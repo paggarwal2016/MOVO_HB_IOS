@@ -45,21 +45,46 @@ class KycViewModel: ObservableObject {
     }
     
     func startKyc() {
-        guard let token = KeychainManager.shared.get("accessToken") else { return }
-        print("token = ", token)
-        
-        let baseUrl = AppEnvironment.shared.current.baseURL.absoluteString
-        print("baseUrl = ", baseUrl)
-        
-        if let topVC = UIApplication.shared.topViewController {
-            KycSdk.startKyc(
-                presentingViewController: topVC,
-                authToken: token,
-                baseUrl: baseUrl,
-                theme: createTheme()
-            )
+        guard let token = KeychainManager.shared.get("accessToken") else {
+            errorMessage = "Missing access token"
+            return
         }
+        let baseUrl = AppEnvironment.shared.current.baseURL.absoluteString
+        
+        
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }),
+              let rootVC = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+            errorMessage = "Unable to find presenting view controller"
+            return
+        }
+        
+        let topVC = Self.topViewController(from: rootVC)
+        
+        KycSdk.startKyc(
+            presentingViewController: topVC,
+            authToken: token,
+            baseUrl: baseUrl,
+            theme: createTheme()
+        )
     }
+    
+    private static func topViewController(from root: UIViewController) -> UIViewController {
+        if let presented = root.presentedViewController {
+            return topViewController(from: presented)
+        }
+        if let nav = root as? UINavigationController,
+           let visible = nav.visibleViewController {
+            return topViewController(from: visible)
+        }
+        if let tab = root as? UITabBarController,
+           let selected = tab.selectedViewController {
+            return topViewController(from: selected)
+        }
+        return root
+    }
+
     
     private func handleSuccess(notification: Notification) {
         isLoading = false

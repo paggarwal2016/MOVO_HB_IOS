@@ -6,8 +6,6 @@
 //
 
 import SwiftUI
-import BlinkID
-import BlinkIDUX
 
 struct OTPVerificationView: View {
     @StateObject var viewModel = AuthViewModel()
@@ -62,7 +60,9 @@ struct OTPVerificationView: View {
         }
         .onChange(of: viewModel.kycProcess) { newValue in
             if newValue {
-                kycVM.startKyc()
+                DispatchQueue.main.async {
+                    kycVM.startKyc()
+                }
             }
         }
     }

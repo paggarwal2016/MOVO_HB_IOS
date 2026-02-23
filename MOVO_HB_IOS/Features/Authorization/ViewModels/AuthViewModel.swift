@@ -67,7 +67,8 @@ final class AuthViewModel: ObservableObject {
                     self.errorMessage = error.localizedDescription
                 }
                 
-            } receiveValue: { (response: RefreshTokenResponse) in
+            } receiveValue: { [weak self] (response: RefreshTokenResponse) in
+                guard let self = self else { return }
                 KeychainManager.shared.save(response.accessToken, for: "accessToken")
                 KeychainManager.shared.save(response.refreshToken, for: "refreshToken")
                 self.kycProcess = true
