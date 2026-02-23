@@ -1,0 +1,641 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		14B2F0872F4C8B1200BB7BC6 /* BlinkIDUX in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 14BF49202F4C892800FD7B53 /* BlinkIDUX */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		14BF491C2F4C887300FD7B53 /* MobileBankingKycSdk.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14BF491B2F4C887000FD7B53 /* MobileBankingKycSdk.xcframework */; };
+		14BF491D2F4C887300FD7B53 /* MobileBankingKycSdk.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 14BF491B2F4C887000FD7B53 /* MobileBankingKycSdk.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		14BF49212F4C892800FD7B53 /* BlinkIDUX in Frameworks */ = {isa = PBXBuildFile; productRef = 14BF49202F4C892800FD7B53 /* BlinkIDUX */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		14BF48452F4C873E00FD7B53 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 14BF482F2F4C873A00FD7B53 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 14BF48362F4C873A00FD7B53;
+			remoteInfo = MOVO_HB_IOS;
+		};
+		14BF484F2F4C873E00FD7B53 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 14BF482F2F4C873A00FD7B53 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 14BF48362F4C873A00FD7B53;
+			remoteInfo = MOVO_HB_IOS;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		14BF491E2F4C887300FD7B53 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				14BF491D2F4C887300FD7B53 /* MobileBankingKycSdk.xcframework in Embed Frameworks */,
+				14B2F0872F4C8B1200BB7BC6 /* BlinkIDUX in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		14BF48372F4C873A00FD7B53 /* MOVO_HB_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MOVO_HB_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		14BF48442F4C873E00FD7B53 /* MOVO_HB_IOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MOVO_HB_IOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14BF484E2F4C873E00FD7B53 /* MOVO_HB_IOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MOVO_HB_IOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14BF491B2F4C887000FD7B53 /* MobileBankingKycSdk.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MobileBankingKycSdk.xcframework; path = "../MOVO Dep/MobileBankingKycSdk.xcframework"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		14BF48392F4C873A00FD7B53 /* MOVO_HB_IOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MOVO_HB_IOS;
+			sourceTree = "<group>";
+		};
+		14BF48472F4C873E00FD7B53 /* MOVO_HB_IOSTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MOVO_HB_IOSTests;
+			sourceTree = "<group>";
+		};
+		14BF48512F4C873E00FD7B53 /* MOVO_HB_IOSUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MOVO_HB_IOSUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		14BF48342F4C873A00FD7B53 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14BF491C2F4C887300FD7B53 /* MobileBankingKycSdk.xcframework in Frameworks */,
+				14BF49212F4C892800FD7B53 /* BlinkIDUX in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14BF48412F4C873E00FD7B53 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14BF484B2F4C873E00FD7B53 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		14BF482E2F4C873A00FD7B53 = {
+			isa = PBXGroup;
+			children = (
+				14BF48392F4C873A00FD7B53 /* MOVO_HB_IOS */,
+				14BF48472F4C873E00FD7B53 /* MOVO_HB_IOSTests */,
+				14BF48512F4C873E00FD7B53 /* MOVO_HB_IOSUITests */,
+				14BF491A2F4C886B00FD7B53 /* Frameworks */,
+				14BF48382F4C873A00FD7B53 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		14BF48382F4C873A00FD7B53 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				14BF48372F4C873A00FD7B53 /* MOVO_HB_IOS.app */,
+				14BF48442F4C873E00FD7B53 /* MOVO_HB_IOSTests.xctest */,
+				14BF484E2F4C873E00FD7B53 /* MOVO_HB_IOSUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		14BF491A2F4C886B00FD7B53 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				14BF491B2F4C887000FD7B53 /* MobileBankingKycSdk.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		14BF48362F4C873A00FD7B53 /* MOVO_HB_IOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 14BF48582F4C873E00FD7B53 /* Build configuration list for PBXNativeTarget "MOVO_HB_IOS" */;
+			buildPhases = (
+				14BF48332F4C873A00FD7B53 /* Sources */,
+				14BF48342F4C873A00FD7B53 /* Frameworks */,
+				14BF48352F4C873A00FD7B53 /* Resources */,
+				14BF491E2F4C887300FD7B53 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				14BF48392F4C873A00FD7B53 /* MOVO_HB_IOS */,
+			);
+			name = MOVO_HB_IOS;
+			packageProductDependencies = (
+				14BF49202F4C892800FD7B53 /* BlinkIDUX */,
+			);
+			productName = MOVO_HB_IOS;
+			productReference = 14BF48372F4C873A00FD7B53 /* MOVO_HB_IOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		14BF48432F4C873E00FD7B53 /* MOVO_HB_IOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 14BF485B2F4C873E00FD7B53 /* Build configuration list for PBXNativeTarget "MOVO_HB_IOSTests" */;
+			buildPhases = (
+				14BF48402F4C873E00FD7B53 /* Sources */,
+				14BF48412F4C873E00FD7B53 /* Frameworks */,
+				14BF48422F4C873E00FD7B53 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				14BF48462F4C873E00FD7B53 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				14BF48472F4C873E00FD7B53 /* MOVO_HB_IOSTests */,
+			);
+			name = MOVO_HB_IOSTests;
+			packageProductDependencies = (
+			);
+			productName = MOVO_HB_IOSTests;
+			productReference = 14BF48442F4C873E00FD7B53 /* MOVO_HB_IOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		14BF484D2F4C873E00FD7B53 /* MOVO_HB_IOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 14BF485E2F4C873E00FD7B53 /* Build configuration list for PBXNativeTarget "MOVO_HB_IOSUITests" */;
+			buildPhases = (
+				14BF484A2F4C873E00FD7B53 /* Sources */,
+				14BF484B2F4C873E00FD7B53 /* Frameworks */,
+				14BF484C2F4C873E00FD7B53 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				14BF48502F4C873E00FD7B53 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				14BF48512F4C873E00FD7B53 /* MOVO_HB_IOSUITests */,
+			);
+			name = MOVO_HB_IOSUITests;
+			packageProductDependencies = (
+			);
+			productName = MOVO_HB_IOSUITests;
+			productReference = 14BF484E2F4C873E00FD7B53 /* MOVO_HB_IOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		14BF482F2F4C873A00FD7B53 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					14BF48362F4C873A00FD7B53 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					14BF48432F4C873E00FD7B53 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 14BF48362F4C873A00FD7B53;
+					};
+					14BF484D2F4C873E00FD7B53 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 14BF48362F4C873A00FD7B53;
+					};
+				};
+			};
+			buildConfigurationList = 14BF48322F4C873A00FD7B53 /* Build configuration list for PBXProject "MOVO_HB_IOS" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 14BF482E2F4C873A00FD7B53;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				14BF491F2F4C892800FD7B53 /* XCRemoteSwiftPackageReference "blinkid-ios" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				14BF48362F4C873A00FD7B53 /* MOVO_HB_IOS */,
+				14BF48432F4C873E00FD7B53 /* MOVO_HB_IOSTests */,
+				14BF484D2F4C873E00FD7B53 /* MOVO_HB_IOSUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		14BF48352F4C873A00FD7B53 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14BF48422F4C873E00FD7B53 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14BF484C2F4C873E00FD7B53 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		14BF48332F4C873A00FD7B53 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14BF48402F4C873E00FD7B53 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14BF484A2F4C873E00FD7B53 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		14BF48462F4C873E00FD7B53 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 14BF48362F4C873A00FD7B53 /* MOVO_HB_IOS */;
+			targetProxy = 14BF48452F4C873E00FD7B53 /* PBXContainerItemProxy */;
+		};
+		14BF48502F4C873E00FD7B53 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 14BF48362F4C873A00FD7B53 /* MOVO_HB_IOS */;
+			targetProxy = 14BF484F2F4C873E00FD7B53 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		14BF48562F4C873E00FD7B53 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		14BF48572F4C873E00FD7B53 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		14BF48592F4C873E00FD7B53 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 57J74H5MVZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Enable Movo to upload camera photos and for your identification";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone may be required during identity verification.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.movocash.movo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		14BF485A2F4C873E00FD7B53 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 57J74H5MVZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Enable Movo to upload camera photos and for your identification";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone may be required during identity verification.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.movocash.movo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		14BF485C2F4C873E00FD7B53 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "test.MOVO-HB-IOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MOVO_HB_IOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MOVO_HB_IOS";
+			};
+			name = Debug;
+		};
+		14BF485D2F4C873E00FD7B53 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "test.MOVO-HB-IOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MOVO_HB_IOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MOVO_HB_IOS";
+			};
+			name = Release;
+		};
+		14BF485F2F4C873E00FD7B53 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "test.MOVO-HB-IOSUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = MOVO_HB_IOS;
+			};
+			name = Debug;
+		};
+		14BF48602F4C873E00FD7B53 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "test.MOVO-HB-IOSUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = MOVO_HB_IOS;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		14BF48322F4C873A00FD7B53 /* Build configuration list for PBXProject "MOVO_HB_IOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14BF48562F4C873E00FD7B53 /* Debug */,
+				14BF48572F4C873E00FD7B53 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		14BF48582F4C873E00FD7B53 /* Build configuration list for PBXNativeTarget "MOVO_HB_IOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14BF48592F4C873E00FD7B53 /* Debug */,
+				14BF485A2F4C873E00FD7B53 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		14BF485B2F4C873E00FD7B53 /* Build configuration list for PBXNativeTarget "MOVO_HB_IOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14BF485C2F4C873E00FD7B53 /* Debug */,
+				14BF485D2F4C873E00FD7B53 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		14BF485E2F4C873E00FD7B53 /* Build configuration list for PBXNativeTarget "MOVO_HB_IOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14BF485F2F4C873E00FD7B53 /* Debug */,
+				14BF48602F4C873E00FD7B53 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		14BF491F2F4C892800FD7B53 /* XCRemoteSwiftPackageReference "blinkid-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/BlinkID/blinkid-ios.git";
+			requirement = {
+				kind = exactVersion;
+				version = 7.3.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		14BF49202F4C892800FD7B53 /* BlinkIDUX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14BF491F2F4C892800FD7B53 /* XCRemoteSwiftPackageReference "blinkid-ios" */;
+			productName = BlinkIDUX;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 14BF482F2F4C873A00FD7B53 /* Project object */;
+}

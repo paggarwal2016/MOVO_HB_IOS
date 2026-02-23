@@ -1,0 +1,15 @@
+{
+  "originHash" : "60bec41ada8f1e064548ab21f9bcf5f60bdbceef428a6e2a1f7141b5fbe413b3",
+  "pins" : [
+    {
+      "identity" : "blinkid-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/BlinkID/blinkid-ios.git",
+      "state" : {
+        "revision" : "09baa1a6bdaae11e1a349584c476ab492d86c79d",
+        "version" : "7.3.1"
+      }
+    }
+  ],
+  "version" : 3
+}
