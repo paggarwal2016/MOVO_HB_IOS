@@ -13,20 +13,25 @@ final class NetworkClient: NetworkService {
     private let session: URLSession
     private var isRefreshing = false
     private var refreshPublisher: AnyPublisher<Void, Error>?
+    // Track retry attempts internally by request URL
+    private var retryCounts: [URL: Int] = [:]
+    private let maxRetryCount = 1
     
     init() {
-        let delegate = SecureSessionDelegate(enabled: false)
+        let delegate = SecureSessionDelegate(enabled: false) // TODO: AI info - MITM attack risk
         self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
     }
     
     func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<T, Error> {
-      
-        // TODO: - Enable future
-//        if JailbreakDetector.shared.isJailBroken {
-//            fatalError("Jailbroken device detected.")
-//        }
         
-        guard let urlRequest = endpoint.urlRequest else {
+        if JailbreakDetector.shared.isJailBroken {
+            // TODO: - Force logout & block API Block network request safely
+            return Fail(error: URLError(.userAuthenticationRequired))
+                .eraseToAnyPublisher()
+        }
+        
+        guard let urlRequest = endpoint.urlRequest,
+              let url = urlRequest.url else {
             return Fail(error: URLError(.badURL))
                 .eraseToAnyPublisher()
         }
@@ -34,7 +39,7 @@ final class NetworkClient: NetworkService {
         var request = urlRequest
         
         if endpoint.requiresAuth,
-           let token = KeychainManager.shared.get("accessToken") {
+           let token = AuthManager.shared.accessToken {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
@@ -46,21 +51,26 @@ final class NetworkClient: NetworkService {
                 }
                 
                 if case NetworkError.unauthorized = error {
-                    return self.refreshTokenPublisher()
-                        .flatMap { _ in
-                            self.performRequest(request)
-                        }
-                        .eraseToAnyPublisher()
+                    // Track retry attempts internally
+                    let currentRetry = self.retryCounts[url] ?? 0
+                    if currentRetry < self.maxRetryCount {
+                        self.retryCounts[url] = currentRetry + 1
+                        return self.refreshTokenPublisher()
+                            .flatMap { _ in
+                                self.performRequest(request)
+                            }
+                            .handleEvents(receiveCompletion: { _ in
+                                self.retryCounts[url] = nil // Reset retry after attempt
+                            })
+                            .eraseToAnyPublisher()
+                    } else {
+                        // TODO: - Exceeded retry limit, force logout
+                    }
                 }
-                
                 return Fail(error: error).eraseToAnyPublisher()
             }
             .eraseToAnyPublisher()
     }
-}
-
-
-private extension NetworkClient {
     
     func performRequest<T: Decodable>(_ request: URLRequest) -> AnyPublisher<T, Error> {
         
@@ -91,17 +101,24 @@ private extension NetworkClient {
 }
 
 
-
 private extension NetworkClient {
     
     func refreshTokenPublisher() -> AnyPublisher<Void, Error> {
         
         if isRefreshing {
-            return refreshPublisher ?? Fail(error: URLError(.cannotLoadFromNetwork))
-                .eraseToAnyPublisher()
+            if let existingPublisher = refreshPublisher {
+                return existingPublisher
+            } else {
+                return Fail(error: URLError(.cannotLoadFromNetwork))
+                    .eraseToAnyPublisher()
+            }
         }
         
-        guard let refreshToken = KeychainManager.shared.get("refreshToken") else {
+        let refreshToken: String
+        do {
+            refreshToken = try KeychainManager.shared.get("refresh_token")
+        } catch {
+            // TODO: No refresh token, call force logout()
             return Fail(error: URLError(.userAuthenticationRequired))
                 .eraseToAnyPublisher()
         }
@@ -111,31 +128,41 @@ private extension NetworkClient {
         let endpoint = AuthAPI.refreshToken(refreshToken: refreshToken)
         
         guard let request = endpoint.urlRequest else {
+            isRefreshing = false
             return Fail(error: URLError(.badURL))
                 .eraseToAnyPublisher()
         }
         
-        refreshPublisher = performRequest(request)
+        // Create the refresh publisher
+        let publisher: AnyPublisher<Void, Error> = performRequest(request)
             .handleEvents(receiveOutput: { (response: RefreshTokenResponse) in
+                AuthManager.shared.updateAccessToken(response.accessToken)
                 
-                KeychainManager.shared.save(response.accessToken, for: "accessToken")
-                KeychainManager.shared.save(response.refreshToken, for: "refreshToken")
+                do {
+                    try KeychainManager.shared.save(
+                        response.refreshToken,
+                        for: "refresh_token",
+                        biometricProtected: BiometricManager.isAvailable
+                    )
+                } catch {
+                    print("Failed to save token: \(error.localizedDescription)")
+                }
             })
             .map { _ in () }
-            .handleEvents(receiveCompletion: { [weak self] _ in
+            .handleEvents(receiveCompletion: { [weak self] completion in
                 self?.isRefreshing = false
+                self?.refreshPublisher = nil
+                if case .failure(_) = completion {
+                    // TODO: failed call force logout()
+                }
             })
             .share()
             .eraseToAnyPublisher()
         
-        return refreshPublisher!
+        refreshPublisher = publisher
+        return publisher
     }
 }
-
-
-
-
-
 
 
 

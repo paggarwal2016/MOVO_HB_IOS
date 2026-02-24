@@ -18,6 +18,10 @@ enum AppInfo {
     }
     
     static var fullVersion: String {
-        "\(version) (\(buildNumber)"
+        "\(version) (\(buildNumber))"
+    }
+    
+    static var bundleIdentifier: String {
+        Bundle.main.bundleIdentifier ?? "com.unknown.app"
     }
 }

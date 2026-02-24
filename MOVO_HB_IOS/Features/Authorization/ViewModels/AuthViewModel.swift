@@ -16,10 +16,9 @@ final class AuthViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var otpSent = false
     @Published var kycProcess = false
-    
     @Published var errorMessage: String?
     
-    init(network: NetworkService = NetworkClient()) {
+    init(network: NetworkService) {
         self.network = network
     }
     
@@ -41,9 +40,8 @@ final class AuthViewModel: ObservableObject {
                     self.errorMessage = error.localizedDescription
                 }
                 
-            } receiveValue: { (response: SussessResponse) in
+            } receiveValue: { (response: SuccessResponse) in
                 self.otpSent = true
-                print("OTP Success:", response)
             }
             .store(in: &cancellables)
     }
@@ -69,8 +67,20 @@ final class AuthViewModel: ObservableObject {
                 
             } receiveValue: { [weak self] (response: RefreshTokenResponse) in
                 guard let self = self else { return }
-                KeychainManager.shared.save(response.accessToken, for: "accessToken")
-                KeychainManager.shared.save(response.refreshToken, for: "refreshToken")
+                
+                AuthManager.shared.updateAccessToken(response.accessToken)
+                
+                // Save refresh token safely
+                do {
+                    try KeychainManager.shared.save(
+                        response.refreshToken,
+                        for: "refresh_token",
+                        biometricProtected: BiometricManager.isAvailable
+                    )
+                } catch {
+                    self.errorMessage = "Failed to save token: \(error.localizedDescription)"
+                }
+                
                 self.kycProcess = true
             }
             .store(in: &cancellables)

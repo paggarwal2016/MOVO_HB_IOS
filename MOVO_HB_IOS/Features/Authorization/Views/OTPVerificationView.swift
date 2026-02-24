@@ -2,18 +2,20 @@
 //  OTPVerificationView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 23/02/26.
+//  Created by Movo Developer on 23/02/26.
 //
 
 import SwiftUI
 
 struct OTPVerificationView: View {
-    @StateObject var viewModel = AuthViewModel()
-    @StateObject private var kycVM = KycViewModel()
+    @SwiftUI.Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: AuthViewModel
+    //@StateObject private var kycVM = KycViewModel() // TODO: - Enable after the New SDK is released
     var phone: String
     @State private var code: String = ""
     @FocusState private var isFocused: Bool
-    
+    @State private var showTokenAlert: Bool = false
+            
     var body: some View {
         ZStack {
             VStack(alignment: .leading, spacing: 24) {
@@ -38,7 +40,6 @@ struct OTPVerificationView: View {
                 
                 Button {
                     viewModel.validateOTP(phone: phone, code: code)
-                    print("OTP Submitted:", code)
                 } label: {
                     Text("Done")
                         .bold()
@@ -60,14 +61,18 @@ struct OTPVerificationView: View {
         }
         .onChange(of: viewModel.kycProcess) { newValue in
             if newValue {
-                DispatchQueue.main.async {
-                    kycVM.startKyc()
-                }
+                showTokenAlert = true
+//                DispatchQueue.main.async {
+//                    kycVM.startKyc() // TODO: - Enable after the New SDK is released
+//                }
             }
         }
+        .alert("Token received", isPresented: $showTokenAlert) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Your authentication token was successfully received.")
+        }
     }
-}
-
-#Preview {
-    OTPVerificationView(phone: "+147384843")
 }

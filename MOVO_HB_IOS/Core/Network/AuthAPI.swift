@@ -7,12 +7,6 @@
 
 import Foundation
 
-final class AppEnvironment {
-    static let shared = AppEnvironment()
-    var current: Environment = .production
-    private init() {}
-}
-
 enum AuthAPI: Endpoint {
     
     case messengerOTP(phoneNumber: String, context: String)
@@ -20,7 +14,7 @@ enum AuthAPI: Endpoint {
     case refreshToken(refreshToken: String)
     
     // MARK: - Enviroment Configure
-    var environment: Environment { AppEnvironment.shared.current }
+    var environment: Environment { AppConfig.environment }
     
     // MARK: - URL Path
     var path: String {
@@ -45,30 +39,32 @@ enum AuthAPI: Endpoint {
             "X-Request-ID": UUID().uuidString
         ]
     }
-     
+    
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { nil }
     
-    // MARK: - Body
+    // MARK: - Body (Safe Encoding)
     var body: Data? {
+        do {
+            return try encodeBody()
+        } catch {
+            return nil
+        }
+    }
+    
+    private func encodeBody() throws -> Data {
         switch self {
         case .messengerOTP(let phoneNumber, let context):
-            let request = MessengerOTPRequest(
-                phoneNumber: phoneNumber,
-                context: context
-            )
-            return try? JSONEncoder().encode(request)
+            let request = MessengerOTPRequest(phoneNumber: phoneNumber, context: context)
+            return try JSONEncoder().encode(request)
+            
         case .tokenSMS(let phoneNumber, let code):
-            let request = TokenSMSRequest(
-                phoneNumber: phoneNumber,
-                code: code
-            )
-            return try? JSONEncoder().encode(request)
-        case .refreshToken(refreshToken: let refreshToken):
-            let request = RefreshTokenRequest(
-                refreshToken: refreshToken
-            )
-            return try? JSONEncoder().encode(request)
+            let request = TokenSMSRequest(phoneNumber: phoneNumber, code: code)
+            return try JSONEncoder().encode(request)
+            
+        case .refreshToken(let refreshToken):
+            let request = RefreshTokenRequest(refreshToken: refreshToken)
+            return try JSONEncoder().encode(request)
         }
     }
     
