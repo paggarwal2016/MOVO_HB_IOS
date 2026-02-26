@@ -16,7 +16,7 @@
 		1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468195E2F4DE6CF00BED014 /* AppInfo.swift */; };
 		1468197E2F4DE6CF00BED014 /* PhoneInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468196A2F4DE6CF00BED014 /* PhoneInputView.swift */; };
 		1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819642F4DE6CF00BED014 /* AuthViewModel.swift */; };
-		146819802F4DE6CF00BED014 /* MOVO_HB_IOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819752F4DE6CF00BED014 /* MOVO_HB_IOSApp.swift */; };
+		146819802F4DE6CF00BED014 /* MovocashIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */; };
 		146819812F4DE6CF00BED014 /* HTTPMethod.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819532F4DE6CF00BED014 /* HTTPMethod.swift */; };
 		146819822F4DE6CF00BED014 /* SSLPinning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819562F4DE6CF00BED014 /* SSLPinning.swift */; };
 		146819832F4DE6CF00BED014 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819582F4DE6CF00BED014 /* AuthManager.swift */; };
@@ -33,14 +33,17 @@
 		1468198E2F4DE6CF00BED014 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468195C2F4DE6CF00BED014 /* KeychainManager.swift */; };
 		1468198F2F4DE6CF00BED014 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468195A2F4DE6CF00BED014 /* DeviceManager.swift */; };
 		146819902F4DE6CF00BED014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 146819732F4DE6CF00BED014 /* Assets.xcassets */; };
-		146819962F4DE71C00BED014 /* MOVO_HB_IOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819942F4DE71C00BED014 /* MOVO_HB_IOSTests.swift */; };
-		1468199A2F4DE72C00BED014 /* MOVO_HB_IOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819972F4DE72C00BED014 /* MOVO_HB_IOSUITests.swift */; };
-		1468199B2F4DE72C00BED014 /* MOVO_HB_IOSUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819982F4DE72C00BED014 /* MOVO_HB_IOSUITestsLaunchTests.swift */; };
+		146819962F4DE71C00BED014 /* MovocashIOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819942F4DE71C00BED014 /* MovocashIOSTests.swift */; };
+		1468199A2F4DE72C00BED014 /* MovocashIOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819972F4DE72C00BED014 /* MovocashIOSTests.swift */; };
+		1468199B2F4DE72C00BED014 /* MovocashIOSTestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819982F4DE72C00BED014 /* MovocashIOSTestsLaunchTests.swift */; };
 		1468199D2F4EDEF000BED014 /* OTPDigitBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468199C2F4EDEF000BED014 /* OTPDigitBox.swift */; };
 		1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468199E2F4EE8B000BED014 /* OTPViewModel.swift */; };
 		146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A02F4F0A2100BED014 /* AlertManager.swift */; };
 		146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A22F4F272500BED014 /* PhoneFormatter.swift */; };
 		146819A52F4F2F9400BED014 /* OTPInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A42F4F2F9400BED014 /* OTPInputView.swift */; };
+		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
+		14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5952F504AF8000D84FD /* NetworkError.swift */; };
+		14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,10 +102,10 @@
 		146819702F4DE6CF00BED014 /* SpinnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerView.swift; sourceTree = "<group>"; };
 		146819732F4DE6CF00BED014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		146819742F4DE6CF00BED014 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		146819752F4DE6CF00BED014 /* MOVO_HB_IOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MOVO_HB_IOSApp.swift; sourceTree = "<group>"; };
-		146819942F4DE71C00BED014 /* MOVO_HB_IOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MOVO_HB_IOSTests.swift; sourceTree = "<group>"; };
-		146819972F4DE72C00BED014 /* MOVO_HB_IOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MOVO_HB_IOSUITests.swift; sourceTree = "<group>"; };
-		146819982F4DE72C00BED014 /* MOVO_HB_IOSUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MOVO_HB_IOSUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSApp.swift; sourceTree = "<group>"; };
+		146819942F4DE71C00BED014 /* MovocashIOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSTests.swift; sourceTree = "<group>"; };
+		146819972F4DE72C00BED014 /* MovocashIOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSTests.swift; sourceTree = "<group>"; };
+		146819982F4DE72C00BED014 /* MovocashIOSTestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSTestsLaunchTests.swift; sourceTree = "<group>"; };
 		1468199C2F4EDEF000BED014 /* OTPDigitBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPDigitBox.swift; sourceTree = "<group>"; };
 		1468199E2F4EE8B000BED014 /* OTPViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPViewModel.swift; sourceTree = "<group>"; };
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
@@ -111,7 +114,23 @@
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14DBC5912F50204D000D84FD /* SecureLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureLogger.swift; sourceTree = "<group>"; };
+		14DBC5952F504AF8000D84FD /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
+		14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSecurityManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		14DBC58E2F5014AD000D84FD /* Extensions */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		14DBC59B2F5081BE000D84FD /* Shield */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shield;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		14BF48342F4C873A00FD7B53 /* Frameworks */ = {
@@ -154,6 +173,7 @@
 				146819522F4DE6CF00BED014 /* Endpoint.swift */,
 				146819532F4DE6CF00BED014 /* HTTPMethod.swift */,
 				146819542F4DE6CF00BED014 /* NetworkClient.swift */,
+				14DBC5952F504AF8000D84FD /* NetworkError.swift */,
 				146819552F4DE6CF00BED014 /* NetworkService.swift */,
 				146819562F4DE6CF00BED014 /* SSLPinning.swift */,
 			);
@@ -168,6 +188,7 @@
 				1468195A2F4DE6CF00BED014 /* DeviceManager.swift */,
 				1468195B2F4DE6CF00BED014 /* JailbreakDetector.swift */,
 				1468195C2F4DE6CF00BED014 /* KeychainManager.swift */,
+				14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */,
 			);
 			path = Security;
 			sourceTree = "<group>";
@@ -176,6 +197,7 @@
 			isa = PBXGroup;
 			children = (
 				1468195E2F4DE6CF00BED014 /* AppInfo.swift */,
+				14DBC5912F50204D000D84FD /* SecureLogger.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -183,6 +205,7 @@
 		146819602F4DE6CF00BED014 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				14DBC58E2F5014AD000D84FD /* Extensions */,
 				146819502F4DE6CF00BED014 /* Config */,
 				146819572F4DE6CF00BED014 /* Network */,
 				1468195D2F4DE6CF00BED014 /* Security */,
@@ -244,6 +267,7 @@
 		1468196D2F4DE6CF00BED014 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				14DBC59B2F5081BE000D84FD /* Shield */,
 				1468196C2F4DE6CF00BED014 /* Authorization */,
 			);
 			path = Features;
@@ -283,7 +307,7 @@
 				146819722F4DE6CF00BED014 /* Shared */,
 				146819732F4DE6CF00BED014 /* Assets.xcassets */,
 				146819742F4DE6CF00BED014 /* ContentView.swift */,
-				146819752F4DE6CF00BED014 /* MOVO_HB_IOSApp.swift */,
+				146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */,
 			);
 			path = MovocashIOS;
 			sourceTree = "<group>";
@@ -291,7 +315,7 @@
 		146819952F4DE71C00BED014 /* MovocashIOSTests */ = {
 			isa = PBXGroup;
 			children = (
-				146819942F4DE71C00BED014 /* MOVO_HB_IOSTests.swift */,
+				146819942F4DE71C00BED014 /* MovocashIOSTests.swift */,
 			);
 			path = MovocashIOSTests;
 			sourceTree = "<group>";
@@ -299,8 +323,8 @@
 		146819992F4DE72C00BED014 /* MovocashIOSUITests */ = {
 			isa = PBXGroup;
 			children = (
-				146819972F4DE72C00BED014 /* MOVO_HB_IOSUITests.swift */,
-				146819982F4DE72C00BED014 /* MOVO_HB_IOSUITestsLaunchTests.swift */,
+				146819972F4DE72C00BED014 /* MovocashIOSTests.swift */,
+				146819982F4DE72C00BED014 /* MovocashIOSTestsLaunchTests.swift */,
 			);
 			path = MovocashIOSUITests;
 			sourceTree = "<group>";
@@ -348,6 +372,10 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				14DBC58E2F5014AD000D84FD /* Extensions */,
+				14DBC59B2F5081BE000D84FD /* Shield */,
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (
@@ -480,8 +508,10 @@
 				1468197C2F4DE6CF00BED014 /* OTPVerificationView.swift in Sources */,
 				1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */,
 				1468197E2F4DE6CF00BED014 /* PhoneInputView.swift in Sources */,
+				14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */,
 				1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */,
-				146819802F4DE6CF00BED014 /* MOVO_HB_IOSApp.swift in Sources */,
+				14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */,
+				146819802F4DE6CF00BED014 /* MovocashIOSApp.swift in Sources */,
 				146819812F4DE6CF00BED014 /* HTTPMethod.swift in Sources */,
 				146819822F4DE6CF00BED014 /* SSLPinning.swift in Sources */,
 				146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */,
@@ -492,6 +522,7 @@
 				146819862F4DE6CF00BED014 /* OTPTextField.swift in Sources */,
 				146819872F4DE6CF00BED014 /* AuthResponse.swift in Sources */,
 				146819882F4DE6CF00BED014 /* KycViewModel.swift in Sources */,
+				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
 				146819A52F4F2F9400BED014 /* OTPInputView.swift in Sources */,
 				1468198A2F4DE6CF00BED014 /* AppConfig.swift in Sources */,
@@ -509,7 +540,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				146819962F4DE71C00BED014 /* MOVO_HB_IOSTests.swift in Sources */,
+				146819962F4DE71C00BED014 /* MovocashIOSTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -517,8 +548,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1468199A2F4DE72C00BED014 /* MOVO_HB_IOSUITests.swift in Sources */,
-				1468199B2F4DE72C00BED014 /* MOVO_HB_IOSUITestsLaunchTests.swift in Sources */,
+				1468199A2F4DE72C00BED014 /* MovocashIOSTests.swift in Sources */,
+				1468199B2F4DE72C00BED014 /* MovocashIOSTestsLaunchTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -673,7 +704,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -707,7 +738,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

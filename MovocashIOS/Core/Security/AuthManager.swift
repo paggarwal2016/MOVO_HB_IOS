@@ -6,21 +6,24 @@
 //
 import Foundation
 
-final class AuthManager {
+actor AuthManager {
 
     static let shared = AuthManager()
     private init() {}
 
-    private let queue = DispatchQueue(label: "com.app.auth", attributes: .concurrent)
-    private var _accessToken: String?
+    private var accessToken: String?
 
-    var accessToken: String? { queue.sync { _accessToken } }
+    // READ
+    func getAccessToken() -> String? {
+        accessToken
+    }
 
+    // WRITE
     func updateAccessToken(_ token: String) {
-        queue.async(flags: .barrier) { self._accessToken = token }
+        accessToken = token
     }
 
     func clearSession() {
-        queue.async(flags: .barrier) { self._accessToken = nil }
+        accessToken = nil
     }
 }

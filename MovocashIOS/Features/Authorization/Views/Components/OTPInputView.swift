@@ -52,7 +52,7 @@ struct OTPInputView: View {
         .contentShape(Rectangle())
         .onTapGesture { isFocused = true }
         .onAppear { otpVM.startTimer() }
-        .onChange(of: otpVM.otpText) { newValue in
+        .onChangeCompat(of: otpVM.otpText) { newValue in
             if newValue.count == otpVM.maxLength {
                 isFocused = false
                 verifyOTP()
@@ -79,7 +79,6 @@ struct OTPInputView: View {
     }
 
     private func verifyOTP() {
-        print("OTP:", otpVM.otpText)
-        // call API here
+        SecureLogger.log("OTP validation triggered") // TODO: - call API here
     }
 }

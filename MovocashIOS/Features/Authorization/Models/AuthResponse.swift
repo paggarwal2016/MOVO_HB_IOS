@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct RefreshTokenResponse : Decodable {
+nonisolated struct RefreshTokenResponse: Decodable {
     let accessToken: String
     let refreshToken: String
     
@@ -17,7 +17,7 @@ struct RefreshTokenResponse : Decodable {
     }
 }
 
-struct SuccessResponse: Decodable {
+nonisolated struct SuccessResponse: Decodable {
     let success: Bool
     
     enum CodingKeys: String, CodingKey {
@@ -25,7 +25,10 @@ struct SuccessResponse: Decodable {
     }
 }
 
-
-struct APIErrorResponse: Decodable {
+nonisolated struct APIErrorResponse: Decodable {
     let message: String
+    
+    enum CodingKeys: String, CodingKey {
+        case message = "message"
+    }
 }

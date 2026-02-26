@@ -13,7 +13,7 @@ enum Environment {
     var baseURLString: String {
         switch self {
         case .QA:
-            return "https://api.mobile-banking-qa.herringbank.com" // TODO: - AI info - Provide Correct dev url
+            return "https://api.mobile-banking-qa.herringbank.com"
         case .production:
             return "https://api.mobile-banking.herringbank.com" // TODO: - AI info - Provide Correct production url
         }

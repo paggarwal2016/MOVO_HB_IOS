@@ -13,12 +13,12 @@ protocol Endpoint {
     var header: [String: String]? { get }
     var queryItems: [URLQueryItem]? { get }
     var body: Data? { get }
-    var requiresAuth: Bool { get }
+    nonisolated var requiresAuth: Bool { get }
 }
 
 
 extension Endpoint {
-    
+    @MainActor
     var urlRequest: URLRequest? {
         
         guard var components = URLComponents(string: environment.baseURLString) else {
@@ -30,6 +30,7 @@ extension Endpoint {
             return nil
         }
         var request = URLRequest(url: url)
+        request.timeoutInterval = 15
         request.httpMethod = method.rawValue
         request.httpBody = body
         header?.forEach {

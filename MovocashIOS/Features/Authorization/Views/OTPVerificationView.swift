@@ -83,13 +83,13 @@ struct OTPVerificationView: View {
                 isFocused = true
             }
         }
-        .onChange(of: otpVM.otpText) { newValue in
+        .onChangeCompat(of: otpVM.otpText) { newValue in
             if newValue.count == otpVM.maxLength {
                 isFocused = false
                 verifyOTP()
             }
         }
-        .onChange(of: authVM.state) { newState in
+        .onChangeCompat(of: authVM.state) { newState in
             if newState == .verified {
                 AlertManager.shared.showConfirmation(
                     title: "Success",
@@ -101,6 +101,7 @@ struct OTPVerificationView: View {
                     },
                     onCancel: {
                         otpVM.otpText = ""
+                        otpVM.state = .expired
                         otpVM.stopTimer()
                     }
                 )

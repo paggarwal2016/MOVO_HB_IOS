@@ -6,198 +6,150 @@
 //
 
 import Foundation
-import Combine
 
-final class NetworkClient: NetworkService {
+actor NetworkClient {
     
-    private let session: URLSession
+    static let shared = NetworkClient()
+    
+    // Actor-protected state
     private var isRefreshing = false
-    private var refreshPublisher: AnyPublisher<Void, NetworkError>?
-    private var retryCounts: [URL: Int] = [:]
-    private let maxRetryCount = 1
+    private var retryTracker: [URL: Int] = [:]
+    private let maxRetry = 1
     
-    init() {
-        let delegate = SecureSessionDelegate(enabled: false)// TODO: AI info - MITM attack risk
-        self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+    // Custom session for security
+    private let session: URLSession
+    
+    private init() {
+        
+        let config = URLSessionConfiguration.default
+
+        // Fintech-safe timeout settings
+        config.timeoutIntervalForRequest = 15        // Per request timeout
+        config.timeoutIntervalForResource = 30       // Total resource timeout
+        
+        // Security best practices
+        config.waitsForConnectivity = true           // Wait for network recovery
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
+        
+        self.session = URLSession(
+            configuration: config,
+            delegate: SecureSessionDelegate(enabled: true), // customizable
+            delegateQueue: nil
+        )
     }
     
-    // MARK: - PUBLIC REQUEST
-    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<T, NetworkError> {
+    // MARK: - Public Request
+    func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
         
-        if JailbreakDetector.shared.isJailBroken {
-            // TODO: - Force logout & block API Block network request safely
-            return Fail(error: .serverMessage("Device security compromised"))
-                .eraseToAnyPublisher()
+        // Security check
+        if await JailbreakDetector.shared.isJailBroken {
+            throw NetworkError.securityViolation
         }
         
-        guard let urlRequest = endpoint.urlRequest,
-              let url = urlRequest.url else {
-            return Fail(error: .invalidResponse)
-                .eraseToAnyPublisher()
+        guard var request = await endpoint.urlRequest,
+              let url = request.url else {
+            throw NetworkError.invalidResponse
         }
         
-        var request = urlRequest
-        
+        // Attach auth token if required
         if endpoint.requiresAuth,
-           let token = AuthManager.shared.accessToken {
+           let token = await AuthManager.shared.getAccessToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        return performRequest(request)
-            .catch { [weak self] error -> AnyPublisher<T, NetworkError> in
-                guard let self else { return Fail(error: error).eraseToAnyPublisher() }
-                
-                // TOKEN REFRESH FLOW
-                if case .unauthorized = error {
-                    
-                    let currentRetry = self.retryCounts[url] ?? 0
-                    guard currentRetry < self.maxRetryCount else {
-                        return Fail(error: .unauthorized).eraseToAnyPublisher()
-                    }
-                    
-                    self.retryCounts[url] = currentRetry + 1
-                    
-                    return self.refreshTokenPublisher()
-                        .flatMap { self.performRequest(request) }
-                        .handleEvents(receiveCompletion: { _ in
-                            self.retryCounts[url] = nil
-                        })
-                        .eraseToAnyPublisher()
-                } else {
-                    // TODO: - Exceeded retry limit, force logout
-                }
-                
-                return Fail(error: error).eraseToAnyPublisher()
-            }
-            .eraseToAnyPublisher()
-    }
-}
-
-
-extension NetworkClient {
-    
-    func performRequest<T: Decodable>(_ request: URLRequest) -> AnyPublisher<T, NetworkError> {
-        
-        session.dataTaskPublisher(for: request)
-            .tryMap { data, response in
-                
-                guard let http = response as? HTTPURLResponse else {
-                    throw NetworkError.invalidResponse
-                }
-                
-                print("Api Status Code:", http.statusCode)
-                print("Raw JSON:", String(data: data, encoding: .utf8) ?? "")
-                
-                if http.statusCode == 401 {
-                    throw NetworkError.unauthorized
-                }
-                
-                if !(200...299).contains(http.statusCode) {
-                    
-                    if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                        throw NetworkError.serverMessage(apiError.message)
-                    }
-                    
-                    throw NetworkError.unknown
-                }
-                
-                return data
-            }
-            .decode(type: T.self, decoder: JSONDecoder())
-            .mapError { self.mapToNetworkError($0) }
-            .eraseToAnyPublisher()
-    }
-    
-    private func mapToNetworkError(_ error: Error) -> NetworkError {
-        
-        if let error = error as? NetworkError {
-            return error
-        }
-        
-        if let urlError = error as? URLError {
-            switch urlError.code {
-            case .notConnectedToInternet: return .noInternet
-            case .timedOut: return .serverMessage("Request timed out")
-            default: return .serverMessage(urlError.localizedDescription)
-            }
-        }
-        
-        if error is DecodingError {
-            return .decodingError
-        }
-        
-        return .unknown
-    }
-}
-
-
-private extension NetworkClient {
-    
-    func refreshTokenPublisher() -> AnyPublisher<Void, NetworkError> {
-        
-        if isRefreshing {
-            return refreshPublisher ?? Fail(error: .unknown).eraseToAnyPublisher()
-        }
-        
-        let refreshToken: String
         do {
-            refreshToken = try KeychainManager.shared.get("refresh_token")
-        } catch {
-            // TODO: No refresh token, call force logout()
-            return Fail(error: .unauthorized).eraseToAnyPublisher()
+            return try await performRequest(request)
+        } catch NetworkError.unauthorized {
+            // Retry logic for 401
+            let retry = retryTracker[url] ?? 0
+            guard retry < maxRetry else { throw NetworkError.unauthorized }
+            
+            retryTracker[url] = retry + 1
+            try await refreshToken()
+            retryTracker[url] = nil
+            
+            return try await performRequest(request)
+        }
+    }
+    
+    // MARK: - Refresh Token
+    private func refreshToken() async throws {
+        if isRefreshing {
+            while isRefreshing {
+                try await Task.sleep(nanoseconds: 200_000_000)
+            }
+            return
         }
         
         isRefreshing = true
+        defer { isRefreshing = false }
         
-        guard let request = AuthAPI.refreshToken(refreshToken: refreshToken).urlRequest else {
-            isRefreshing = false
-            return Fail(error: .invalidResponse).eraseToAnyPublisher()
+        let refreshToken = try await KeychainManager.shared.get("refresh_token")
+        
+        guard let request = await AuthAPI.refreshToken(refreshToken: refreshToken).urlRequest else {
+            throw NetworkError.invalidResponse
         }
         
-        let publisher = performRequest(request)
-            .handleEvents(receiveOutput: { (response: RefreshTokenResponse) in
-                AuthManager.shared.updateAccessToken(response.accessToken)
-                try? KeychainManager.shared.save(response.refreshToken, for: "refresh_token", biometricProtected: BiometricManager.isAvailable)
-            })
-            .map { _ in () }
-            .handleEvents(receiveCompletion: { [weak self] completion in
-                self?.isRefreshing = false
-                self?.refreshPublisher = nil
-                if case .failure(_) = completion {
-                    // TODO: failed call force logout()
-                }
-            })
-            .share()
-            .eraseToAnyPublisher()
+        // Decode off actor
+        let response: RefreshTokenResponse = try await Task.detached {
+            try await NetworkClient.shared.performRequest(request)
+        }.value
         
-        refreshPublisher = publisher
-        return publisher
+        // Update actor-protected state safely
+        await AuthManager.shared.updateAccessToken(response.accessToken)
+        
+        try await KeychainManager.shared.save(
+            response.refreshToken,
+            for: "refresh_token",
+            protection: .backgroundSafe
+        )
     }
-}
-
-
-enum NetworkError: LocalizedError {
-    case invalidResponse
-    case unauthorized
-    case decodingError
-    case serverMessage(String)
-    case noInternet
-    case unknown
     
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse:
-            return "Invalid server response"
-        case .unauthorized:
-            return "Session expired. Please login again."
-        case .decodingError:
-            return "Unable to process server data"
-        case .serverMessage(let message):
-            return message
-        case .noInternet:
-            return "No internet connection"
-        case .unknown:
-            return "Something went wrong. Please try again."
+    // MARK: - Perform Request (Nonisolated for Swift 6 concurrency)
+    private nonisolated func performRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
+        
+        // Use a separate URLSession
+        let session = URLSession.shared
+        
+        // Network call
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            await SecureLogger.log("Network error: \(error.localizedDescription)", level: .error)
+            throw NetworkError.noInternet
+        }
+        
+        // Validate HTTP response
+        guard let http = response as? HTTPURLResponse else {
+            await SecureLogger.log("Invalid response for URL: \(request.url?.absoluteString ?? "Unknown")", level: .error)
+            throw NetworkError.invalidResponse
+        }
+        
+        await SecureLogger.log("API Status Code: \(http.statusCode)")
+        
+        if http.statusCode == 401 {
+            throw NetworkError.unauthorized
+        }
+        
+        if !(200...299).contains(http.statusCode) {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                await SecureLogger.log("API Error: \(apiError.message)", level: .error)
+                throw NetworkError.serverMessage(apiError.message)
+            }
+            throw NetworkError.unknown
+        }
+        
+        await SecureLogger.log("Response :\(String(data: data, encoding: .utf8) ?? "")", level: .debug)
+        // Decode successful response
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            await SecureLogger.log(
+                "Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)",
+                level: .error)
+            throw NetworkError.decodingError
         }
     }
 }

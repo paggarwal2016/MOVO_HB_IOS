@@ -31,28 +31,25 @@ final class OTPViewModel: ObservableObject {
     func updateOTP(_ value: String) {
         let digits = value.filter { $0.isNumber }
         let truncated = String(digits.prefix(maxLength))
-        
-        Task { @MainActor in
-            otpText = truncated
-        }
+        otpText = truncated
     }
 
-    // MARK: - Modern Timer (Swift 6 Safe)
+    // MARK: - Start Timer (iOS 15+ compatible)
     func startTimer(seconds: Int = 10) {
-
         stopTimer()
-
         remainingSeconds = seconds
         state = .counting
 
-        timerTask = Task {
-            while remainingSeconds > 0 && !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-                remainingSeconds -= 1
+        timerTask = Task { [weak self] in
+            guard let self else { return }
+
+            while self.remainingSeconds > 0 && !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second in nanoseconds
+                self.remainingSeconds -= 1
             }
 
             if !Task.isCancelled {
-                state = .expired
+                self.state = .expired
             }
         }
     }

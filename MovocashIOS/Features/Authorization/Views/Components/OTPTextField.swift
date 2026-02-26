@@ -31,7 +31,7 @@ struct OTPTextField: View {
                 .textContentType(.oneTimeCode)
                 .foregroundColor(.clear)
                 .accentColor(.clear)
-                .onChange(of: code) { newValue in
+                .onChangeCompat(of: code) { newValue in
                     if newValue.count > 6 {
                         code = String(newValue.prefix(6))
                     }

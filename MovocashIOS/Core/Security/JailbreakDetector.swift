@@ -9,7 +9,7 @@ import Foundation
 import UIKit
 import MachO
 
-final class JailbreakDetector {
+actor JailbreakDetector {
     static let shared = JailbreakDetector()
     private init() {}
     

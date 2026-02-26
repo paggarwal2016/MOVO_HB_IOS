@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct PhoneInputView: View {
-    @StateObject var viewModel = AuthViewModel(network: NetworkClient())
+    @StateObject private var viewModel = AuthViewModel(network: NetworkClient.shared)
     @State private var phoneNumber: String = "" // TODO need to remove
     @State private var showError: Bool = false
     
@@ -17,7 +17,7 @@ struct PhoneInputView: View {
     @State private var previousText: String = ""
     
     var body: some View {
-        NavigationStack {
+        NavigationWrapper {
             ZStack {
                 VStack(alignment: .leading, spacing: 24) {
                     
@@ -35,7 +35,7 @@ struct PhoneInputView: View {
                             TextField("(123) 456-7890", text: $displayText)
                                 .keyboardType(.numberPad)
                                 .font(.title3)
-                                .onChange(of: displayText) { newValue in
+                                .onChangeCompat(of: displayText) { newValue in
 
                                     let isDeleting = newValue.count < previousText.count
                                     var digits = PhoneFormatter.raw(newValue)
@@ -107,8 +107,9 @@ struct PhoneInputView: View {
                 //                }
                 
                 // Modern Navigation API for iOS 16+
-                .navigationDestination(isPresented: $viewModel.showOTP) {
+                .navigationDestinationCompat(isPresented: $viewModel.showOTP) {
                     OTPVerificationView(authVM: viewModel, phoneNumber: "+1\(rawPhone)", context: "registration")
+                        .sensitiveScreen()
                 }
                 
                 if viewModel.state == .loading {
