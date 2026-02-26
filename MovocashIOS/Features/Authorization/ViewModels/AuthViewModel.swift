@@ -6,61 +6,60 @@
 //
 
 import SwiftUI
-import Combine
 
+@MainActor
 final class AuthViewModel: ObservableObject {
-    
+
     @Published var state: AuthState = .idle
     @Published var showOTP: Bool = false
-    
+
     private let network: NetworkService
-    private var cancellables = Set<AnyCancellable>()
-        
+    private var currentTask: Task<Void, Never>?
+
     init(network: NetworkService) {
         self.network = network
     }
-    
-    func sendOTP(phone: String, context: String) {
-        
-        guard state != .loading else { return }
-        state = .loading
-        
-        network.request(AuthAPI.messengerOTP(phoneNumber: phone, context: context))
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                guard let self = self else { return }
-                if case .failure(let error) = completion {
-                    state = .idle
-                    AlertManager.shared.showError(error.localizedDescription)
-                }
-            } receiveValue: { (response: SuccessResponse) in
-                self.state = .otpSent
-                self.showOTP = true  // <-- trigger navigation
-            }
-            .store(in: &cancellables)
+
+    deinit {
+        currentTask?.cancel()
     }
-    
-    
-    func validateOTP(phone: String, code: String) {
-        
+
+    func sendOTP(phone: String, context: String) {
+
         guard state != .loading else { return }
         state = .loading
-        
-        network.request(AuthAPI.tokenSMS(phoneNumber: phone, code: code))
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                guard let self = self else { return }
-                
-                if case .failure(let error) = completion {
-                    state = .idle
-                    AlertManager.shared.showError(error.localizedDescription)
-                }
-                
-            } receiveValue: { [weak self] (response: RefreshTokenResponse) in
-                guard let self = self else { return }
-                
+
+        currentTask?.cancel()
+        currentTask = Task {
+            do {
+                let _: SuccessResponse = try await network.request(
+                    AuthAPI.messengerOTP(phoneNumber: phone, context: context)
+                )
+                state = .otpSent
+                showOTP = true
+            } catch is CancellationError {
+                // Task was cancelled — no UI update needed
+            } catch {
+                state = .idle
+                AlertManager.shared.showError(error.localizedDescription)
+            }
+        }
+    }
+
+    func validateOTP(phone: String, code: String) {
+
+        guard state != .loading else { return }
+        state = .loading
+
+        currentTask?.cancel()
+        currentTask = Task {
+            do {
+                let response: RefreshTokenResponse = try await network.request(
+                    AuthAPI.tokenSMS(phoneNumber: phone, code: code)
+                )
+
                 AuthManager.shared.updateAccessToken(response.accessToken)
-                // Save refresh token safely
+
                 do {
                     try KeychainManager.shared.save(
                         response.refreshToken,
@@ -70,9 +69,15 @@ final class AuthViewModel: ObservableObject {
                 } catch {
                     AlertManager.shared.showError("Failed to save token: \(error.localizedDescription)")
                 }
-                self.state = .verified
+
+                state = .verified
+            } catch is CancellationError {
+                // Task was cancelled — no UI update needed
+            } catch {
+                state = .idle
+                AlertManager.shared.showError(error.localizedDescription)
             }
-            .store(in: &cancellables)
+        }
     }
 }
 

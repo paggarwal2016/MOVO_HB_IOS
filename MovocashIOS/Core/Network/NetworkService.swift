@@ -6,8 +6,7 @@
 //
 
 import Foundation
-import Combine
 
-protocol NetworkService {
-    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<T, NetworkError>
+nonisolated protocol NetworkService: Sendable {
+    func request<T: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> T
 }

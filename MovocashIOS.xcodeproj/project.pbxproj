@@ -41,6 +41,7 @@
 		146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A02F4F0A2100BED014 /* AlertManager.swift */; };
 		146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A22F4F272500BED014 /* PhoneFormatter.swift */; };
 		146819A52F4F2F9400BED014 /* OTPInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A42F4F2F9400BED014 /* OTPInputView.swift */; };
+		14C3D1022F5F100000BED014 /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C3D1012F5F100000BED014 /* NetworkError.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,6 +109,7 @@
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		146819A22F4F272500BED014 /* PhoneFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFormatter.swift; sourceTree = "<group>"; };
 		146819A42F4F2F9400BED014 /* OTPInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPInputView.swift; sourceTree = "<group>"; };
+		14C3D1012F5F100000BED014 /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -154,6 +156,7 @@
 				146819522F4DE6CF00BED014 /* Endpoint.swift */,
 				146819532F4DE6CF00BED014 /* HTTPMethod.swift */,
 				146819542F4DE6CF00BED014 /* NetworkClient.swift */,
+				14C3D1012F5F100000BED014 /* NetworkError.swift */,
 				146819552F4DE6CF00BED014 /* NetworkService.swift */,
 				146819562F4DE6CF00BED014 /* SSLPinning.swift */,
 			);
@@ -475,6 +478,7 @@
 				146819772F4DE6CF00BED014 /* Environment.swift in Sources */,
 				146819782F4DE6CF00BED014 /* NetworkService.swift in Sources */,
 				146819792F4DE6CF00BED014 /* NetworkClient.swift in Sources */,
+				14C3D1022F5F100000BED014 /* NetworkError.swift in Sources */,
 				1468197A2F4DE6CF00BED014 /* AuthAPI.swift in Sources */,
 				1468197B2F4DE6CF00BED014 /* BiometricManager.swift in Sources */,
 				1468197C2F4DE6CF00BED014 /* OTPVerificationView.swift in Sources */,
@@ -673,7 +677,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -707,7 +711,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
