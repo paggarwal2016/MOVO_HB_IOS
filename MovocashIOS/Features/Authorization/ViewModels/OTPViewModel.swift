@@ -19,7 +19,7 @@ enum OTPViewState {
 final class OTPViewModel: ObservableObject {
 
     @Published var otpText: String = ""
-    @Published var remainingSeconds: Int = 10
+    @Published var remainingSeconds: Int = 30
     @Published var state: OTPViewState = .idle
 
     let maxLength: Int = 6
@@ -35,7 +35,7 @@ final class OTPViewModel: ObservableObject {
     }
 
     // MARK: - Start Timer (iOS 15+ compatible)
-    func startTimer(seconds: Int = 10) {
+    func startTimer(seconds: Int = 30) {
         stopTimer()
         remainingSeconds = seconds
         state = .counting

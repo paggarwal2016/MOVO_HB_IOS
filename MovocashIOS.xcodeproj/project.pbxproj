@@ -27,7 +27,6 @@
 		146819882F4DE6CF00BED014 /* KycViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468196E2F4DE6CF00BED014 /* KycViewModel.swift */; };
 		146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819662F4DE6CF00BED014 /* CompromisedDeviceView.swift */; };
 		1468198A2F4DE6CF00BED014 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194E2F4DE6CF00BED014 /* AppConfig.swift */; };
-		1468198B2F4DE6CF00BED014 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819742F4DE6CF00BED014 /* ContentView.swift */; };
 		1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819702F4DE6CF00BED014 /* SpinnerView.swift */; };
 		1468198D2F4DE6CF00BED014 /* AuthRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819612F4DE6CF00BED014 /* AuthRequest.swift */; };
 		1468198E2F4DE6CF00BED014 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468195C2F4DE6CF00BED014 /* KeychainManager.swift */; };
@@ -101,7 +100,6 @@
 		1468196E2F4DE6CF00BED014 /* KycViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KycViewModel.swift; sourceTree = "<group>"; };
 		146819702F4DE6CF00BED014 /* SpinnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerView.swift; sourceTree = "<group>"; };
 		146819732F4DE6CF00BED014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		146819742F4DE6CF00BED014 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSApp.swift; sourceTree = "<group>"; };
 		146819942F4DE71C00BED014 /* MovocashIOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSTests.swift; sourceTree = "<group>"; };
 		146819972F4DE72C00BED014 /* MovocashIOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSTests.swift; sourceTree = "<group>"; };
@@ -306,7 +304,6 @@
 				1468196F2F4DE6CF00BED014 /* KYC */,
 				146819722F4DE6CF00BED014 /* Shared */,
 				146819732F4DE6CF00BED014 /* Assets.xcassets */,
-				146819742F4DE6CF00BED014 /* ContentView.swift */,
 				146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */,
 			);
 			path = MovocashIOS;
@@ -526,7 +523,6 @@
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
 				146819A52F4F2F9400BED014 /* OTPInputView.swift in Sources */,
 				1468198A2F4DE6CF00BED014 /* AppConfig.swift in Sources */,
-				1468198B2F4DE6CF00BED014 /* ContentView.swift in Sources */,
 				1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */,
 				1468198D2F4DE6CF00BED014 /* AuthRequest.swift in Sources */,
 				1468199D2F4EDEF000BED014 /* OTPDigitBox.swift in Sources */,

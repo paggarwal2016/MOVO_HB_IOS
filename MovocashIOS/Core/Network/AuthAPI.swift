@@ -13,7 +13,7 @@ enum AuthAPI: Endpoint {
     case tokenSMS(phoneNumber: String, code: String)
     case refreshToken(refreshToken: String)
     
-    // MARK: - Enviroment Configure
+    // MARK: - Environment Configure
     var environment: Environment { AppConfig.environment }
     
     // MARK: - URL Path

@@ -7,12 +7,12 @@
 import Foundation
 
 enum Environment {
-    case QA
+    case qa
     case production
     
     var baseURLString: String {
         switch self {
-        case .QA:
+        case .qa:
             return "https://api.mobile-banking-qa.herringbank.com"
         case .production:
             return "https://api.mobile-banking.herringbank.com" // TODO: - AI info - Provide Correct production url
