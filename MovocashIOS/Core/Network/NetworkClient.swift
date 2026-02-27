@@ -34,7 +34,7 @@ actor NetworkClient {
         
         self.session = URLSession(
             configuration: config,
-            delegate: SecureSessionDelegate(enabled: true), // customizable
+            delegate: SecureSessionDelegate(), // customizable
             delegateQueue: nil
         )
     }
@@ -117,17 +117,17 @@ actor NetworkClient {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            await SecureLogger.log("Network error: \(error.localizedDescription)", level: .error)
+            await SecureLogger.error("Network error: \(error.localizedDescription)", category: .network)
             throw NetworkError.noInternet
         }
         
         // Validate HTTP response
         guard let http = response as? HTTPURLResponse else {
-            await SecureLogger.log("Invalid response for URL: \(request.url?.absoluteString ?? "Unknown")", level: .error)
+            await SecureLogger.error("Invalid response for URL: \(request.url?.absoluteString ?? "Unknown")", category: .network)
             throw NetworkError.invalidResponse
         }
         
-        await SecureLogger.log("API Status Code: \(http.statusCode)")
+        await SecureLogger.info("API Status Code: \(http.statusCode)", category: .network)
         
         if http.statusCode == 401 {
             throw NetworkError.unauthorized
@@ -135,20 +135,18 @@ actor NetworkClient {
         
         if !(200...299).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                await SecureLogger.log("API Error: \(apiError.message)", level: .error)
+                await SecureLogger.error("API Error: \(apiError.message)", category: .network)
                 throw NetworkError.serverMessage(apiError.message)
             }
             throw NetworkError.unknown
         }
         
-        await SecureLogger.log("Response :\(String(data: data, encoding: .utf8) ?? "")", level: .debug)
+        await SecureLogger.debug("Response :\(String(data: data, encoding: .utf8) ?? "")", category: .network)
         // Decode successful response
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
-            await SecureLogger.log(
-                "Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)",
-                level: .error)
+            await SecureLogger.error("Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)", category: .network)
             throw NetworkError.decodingError
         }
     }

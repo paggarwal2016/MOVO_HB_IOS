@@ -89,24 +89,24 @@ struct OTPVerificationView: View {
                 verifyOTP()
             }
         }
-        .onChangeCompat(of: authVM.state) { newState in
-            if newState == .verified {
-                AlertManager.shared.showConfirmation(
-                    title: "Success",
-                    message: "OTP verified successfully",
-                    onConfirm: {
-                        dismiss()
-                        authVM.state = .idle
-                        authVM.showOTP = false
-                    },
-                    onCancel: {
-                        otpVM.otpText = ""
-                        otpVM.state = .expired
-                        otpVM.stopTimer()
-                    }
-                )
-            }
-        }
+//        .onChangeCompat(of: authVM.state) { newState in
+//            if newState == .verified {
+//                AlertManager.shared.showConfirmation(
+//                    title: "Success",
+//                    message: "OTP verified successfully",
+//                    onConfirm: {
+//                        dismiss()
+//                        authVM.state = .idle
+//                        authVM.showOTP = false
+//                    },
+//                    onCancel: {
+//                        otpVM.otpText = ""
+//                        otpVM.state = .expired
+//                        otpVM.stopTimer()
+//                    }
+//                )
+//            }
+//        }
     }
 
     // MARK: - Digit extractor

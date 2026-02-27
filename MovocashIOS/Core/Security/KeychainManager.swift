@@ -48,7 +48,7 @@ final class KeychainManager {
     ) throws {
         
         guard let data = value.data(using: .utf8) else {
-            SecureLogger.log("❌ Invalid data for key '\(key)'", level: .error)
+            SecureLogger.error("Invalid data for key '\(key)'", category: .auth)
             throw KeychainError.invalidData
         }
         
@@ -60,7 +60,7 @@ final class KeychainManager {
         case .backgroundSafe:
             query[kSecAttrAccessible as String] =
             kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-            SecureLogger.log("Saving '\(key)' as BACKGROUND SAFE")
+            SecureLogger.info("Saving '\(key)' as BACKGROUND SAFE")
             
             // Requires FaceID / TouchID
         case .userPresence:
@@ -71,11 +71,11 @@ final class KeychainManager {
                 [.biometryCurrentSet],
                 &error
             ) else {
-                SecureLogger.log("❌ Failed creating biometric access control for '\(key)'", level: .error)
+                SecureLogger.error("Failed creating biometric access control for '\(key)'", category: .auth)
                 throw error!.takeRetainedValue() as Error
             }
             query[kSecAttrAccessControl as String] = access
-            SecureLogger.log("Saving '\(key)' as BIOMETRIC PROTECTED")
+            SecureLogger.info("Saving '\(key)' as BIOMETRIC PROTECTED")
         }
         
         // Update or Insert
@@ -84,13 +84,13 @@ final class KeychainManager {
         if status == errSecSuccess {
             let attributes: [String: Any] = [kSecValueData as String: data]
             try checkStatus(SecItemUpdate(query as CFDictionary, attributes as CFDictionary))
-            SecureLogger.log("Updated key '\(key)' successfully")
+            SecureLogger.info("Updated key '\(key)' successfully")
         } else if status == errSecItemNotFound {
             query[kSecValueData as String] = data
             try checkStatus(SecItemAdd(query as CFDictionary, nil))
-            SecureLogger.log("Saved key '\(key)' successfully")
+            SecureLogger.info("Saved key '\(key)' successfully")
         } else {
-            SecureLogger.log("❌ Save failed for '\(key)' OSStatus: \(status)", level: .error)
+            SecureLogger.error("Save failed for '\(key)' OSStatus: \(status)", category: .auth)
             try checkStatus(status)
         }
     }
@@ -110,9 +110,9 @@ final class KeychainManager {
             let context = LAContext()
             context.localizedReason = prompt
             query[kSecUseAuthenticationContext as String] = context
-            SecureLogger.log("Reading '\(key)' with biometric prompt")
+            SecureLogger.info("Reading '\(key)' with biometric prompt")
         } else {
-            SecureLogger.log("Reading '\(key)' without biometric")
+            SecureLogger.info("Reading '\(key)' without biometric")
         }
         
         var result: AnyObject?
@@ -120,7 +120,7 @@ final class KeychainManager {
         
         switch status {
         case errSecSuccess:
-            SecureLogger.log("Read key '\(key)' success")
+            SecureLogger.info("Read key '\(key)' success")
             guard let data = result as? Data,
                   let string = String(data: data, encoding: .utf8) else {
                 throw KeychainError.invalidData
@@ -128,19 +128,19 @@ final class KeychainManager {
             return string
             
         case errSecItemNotFound:
-            SecureLogger.log("Key '\(key)' not found")
+            SecureLogger.info("Key '\(key)' not found")
             throw KeychainError.itemNotFound
             
         case errSecAuthFailed:
-            SecureLogger.log("Biometric auth failed for '\(key)'")
+            SecureLogger.info("Biometric auth failed for '\(key)'")
             throw KeychainError.authFailed
             
         case errSecInteractionNotAllowed:
-            SecureLogger.log("'\(key)' blocked — biometric required in background")
+            SecureLogger.info("'\(key)' blocked — biometric required in background")
             throw KeychainError.interactionNotAllowed
             
         default:
-            SecureLogger.log("❌ Read failed '\(key)' OSStatus: \(status)", level: .error)
+            SecureLogger.error("Read failed '\(key)' OSStatus: \(status)", category: .auth)
             throw KeychainError.unexpectedStatus(status)
         }
     }
@@ -152,7 +152,7 @@ final class KeychainManager {
         let status = SecItemDelete(query as CFDictionary)
         
         if status != errSecSuccess && status != errSecItemNotFound {
-            SecureLogger.log("Deleted key '\(key)'")
+            SecureLogger.info("Deleted key '\(key)'")
             try checkStatus(status)
         }
     }

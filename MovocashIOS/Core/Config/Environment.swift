@@ -9,13 +9,13 @@ import Foundation
 enum Environment {
     case qa
     case production
-    
-    var baseURLString: String {
+
+    var baseURL: URL {
         switch self {
         case .qa:
-            return "https://api.mobile-banking-qa.herringbank.com"
+            return URL(string: "https://api.mobile-banking-qa.herringbank.com")!
         case .production:
-            return "https://api.mobile-banking.herringbank.com" // TODO: - AI info - Provide Correct production url
+            return URL(string: "https://api.mobile-banking.herringbank.com")!
         }
     }
 }

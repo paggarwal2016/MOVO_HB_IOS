@@ -21,7 +21,7 @@ extension Endpoint {
     @MainActor
     var urlRequest: URLRequest? {
         
-        guard var components = URLComponents(string: environment.baseURLString) else {
+        guard var components = URLComponents(string: environment.baseURL.absoluteString) else {
             return nil
         }
         components.path += path

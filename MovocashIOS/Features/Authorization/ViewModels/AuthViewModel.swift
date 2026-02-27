@@ -56,6 +56,15 @@ final class AuthViewModel: ObservableObject {
                     protection: .backgroundSafe
                 )
                 
+                // Configure SDK
+                await KYCManager.shared.configureSDK()
+                
+                // Update token (if needed)
+                KYCManager.shared.updateToken(response.accessToken)
+                
+                // Start KYC
+                KYCManager.shared.startKYC()
+                
                 self.state = .verified
             } catch {
                 self.state = .idle

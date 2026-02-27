@@ -79,6 +79,6 @@ struct OTPInputView: View {
     }
 
     private func verifyOTP() {
-        SecureLogger.log("OTP validation triggered") // TODO: - call API here
+        SecureLogger.info("OTP validation triggered") // TODO: - call API here
     }
 }

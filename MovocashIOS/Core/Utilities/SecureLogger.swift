@@ -17,27 +17,81 @@ enum SecureLogLevel: String {
     case error
 }
 
+// MARK: - Log Category
+
+enum SecureCategory: String {
+    case auth = "Auth"
+    case kyc = "KYC"
+    case network = "Network"
+    case payment = "Payment"
+    case general = "General"
+}
+
 // MARK: - Secure Logger
 
 final class SecureLogger {
 
     private static let subsystem = AppInfo.bundleIdentifier
-    private static let logger = Logger(subsystem: subsystem, category: "SecureLog")
+    private static var loggers: [String: Logger] = [:]
 
     private init() {}
 
-    // Public logging entry
-    static func log(
+    // MARK: - Public APIs
+
+    static func debug(
         _ message: @autoclosure () -> String,
-        level: SecureLogLevel = .debug,
+        category: SecureCategory = .general,
         file: String = #fileID,
         function: String = #function,
         line: Int = #line
     ) {
+        log(message(), level: .debug, category: category, file: file, function: function, line: line)
+    }
 
+    static func info(
+        _ message: @autoclosure () -> String,
+        category: SecureCategory = .general,
+        file: String = #fileID,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        log(message(), level: .info, category: category, file: file, function: function, line: line)
+    }
+
+    static func warning(
+        _ message: @autoclosure () -> String,
+        category: SecureCategory = .general,
+        file: String = #fileID,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        log(message(), level: .warning, category: category, file: file, function: function, line: line)
+    }
+
+    static func error(
+        _ message: @autoclosure () -> String,
+        category: SecureCategory = .general,
+        file: String = #fileID,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        log(message(), level: .error, category: category, file: file, function: function, line: line)
+    }
+
+    // MARK: - Core Log Method
+
+    private static func log(
+        _ message: String,
+        level: SecureLogLevel,
+        category: SecureCategory,
+        file: String,
+        function: String,
+        line: Int
+    ) {
         #if DEBUG
-        let sanitized = sanitize(message())
+        let sanitized = sanitize(message)
         let context = "[\(file):\(line)] \(function)"
+        let logger = getLogger(for: category.rawValue)
 
         switch level {
         case .debug:
@@ -50,6 +104,16 @@ final class SecureLogger {
             logger.error("\(sanitized, privacy: .public)")
         }
         #endif
+    }
+
+    private static func getLogger(for category: String) -> Logger {
+        if let existing = loggers[category] {
+            return existing
+        }
+
+        let newLogger = Logger(subsystem: subsystem, category: category)
+        loggers[category] = newLogger
+        return newLogger
     }
 }
 

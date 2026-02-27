@@ -48,6 +48,6 @@ struct MovocashIOSApp: App {
         //        await AuthManager.shared.logout()    // Actor-safe logout
         //        try? await KeychainManager.shared.deleteAll() // optional: clear tokens
         self.isDeviceCompromised = true
-        SecureLogger.log("Device is compromised. User forced to logout.")
+        SecureLogger.info("Device is compromised. User forced to logout.", category: .general)
     }
 }

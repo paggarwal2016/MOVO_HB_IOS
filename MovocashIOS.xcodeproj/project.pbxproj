@@ -40,10 +40,11 @@
 		146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A02F4F0A2100BED014 /* AlertManager.swift */; };
 		146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A22F4F272500BED014 /* PhoneFormatter.swift */; };
 		146819A52F4F2F9400BED014 /* OTPInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A42F4F2F9400BED014 /* OTPInputView.swift */; };
+		14B824DF2F5184E8003ACBD0 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14B824DE2F5184E8003ACBD0 /* MobileBankingSDK */; };
+		14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B824E02F51898E003ACBD0 /* KYCManager.swift */; };
 		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
 		14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5952F504AF8000D84FD /* NetworkError.swift */; };
 		14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */; };
-		998F86B72F517E480092C126 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 998F86B62F517E480092C126 /* MobileBankingSDK */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,6 +111,7 @@
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		146819A22F4F272500BED014 /* PhoneFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFormatter.swift; sourceTree = "<group>"; };
 		146819A42F4F2F9400BED014 /* OTPInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPInputView.swift; sourceTree = "<group>"; };
+		14B824E02F51898E003ACBD0 /* KYCManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCManager.swift; sourceTree = "<group>"; };
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -136,7 +138,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				998F86B72F517E480092C126 /* MobileBankingSDK in Frameworks */,
+				14B824DF2F5184E8003ACBD0 /* MobileBankingSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -277,6 +279,7 @@
 			isa = PBXGroup;
 			children = (
 				1468196E2F4DE6CF00BED014 /* KycViewModel.swift */,
+				14B824E02F51898E003ACBD0 /* KYCManager.swift */,
 			);
 			path = KYC;
 			sourceTree = "<group>";
@@ -378,7 +381,7 @@
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (
-				998F86B62F517E480092C126 /* MobileBankingSDK */,
+				14B824DE2F5184E8003ACBD0 /* MobileBankingSDK */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -457,7 +460,7 @@
 			mainGroup = 14BF482E2F4C873A00FD7B53;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				998F86B52F517E480092C126 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				14B824DD2F5184E8003ACBD0 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -520,6 +523,7 @@
 				146819842F4DE6CF00BED014 /* JailbreakDetector.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
+				14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */,
 				146819862F4DE6CF00BED014 /* OTPTextField.swift in Sources */,
 				146819872F4DE6CF00BED014 /* AuthResponse.swift in Sources */,
 				146819882F4DE6CF00BED014 /* KycViewModel.swift in Sources */,
@@ -878,7 +882,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		998F86B52F517E480092C126 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+		14B824DD2F5184E8003ACBD0 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
 			requirement = {
@@ -889,9 +893,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		998F86B62F517E480092C126 /* MobileBankingSDK */ = {
+		14B824DE2F5184E8003ACBD0 /* MobileBankingSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 998F86B52F517E480092C126 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			package = 14B824DD2F5184E8003ACBD0 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
 			productName = MobileBankingSDK;
 		};
 /* End XCSwiftPackageProductDependency section */

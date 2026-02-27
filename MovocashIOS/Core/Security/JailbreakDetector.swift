@@ -68,9 +68,3 @@ actor JailbreakDetector {
         return false
     }
 }
-
-// TODO: - used App Launch
-
-//if JailbreakDetector.shared.isJailbroken {
-//    fatalError("Jailbroken device detected.")
-//}
