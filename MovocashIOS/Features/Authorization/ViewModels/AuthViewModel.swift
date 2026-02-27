@@ -58,14 +58,17 @@ final class AuthViewModel: ObservableObject {
                 
                 // Configure SDK
                 await KYCManager.shared.configureSDK()
-                
-                // Update token (if needed)
-                KYCManager.shared.updateToken(response.accessToken)
-                
-                // Start KYC
-                KYCManager.shared.startKYC()
-                
-                self.state = .verified
+
+                // Start KYC and wait for result
+                let kycResult = await KYCManager.shared.startKYC()
+
+                switch kycResult {
+                case .success:
+                    self.state = .verified
+                case .failed(let error):
+                    self.state = .idle
+                    AlertManager.shared.showError(error.localizedDescription)
+                }
             } catch {
                 self.state = .idle
                 AlertManager.shared.showError(error.localizedDescription)
