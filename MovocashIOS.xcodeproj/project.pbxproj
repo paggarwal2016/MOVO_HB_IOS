@@ -43,6 +43,7 @@
 		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
 		14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5952F504AF8000D84FD /* NetworkError.swift */; };
 		14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */; };
+		998F86B72F517E480092C126 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 998F86B62F517E480092C126 /* MobileBankingSDK */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -135,6 +136,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				998F86B72F517E480092C126 /* MobileBankingSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,6 +378,7 @@
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (
+				998F86B62F517E480092C126 /* MobileBankingSDK */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -454,6 +457,7 @@
 			mainGroup = 14BF482E2F4C873A00FD7B53;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				998F86B52F517E480092C126 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -700,7 +704,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -734,7 +738,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -872,6 +876,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		998F86B52F517E480092C126 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		998F86B62F517E480092C126 /* MobileBankingSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 998F86B52F517E480092C126 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			productName = MobileBankingSDK;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 14BF482F2F4C873A00FD7B53 /* Project object */;
 }

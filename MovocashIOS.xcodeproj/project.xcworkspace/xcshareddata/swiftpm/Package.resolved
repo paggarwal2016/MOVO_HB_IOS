@@ -1,0 +1,23 @@
+{
+  "originHash" : "853e8037dc6a0e2cdb2c2d37da0be3c44d775ffac291505ee7dc6b2da9de678a",
+  "pins" : [
+    {
+      "identity" : "blinkid-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/BlinkID/blinkid-ios.git",
+      "state" : {
+        "revision" : "17a80de7d39eecefb9f8e7b22acbf7ed140ff344",
+        "version" : "7.6.1"
+      }
+    },
+    {
+      "identity" : "mobile-banking.mobile-banking-ios-sdk",
+      "kind" : "registry",
+      "location" : "",
+      "state" : {
+        "version" : "1.4.0"
+      }
+    }
+  ],
+  "version" : 3
+}
