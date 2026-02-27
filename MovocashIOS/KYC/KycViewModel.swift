@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import MobileBankingSDK
+import BlinkIDUX
 import Combine
 
 @MainActor
