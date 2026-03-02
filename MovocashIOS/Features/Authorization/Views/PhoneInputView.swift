@@ -8,16 +8,23 @@
 import SwiftUI
 
 struct PhoneInputView: View {
-    @StateObject private var viewModel = AuthViewModel(network: NetworkClient.shared)
-    @State private var phoneNumber: String = "" // TODO need to remove
+    @StateObject private var viewModel = AuthViewModel()
     @State private var showError: Bool = false
     
     @State private var displayText: String = ""
     @State private var rawPhone: String = ""
     @State private var previousText: String = ""
     
+    @FocusState private var isFocused: Bool
+    
+    init(network: NetworkClient = .shared) {
+        _viewModel = StateObject(
+            wrappedValue: AuthViewModel(network: network)
+        )
+    }
+    
     var body: some View {
-        NavigationWrapper {
+        NavigationStack {
             ZStack {
                 VStack(alignment: .leading, spacing: 24) {
                     
@@ -35,6 +42,7 @@ struct PhoneInputView: View {
                             TextField("(123) 456-7890", text: $displayText)
                                 .keyboardType(.numberPad)
                                 .font(.title3)
+                                .focused($isFocused)
                                 .onChangeCompat(of: displayText) { newValue in
 
                                     let isDeleting = newValue.count < previousText.count
@@ -42,9 +50,7 @@ struct PhoneInputView: View {
 
                                     // HARD LIMIT — block typing after 10 digits
                                     if digits.count > 10 {
-                                        DispatchQueue.main.async {
-                                            displayText = previousText
-                                        }
+                                        displayText = previousText
                                         return
                                     }
 
@@ -55,9 +61,7 @@ struct PhoneInputView: View {
 
                                     let formatted = PhoneFormatter.formatted(digits)
 
-                                    DispatchQueue.main.async {
-                                        displayText = formatted
-                                    }
+                                    displayText = formatted
 
                                     rawPhone = digits
                                     previousText = formatted
@@ -81,6 +85,7 @@ struct PhoneInputView: View {
                     Spacer()
                     
                     Button {
+                        isFocused = false
                         guard rawPhone.count == 10 else {
                             AlertManager.shared.showError("Enter valid 10 digit mobile number")
                             return
@@ -91,31 +96,33 @@ struct PhoneInputView: View {
                             .bold()
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.blue)
+                            .background(AppColors.primary)
                             .foregroundColor(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }
                 .padding()
-                
-                // TODO: ios 16
-                //                NavigationLink(
-                //                    destination: OTPVerificationView(phone: phoneNumber),
-                //                    isActive: $viewModel.otpSent
-                //                ) {
-                //                    EmptyView()
-                //                }
-                
-                // Modern Navigation API for iOS 16+
                 .navigationDestinationCompat(isPresented: $viewModel.showOTP) {
                     OTPVerificationView(authVM: viewModel, phoneNumber: "+1\(rawPhone)", context: "registration")
-                        .sensitiveScreen()
+                        //.sensitiveScreen()
                 }
                 
                 if viewModel.state == .loading {
                     SpinnerView()
                 }
             }
+            .onAppear {
+                displayText = ""
+                rawPhone = ""
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isFocused = true
+                }
+            }
+            .navigationTitle("Movo Cash")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(AppColors.primary, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
 }
