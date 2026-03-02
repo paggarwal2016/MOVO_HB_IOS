@@ -112,8 +112,6 @@ struct PhoneInputView: View {
                 }
             }
             .onAppear {
-                displayText = ""
-                rawPhone = ""
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     isFocused = true
                 }
