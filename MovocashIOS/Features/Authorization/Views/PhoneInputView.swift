@@ -17,6 +17,8 @@ struct PhoneInputView: View {
     
     @FocusState private var isFocused: Bool
     
+    @StateObject private var ackVM = ACHViewModel()
+    
     init(network: NetworkClient = .shared) {
         _viewModel = StateObject(
             wrappedValue: AuthViewModel(network: network)
@@ -121,6 +123,25 @@ struct PhoneInputView: View {
             .toolbarBackground(AppColors.primary, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar { // TODO: - remove future
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        SecureLogger.info("Initiated plaid API", category: .plaid)
+                        Task { @MainActor in
+                            do {
+                                let response = try await ackVM.fetchLinkToken()
+                                SecureLogger.info("Fetched link token: \(response)", category: .kyc)
+                                // Update UI safely here
+                            } catch {
+                                SecureLogger.error("Failed to fetch link token: \(error.localizedDescription)", category: .kyc)
+                            }
+                        }
+                    }) {
+                        Image(systemName: "bell") // Replace with your icon or Text("Action")
+                            .foregroundColor(.white)
+                    }
+                }
+            }
         }
     }
 }
