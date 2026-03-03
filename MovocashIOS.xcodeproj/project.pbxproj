@@ -123,6 +123,16 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		1494AB672F56F3BC00E0F1AC /* Services */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Services;
+			sourceTree = "<group>";
+		};
+		1494AB692F56FA3400E0F1AC /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
 		14DBC58E2F5014AD000D84FD /* Extensions */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Extensions;
@@ -281,6 +291,8 @@
 			isa = PBXGroup;
 			children = (
 				14B824E02F51898E003ACBD0 /* KYCManager.swift */,
+				1494AB692F56FA3400E0F1AC /* ViewModels */,
+				1494AB672F56F3BC00E0F1AC /* Services */,
 			);
 			path = KYC;
 			sourceTree = "<group>";
@@ -379,6 +391,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				1494AB672F56F3BC00E0F1AC /* Services */,
+				1494AB692F56FA3400E0F1AC /* ViewModels */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 			);

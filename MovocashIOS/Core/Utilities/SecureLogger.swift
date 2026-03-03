@@ -25,6 +25,7 @@ enum SecureCategory: String {
     case network = "Network"
     case payment = "Payment"
     case general = "General"
+    case plaid = "plaid"
 }
 
 // MARK: - Secure Logger
