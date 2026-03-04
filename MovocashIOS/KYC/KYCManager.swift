@@ -19,22 +19,32 @@ enum KYCResult {
 
 // MARK: - KYC Errors
 
-enum KYCError: LocalizedError {
+enum KYCError: LocalizedError, Equatable {
+    
     case notConfigured
-    case noViewController
+    case noPresenter
+    case cancelled
+    case rejected
     case timeout
+    case sdkError(String)
     case unknown
     
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "KYC SDK is not configured"
-        case .noViewController:
-            return "Unable to present KYC screen"
+            return "Verification system not ready. Please try again."
+        case .noPresenter:
+            return "Unable to start verification."
+        case .cancelled:
+            return "Verification was cancelled."
+        case .rejected:
+            return "Verification was not approved."
         case .timeout:
-            return "KYC process timed out"
+            return "Verification timed out. Please try again."
+        case .sdkError(let message):
+            return message
         case .unknown:
-            return "An unknown KYC error occurred"
+            return "Something went wrong. Please try again."
         }
     }
 }
@@ -47,7 +57,32 @@ final class KYCManager {
     
     private var isConfigured = false
     private let timeoutSeconds: UInt64 = 120
-    private weak var currentPresenter: UIViewController?
+    private weak var presenter: UIViewController?
+    
+    
+    func configureSDK(officeId: String) async {
+        guard !isConfigured else { return }
+        
+        SecureLogger.info("Starting KYC configuration", category: .kyc)
+        
+        guard let token = await AuthManager.shared.getAccessToken() else {
+            SecureLogger.error("Missing access token", category: .kyc)
+            return
+        }
+        
+        let baseURL = AppConfig.baseURL.absoluteString
+        
+        MobileBankingSDK.configure(
+            authToken: token,
+            baseUrl: baseURL,
+            officeId: officeId,
+            theme: makeKYCTheme(),
+            enableVerboseLogs: true
+        )
+        
+        isConfigured = true
+        SecureLogger.info("KYC SDK configured", category: .kyc)
+    }
     
     // MARK: - Configure SDK
     
@@ -62,17 +97,20 @@ final class KYCManager {
         
         let baseURL = AppConfig.baseURL.absoluteString
         
-        MobileBankingSDK.configure(authToken: token, baseUrl: baseURL, theme: makeKYCTheme(), enableVerboseLogs: true)
+        MobileBankingSDK.configure(authToken: token, baseUrl: baseURL, theme: makeKYCTheme(), enableVerboseLogs: true) // office TODO
         
         isConfigured = true
         SecureLogger.info("KYC SDK configured successfully", category: .kyc)
     }
     
+    
+    // MARK: - Update Token (If Refreshed)
     func updateToken(_ token: String) {
         MobileBankingSDK.updateAuthToken(token)
         SecureLogger.info("KYC token updated", category: .kyc)
     }
     
+    // MARK: - Clear Session
     func clearSession() {
         MobileBankingSDK.clearSession()
         SecureLogger.info("KYC session cleared", category: .kyc)
@@ -80,165 +118,119 @@ final class KYCManager {
     
     // MARK: - Start KYC Flow
     
-    func startKYC() async -> KYCResult {
+    func start() async throws -> User {
         
         guard isConfigured else {
-            SecureLogger.error("KYC not configured", category: .kyc)
-            return .failed(KYCError.notConfigured)
+            throw KYCError.notConfigured
         }
         
-        guard let presentingVC = UIApplication.topViewController() else {
-            return .failed(KYCError.noViewController)
+        guard let topVC = UIApplication.topViewController() else {
+            throw KYCError.noPresenter
         }
         
-        currentPresenter = presentingVC
+        presenter = topVC
         
-        SecureLogger.info("Starting KYC flow", category: .kyc)
-        
-        return await withCheckedContinuation { continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             
-            var successObserver: NSObjectProtocol?
-            var errorObserver: NSObjectProtocol?
-            var hasResumed = false
+            var resumed = false
             
-            func resumeOnce(_ result: KYCResult) {
-                guard !hasResumed else { return }
-                hasResumed = true
-                continuation.resume(returning: result)
+            func resumeOnce(_ result: Result<User, Error>) {
+                guard !resumed else { return }
+                resumed = true
+                
+                cleanup()
+                
+                switch result {
+                case .success(let user):
+                    continuation.resume(returning: user)
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
             }
             
             func cleanup() {
-                if let successObserver {
-                    NotificationCenter.default.removeObserver(successObserver)
-                }
-                if let errorObserver {
-                    NotificationCenter.default.removeObserver(errorObserver)
-                }
+                NotificationCenter.default.removeObserver(self)
+                dismiss()
             }
             
-            func dismissSDK() {
+            func dismiss() {
                 Task { @MainActor in
-                    self.currentPresenter?.dismiss(animated: true)
-                    self.currentPresenter = nil
+                    self.presenter?.dismiss(animated: true)
+                    self.presenter = nil
                 }
             }
             
-            // MARK: - Success Observer
-            
-            successObserver = NotificationCenter.default.addObserver(
+            // SUCCESS
+            NotificationCenter.default.addObserver(
                 forName: .verificationCompleted,
                 object: nil,
                 queue: .main
             ) { notification in
                 
-                cleanup()
-                
                 guard let user = notification.object as? User else {
-                    SecureLogger.error("KYC success but User missing", category: .kyc)
-                    resumeOnce(.failed(KYCError.unknown))
+                    resumeOnce(.failure(KYCError.unknown))
                     return
                 }
-                
-                SecureLogger.info("KYC success for userId: \(user)", category: .kyc)
-                
-                dismissSDK()
                 resumeOnce(.success(user))
             }
             
-            // MARK: - Error Observer
-            
-            errorObserver = NotificationCenter.default.addObserver(
+            // ERROR
+            NotificationCenter.default.addObserver(
                 forName: .scannerError,
                 object: nil,
                 queue: .main
             ) { notification in
-                cleanup()
                 
-                let error = notification.object as? Error ?? KYCError.unknown
-                print("error =",error)
-                SecureLogger.error("KYC error: \(error.localizedDescription)", category: .kyc)
-                
-                dismissSDK()
-                NotificationCenter.default.post(name: .otpFlowCancel, object: nil)
-                resumeOnce(.failed(error))
+                if let error = notification.object as? Error {
+                    resumeOnce(.failure(KYCError.sdkError(error.localizedDescription)))
+                } else {
+                    resumeOnce(.failure(KYCError.unknown))
+                }
             }
             
-            // MARK: - Timeout Protection
-            
+            // TIMEOUT
             Task {
                 try? await Task.sleep(nanoseconds: timeoutSeconds * 1_000_000_000)
-                
-                guard !hasResumed else { return }
-                
-                SecureLogger.error("KYC timeout", category: .kyc)
-                
-                cleanup()
-                dismissSDK()
-                NotificationCenter.default.post(name: .otpFlowCancel, object: nil)
-                resumeOnce(.failed(KYCError.timeout))
+                resumeOnce(.failure(KYCError.timeout))
             }
             
-            // MARK: - Start SDK
-            
-            MobileBankingSDK.startKyc(presentingViewController: presentingVC)
+            MobileBankingSDK.startKyc(presentingViewController: topVC)
         }
     }
+    
     
     // MARK: - // Theme Configure
     
     private func makeKYCTheme() -> Theme {
         
-        let primary = UIColor(red: 18/255, green: 31/255, blue: 56/255, alpha: 1)
-        let accent  = UIColor(red: 77/255, green: 163/255, blue: 255/255, alpha: 1) // fintech blue
-        
         return Theme(
             backgroundGradient: [
-                primary,
-                UIColor(
-                    red: 10/255,
-                    green: 18/255,
-                    blue: 36/255,
-                    alpha: 1
-                )
-            ],
+                AppColors.background,
+                AppColors.background
+            ], // Back theme
             
-            accentColor: accent,
+            accentColor: AppColors.accent, // Try againing and icon Disclaimer
             
             labelProps: LabelProps(
-                primaryTextColor: accent,
-                secondaryTextColor: UIColor(
-                    red: 120/255,
-                    green: 150/255,
-                    blue: 200/255,
-                    alpha: 1
-                ),
+                primaryTextColor: AppColors.primaryText, // look correct, first , last , let's confirm
+                secondaryTextColor: AppColors.secondaryText,// first, last, title color
                 titleFont: .monospacedSystemFont(ofSize: 28, weight: .bold),
                 bodyFont:  .monospacedSystemFont(ofSize: 17, weight: .regular),
                 inputLabelFont: .monospacedSystemFont(ofSize: 14, weight: .medium)
             ),
             
             buttonProps: ButtonProps(
-                color: primary,
-                textColor: .white,
+                color: AppColors.accent,// Looks good! and Next button and get Started
+                textColor: .white, // action button color
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 18, weight: .bold)
             ),
             
             inputProps: InputProps(
-                backgroundColor: UIColor(
-                    red: 20/255,
-                    green: 30/255,
-                    blue: 55/255,
-                    alpha: 1
-                ),
-                textColor: .white,
-                placeholderColor: UIColor(
-                    red: 140/255,
-                    green: 160/255,
-                    blue: 200/255,
-                    alpha: 0.8
-                ),
-                borderColor: accent.withAlphaComponent(0.8),
+                backgroundColor: AppColors.inputBackground, // input field background color
+                textColor: AppColors.inputText, // input field text color
+                placeholderColor: AppColors.inputPlaceholder, // SSN placeholder color
+                borderColor: AppColors.accent, // corner border color
                 borderWidth: 1.5,
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 16, weight: .regular)
@@ -246,8 +238,6 @@ final class KYCManager {
         )
     }
 }
-
-
 
 
 // MARK: - Top View Controller Helper
@@ -261,19 +251,16 @@ extension UIApplication {
             .first?
             .rootViewController
     ) -> UIViewController? {
-        
         if let nav = base as? UINavigationController {
             return topViewController(base: nav.visibleViewController)
         }
-        
         if let tab = base as? UITabBarController {
             return topViewController(base: tab.selectedViewController)
         }
-        
         if let presented = base?.presentedViewController {
             return topViewController(base: presented)
         }
-        
         return base
     }
 }
+
