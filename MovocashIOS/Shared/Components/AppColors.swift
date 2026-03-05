@@ -7,26 +7,35 @@
 
 import SwiftUI
 
-enum AppColors {
+struct AppColors {
     
     // MARK: - Brand
+    static let primary = Color(red: 181/255, green: 49/255, blue: 62/255) // Red
+    static let secondary = Color(red: 220/255, green: 223/255, blue: 228/255) // gray
     
-    //static let primary = Color(red: 0.07, green: 0.12, blue: 0.22) // Deep Navy
-    static let primary = Color(red: 181/255, green: 49/255, blue: 62/255)
-    static let secondary = Color(red: 0.16, green: 0.20, blue: 0.32)
+    // MARK: - Background
+    static let background = UIColor.black
+    static let backgroundSwiftUI = Color.black
     
-    // MARK: - Backgrounds
+    // MARK: - Labels
+    static let primaryText = UIColor.lightGray
+    static let secondaryText = UIColor.gray
     
-    static let background = Color(.systemBackground)
-    static let cardBackground = Color(red: 0.95, green: 0.96, blue: 0.98)
+    static let primaryTextSwiftUI = Color(.lightGray)
+    static let secondaryTextSwiftUI = Color(.gray)
     
-    // MARK: - Text
+    // MARK: - Input
+    static let inputBackground = UIColor(white: 0.12, alpha: 1)
+    static let inputText = UIColor.white
+    static let inputPlaceholder = UIColor.gray
     
-    static let primaryText = Color.primary
-    static let secondaryText = Color.gray
+    // MARK: - Accent
+    static let accent = UIColor(
+        red: 77/255,
+        green: 163/255,
+        blue: 255/255,
+        alpha: 1
+    )
     
-    // MARK: - States
-    
-    static let success = Color.green
-    static let error = Color.red
+    static let accent1 = UIColor(red: 181/255, green: 49/255, blue: 62/255, alpha: 1)
 }
