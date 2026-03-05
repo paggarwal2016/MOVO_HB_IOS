@@ -51,6 +51,7 @@ actor NetworkClient {
               let url = request.url else {
             throw NetworkError.invalidResponse
         }
+        await SecureLogger.debug("API URL: \(url)", category: .network)
         
         // Attach auth token if required
         if endpoint.requiresAuth,

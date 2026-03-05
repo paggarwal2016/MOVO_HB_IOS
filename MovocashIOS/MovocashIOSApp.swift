@@ -28,7 +28,7 @@ struct MovocashIOSApp: App {
 
 
 
-
+//TODO: // In future
 //@main struct MovocashIOSApp: App {
 //    @State private var isDeviceCompromised = false
 //    

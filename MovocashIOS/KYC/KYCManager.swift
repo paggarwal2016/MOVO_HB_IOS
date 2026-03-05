@@ -10,45 +10,6 @@ import MobileBankingSDK
 import UIKit
 import SwiftUI
 
-// MARK: - KYC Result
-
-enum KYCResult {
-    case success(User)
-    case failed(Error)
-}
-
-// MARK: - KYC Errors
-
-enum KYCError: LocalizedError, Equatable {
-    
-    case notConfigured
-    case noPresenter
-    case cancelled
-    case rejected
-    case timeout
-    case sdkError(String)
-    case unknown
-    
-    var errorDescription: String? {
-        switch self {
-        case .notConfigured:
-            return "Verification system not ready. Please try again."
-        case .noPresenter:
-            return "Unable to start verification."
-        case .cancelled:
-            return "Verification was cancelled."
-        case .rejected:
-            return "Verification was not approved."
-        case .timeout:
-            return "Verification timed out. Please try again."
-        case .sdkError(let message):
-            return message
-        case .unknown:
-            return "Something went wrong. Please try again."
-        }
-    }
-}
-
 @MainActor
 final class KYCManager {
     
@@ -56,10 +17,9 @@ final class KYCManager {
     private init() {}
     
     private var isConfigured = false
-    private let timeoutSeconds: UInt64 = 120
     private weak var presenter: UIViewController?
     
-    
+    // MARK: - Configure SDK
     func configureSDK(officeId: String) async {
         guard !isConfigured else { return }
         
@@ -83,26 +43,6 @@ final class KYCManager {
         isConfigured = true
         SecureLogger.info("KYC SDK configured", category: .kyc)
     }
-    
-    // MARK: - Configure SDK
-    
-    func configureSDK() async {
-        
-        SecureLogger.info("Starting KYC configuration", category: .kyc)
-        
-        guard let token = await AuthManager.shared.getAccessToken() else {
-            SecureLogger.error("Missing access token", category: .kyc)
-            return
-        }
-        
-        let baseURL = AppConfig.baseURL.absoluteString
-        
-        MobileBankingSDK.configure(authToken: token, baseUrl: baseURL, theme: makeKYCTheme(), enableVerboseLogs: true) // office TODO
-        
-        isConfigured = true
-        SecureLogger.info("KYC SDK configured successfully", category: .kyc)
-    }
-    
     
     // MARK: - Update Token (If Refreshed)
     func updateToken(_ token: String) {
@@ -188,12 +128,6 @@ final class KYCManager {
                 }
             }
             
-            // TIMEOUT
-            Task {
-                try? await Task.sleep(nanoseconds: timeoutSeconds * 1_000_000_000)
-                resumeOnce(.failure(KYCError.timeout))
-            }
-            
             MobileBankingSDK.startKyc(presentingViewController: topVC)
         }
     }
@@ -209,7 +143,7 @@ final class KYCManager {
                 AppColors.background
             ], // Back theme
             
-            accentColor: AppColors.accent, // Try againing and icon Disclaimer
+            accentColor: .white, // Try againing and icon Disclaimer
             
             labelProps: LabelProps(
                 primaryTextColor: AppColors.primaryText, // look correct, first , last , let's confirm
@@ -220,7 +154,7 @@ final class KYCManager {
             ),
             
             buttonProps: ButtonProps(
-                color: AppColors.accent,// Looks good! and Next button and get Started
+                color: AppColors.accent1,// Looks good! and Next button and get Started
                 textColor: .white, // action button color
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 18, weight: .bold)
@@ -230,7 +164,7 @@ final class KYCManager {
                 backgroundColor: AppColors.inputBackground, // input field background color
                 textColor: AppColors.inputText, // input field text color
                 placeholderColor: AppColors.inputPlaceholder, // SSN placeholder color
-                borderColor: AppColors.accent, // corner border color
+                borderColor: .white, // corner border color
                 borderWidth: 1.5,
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 16, weight: .regular)
@@ -238,7 +172,6 @@ final class KYCManager {
         )
     }
 }
-
 
 // MARK: - Top View Controller Helper
 
