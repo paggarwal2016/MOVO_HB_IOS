@@ -149,6 +149,16 @@
 			path = Shield;
 			sourceTree = "<group>";
 		};
+		14DCE1B62F59640A008A8DC4 /* Services */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Services;
+			sourceTree = "<group>";
+		};
+		14DCE1B72F596428008A8DC4 /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -299,6 +309,8 @@
 		1468196F2F4DE6CF00BED014 /* KYC */ = {
 			isa = PBXGroup;
 			children = (
+				14DCE1B72F596428008A8DC4 /* ViewModels */,
+				14DCE1B62F59640A008A8DC4 /* Services */,
 				142337BF2F5808250030B4E7 /* KYCLauncherView.swift */,
 				14DCE1382F595474008A8DC4 /* KYCEnum.swift */,
 				14B824E02F51898E003ACBD0 /* KYCManager.swift */,
@@ -404,6 +416,8 @@
 				142337CB2F584C010030B4E7 /* Home */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
+				14DCE1B62F59640A008A8DC4 /* Services */,
+				14DCE1B72F596428008A8DC4 /* ViewModels */,
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (

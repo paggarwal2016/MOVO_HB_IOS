@@ -5,15 +5,19 @@
    version = "2.0">
    <Breakpoints>
       <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.ExceptionBreakpoint">
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "491069A9-A926-4516-A62C-256C4D77ADCB"
+            uuid = "786148CF-0779-4503-B74A-5AE41521D579"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            breakpointStackSelectionBehavior = "1"
-            scope = "1"
-            stopOnStyle = "0">
+            filePath = "../../Library/Developer/Xcode/DerivedData/MovocashIOS-akyufnakfrpsckgusxytprmpwyss/SourcePackages/registry/downloads/mobile-banking/mobile-banking-ios-sdk/1.4.4/Sources/MobileBankingKycSdk/Networking/AchAccount/GetPlaidLinkTokenRequest.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "59"
+            endingLineNumber = "59"
+            landmarkName = "getPlaidLinkTokenRequest(accountId:platform:bundleId:completion:)"
+            landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
