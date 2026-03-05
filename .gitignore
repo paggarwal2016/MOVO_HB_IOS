@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+README.md
+# Xcode user-specific files
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+
+# Xcode build files
+build/
+DerivedData/
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+
+# CocoaPods (if used)
+Pods/
+
+# Provisioning profiles & certificates
+*.mobileprovision
+*.cer
+
+# Archives
+*.zip
+Archive.zip
+
+# Environment / secrets
+.env
+.env.*
