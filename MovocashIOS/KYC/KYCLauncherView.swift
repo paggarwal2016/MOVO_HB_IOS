@@ -2,7 +2,7 @@
 //  KYCVerificationScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 04/03/26.
+//  Created by Movo Developer on 04/03/26.
 //
 
 import SwiftUI
@@ -20,8 +20,7 @@ struct KYCLauncherView: View {
     private func startKYC() async {
         do {
             // Start KYC and wait for result
-            let user = try await KYCManager.shared.start()
-            print("KYC Success:", user)
+            _ = try await KYCManager.shared.start()
             //TODO: OSCAR Implementation
             appState.flow = .home
         } catch let error as KYCError {

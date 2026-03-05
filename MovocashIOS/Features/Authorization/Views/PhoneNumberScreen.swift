@@ -2,7 +2,7 @@
 //  PhoneNumberScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 04/03/26.
+//  Created by Movo Developer on 04/03/26.
 //
 
 import Foundation
@@ -33,6 +33,7 @@ struct PhoneNumberScreen: View {
             VStack(alignment: .leading, spacing: 24) {
                 HStack {
                     BackButton {
+                        UIApplication.shared.dismissKeyboard()
                         appState.flow = .choice
                     }
                     Spacer()

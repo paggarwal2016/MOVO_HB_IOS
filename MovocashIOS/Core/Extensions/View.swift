@@ -72,3 +72,10 @@ extension UIApplication {
                    to: nil, from: nil, for: nil)
     }
 }
+
+
+extension View {
+    func networkMonitor() -> some View {
+        modifier(NetworkMonitorModifier())
+    }
+}

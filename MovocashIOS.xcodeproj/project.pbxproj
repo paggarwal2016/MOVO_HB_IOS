@@ -149,6 +149,11 @@
 			path = Shield;
 			sourceTree = "<group>";
 		};
+		14DCE2362F59BDA4008A8DC4 /* Reachability */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Reachability;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -225,6 +230,7 @@
 		146819602F4DE6CF00BED014 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				14DCE2362F59BDA4008A8DC4 /* Reachability */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				146819502F4DE6CF00BED014 /* Config */,
 				146819572F4DE6CF00BED014 /* Network */,
@@ -404,6 +410,7 @@
 				142337CB2F584C010030B4E7 /* Home */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
+				14DCE2362F59BDA4008A8DC4 /* Reachability */,
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (

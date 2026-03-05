@@ -2,7 +2,7 @@
 //  OTPScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 04/03/26.
+//  Created by Movo Developer on 04/03/26.
 //
 
 import Foundation
@@ -28,6 +28,7 @@ struct OTPScreen: View {
             VStack(alignment: .leading, spacing: 24) {
                 HStack {
                     BackButton {
+                        UIApplication.shared.dismissKeyboard()
                         appState.flow = .loginPhone
                     }
                     Spacer()

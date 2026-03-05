@@ -14,8 +14,10 @@ struct MovocashIOSApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .networkMonitor()
                 .environmentObject(appState)
                 .globalAlert()
+                //.sensitiveScreen() TODO: - In future
         }
     }
 }

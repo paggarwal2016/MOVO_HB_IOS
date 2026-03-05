@@ -2,7 +2,7 @@
 //  KYCManager.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 27/02/26.
+//  Created by Movo Developer on 27/02/26.
 //
 
 import Foundation
@@ -36,8 +36,7 @@ final class KYCManager {
             authToken: token,
             baseUrl: baseURL,
             officeId: officeId,
-            theme: makeKYCTheme(),
-            enableVerboseLogs: true
+            theme: makeKYCTheme()
         )
         
         isConfigured = true
