@@ -9,30 +9,20 @@ import Foundation
 import Security
 import LocalAuthentication
 
-// MARK: - Errors
+// MARK: - KeychainManager Protocol
 
-enum KeychainError: Error {
-    case invalidData
-    case itemNotFound
-    case duplicateItem
-    case authFailed
-    case interactionNotAllowed
-    case unexpectedStatus(OSStatus)
-}
-
-// MARK: - Protection Levels (IMPORTANT)
-
-enum KeychainProtection {
-    /// Used for refresh tokens (background access allowed)
-    case backgroundSafe
+protocol KeychainManagerProtocol {
+    func save(_ value: String, for key: String, protection: KeychainProtection) throws
     
-    /// Used for biometric unlock / payments
-    case userPresence
+    func get(_ key: String, biometricPrompt: String?) throws -> String
+    
+    func delete(_ key: String) throws
 }
 
-// MARK: - Manager
 
-final class KeychainManager {
+// MARK: - KeychainManager
+
+final class KeychainManager: KeychainManagerProtocol {
     
     static let shared = KeychainManager()
     private init() {}
@@ -176,4 +166,29 @@ final class KeychainManager {
         default: throw KeychainError.unexpectedStatus(status)
         }
     }
+}
+
+
+
+
+
+// MARK: - Errors
+
+enum KeychainError: Error {
+    case invalidData
+    case itemNotFound
+    case duplicateItem
+    case authFailed
+    case interactionNotAllowed
+    case unexpectedStatus(OSStatus)
+}
+
+// MARK: - Protection Levels (IMPORTANT)
+
+enum KeychainProtection {
+    /// Used for refresh tokens (background access allowed)
+    case backgroundSafe
+    
+    /// Used for biometric unlock / payments
+    case userPresence
 }

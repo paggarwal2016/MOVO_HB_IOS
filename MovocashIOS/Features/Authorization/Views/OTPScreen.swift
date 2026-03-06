@@ -2,7 +2,7 @@
 //  OTPScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 04/03/26.
+//  Created by Movo Developer on 04/03/26.
 //
 
 import Foundation
@@ -28,6 +28,7 @@ struct OTPScreen: View {
             VStack(alignment: .leading, spacing: 24) {
                 HStack {
                     BackButton {
+                        UIApplication.shared.dismissKeyboard()
                         appState.flow = .loginPhone
                     }
                     Spacer()
@@ -36,7 +37,7 @@ struct OTPScreen: View {
                 Text("Enter 6-digit code")
                     .font(.largeTitle.bold())
                 
-                Text("We Sent a verfication code to your mobile \(appState.phoneNumber.suffix(4))")
+                Text("We Sent a verfication code to your mobile \(authVM.phoneNumber.suffix(4))")
                     .font(.headline.bold())
                 
                 // OTP Boxes
@@ -102,11 +103,17 @@ struct OTPScreen: View {
         
         Task {
             do {
-                try await authVM.validateOTP(
-                    phone: appState.phoneNumber,
+                let response = try await authVM.validateOTP(
                     code: otpVM.otpText
                 )
+                
+                try await AppContainer.shared.sessionManager.startSession(accessToken: response.accessToken, refreshToken: response.refreshToken, appState: appState)
+                
+                // Configure KYC SDK
+                await KYCManager.shared.configureSDK(officeId: "1")
+                
                 appState.otpVerified = true
+                authVM.phoneNumber = ""
                 
                 if appState.context == PhoneFlowType.login.rawValue {
                     appState.flow = .home

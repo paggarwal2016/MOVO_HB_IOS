@@ -2,7 +2,7 @@
 //  KYCManager.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 27/02/26.
+//  Created by Movo Developer on 27/02/26.
 //
 
 import Foundation
@@ -16,12 +16,10 @@ final class KYCManager {
     static let shared = KYCManager()
     private init() {}
     
-    private var isConfigured = false
     private weak var presenter: UIViewController?
     
     // MARK: - Configure SDK
     func configureSDK(officeId: String) async {
-        guard !isConfigured else { return }
         
         SecureLogger.info("Starting KYC configuration", category: .kyc)
         
@@ -36,11 +34,9 @@ final class KYCManager {
             authToken: token,
             baseUrl: baseURL,
             officeId: officeId,
-            theme: makeKYCTheme(),
-            enableVerboseLogs: true
+            theme: makeKYCTheme()
         )
         
-        isConfigured = true
         SecureLogger.info("KYC SDK configured", category: .kyc)
     }
     
@@ -59,10 +55,6 @@ final class KYCManager {
     // MARK: - Start KYC Flow
     
     func start() async throws -> User {
-        
-        guard isConfigured else {
-            throw KYCError.notConfigured
-        }
         
         guard let topVC = UIApplication.topViewController() else {
             throw KYCError.noPresenter

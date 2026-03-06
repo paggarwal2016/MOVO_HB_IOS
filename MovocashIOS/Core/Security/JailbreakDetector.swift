@@ -13,7 +13,7 @@ actor JailbreakDetector {
     static let shared = JailbreakDetector()
     private init() {}
     
-    var isJailBroken: Bool {
+    var isJailbroken: Bool {
         #if targetEnvironment(simulator)
         return false
         #else

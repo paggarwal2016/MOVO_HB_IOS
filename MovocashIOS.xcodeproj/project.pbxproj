@@ -15,8 +15,8 @@
 		142337BE2F5807FB0030B4E7 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BD2F5807FB0030B4E7 /* OTPScreen.swift */; };
 		142337C02F5808250030B4E7 /* KYCLauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BF2F5808250030B4E7 /* KYCLauncherView.swift */; };
 		146819772F4DE6CF00BED014 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194F2F4DE6CF00BED014 /* Environment.swift */; };
-		146819782F4DE6CF00BED014 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819552F4DE6CF00BED014 /* NetworkService.swift */; };
-		146819792F4DE6CF00BED014 /* NetworkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819542F4DE6CF00BED014 /* NetworkClient.swift */; };
+		146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819552F4DE6CF00BED014 /* NetworkServiceProtocol.swift */; };
+		146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819542F4DE6CF00BED014 /* NetworkService.swift */; };
 		1468197A2F4DE6CF00BED014 /* AuthAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819512F4DE6CF00BED014 /* AuthAPI.swift */; };
 		1468197B2F4DE6CF00BED014 /* BiometricManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819592F4DE6CF00BED014 /* BiometricManager.swift */; };
 		1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468195E2F4DE6CF00BED014 /* AppInfo.swift */; };
@@ -27,7 +27,6 @@
 		146819832F4DE6CF00BED014 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819582F4DE6CF00BED014 /* AuthManager.swift */; };
 		146819842F4DE6CF00BED014 /* JailbreakDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468195B2F4DE6CF00BED014 /* JailbreakDetector.swift */; };
 		146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819522F4DE6CF00BED014 /* Endpoint.swift */; };
-		146819862F4DE6CF00BED014 /* OTPTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819672F4DE6CF00BED014 /* OTPTextField.swift */; };
 		146819872F4DE6CF00BED014 /* AuthResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819622F4DE6CF00BED014 /* AuthResponse.swift */; };
 		146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819662F4DE6CF00BED014 /* CompromisedDeviceView.swift */; };
 		1468198A2F4DE6CF00BED014 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194E2F4DE6CF00BED014 /* AppConfig.swift */; };
@@ -43,12 +42,17 @@
 		1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468199E2F4EE8B000BED014 /* OTPViewModel.swift */; };
 		146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A02F4F0A2100BED014 /* AlertManager.swift */; };
 		146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A22F4F272500BED014 /* PhoneFormatter.swift */; };
-		146819A52F4F2F9400BED014 /* OTPInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A42F4F2F9400BED014 /* OTPInputView.swift */; };
 		14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B824E02F51898E003ACBD0 /* KYCManager.swift */; };
 		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
 		14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5952F504AF8000D84FD /* NetworkError.swift */; };
 		14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */; };
 		14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE1382F595474008A8DC4 /* KYCEnum.swift */; };
+		14DCE2872F5ABA38008A8DC4 /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2862F5ABA38008A8DC4 /* AppContainer.swift */; };
+		14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2882F5AC31A008A8DC4 /* SessionManager.swift */; };
+		14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE28A2F5AD88E008A8DC4 /* AppLockManager.swift */; };
+		14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */; };
+		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
+		14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -93,8 +97,8 @@
 		146819512F4DE6CF00BED014 /* AuthAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthAPI.swift; sourceTree = "<group>"; };
 		146819522F4DE6CF00BED014 /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
 		146819532F4DE6CF00BED014 /* HTTPMethod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPMethod.swift; sourceTree = "<group>"; };
-		146819542F4DE6CF00BED014 /* NetworkClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkClient.swift; sourceTree = "<group>"; };
-		146819552F4DE6CF00BED014 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		146819542F4DE6CF00BED014 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		146819552F4DE6CF00BED014 /* NetworkServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkServiceProtocol.swift; sourceTree = "<group>"; };
 		146819562F4DE6CF00BED014 /* SSLPinning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSLPinning.swift; sourceTree = "<group>"; };
 		146819582F4DE6CF00BED014 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		146819592F4DE6CF00BED014 /* BiometricManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricManager.swift; sourceTree = "<group>"; };
@@ -106,7 +110,6 @@
 		146819622F4DE6CF00BED014 /* AuthResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthResponse.swift; sourceTree = "<group>"; };
 		146819642F4DE6CF00BED014 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		146819662F4DE6CF00BED014 /* CompromisedDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompromisedDeviceView.swift; sourceTree = "<group>"; };
-		146819672F4DE6CF00BED014 /* OTPTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPTextField.swift; sourceTree = "<group>"; };
 		146819702F4DE6CF00BED014 /* SpinnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerView.swift; sourceTree = "<group>"; };
 		146819732F4DE6CF00BED014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSApp.swift; sourceTree = "<group>"; };
@@ -117,7 +120,6 @@
 		1468199E2F4EE8B000BED014 /* OTPViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPViewModel.swift; sourceTree = "<group>"; };
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		146819A22F4F272500BED014 /* PhoneFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFormatter.swift; sourceTree = "<group>"; };
-		146819A42F4F2F9400BED014 /* OTPInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPInputView.swift; sourceTree = "<group>"; };
 		14B824E02F51898E003ACBD0 /* KYCManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCManager.swift; sourceTree = "<group>"; };
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -126,6 +128,12 @@
 		14DBC5952F504AF8000D84FD /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
 		14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSecurityManager.swift; sourceTree = "<group>"; };
 		14DCE1382F595474008A8DC4 /* KYCEnum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCEnum.swift; sourceTree = "<group>"; };
+		14DCE2862F5ABA38008A8DC4 /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
+		14DCE2882F5AC31A008A8DC4 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
+		14DCE28A2F5AD88E008A8DC4 /* AppLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockManager.swift; sourceTree = "<group>"; };
+		14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderProvider.swift; sourceTree = "<group>"; };
+		14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
+		14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberValidator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -147,6 +155,11 @@
 		14DBC59B2F5081BE000D84FD /* Shield */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Shield;
+			sourceTree = "<group>";
+		};
+		14DCE2362F59BDA4008A8DC4 /* Reachability */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Reachability;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -192,9 +205,11 @@
 				146819512F4DE6CF00BED014 /* AuthAPI.swift */,
 				146819522F4DE6CF00BED014 /* Endpoint.swift */,
 				146819532F4DE6CF00BED014 /* HTTPMethod.swift */,
-				146819542F4DE6CF00BED014 /* NetworkClient.swift */,
+				146819542F4DE6CF00BED014 /* NetworkService.swift */,
 				14DBC5952F504AF8000D84FD /* NetworkError.swift */,
-				146819552F4DE6CF00BED014 /* NetworkService.swift */,
+				146819552F4DE6CF00BED014 /* NetworkServiceProtocol.swift */,
+				14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */,
+				14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */,
 				146819562F4DE6CF00BED014 /* SSLPinning.swift */,
 			);
 			path = Network;
@@ -209,6 +224,7 @@
 				1468195B2F4DE6CF00BED014 /* JailbreakDetector.swift */,
 				1468195C2F4DE6CF00BED014 /* KeychainManager.swift */,
 				14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */,
+				14DCE28A2F5AD88E008A8DC4 /* AppLockManager.swift */,
 			);
 			path = Security;
 			sourceTree = "<group>";
@@ -225,6 +241,7 @@
 		146819602F4DE6CF00BED014 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				14DCE2362F59BDA4008A8DC4 /* Reachability */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				146819502F4DE6CF00BED014 /* Config */,
 				146819572F4DE6CF00BED014 /* Network */,
@@ -256,10 +273,8 @@
 			isa = PBXGroup;
 			children = (
 				146819662F4DE6CF00BED014 /* CompromisedDeviceView.swift */,
-				146819672F4DE6CF00BED014 /* OTPTextField.swift */,
 				146819A22F4F272500BED014 /* PhoneFormatter.swift */,
 				1468199C2F4EDEF000BED014 /* OTPDigitBox.swift */,
-				146819A42F4F2F9400BED014 /* OTPInputView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -288,6 +303,8 @@
 		1468196D2F4DE6CF00BED014 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				14DCE2862F5ABA38008A8DC4 /* AppContainer.swift */,
+				14DCE2882F5AC31A008A8DC4 /* SessionManager.swift */,
 				142337CB2F584C010030B4E7 /* Home */,
 				142337C92F5846870030B4E7 /* Launch */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
@@ -320,6 +337,7 @@
 			isa = PBXGroup;
 			children = (
 				146819712F4DE6CF00BED014 /* Components */,
+				14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -404,6 +422,7 @@
 				142337CB2F584C010030B4E7 /* Home */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
+				14DCE2362F59BDA4008A8DC4 /* Reachability */,
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (
@@ -532,8 +551,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				146819772F4DE6CF00BED014 /* Environment.swift in Sources */,
-				146819782F4DE6CF00BED014 /* NetworkService.swift in Sources */,
-				146819792F4DE6CF00BED014 /* NetworkClient.swift in Sources */,
+				146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */,
+				146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */,
 				1468197A2F4DE6CF00BED014 /* AuthAPI.swift in Sources */,
 				1468197B2F4DE6CF00BED014 /* BiometricManager.swift in Sources */,
 				1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */,
@@ -550,21 +569,25 @@
 				146819832F4DE6CF00BED014 /* AuthManager.swift in Sources */,
 				146819842F4DE6CF00BED014 /* JailbreakDetector.swift in Sources */,
 				142337BE2F5807FB0030B4E7 /* OTPScreen.swift in Sources */,
+				14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */,
-				146819862F4DE6CF00BED014 /* OTPTextField.swift in Sources */,
 				146819872F4DE6CF00BED014 /* AuthResponse.swift in Sources */,
 				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
+				14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */,
 				14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */,
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
-				146819A52F4F2F9400BED014 /* OTPInputView.swift in Sources */,
 				1468198A2F4DE6CF00BED014 /* AppConfig.swift in Sources */,
 				1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */,
 				1468198D2F4DE6CF00BED014 /* AuthRequest.swift in Sources */,
 				1468199D2F4EDEF000BED014 /* OTPDigitBox.swift in Sources */,
+				14DCE2872F5ABA38008A8DC4 /* AppContainer.swift in Sources */,
 				146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */,
+				14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */,
 				1468198E2F4DE6CF00BED014 /* KeychainManager.swift in Sources */,
+				14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */,
+				14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */,
 				142337BC2F5807C70030B4E7 /* PhoneNumberScreen.swift in Sources */,
 				1468198F2F4DE6CF00BED014 /* DeviceManager.swift in Sources */,
 			);

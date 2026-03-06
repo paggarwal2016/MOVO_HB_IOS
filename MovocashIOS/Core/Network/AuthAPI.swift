@@ -29,16 +29,7 @@ enum AuthAPI: Endpoint {
     var method: HTTPMethod { .POST } // feature use switch case
     
     // MARK: - Header Configure
-    var header: [String : String]? {
-        [
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "X-Device-ID": DeviceManager.shared.deviceID,
-            "X-App-Version": AppInfo.version,
-            "X-Platform": "iOS",
-            "X-Request-ID": UUID().uuidString
-        ]
-    }
+    var headerType: HeaderType { .default }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { nil }
@@ -67,7 +58,5 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
         }
     }
-    
-    // MARK: - Auth Requirement
-    var requiresAuth: Bool { false }
+
 }

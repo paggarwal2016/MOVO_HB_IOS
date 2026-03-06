@@ -9,19 +9,19 @@ import Foundation
 
 enum AppInfo {
     
-    static var version: String {
+    nonisolated static var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
     
-    static var buildNumber: String {
+    nonisolated static var buildNumber: String {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
     }
     
-    static var fullVersion: String {
+    nonisolated static var fullVersion: String {
         "\(version) (\(buildNumber))"
     }
     
-    static var bundleIdentifier: String {
+    nonisolated static var bundleIdentifier: String {
         Bundle.main.bundleIdentifier ?? "com.unknown.app"
     }
 }

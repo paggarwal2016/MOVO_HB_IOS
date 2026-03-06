@@ -12,20 +12,32 @@ import Combine
 final class AuthViewModel: ObservableObject {
     @Published var state: AuthState = .idle
     @Published var showOTP: Bool = false
+    @Published var phoneNumber: String = ""
+    @Published var context: String = ""
     
-    private let network: NetworkClient
+    private let network: NetworkServiceProtocol
+    private let keychain: KeychainManagerProtocol
+    private let authManager: AuthManagerProtocol
     
-    init(network: NetworkClient = .shared) {
+    init(
+        network: NetworkServiceProtocol,
+        keychain: KeychainManagerProtocol,
+        authManager: AuthManagerProtocol
+    ) {
         self.network = network
+        self.keychain = keychain
+        self.authManager = authManager
     }
     
-    func sendOTP(phone: String, context: String) async throws {
+    //MARK: - Send OTP
+    
+    func sendOTP() async throws {
         guard state != .loading else { return }
         state = .loading
         
         do {
             let _: SuccessResponse = try await network.request(
-                AuthAPI.messengerOTP(phoneNumber: phone, context: context)
+                AuthAPI.messengerOTP(phoneNumber: phoneNumber, context: context)
             )
             state = .otpSent
             showOTP = true
@@ -35,35 +47,26 @@ final class AuthViewModel: ObservableObject {
         }
     }
     
+    //MARK: - Validate OTP
     
-    func validateOTP(phone: String, code: String) async throws {
-        guard state != .loading else { return }
+    func validateOTP(code: String) async throws -> RefreshTokenResponse  {
+        guard state != .loading else { throw NSError(domain: "AlreadyLoading", code: 0) }
         state = .loading
         
         do {
             let response: RefreshTokenResponse = try await network.request(
-                AuthAPI.tokenSMS(phoneNumber: phone, code: code)
-            )
-            // Update access token safely
-            await AuthManager.shared.updateAccessToken(response.accessToken)
-            
-            // Save refresh token
-            try KeychainManager.shared.save(
-                response.refreshToken,
-                for: "refresh_token",
-                protection: .backgroundSafe
+                AuthAPI.tokenSMS(phoneNumber: phoneNumber, code: code)
             )
             self.state = .verified
-            
-            // Configure SDK
-            await KYCManager.shared.configureSDK(officeId: "1")
-            
+            return response
         } catch {
             state = .idle
             throw error
         }
     }
 }
+
+//MARK: - AuthState
 
 enum AuthState: Equatable {
     case idle

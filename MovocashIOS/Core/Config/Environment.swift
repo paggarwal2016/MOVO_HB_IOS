@@ -4,6 +4,7 @@
 //
 //  Created by Movo Developer on 20/02/26.
 //
+
 import Foundation
 
 enum Environment {
@@ -11,11 +12,19 @@ enum Environment {
     case production
 
     var baseURL: URL {
+        let urlString: String
+        
         switch self {
         case .qa:
-            return URL(string: "https://api.mobile-banking-qa.herringbank.com")!
+            urlString = "https://api.mobile-banking-qa.herringbank.com"
         case .production:
-            return URL(string: "https://api.mobile-banking.herringbank.com")!
+            urlString = "https://api.mobile-banking.herringbank.com"
         }
+
+        guard let url = URL(string: urlString) else {
+            fatalError("Invalid baseURL configuration: \(urlString)")
+        }
+
+        return url
     }
 }

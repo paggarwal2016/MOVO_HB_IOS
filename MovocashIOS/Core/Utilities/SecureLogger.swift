@@ -29,7 +29,7 @@ enum SecureCategory: String {
 
 // MARK: - Secure Logger
 
-final class SecureLogger {
+actor SecureLogger {
 
     private static let subsystem = AppInfo.bundleIdentifier
     private static var loggers: [String: Logger] = [:]

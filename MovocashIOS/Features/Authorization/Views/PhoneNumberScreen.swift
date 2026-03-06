@@ -2,7 +2,7 @@
 //  PhoneNumberScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 04/03/26.
+//  Created by Movo Developer on 04/03/26.
 //
 
 import Foundation
@@ -15,17 +15,13 @@ enum PhoneFlowType : String {
 
 struct PhoneNumberScreen: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var authVM = AuthViewModel()
+    @EnvironmentObject var authVM: AuthViewModel
     @State private var displayText: String = ""
-    @State private var rawPhone: String = ""
     @State private var previousText: String = ""
     let flowType: PhoneFlowType
     
-    init(flowType: PhoneFlowType, network: NetworkClient = .shared) {
+    init(flowType: PhoneFlowType) {
         self.flowType = flowType
-        _authVM = StateObject(
-            wrappedValue: AuthViewModel(network: network)
-        )
     }
     
     var body: some View {
@@ -33,6 +29,7 @@ struct PhoneNumberScreen: View {
             VStack(alignment: .leading, spacing: 24) {
                 HStack {
                     BackButton {
+                        UIApplication.shared.dismissKeyboard()
                         appState.flow = .choice
                     }
                     Spacer()
@@ -71,7 +68,7 @@ struct PhoneNumberScreen: View {
                             
                             displayText = formatted
                             
-                            rawPhone = digits
+                            authVM.phoneNumber = digits
                             previousText = formatted
                         }
                 }
@@ -83,14 +80,21 @@ struct PhoneNumberScreen: View {
                 
                 PrimaryButton(title: "Proceed") {
                     UIApplication.shared.dismissKeyboard()
-                    guard rawPhone.count == 10 else {
-                        AlertManager.shared.showError("Enter valid 10 digit mobile number")
+                    let phone = PhoneNumberValidator.sanitize(authVM.phoneNumber)
+                    
+                    guard PhoneNumberValidator.isValidUSNumber(phone) else {
+                        AlertManager.shared.showError("Enter a valid phone number")
                         return
                     }
+                    
+                    let normalized = PhoneNumberValidator.normalize(phone)
+                    
+                    authVM.phoneNumber = normalized
+                    authVM.context = appState.context
+                    
                     Task {
                         do {
-                            try await authVM.sendOTP(phone: "+1\(rawPhone)", context: appState.context)
-                            appState.phoneNumber = "+1\(rawPhone)"
+                            try await authVM.sendOTP()
                             appState.flow = .otp
                         } catch {
                             AlertManager.shared.showError(error.localizedDescription)
