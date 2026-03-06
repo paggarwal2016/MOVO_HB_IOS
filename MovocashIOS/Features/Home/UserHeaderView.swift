@@ -60,7 +60,9 @@ struct UserHeaderView: View {
                 showLogoutAlert = false
             }
             Button("Logout", role: .destructive) {
-                appState.flow = .choice
+                Task {
+                    await AppContainer.shared.sessionManager.logout(appState: appState)
+                }
             }
         } message: {
             Text("Are you sure you want to logout?")

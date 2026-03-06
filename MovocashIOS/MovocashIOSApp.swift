@@ -6,18 +6,37 @@
 //
 
 import SwiftUI
+import Combine
 
 @main
 struct MovocashIOSApp: App {
     @StateObject private var appState = AppState()
+    @SwiftUI.Environment(\.scenePhase) private var scenePhase
     
     var body: some Scene {
         WindowGroup {
             RootView()
-                .networkMonitor()
                 .environmentObject(appState)
+                .networkMonitor(state: appState)
                 .globalAlert()
-                //.sensitiveScreen() TODO: - In future
+            //.sensitiveScreen() TODO: - In future
+        }
+        .onChange(of: scenePhase) { newPhase in
+            handleScenePhase(newPhase)
+        }
+    }
+    
+    
+    private func handleScenePhase(_ phase: ScenePhase) {
+        switch phase {
+        case .background:
+            AppLockManager.shared.didEnterBackground()
+        case .active:
+            Task {
+                await AppLockManager.shared.handleAppReentry(appState: appState)
+            }
+        default:
+            break
         }
     }
 }
@@ -33,11 +52,11 @@ struct MovocashIOSApp: App {
 //TODO: // In future
 //@main struct MovocashIOSApp: App {
 //    @State private var isDeviceCompromised = false
-//    
+//
 ////    init() { TODO: // In future
 ////        _ = ScreenSecurityManager.shared
 ////    }
-//    
+//
 //    var body: some Scene { WindowGroup { ZStack {
 //        //Match Launch screen color
 //        LinearGradient( colors: [Color.blue, Color.purple], startPoint: .topLeading, endPoint: .bottomTrailing )

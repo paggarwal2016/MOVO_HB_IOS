@@ -75,7 +75,7 @@ extension UIApplication {
 
 
 extension View {
-    func networkMonitor() -> some View {
-        modifier(NetworkMonitorModifier())
+    func networkMonitor(state: AppState) -> some View {
+        modifier(NetworkMonitorModifier(appState: state))
     }
 }

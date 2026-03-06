@@ -18,9 +18,9 @@ enum NetworkStatus {
 
 final class AppState: ObservableObject {
     @Published var flow: AuthFlow = .splash
-    @Published var phoneNumber: String = ""
     @Published var context: String = ""
     @Published var otpVerified: Bool = false
     @Published var kycVerified: Bool = false
+    @Published var isAuthenticated: Bool = false
     @Published var networkStatus: NetworkStatus = .connected
 }

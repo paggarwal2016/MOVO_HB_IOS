@@ -10,7 +10,7 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var authVM = AuthViewModel()
+    @StateObject private var authVM = AppContainer.shared.makeAuthViewModel()
     
     var body: some View {
         NavigationStack {
@@ -31,6 +31,7 @@ struct RootView: View {
                 HomeTabBarView()
             }
         }
+        .environmentObject(authVM)
         .animation(.easeInOut, value: appState.flow)
     }
 }

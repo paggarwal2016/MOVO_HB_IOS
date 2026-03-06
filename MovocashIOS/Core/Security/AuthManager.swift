@@ -6,7 +6,9 @@
 //
 import Foundation
 
-actor AuthManager {
+//MARK: - AuthManager
+
+actor AuthManager: AuthManagerProtocol {
 
     static let shared = AuthManager()
     private init() {}
@@ -14,16 +16,25 @@ actor AuthManager {
     private var accessToken: String?
 
     // READ
-    func getAccessToken() -> String? {
+    func getAccessToken() async -> String? {
         accessToken
     }
 
     // WRITE
-    func updateAccessToken(_ token: String) {
+    func updateAccessToken(_ token: String) async {
         accessToken = token
     }
 
-    func clearSession() {
+    func clearSession() async {
         accessToken = nil
     }
+}
+
+
+// MARK: - AuthManagerProtocol
+
+protocol AuthManagerProtocol {
+    func updateAccessToken(_ token: String) async
+    func getAccessToken() async -> String?
+    func clearSession() async
 }

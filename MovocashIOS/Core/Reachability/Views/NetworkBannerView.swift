@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+//MARK: - Network UI
 struct NetworkBannerView: View {
     var body: some View {
         HStack {
@@ -25,10 +26,12 @@ struct NetworkBannerView: View {
 }
 
 
-
+//MARK: - Network Modifier
 struct NetworkMonitorModifier: ViewModifier {
-    @EnvironmentObject var appState: AppState
+    
+    @ObservedObject var appState: AppState
     @StateObject private var monitor = NetworkMonitor.shared
+    @State private var didReceiveInitialStatus = false
     
     func body(content: Content) -> some View {
         ZStack(alignment: .top) {
@@ -40,7 +43,12 @@ struct NetworkMonitorModifier: ViewModifier {
             }
         }
         .onReceive(monitor.$status) { status in
-            withAnimation {
+            if !didReceiveInitialStatus {
+                appState.networkStatus = status
+                didReceiveInitialStatus = true
+                return
+            }
+            withAnimation(.easeInOut(duration: 0.25)) {
                 appState.networkStatus = status
             }
         }

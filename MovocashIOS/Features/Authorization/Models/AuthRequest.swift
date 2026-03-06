@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct MessengerOTPRequest: Encodable, @unchecked Sendable {
+struct MessengerOTPRequest: Encodable, Sendable {
     let phoneNumber: String
     let context: String
     enum CodingKeys: String, CodingKey {
@@ -16,7 +16,7 @@ struct MessengerOTPRequest: Encodable, @unchecked Sendable {
     }
 }
 
-struct TokenSMSRequest: Encodable, @unchecked Sendable {
+struct TokenSMSRequest: Encodable, Sendable {
     let phoneNumber: String
     let code: String
     enum CodingKeys: String, CodingKey {
@@ -25,7 +25,7 @@ struct TokenSMSRequest: Encodable, @unchecked Sendable {
     }
 }
 
-struct RefreshTokenRequest: Encodable, @unchecked Sendable {
+struct RefreshTokenRequest: Encodable, Sendable {
     let refreshToken: String
     enum CodingKeys: String, CodingKey {
         case refreshToken = "refreshToken"
