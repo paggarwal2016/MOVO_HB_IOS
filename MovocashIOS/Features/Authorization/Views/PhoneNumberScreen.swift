@@ -16,14 +16,12 @@ enum PhoneFlowType : String {
 struct PhoneNumberScreen: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var authVM: AuthViewModel
-    @State private var displayText: String = ""
-    @State private var previousText: String = ""
     let flowType: PhoneFlowType
-    
+
     init(flowType: PhoneFlowType) {
         self.flowType = flowType
     }
-    
+
     var body: some View {
         ZStack {
             VStack(alignment: .leading, spacing: 24) {
@@ -34,50 +32,30 @@ struct PhoneNumberScreen: View {
                     }
                     Spacer()
                 }
-                
+
                 Text("Tell us your mobile number")
                     .font(.largeTitle.bold())
-                
+
                 Text("We'll text you a code so we can confirm that it's you.")
                     .font(.headline.bold())
-                
+
                 HStack {
                     Text("+1")
                         .font(.title3)
-                    
-                    TextField("(123) 456-7890", text: $displayText)
+
+                    TextField("(123) 456-7890", text: $authVM.phoneDisplayText)
                         .keyboardType(.numberPad)
                         .font(.title3)
-                        .onChangeCompat(of: displayText) { newValue in
-                            
-                            let isDeleting = newValue.count < previousText.count
-                            var digits = PhoneFormatter.raw(newValue)
-                            
-                            // HARD LIMIT — block typing after 10 digits
-                            if digits.count > 10 {
-                                displayText = previousText
-                                return
-                            }
-                            
-                            // deleting formatting character fix
-                            if isDeleting && PhoneFormatter.raw(previousText) == digits {
-                                digits = String(digits.dropLast())
-                            }
-                            
-                            let formatted = PhoneFormatter.formatted(digits)
-                            
-                            displayText = formatted
-                            
-                            authVM.phoneNumber = digits
-                            previousText = formatted
+                        .onChangeCompat(of: authVM.phoneDisplayText) { newValue in
+                            authVM.handlePhoneInput(newValue)
                         }
                 }
                 .padding()
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                
+
                 Spacer()
-                
+
                 PrimaryButton(title: "Proceed") {
                     UIApplication.shared.dismissKeyboard()
                     Task {
@@ -86,7 +64,7 @@ struct PhoneNumberScreen: View {
                 }
             }
             .padding()
-            
+
             if authVM.state == .loading {
                 SpinnerView()
             }
