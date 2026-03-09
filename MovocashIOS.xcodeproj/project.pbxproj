@@ -147,6 +147,16 @@
 			path = Home;
 			sourceTree = "<group>";
 		};
+		1486201F2F5EBA1700792DB2 /* Services */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Services;
+			sourceTree = "<group>";
+		};
+		148620222F5EBA6F00792DB2 /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
 		14DBC58E2F5014AD000D84FD /* Extensions */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Extensions;
@@ -316,6 +326,8 @@
 		1468196F2F4DE6CF00BED014 /* KYC */ = {
 			isa = PBXGroup;
 			children = (
+				148620222F5EBA6F00792DB2 /* ViewModels */,
+				1486201F2F5EBA1700792DB2 /* Services */,
 				142337BF2F5808250030B4E7 /* KYCView.swift */,
 				14DCE1382F595474008A8DC4 /* KYCEnum.swift */,
 				14B824E02F51898E003ACBD0 /* KYCManager.swift */,
@@ -420,6 +432,8 @@
 			fileSystemSynchronizedGroups = (
 				142337C92F5846870030B4E7 /* Launch */,
 				142337CB2F584C010030B4E7 /* Home */,
+				1486201F2F5EBA1700792DB2 /* Services */,
+				148620222F5EBA6F00792DB2 /* ViewModels */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,

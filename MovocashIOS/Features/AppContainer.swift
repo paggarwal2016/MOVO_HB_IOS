@@ -42,4 +42,8 @@ final class AppContainer {
             alertManager: alertManager
         )
     }
+    
+    func makeACHViewModel() -> ACHViewModel {
+        ACHViewModel(alertManager: alertManager)
+    }
 }
