@@ -19,6 +19,7 @@ enum NetworkError: LocalizedError, Sendable {
     case noInternet
     case securityViolation
     case invalidURL
+    case encodingError
     case unknown
 
     var errorDescription: String? {
@@ -53,6 +54,9 @@ enum NetworkError: LocalizedError, Sendable {
             
         case .invalidURL:
             return "Invalid URL"
+
+        case .encodingError:
+            return "Failed to encode request data"
             
         case .unknown:
             return "Something went wrong"

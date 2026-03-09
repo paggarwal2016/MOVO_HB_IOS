@@ -49,7 +49,7 @@ actor NetworkService: NetworkServiceProtocol {
             delegate: SecureSessionDelegate(), // customizable
             delegateQueue: nil
         )
-        self.builder = RequestBuilder()
+        self.builder = RequestBuilder(authManager: authManager)
     }
     
     // MARK: - Public Request
@@ -87,7 +87,8 @@ actor NetworkService: NetworkServiceProtocol {
             }
             
             retryTracker[url] = nil
-            return try await performRequest(request)
+            let retryRequest = try await builder.build(from: endpoint)
+            return try await performRequest(retryRequest)
         }
     }
     

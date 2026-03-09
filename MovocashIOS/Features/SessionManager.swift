@@ -69,6 +69,20 @@ final class SessionManager: ObservableObject {
         
     }
 
+    // MARK: - Restore Session
+    func restoreSession(appState: AppState) async -> Bool {
+        guard let accessToken = try? keychain.get("access_token", biometricPrompt: nil),
+              let refreshToken = try? keychain.get("refresh_token", biometricPrompt: nil),
+              !accessToken.isEmpty,
+              !refreshToken.isEmpty else {
+            return false
+        }
+
+        await authManager.updateAccessToken(accessToken)
+        appState.isAuthenticated = true
+        return true
+    }
+
     // MARK: - Logout
     func logout(appState: AppState) async {
 

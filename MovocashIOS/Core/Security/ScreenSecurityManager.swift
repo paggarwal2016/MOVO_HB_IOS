@@ -26,6 +26,8 @@ final class ScreenSecurityManager: ObservableObject {
         didSet { updateShield() }
     }
 
+    var onScreenshotDetected: (() async -> Void)?
+
     private init() {
         observeRecording()
         observeAppState()
@@ -76,8 +78,8 @@ private extension ScreenSecurityManager {
             object: nil,
             queue: nil
         ) { _ in
-            Task {
-                await AuthManager.shared.clearSession()
+            Task { @MainActor in
+                await ScreenSecurityManager.shared.onScreenshotDetected?()
             }
         }
     }

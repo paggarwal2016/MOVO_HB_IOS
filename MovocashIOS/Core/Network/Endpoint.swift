@@ -12,5 +12,5 @@ protocol Endpoint {
     var method: HTTPMethod { get }
     var headerType: HeaderType { get }
     var queryItems: [URLQueryItem]? { get }
-    var body: Data? { get }
+    var body: Data? { get throws }
 }

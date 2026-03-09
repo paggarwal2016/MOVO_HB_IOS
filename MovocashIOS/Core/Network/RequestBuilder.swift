@@ -8,7 +8,13 @@
 import Foundation
 
 final class RequestBuilder: Sendable {
-    
+
+    private let authManager: AuthManagerProtocol
+
+    init(authManager: AuthManagerProtocol) {
+        self.authManager = authManager
+    }
+
     func build(from endpoint: Endpoint) async throws -> URLRequest {
         
         // 1. Build URL
@@ -30,10 +36,10 @@ final class RequestBuilder: Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = endpoint.method.rawValue
         request.timeoutInterval = 15
-        request.httpBody = endpoint.body
+        request.httpBody = try endpoint.body
         
         // 3. Attach Headers
-        let headers = await HeaderProvider.headers(for: endpoint.headerType)
+        let headers = await HeaderProvider.headers(for: endpoint.headerType, authManager: authManager)
         headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
         
         return request
