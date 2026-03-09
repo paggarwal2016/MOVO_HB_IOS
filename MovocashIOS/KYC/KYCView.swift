@@ -8,14 +8,22 @@
 import SwiftUI
 
 struct KYCView: View {
-
+    
     @EnvironmentObject var appState: AppState
-    @StateObject private var kycVM = AppContainer.shared.makeKYCViewModel()
-
+    
+    private let kycManager = AppContainer.shared.kycManager
+    private let alertManager = AppContainer.shared.alertManager
+    
     var body: some View {
         Color.clear
             .task {
-                await kycVM.startVerification(appState: appState)
+                do {
+                    _ = try await kycManager.start()
+                    appState.flow = .home
+                } catch {
+                    appState.flow = .getStartedPhone
+                    alertManager.showError(error.localizedDescription)
+                }
             }
     }
 }
