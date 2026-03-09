@@ -100,29 +100,12 @@ struct OTPScreen: View {
     private func verifyOTP() {
         guard otpVM.isValidOTP else { return }
         UIApplication.shared.dismissKeyboard()
-        
+
         Task {
-            do {
-                let response = try await authVM.validateOTP(
-                    code: otpVM.otpText
-                )
-                
-                try await AppContainer.shared.sessionManager.startSession(accessToken: response.accessToken, refreshToken: response.refreshToken, appState: appState)
-                
-                // Configure KYC SDK
-                await KYCManager.shared.configureSDK(officeId: "1")
-                
-                appState.otpVerified = true
-                authVM.phoneNumber = ""
-                
-                if appState.context == PhoneFlowType.login.rawValue {
-                    appState.flow = .home
-                } else {
-                    appState.flow = .kyc
-                }
-            } catch {
-                AlertManager.shared.showError(error.localizedDescription)
-            }
+            await authVM.completeOTPVerification(
+                code: otpVM.otpText,
+                appState: appState
+            )
         }
     }
 }

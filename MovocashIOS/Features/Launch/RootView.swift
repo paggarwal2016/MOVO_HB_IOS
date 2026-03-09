@@ -11,7 +11,8 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var authVM = AppContainer.shared.makeAuthViewModel()
-    
+    @StateObject private var kycVM = AppContainer.shared.makeKYCViewModel()
+
     var body: some View {
         NavigationStack {
             switch appState.flow {
@@ -32,6 +33,8 @@ struct RootView: View {
             }
         }
         .environmentObject(authVM)
+        .environmentObject(kycVM)
+        .environmentObject(AppContainer.shared.sessionManager)
         .animation(.easeInOut, value: appState.flow)
     }
 }

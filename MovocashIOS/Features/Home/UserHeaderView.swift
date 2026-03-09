@@ -10,6 +10,7 @@ import SwiftUI
 
 struct UserHeaderView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var sessionManager: SessionManager
     @State private var showLogoutAlert = false
     
     var body: some View {
@@ -61,7 +62,7 @@ struct UserHeaderView: View {
             }
             Button("Logout", role: .destructive) {
                 Task {
-                    await AppContainer.shared.sessionManager.logout(appState: appState)
+                    await sessionManager.logout(appState: appState)
                 }
             }
         } message: {

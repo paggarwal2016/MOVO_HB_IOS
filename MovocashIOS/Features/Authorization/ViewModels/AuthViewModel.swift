@@ -18,15 +18,24 @@ final class AuthViewModel: ObservableObject {
     private let network: NetworkServiceProtocol
     private let keychain: KeychainManagerProtocol
     private let authManager: AuthManagerProtocol
-    
+    private let sessionManager: SessionManager
+    private let kycManager: KYCManagerProtocol
+    private let alertManager: AlertManagerProtocol
+
     init(
         network: NetworkServiceProtocol,
         keychain: KeychainManagerProtocol,
-        authManager: AuthManagerProtocol
+        authManager: AuthManagerProtocol,
+        sessionManager: SessionManager,
+        kycManager: KYCManagerProtocol,
+        alertManager: AlertManagerProtocol
     ) {
         self.network = network
         self.keychain = keychain
         self.authManager = authManager
+        self.sessionManager = sessionManager
+        self.kycManager = kycManager
+        self.alertManager = alertManager
     }
     
     //MARK: - Send OTP
@@ -48,11 +57,11 @@ final class AuthViewModel: ObservableObject {
     }
     
     //MARK: - Validate OTP
-    
+
     func validateOTP(code: String) async throws -> RefreshTokenResponse  {
         guard state != .loading else { throw NSError(domain: "AlreadyLoading", code: 0) }
         state = .loading
-        
+
         do {
             let response: RefreshTokenResponse = try await network.request(
                 AuthAPI.tokenSMS(phoneNumber: phoneNumber, code: code)
@@ -62,6 +71,54 @@ final class AuthViewModel: ObservableObject {
         } catch {
             state = .idle
             throw error
+        }
+    }
+
+    // MARK: - Complete OTP Verification Flow
+
+    func completeOTPVerification(code: String, appState: AppState) async {
+        do {
+            let response = try await validateOTP(code: code)
+
+            try await sessionManager.startSession(
+                accessToken: response.accessToken,
+                refreshToken: response.refreshToken,
+                appState: appState
+            )
+
+            await kycManager.configureSDK(officeId: "1")
+
+            appState.otpVerified = true
+            phoneNumber = ""
+
+            if appState.context == PhoneFlowType.login.rawValue {
+                appState.flow = .home
+            } else {
+                appState.flow = .kyc
+            }
+        } catch {
+            alertManager.showError(error.localizedDescription)
+        }
+    }
+
+    // MARK: - Submit Phone Number
+
+    func submitPhoneNumber(appState: AppState) async {
+        let phone = PhoneNumberValidator.sanitize(phoneNumber)
+
+        guard PhoneNumberValidator.isValidUSNumber(phone) else {
+            alertManager.showError("Enter a valid phone number")
+            return
+        }
+
+        phoneNumber = PhoneNumberValidator.normalize(phone)
+        context = appState.context
+
+        do {
+            try await sendOTP()
+            appState.flow = .otp
+        } catch {
+            alertManager.showError(error.localizedDescription)
         }
     }
 }

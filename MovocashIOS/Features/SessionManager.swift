@@ -14,13 +14,19 @@ final class SessionManager: ObservableObject {
 
     private let authManager: AuthManagerProtocol
     private let keychain: KeychainManagerProtocol
+    private let kycManager: KYCManagerProtocol
+    private let alertManager: AlertManagerProtocol
 
     init(
         authManager: AuthManagerProtocol,
-        keychain: KeychainManagerProtocol
+        keychain: KeychainManagerProtocol,
+        kycManager: KYCManagerProtocol,
+        alertManager: AlertManagerProtocol
     ) {
         self.authManager = authManager
         self.keychain = keychain
+        self.kycManager = kycManager
+        self.alertManager = alertManager
     }
 
     // MARK: - Start Session
@@ -71,7 +77,7 @@ final class SessionManager: ObservableObject {
         try? keychain.delete("access_token")
         try? keychain.delete("refresh_token")
 
-        KYCManager.shared.clearSession()
+        kycManager.clearSession()
 
         resetAppState(appState)
     }
@@ -81,7 +87,7 @@ final class SessionManager: ObservableObject {
 
         await logout(appState: appState)
 
-        AlertManager.shared.showError(
+        alertManager.showError(
             "Session expired. Please login again."
         )
     }

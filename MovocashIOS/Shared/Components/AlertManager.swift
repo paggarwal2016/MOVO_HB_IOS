@@ -22,8 +22,24 @@ enum AppAlertType: Identifiable {
     }
 }
 
+// MARK: - AlertManager Protocol
+
 @MainActor
-final class AlertManager: ObservableObject {
+protocol AlertManagerProtocol {
+    func showError(_ message: String, onDismiss: (() -> Void)?)
+    func showConfirmation(title: String, message: String, onConfirm: (() -> Void)?, onCancel: (() -> Void)?)
+}
+
+extension AlertManagerProtocol {
+    func showError(_ message: String) {
+        showError(message, onDismiss: nil)
+    }
+}
+
+// MARK: - AlertManager
+
+@MainActor
+final class AlertManager: ObservableObject, AlertManagerProtocol {
     static let shared = AlertManager()
     @Published var currentAlert: AppAlertType?
 
