@@ -10,20 +10,36 @@ import MobileBankingSDK
 import UIKit
 import SwiftUI
 
+// MARK: - KYCManager Protocol
+
 @MainActor
-final class KYCManager {
-    
-    static let shared = KYCManager()
-    private init() {}
-    
+protocol KYCManagerProtocol {
+    func configureSDK(officeId: String) async
+    func start() async throws -> User
+    func clearSession()
+    func updateToken(_ token: String)
+}
+
+// MARK: - KYCManager
+
+@MainActor
+final class KYCManager: KYCManagerProtocol {
+
+    static let shared = KYCManager(authManager: AuthManager.shared)
+
+    private let authManager: AuthManagerProtocol
     private weak var presenter: UIViewController?
-    
+
+    init(authManager: AuthManagerProtocol) {
+        self.authManager = authManager
+    }
+
     // MARK: - Configure SDK
     func configureSDK(officeId: String) async {
-        
+
         SecureLogger.info("Starting KYC configuration", category: .kyc)
-        
-        guard let token = await AuthManager.shared.getAccessToken() else {
+
+        guard let token = await authManager.getAccessToken() else {
             SecureLogger.error("Missing access token", category: .kyc)
             return
         }

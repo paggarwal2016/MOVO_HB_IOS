@@ -80,25 +80,8 @@ struct PhoneNumberScreen: View {
                 
                 PrimaryButton(title: "Proceed") {
                     UIApplication.shared.dismissKeyboard()
-                    let phone = PhoneNumberValidator.sanitize(authVM.phoneNumber)
-                    
-                    guard PhoneNumberValidator.isValidUSNumber(phone) else {
-                        AlertManager.shared.showError("Enter a valid phone number")
-                        return
-                    }
-                    
-                    let normalized = PhoneNumberValidator.normalize(phone)
-                    
-                    authVM.phoneNumber = normalized
-                    authVM.context = appState.context
-                    
                     Task {
-                        do {
-                            try await authVM.sendOTP()
-                            appState.flow = .otp
-                        } catch {
-                            AlertManager.shared.showError(error.localizedDescription)
-                        }
+                        await authVM.submitPhoneNumber(appState: appState)
                     }
                 }
             }

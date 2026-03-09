@@ -8,32 +8,42 @@
 import Foundation
 
 actor NetworkService: NetworkServiceProtocol {
-    
-    static let shared = NetworkService()
-    
+
+    static let shared = NetworkService(
+        keychain: KeychainManager.shared,
+        authManager: AuthManager.shared
+    )
+
     private let builder: RequestBuilder
-    
+    private let keychain: KeychainManagerProtocol
+    private let authManager: AuthManagerProtocol
+
     // Actor-protected state
     private var isRefreshing = false
     private var retryTracker: [URL: Int] = [:]
     private let maxRetry = 1
-    
+
     // Custom session for security
     private let session: URLSession
-    
-    private init() {
-        
+
+    init(
+        keychain: KeychainManagerProtocol,
+        authManager: AuthManagerProtocol
+    ) {
+        self.keychain = keychain
+        self.authManager = authManager
+
         let config = URLSessionConfiguration.default
-        
+
         // Fintech-safe timeout settings
         config.timeoutIntervalForRequest = 15        // Per request timeout
         config.timeoutIntervalForResource = 30       // Total resource timeout
-        
+
         // Security best practices
         config.waitsForConnectivity = true           // Wait for network recovery
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.urlCache = nil
-        
+
         self.session = URLSession(
             configuration: config,
             delegate: SecureSessionDelegate(), // customizable
@@ -89,23 +99,25 @@ actor NetworkService: NetworkServiceProtocol {
             }
             return
         }
-        
+
         isRefreshing = true
         defer { isRefreshing = false }
-        
-        let refreshToken = try await KeychainManager.shared.get("refresh_token")
-        
+
+        let refreshToken = try await keychain.get("refresh_token", biometricPrompt: nil)
+
         guard !refreshToken.isEmpty else {
             throw NetworkError.unauthorized
         }
-        
+
         let endpoint = AuthAPI.refreshToken(refreshToken: refreshToken)
-        // Build the request
         let request = try await builder.build(from: endpoint)
-        
+
         let response: RefreshTokenResponse = try await performRequest(request)
-        
-        try await AppContainer.shared.sessionManager.storeTokens(accessToken: response.accessToken, refreshToken: response.refreshToken)
+
+        // Store refreshed tokens directly
+        try await keychain.save(response.accessToken, for: "access_token", protection: .backgroundSafe)
+        try await keychain.save(response.refreshToken, for: "refresh_token", protection: .backgroundSafe)
+        await authManager.updateAccessToken(response.accessToken)
     }
     
     // MARK: - Perform Request (Nonisolated for Swift 6 concurrency)

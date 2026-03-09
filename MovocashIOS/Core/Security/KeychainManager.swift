@@ -11,7 +11,7 @@ import LocalAuthentication
 
 // MARK: - KeychainManager Protocol
 
-protocol KeychainManagerProtocol {
+protocol KeychainManagerProtocol: Sendable {
     func save(_ value: String, for key: String, protection: KeychainProtection) throws
     
     func get(_ key: String, biometricPrompt: String?) throws -> String
