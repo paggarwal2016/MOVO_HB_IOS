@@ -64,7 +64,15 @@ struct OTPScreen: View {
                 Spacer()
                 
                 PrimaryButton(title: "Continue", isEnabled: otpVM.isValidOTP) {
-                    verifyOTP()
+                    UIApplication.shared.dismissKeyboard()
+                    Task {
+                        await otpVM.submitOTP { code in
+                            await authVM.completeOTPVerification(
+                                code: code,
+                                appState: appState
+                            )
+                        }
+                    }
                 }
                 .disabled(!otpVM.isValidOTP || authVM.state == .loading)
             }
@@ -83,7 +91,15 @@ struct OTPScreen: View {
         .onChangeCompat(of: otpVM.otpText) { newValue in
             if newValue.count == otpVM.maxLength {
                 isFocused = false
-                verifyOTP()
+                UIApplication.shared.dismissKeyboard()
+                Task {
+                    await otpVM.submitOTP { code in
+                        await authVM.completeOTPVerification(
+                            code: code,
+                            appState: appState
+                        )
+                    }
+                }
             }
         }
     }
@@ -96,16 +112,4 @@ struct OTPScreen: View {
         return String(string[i])
     }
     
-    // MARK: - Verify OTP
-    private func verifyOTP() {
-        guard otpVM.isValidOTP else { return }
-        UIApplication.shared.dismissKeyboard()
-
-        Task {
-            await authVM.completeOTPVerification(
-                code: otpVM.otpText,
-                appState: appState
-            )
-        }
-    }
 }

@@ -13,6 +13,7 @@ final class AuthViewModel: ObservableObject {
     @Published var state: AuthState = .idle
     @Published var showOTP: Bool = false
     @Published var phoneNumber: String = ""
+    @Published var phoneDisplayText: String = ""
     @Published var context: String = ""
     
     private let network: NetworkServiceProtocol
@@ -90,6 +91,7 @@ final class AuthViewModel: ObservableObject {
 
             appState.otpVerified = true
             phoneNumber = ""
+            phoneDisplayText = ""
 
             if appState.context == PhoneFlowType.login.rawValue {
                 appState.flow = .home
@@ -99,6 +101,30 @@ final class AuthViewModel: ObservableObject {
         } catch {
             alertManager.showError(error.localizedDescription)
         }
+    }
+
+    // MARK: - Phone Input Formatting
+
+    private var phonePreviousText: String = ""
+
+    func handlePhoneInput(_ newValue: String) {
+        let isDeleting = newValue.count < phonePreviousText.count
+        var digits = PhoneFormatter.raw(newValue)
+
+        if digits.count > 10 {
+            phoneDisplayText = phonePreviousText
+            return
+        }
+
+        if isDeleting && PhoneFormatter.raw(phonePreviousText) == digits {
+            digits = String(digits.dropLast())
+        }
+
+        let formatted = PhoneFormatter.formatted(digits)
+
+        phoneDisplayText = formatted
+        phoneNumber = digits
+        phonePreviousText = formatted
     }
 
     // MARK: - Submit Phone Number
