@@ -33,7 +33,7 @@ actor AuthManager: AuthManagerProtocol {
 
 // MARK: - AuthManagerProtocol
 
-protocol AuthManagerProtocol {
+protocol AuthManagerProtocol: Sendable {
     func updateAccessToken(_ token: String) async
     func getAccessToken() async -> String?
     func clearSession() async

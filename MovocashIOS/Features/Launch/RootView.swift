@@ -11,7 +11,6 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var authVM = AppContainer.shared.makeAuthViewModel()
-    @StateObject private var kycVM = AppContainer.shared.makeKYCViewModel()
 
     var body: some View {
         NavigationStack {
@@ -27,13 +26,12 @@ struct RootView: View {
             case .otp:
                 OTPScreen(authVM: authVM)
             case .kyc:
-                KYCLauncherView()
+                KYCView()
             case .home:
                 HomeTabBarView()
             }
         }
         .environmentObject(authVM)
-        .environmentObject(kycVM)
         .environmentObject(AppContainer.shared.sessionManager)
         .animation(.easeInOut, value: appState.flow)
     }

@@ -103,7 +103,7 @@ actor NetworkService: NetworkServiceProtocol {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        let refreshToken = try keychain.get("refresh_token", biometricPrompt: nil)
+        let refreshToken = try await keychain.get("refresh_token", biometricPrompt: nil)
 
         guard !refreshToken.isEmpty else {
             throw NetworkError.unauthorized
@@ -115,8 +115,8 @@ actor NetworkService: NetworkServiceProtocol {
         let response: RefreshTokenResponse = try await performRequest(request)
 
         // Store refreshed tokens directly
-        try keychain.save(response.accessToken, for: "access_token", protection: .backgroundSafe)
-        try keychain.save(response.refreshToken, for: "refresh_token", protection: .backgroundSafe)
+        try await keychain.save(response.accessToken, for: "access_token", protection: .backgroundSafe)
+        try await keychain.save(response.refreshToken, for: "refresh_token", protection: .backgroundSafe)
         await authManager.updateAccessToken(response.accessToken)
     }
     
