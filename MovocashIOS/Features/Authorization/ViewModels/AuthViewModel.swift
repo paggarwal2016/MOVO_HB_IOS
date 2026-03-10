@@ -68,6 +68,7 @@ final class AuthViewModel: ObservableObject {
                 AuthAPI.tokenSMS(phoneNumber: phoneNumber, code: code)
             )
             self.state = .verified
+            reset()
             return response
         } catch {
             state = .idle
@@ -90,14 +91,12 @@ final class AuthViewModel: ObservableObject {
             await kycManager.configureSDK(officeId: "1")
 
             appState.otpVerified = true
-            phoneNumber = ""
-            phoneDisplayText = ""
-
             if appState.context == PhoneFlowType.login.rawValue {
                 appState.flow = .home
             } else {
-                appState.flow = .kyc
+                appState.flow = .setupPasscode
             }
+            reset()
         } catch {
             alertManager.showError(error.localizedDescription)
         }
@@ -146,6 +145,11 @@ final class AuthViewModel: ObservableObject {
         } catch {
             alertManager.showError(error.localizedDescription)
         }
+    }
+    
+    func reset() {
+        phoneNumber = ""
+        phoneDisplayText = ""
     }
 }
 

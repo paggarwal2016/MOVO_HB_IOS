@@ -17,6 +17,7 @@ struct DashboardView: View {
 
             UserHeaderView {
                 Task {
+                    AppContainer.lockManager.logout()
                     await sessionManager.logout(appState: appState)
                 }
             }

@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 enum AuthFlow {
-    case splash, choice, loginPhone, getStartedPhone, otp, kyc, home
+    case splash, choice, loginPhone, getStartedPhone, otp, setupPasscode, enableBiometrics, kyc, home
 }
 
 enum NetworkStatus {

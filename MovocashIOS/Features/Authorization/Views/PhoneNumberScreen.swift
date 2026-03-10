@@ -70,6 +70,7 @@ struct PhoneNumberScreen: View {
             }
         }
         .onAppear() {
+            authVM.reset()
             appState.context = flowType.rawValue
         }
     }
