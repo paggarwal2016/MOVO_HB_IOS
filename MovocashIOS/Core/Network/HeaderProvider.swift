@@ -16,17 +16,17 @@ enum HeaderType: Sendable {
 }
 
 struct HeaderProvider {
-    
-    static func headers(for type: HeaderType) async -> [String: String] {
+
+    static func headers(for type: HeaderType, authManager: AuthManagerProtocol) async -> [String: String] {
         var headers: [String: String] = baseHeaders()
         switch type {
         case .default:
             break
         case .authorized:
-            await addAuthorization(&headers)
-            
+            await addAuthorization(&headers, authManager: authManager)
+
         case .authorizedWithOffice:
-            await addAuthorization(&headers)
+            await addAuthorization(&headers, authManager: authManager)
             headers["office-id"] = "1"
         }
         return headers
@@ -54,8 +54,8 @@ private extension HeaderProvider {
 
 private extension HeaderProvider {
     
-    static func addAuthorization(_ headers: inout [String: String]) async {
-        if let token = await AuthManager.shared.getAccessToken() {
+    static func addAuthorization(_ headers: inout [String: String], authManager: AuthManagerProtocol) async {
+        if let token = await authManager.getAccessToken() {
             headers["Authorization"] = "Bearer \(token)"
         }
     }

@@ -34,12 +34,10 @@ enum AuthAPI: Endpoint {
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { nil }
     
-    // MARK: - Body (Safe Encoding)
+    // MARK: - Body
     var body: Data? {
-        do {
-            return try encodeBody()
-        } catch {
-            return nil
+        get throws {
+            try encodeBody()
         }
     }
     

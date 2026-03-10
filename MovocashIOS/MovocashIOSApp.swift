@@ -19,6 +19,12 @@ struct MovocashIOSApp: App {
                 .environmentObject(appState)
                 .networkMonitor(state: appState)
                 .globalAlert()
+                .task {
+                    ScreenSecurityManager.shared.onScreenshotDetected = { [weak appState] in
+                        guard let appState else { return }
+                        await AppContainer.shared.sessionManager.forceLogout(appState: appState)
+                    }
+                }
             //.sensitiveScreen() TODO: - In future
         }
         .onChange(of: scenePhase) { newPhase in

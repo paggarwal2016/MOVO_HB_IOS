@@ -23,7 +23,8 @@ struct SplashScreen: View {
         }
         .task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
-            appState.flow = .choice
+            let restored = await AppContainer.shared.sessionManager.restoreSession(appState: appState)
+            appState.flow = restored ? .home : .choice
         }
     }
 }
