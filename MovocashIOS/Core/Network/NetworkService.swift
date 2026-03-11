@@ -142,6 +142,13 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.invalidResponse
         }
         
+        if let jsonString = String(data: data, encoding: .utf8) {
+#if DEBUG
+            print("URL: \(String(describing: request.url))")
+            print("Response JSON: \(jsonString)")
+#endif
+        }
+                
         SecureLogger.info("API Status Code: \(http.statusCode)", category: .network)
         
         if http.statusCode == 401 {

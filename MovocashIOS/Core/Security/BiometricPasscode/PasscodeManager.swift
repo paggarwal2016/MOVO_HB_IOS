@@ -53,9 +53,10 @@ final class PasscodeManager: PasscodeManaging, Sendable {
 
     // MARK: Keychain keys
     private enum Keys {
-        static let pinHash = "com.movocash.movo.pin.hash"
-        static let pinSalt = "com.movocash.movo.pin.salt"
-        static let bioKey  = "com.movocash.movo.bio.key"
+        private static let prefix = AppInfo.bundleIdentifier
+        static let pinHash = prefix + ".pin.hash"
+        static let pinSalt = prefix + ".pin.salt"
+        static let bioKey  = prefix + ".bio.key"
     }
 
     // MARK: - Public state

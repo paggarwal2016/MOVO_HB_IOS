@@ -112,5 +112,6 @@ final class SessionManager: ObservableObject {
         appState.otpVerified = false
         appState.isAuthenticated = false
         appState.flow = .choice
+        RSAKeyManager.deleteKey() // TODO: - Testing checking
     }
 }

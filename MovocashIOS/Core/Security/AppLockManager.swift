@@ -237,6 +237,16 @@ final class AppLockManager: ObservableObject {
     }
 }
 
+extension AppLockManager { // TODO: - Testing checking
+
+    // Called from AppLockView when user taps biometric button
+    // OR auto-triggered on app launch from SplashScreen
+    func unlockWithRSA(authVM: AuthViewModel, appState: AppState) async {
+        await authVM.loginWithRSA(appState: appState)
+    }
+}
+
+
 // MARK: - Errors
 
 enum AppLockError: LocalizedError {
