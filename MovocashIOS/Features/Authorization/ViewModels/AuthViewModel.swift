@@ -178,10 +178,6 @@ extension AuthViewModel { // TODO: - Testing checking
     
     // ── Enroll flow ───────────────────────────────────────────────────────────
     private func runEnrollFlow(appState: AppState) async {
-        guard RSAKeyManager.isBiometricAvailable() else {
-            SecureLogger.warning("Secure Enclave unavailable — cannot enroll", category: .auth)
-            return
-        }
         
         let keyResult = await Task.detached(priority: .background) {
             RSAKeyManager.generateKeyPair()
