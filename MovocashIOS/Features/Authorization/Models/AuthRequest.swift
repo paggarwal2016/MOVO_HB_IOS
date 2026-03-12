@@ -31,3 +31,23 @@ struct RefreshTokenRequest: Encodable, Sendable {
         case refreshToken = "refreshToken"
     }
 }
+
+// MARK: - RSA
+
+struct RSAEnrollRequest: Encodable, Sendable {
+    let publicKey: String
+    let deviceId: String
+    enum CodingKeys: String, CodingKey {
+        case publicKey = "publicKey"
+        case deviceId = "deviceId"
+    }
+}
+
+struct RSATokenRequest: Encodable, Sendable {
+    let signedMessage: String
+    let deviceId: String
+    enum CodingKeys: String, CodingKey {
+        case signedMessage = "signedMessage"
+        case deviceId = "deviceId"
+    }
+}

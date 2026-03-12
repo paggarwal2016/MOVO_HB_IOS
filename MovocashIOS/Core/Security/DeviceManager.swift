@@ -33,7 +33,7 @@ final class DeviceManager {
         // Generate fallback UUID
         let generated = UUID().uuidString
         try? keychain.save(generated, for: deviceKey, protection: .backgroundSafe)
-        
+                
         return generated
     }
 }

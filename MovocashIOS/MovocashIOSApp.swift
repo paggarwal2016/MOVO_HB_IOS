@@ -11,85 +11,21 @@ import Combine
 @main
 struct MovocashIOSApp: App {
     @StateObject private var appState = AppState()
-    @SwiftUI.Environment(\.scenePhase) private var scenePhase
+    @StateObject private var lockManager = AppContainer.lockManager
     
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
+                .environmentObject(lockManager)
                 .networkMonitor(state: appState)
                 .globalAlert()
                 .task {
-                    ScreenSecurityManager.shared.onScreenshotDetected = { [weak appState] in
-                        guard let appState else { return }
-                        await AppContainer.shared.sessionManager.forceLogout(appState: appState)
-                    }
+                    // On first launch after install, evaluate whether to lock
+                    // SplashScreen handles session restore; lock eval happens after
+                    lockManager.evaluateOnLaunch()
                 }
-            //.sensitiveScreen() TODO: - In future
-        }
-        .onChange(of: scenePhase) { newPhase in
-            handleScenePhase(newPhase)
-        }
-    }
-    
-    
-    private func handleScenePhase(_ phase: ScenePhase) {
-        switch phase {
-        case .background:
-            AppLockManager.shared.didEnterBackground()
-        case .active:
-            Task {
-                await AppLockManager.shared.handleAppReentry(appState: appState)
-            }
-        default:
-            break
+            //.sensitiveScreen() TODO: Future Implementation will check this logic
         }
     }
 }
-
-
-
-
-
-
-
-
-
-//TODO: // In future
-//@main struct MovocashIOSApp: App {
-//    @State private var isDeviceCompromised = false
-//
-////    init() { TODO: // In future
-////        _ = ScreenSecurityManager.shared
-////    }
-//
-//    var body: some Scene { WindowGroup { ZStack {
-//        //Match Launch screen color
-//        LinearGradient( colors: [Color.blue, Color.purple], startPoint: .topLeading, endPoint: .bottomTrailing )
-//            .ignoresSafeArea()
-//        Group {
-//            if isDeviceCompromised {
-//                CompromisedDeviceView()
-//            } else {
-//                PhoneInputView()
-//                    .globalAlert()
-//                    //.sensitiveScreen() TODO: // In future
-//            }
-//        }
-//    }
-//    .task {
-//        await checkDeviceSecurity()
-//    }
-//    }
-//    }
-//    private func checkDeviceSecurity() async {
-//        let compromised = await JailbreakDetector.shared.isJailBroken
-//        if compromised {
-//            await forceLogoutAndBlockUI()
-//        }
-//    }
-//    @MainActor private func forceLogoutAndBlockUI() async {
-//        self.isDeviceCompromised = true
-//        SecureLogger.info("Device is compromised. User forced to logout.", category: .general)
-//    }
-//}

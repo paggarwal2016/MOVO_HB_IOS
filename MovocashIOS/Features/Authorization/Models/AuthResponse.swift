@@ -32,3 +32,14 @@ nonisolated struct APIErrorResponse: Decodable {
         case message = "message"
     }
 }
+
+
+nonisolated struct RSATokenResponse: Decodable {
+    let accessToken:  String
+    let refreshToken: String
+    
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "accessToken"
+        case refreshToken = "refreshToken"
+    }
+}

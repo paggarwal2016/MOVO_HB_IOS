@@ -12,6 +12,8 @@ enum AuthAPI: Endpoint {
     case messengerOTP(phoneNumber: String, context: String)
     case tokenSMS(phoneNumber: String, code: String)
     case refreshToken(refreshToken: String)
+    case enrollRSA(request: RSAEnrollRequest)
+    case tokenRSA(request: RSATokenRequest)
     
     // MARK: - Environment Configure
     var environment: Environment { AppConfig.environment }
@@ -22,6 +24,8 @@ enum AuthAPI: Endpoint {
         case .messengerOTP: return "/messenger/otp"
         case .tokenSMS: return "/auth/token-sms"
         case .refreshToken: return "/auth/refreshToken"
+        case .enrollRSA: return "/rsa"
+        case .tokenRSA: return "/auth/token-rsa"
         }
     }
     
@@ -29,7 +33,14 @@ enum AuthAPI: Endpoint {
     var method: HTTPMethod { .POST } // feature use switch case
     
     // MARK: - Header Configure
-    var headerType: HeaderType { .default }
+    var headerType: HeaderType {
+        switch self {
+        case .messengerOTP,.tokenSMS:
+            return .default
+        case .refreshToken, .enrollRSA, .tokenRSA:
+            return .authorized
+        }
+    }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { nil }
@@ -53,6 +64,14 @@ enum AuthAPI: Endpoint {
             
         case .refreshToken(let refreshToken):
             let request = RefreshTokenRequest(refreshToken: refreshToken)
+            return try JSONEncoder().encode(request)
+            
+        case .enrollRSA(let request):
+            SecureLogger.debug("Enroll RSA \(request)", category: .general)
+            return try JSONEncoder().encode(request)
+            
+        case .tokenRSA(let request):
+            SecureLogger.debug("Token RSA \(request)", category: .general)
             return try JSONEncoder().encode(request)
         }
     }

@@ -17,6 +17,14 @@ final class AppContainer {
     let alertManager: AlertManagerProtocol
     let kycManager: KYCManagerProtocol
     let sessionManager: SessionManager
+    
+    static let lockManager: AppLockManager = {
+        AppLockManager(
+            passcodeManager: PasscodeManager(),
+            biometricManager: BiometricManager()
+        )
+    }()
+
 
     init() {
         keychain = KeychainManager.shared
@@ -41,5 +49,9 @@ final class AppContainer {
             kycManager: kycManager,
             alertManager: alertManager
         )
+    }
+    
+    func makeAppLockViewModel() -> AppLockViewModel {
+        AppLockViewModel(lockManager: AppContainer.lockManager)
     }
 }

@@ -18,7 +18,6 @@
 		146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819552F4DE6CF00BED014 /* NetworkServiceProtocol.swift */; };
 		146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819542F4DE6CF00BED014 /* NetworkService.swift */; };
 		1468197A2F4DE6CF00BED014 /* AuthAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819512F4DE6CF00BED014 /* AuthAPI.swift */; };
-		1468197B2F4DE6CF00BED014 /* BiometricManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819592F4DE6CF00BED014 /* BiometricManager.swift */; };
 		1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468195E2F4DE6CF00BED014 /* AppInfo.swift */; };
 		1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819642F4DE6CF00BED014 /* AuthViewModel.swift */; };
 		146819802F4DE6CF00BED014 /* MovocashIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */; };
@@ -101,7 +100,6 @@
 		146819552F4DE6CF00BED014 /* NetworkServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkServiceProtocol.swift; sourceTree = "<group>"; };
 		146819562F4DE6CF00BED014 /* SSLPinning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSLPinning.swift; sourceTree = "<group>"; };
 		146819582F4DE6CF00BED014 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
-		146819592F4DE6CF00BED014 /* BiometricManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricManager.swift; sourceTree = "<group>"; };
 		1468195A2F4DE6CF00BED014 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		1468195B2F4DE6CF00BED014 /* JailbreakDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JailbreakDetector.swift; sourceTree = "<group>"; };
 		1468195C2F4DE6CF00BED014 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
@@ -145,6 +143,21 @@
 		142337CB2F584C010030B4E7 /* Home */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Home;
+			sourceTree = "<group>";
+		};
+		1486221C2F60159000792DB2 /* BiometricPasscode */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BiometricPasscode;
+			sourceTree = "<group>";
+		};
+		148622252F60178B00792DB2 /* BiometricPasscode */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BiometricPasscode;
+			sourceTree = "<group>";
+		};
+		148622D62F61546D00792DB2 /* RSA */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RSA;
 			sourceTree = "<group>";
 		};
 		14DBC58E2F5014AD000D84FD /* Extensions */ = {
@@ -218,8 +231,9 @@
 		1468195D2F4DE6CF00BED014 /* Security */ = {
 			isa = PBXGroup;
 			children = (
+				148622D62F61546D00792DB2 /* RSA */,
+				1486221C2F60159000792DB2 /* BiometricPasscode */,
 				146819582F4DE6CF00BED014 /* AuthManager.swift */,
-				146819592F4DE6CF00BED014 /* BiometricManager.swift */,
 				1468195A2F4DE6CF00BED014 /* DeviceManager.swift */,
 				1468195B2F4DE6CF00BED014 /* JailbreakDetector.swift */,
 				1468195C2F4DE6CF00BED014 /* KeychainManager.swift */,
@@ -303,6 +317,7 @@
 		1468196D2F4DE6CF00BED014 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				148622252F60178B00792DB2 /* BiometricPasscode */,
 				14DCE2862F5ABA38008A8DC4 /* AppContainer.swift */,
 				14DCE2882F5AC31A008A8DC4 /* SessionManager.swift */,
 				142337CB2F584C010030B4E7 /* Home */,
@@ -420,6 +435,9 @@
 			fileSystemSynchronizedGroups = (
 				142337C92F5846870030B4E7 /* Launch */,
 				142337CB2F584C010030B4E7 /* Home */,
+				1486221C2F60159000792DB2 /* BiometricPasscode */,
+				148622252F60178B00792DB2 /* BiometricPasscode */,
+				148622D62F61546D00792DB2 /* RSA */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,
@@ -554,7 +572,6 @@
 				146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */,
 				146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */,
 				1468197A2F4DE6CF00BED014 /* AuthAPI.swift in Sources */,
-				1468197B2F4DE6CF00BED014 /* BiometricManager.swift in Sources */,
 				1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */,
 				142337BA2F5807890030B4E7 /* ChoiceScreen.swift in Sources */,
 				140DF3522F5591A80060C1B7 /* AppColors.swift in Sources */,

@@ -9,6 +9,8 @@ import Foundation
 import SwiftUI
 
 struct HomeTabBarView: View {
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var authVM: AuthViewModel
     
     @State private var selectedTab = 0
     
@@ -50,5 +52,11 @@ struct HomeTabBarView: View {
             .tag(2)
         }
         .tint(AppColors.primary) // Active tab color
+        .task {
+//            if !RSAKeyManager.isRegistered() { // TODO: - Testing checking
+//                UserDefaults.standard.set(false, forKey: "rsa_enrolled")
+//                await authVM.enrollRSASilently(appState: appState)
+//            }
+        }
     }
 }
