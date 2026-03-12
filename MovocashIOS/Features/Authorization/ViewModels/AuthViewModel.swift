@@ -61,7 +61,7 @@ final class AuthViewModel: ObservableObject {
     //MARK: - Validate OTP
     
     func validateOTP(code: String) async throws -> RefreshTokenResponse  {
-        guard state != .loading else { throw NSError(domain: "AlreadyLoading", code: 0) }
+        guard state != .loading else { throw ModelError.alreadyLoading }
         state = .loading
         
         do {
