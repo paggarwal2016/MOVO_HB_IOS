@@ -41,6 +41,9 @@ final class VCardViewModel: ObservableObject {
              let result = try await operation()
              state = .success
              return result
+         } catch is CancellationError {
+             state = .idle
+             throw CancellationError()
          } catch {
              state = .idle
              alertManager.showError(error.localizedDescription)

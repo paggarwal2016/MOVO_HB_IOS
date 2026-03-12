@@ -10,6 +10,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
     @StateObject private var vm = VCardViewModel(
         network: AppContainer.shared.network,
@@ -63,7 +64,10 @@ struct DashboardView: View {
                 .ignoresSafeArea()
             }
         }
-        .task { await loadCard() }
+        .task(id: lockManager.state) {
+            guard lockManager.state == .unlocked else { return }
+            await loadCard()
+        }
         .onAppear { showCardDetail = false }
     }
     

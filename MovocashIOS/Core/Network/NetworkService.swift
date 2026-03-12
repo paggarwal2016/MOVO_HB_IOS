@@ -123,14 +123,13 @@ actor NetworkService: NetworkServiceProtocol {
     
     // MARK: - Perform Request (Nonisolated for Swift 6 concurrency)
     private nonisolated func performRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
-        
-        // Use a separate URLSession
-        let session = URLSession.shared
-        
+
         // Network call
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            throw CancellationError()
         } catch {
             SecureLogger.error("Network error: \(error.localizedDescription)", category: .network)
             throw NetworkError.noInternet
