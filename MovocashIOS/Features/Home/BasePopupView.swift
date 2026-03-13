@@ -1,19 +1,25 @@
 //
-//  CardDetailView.swift
+//  BasePopupView.swift
 //  MovocashIOS
 //
-//  Created by Movo Developer on 12/03/26.
+//  Created by Vinu on 13/03/26.
 //
 
 import SwiftUI
 
-struct CardDetailPopupView: View {
+// MARK: - Base Popup
+
+struct BasePopupView<Content: View>: View {
     
-    let card: VCardsResponse
+    // MARK: - Properties
+    
+    let maskedNumber: String
+    let formattedBalance: String
+    let balanceLabel: String
     @Binding var isPresented: Bool
-    @State private var copiedField: String?
+    @ViewBuilder let content: Content
     
-    private let brandColor = Color(hex: "#C0472B")
+    // MARK: - Body
     
     var body: some View {
         ZStack {
@@ -23,10 +29,14 @@ struct CardDetailPopupView: View {
             
             VStack(spacing: 0) {
                 
+                // MARK: - Header
+                
                 ZStack(alignment: .topTrailing) {
                     headerCurve
                     
-                    Button { isPresented = false } label: {
+                    Button {
+                        isPresented = false
+                    } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
@@ -37,26 +47,10 @@ struct CardDetailPopupView: View {
                     .padding(16)
                 }
                 
+                // MARK: - Content
+                
                 VStack(spacing: 0) {
-                    DetailField(
-                        label: "CARD NUMBER",
-                        value: card.cardNumber,
-                        copiedField: $copiedField,
-                        fullWidth: true,
-                        accentColor: AppColors.primary
-                    )
-                    
-                    Divider().padding(.horizontal, 20)
-                    
-                    HStack(alignment: .top, spacing: 0) {
-                        PlainField(label: "EXP DATE", value: card.expiration, fullWidth: true)
-                        Divider().frame(height: 60)
-                        PlainField(label: "ZIP", value: card.lastFour, fullWidth: true)
-                    }
-                    
-                    Divider().padding(.horizontal, 20)
-                    
-                    PlainField(label: "DESIGN", value: card.name, fullWidth: true)
+                    content
                 }
                 .padding(.bottom, 8)
             }
@@ -67,7 +61,7 @@ struct CardDetailPopupView: View {
         }
     }
     
-    // MARK: - Curved header
+    // MARK: - Header Curve
     
     private var headerCurve: some View {
         ZStack {
@@ -90,15 +84,15 @@ struct CardDetailPopupView: View {
             }
             
             VStack(spacing: 6) {
-                Text("--")
+                Text(maskedNumber)
                     .font(.system(size: 14))
                     .foregroundStyle(.white.opacity(0.7))
                 
-                Text(card.formattedBalance)
+                Text(formattedBalance)
                     .font(.system(size: 36, weight: .bold))
                     .foregroundStyle(.white)
                 
-                Text("AVAILABLE BALANCE")
+                Text(balanceLabel)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.8))
                     .tracking(1.5)
@@ -189,7 +183,7 @@ struct PlainField: View {
 struct RoundedCornersShape: Shape {
     var corners: UIRectCorner
     var radius: CGFloat
-    
+
     func path(in rect: CGRect) -> Path {
         let path = UIBezierPath(
             roundedRect: rect,
@@ -205,6 +199,6 @@ struct RoundedCornersShape: Shape {
 
 extension VCardsResponse {
     var formattedBalance: String {
-        return "$20,000.00" // replace with real balance field
+        return "$20,000.00" 
     }
 }

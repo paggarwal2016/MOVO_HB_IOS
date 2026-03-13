@@ -35,12 +35,12 @@ struct CustomCardView: View {
             cardBackground
             cardContent
         }
-        .frame(height: 200)
+        .frame(height: 180)
         .padding(.horizontal)
     }
     
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 24)
+        RoundedRectangle(cornerRadius: 15)
             .fill(Color.black)
             .shadow(color: .black.opacity(0.35), radius: 12, x: 0, y: 8)
     }
@@ -77,7 +77,7 @@ struct CustomCardView: View {
                 Spacer()
             }
         }
-        .padding(24)
+        .padding(15)
     }
     
     private var eyeButton: some View {

@@ -53,7 +53,7 @@ actor NetworkService: NetworkServiceProtocol {
     }
     
     // MARK: - Public Request
-    func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
+    func request<T: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> T {
         
         // Security check
         if await JailbreakDetector.shared.isJailbroken {
