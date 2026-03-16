@@ -8,40 +8,82 @@
 import SwiftUI
 
 struct AccountListSheetView: View {
-    
+
     @Binding var selectedAccount: SavingsAccountDetailsResponse?
     @Binding var isPresented: Bool
-    
+
     @StateObject private var savingVM = SavingsAccountViewModel(
         network: AppContainer.shared.network,
         alertManager: AppContainer.shared.alertManager
     )
-    
+
     @State private var accounts: [SavingsAccountDetailsResponse] = []
-    
+    @State private var primaryAccountId: Int?
+    @State private var selectedDetailAccount: SavingsAccountDetailsResponse?
+
+    @State private var showCreateAccount = false
+    @State private var showEditNickname = false
+    @State private var accountToEdit: SavingsAccountDetailsResponse?
+
     var body: some View {
-        NavigationStack {
-            Group {
-                switch savingVM.state {
-                case .loading:
-                    loadingView
-                default:
-                    accountList
-                }
+        ZStack {
+            NavigationStack {
+                accountList
+                    .navigationTitle("Accounts")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button {
+                                showCreateAccount = true
+                            } label: {
+                                Image(systemName: "plus")
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppColors.primary)
+                            }
+                        }
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { isPresented = false }
+                                .foregroundStyle(AppColors.primary)
+                                .fontWeight(.semibold)
+                        }
+                    }
             }
-            .navigationTitle("Accounts")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { isPresented = false }
-                        .foregroundStyle(AppColors.primary)
-                        .fontWeight(.semibold)
-                }
+
+            if savingVM.state == .loading {
+                SpinnerView()
             }
         }
+        .textInputAlert(
+            isPresented: $showCreateAccount,
+            title: "New Account",
+            message: "Enter a name for your new savings account.",
+            placeholder: "Type here...",
+            onCreate: { name in
+                Task { await createAccount(name: name) }
+            }
+        )
+        .textInputAlert(
+            isPresented: $showEditNickname,
+            title: "Edit Nickname",
+            message: "Enter a new nickname for this account.",
+            placeholder: "Type here...",
+            config: TextInputAlertConfig(primaryLabel: "Save"),
+            onCreate: { name in
+                Task { await updateNickname(name: name) }
+            }
+        )
+        .sheet(item: $selectedDetailAccount) { account in
+            SavingAccountDetailView(accountId: account.id)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .globalAlert()
+        .globalToast()
         .task { await loadAccounts() }
     }
-    
+
+    // MARK: - Account List
+
     private var accountList: some View {
         List(accounts, id: \.id) { account in
             AccountRowView(
@@ -49,29 +91,111 @@ struct AccountListSheetView: View {
                 isSelected: selectedAccount?.id == account.id
             )
             .contentShape(Rectangle())
+            .onTapGesture {
+                selectedDetailAccount = account
+            }
             .listRowSeparator(.hidden)
             .listRowBackground(Color(.systemGroupedBackground))
             .listRowInsets(EdgeInsets())
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button {
+                    confirmDelete(account: account)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .tint(AppColors.primary)
+
+                Button {
+                    accountToEdit = account
+                    showEditNickname = true
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(AppColors.secondary)
+            }
         }
         .listStyle(.plain)
         .background(Color(.systemGroupedBackground))
     }
-    
-    private var loadingView: some View {
-        VStack(spacing: 12) {
-            ForEach(0..<4, id: \.self) { _ in
-                CardSkeletonView()
-            }
-            Spacer()
-        }
-        .padding(.top, 16)
-    }
-    
+
+    // MARK: - Load
+
     private func loadAccounts() async {
         do {
             let response = try await savingVM.getSavingAccountList()
             accounts = response.accounts.filter { !$0.isPrimary }
-        } catch {}
+            primaryAccountId = response.accounts.first(where: { $0.isPrimary })?.id
+        } catch {
+            ToastManager.shared.show("Failed to load accounts.", style: .error, position: .bottom)
+        }
+    }
+
+    // Fires a silent background sync without blocking the caller
+    private func backgroundSync() {
+        Task { await loadAccounts() }
+    }
+
+    // MARK: - Create
+
+    private func createAccount(name: String) async {
+        do {
+            let newAccount = try await savingVM.createSavingAccount(
+                request: SavingsAccountRequest.CreateAccount(nickname: name)
+            )
+            accounts.append(newAccount)                         // instant UI update
+            ToastManager.shared.show("\"\(name)\" account created!", style: .success, position: .bottom)
+            backgroundSync()                                   // silent server sync
+        } catch {
+            ToastManager.shared.show("Failed to create account.", style: .error, position: .bottom)
+        }
+    }
+
+    // MARK: - Update Nickname
+
+    private func updateNickname(name: String) async {
+        guard let account = accountToEdit else { return }
+        accountToEdit = nil
+        do {
+            _ = try await savingVM.updateSavingAccount(
+                request: SavingsAccountRequest.UpdateAccount(nickname: name, accountId: account.id)
+            )
+            ToastManager.shared.show("Nickname updated!", style: .success, position: .bottom)
+            backgroundSync()                                   // silent server sync
+        } catch {
+            ToastManager.shared.show("Failed to update nickname.", style: .error, position: .bottom)
+        }
+    }
+
+    // MARK: - Delete
+
+    private func confirmDelete(account: SavingsAccountDetailsResponse) {
+        AlertManager.shared.showConfirmation(
+            title: "Delete Account",
+            message: "Are you sure you want to delete \"\(account.nickname ?? account.maskedAccountNumber)\"?",
+            onConfirm: {
+                Task { await deleteAccount(account) }
+            }
+        )
+    }
+
+    private func deleteAccount(_ account: SavingsAccountDetailsResponse) async {
+        guard let primaryId = primaryAccountId else {
+            ToastManager.shared.show("Cannot delete account: primary account not loaded.", style: .error, position: .bottom)
+            return
+        }
+        do {
+            _ = try await savingVM.deleteSavingAccount(
+                request: SavingsAccountRequest.DeleteAccount(
+                    targetAccountId: primaryId,
+                    accountId: account.id
+                )
+            )
+            accounts.removeAll { $0.id == account.id }         // instant UI update
+            ToastManager.shared.show("Account deleted.", style: .success, position: .bottom)
+            backgroundSync()                                   // silent server sync
+        } catch {
+            ToastManager.shared.show("Failed to delete account.", style: .error, position: .bottom)
+        }
     }
 }
 
@@ -79,40 +203,40 @@ struct AccountListSheetView: View {
 // MARK: - Account Row
 
 struct AccountRowView: View {
-    
+
     let account: SavingsAccountDetailsResponse
     let isSelected: Bool
-    
+
     var body: some View {
         HStack(spacing: 12) {
-            
+
             // MARK: - Icon
-            
+
             Image(systemName: "banknote")
                 .font(.title2)
                 .foregroundStyle(AppColors.primary)
                 .frame(width: 44, height: 44)
                 .background(AppColors.primary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-            
+
             // MARK: - Info
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(account.nickname ?? "-----")
                     .font(.headline)
                     .foregroundStyle(.primary)
-                
+
                 Text(account.accountNumber)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            
+
             Spacer()
-            
-            // MARK: - Checkmark
-            
+
+            // MARK: - Balance
+
             let formatted = String(format: "%.2f", NSDecimalNumber(decimal: account.availableBalance).doubleValue)
-            
+
             Text(formatted)
                 .font(.headline)
                 .foregroundStyle(.secondary)

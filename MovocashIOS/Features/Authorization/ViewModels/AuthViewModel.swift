@@ -90,7 +90,7 @@ final class AuthViewModel: ObservableObject {
                 appState: appState
             )
             
-            await kycManager.configureSDK(officeId: "1")
+            await kycManager.configureSDK(officeId: "3")
             
             appState.otpVerified = true
             if appState.context == PhoneFlowType.login.rawValue {

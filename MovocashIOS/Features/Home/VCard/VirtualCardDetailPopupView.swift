@@ -15,10 +15,11 @@ struct VirtualCardDetailPopupView: View {
     
     var body: some View {
         BasePopupView(
-            maskedNumber: "•••• \(card.lastFour)",
+            nickName: "",
             formattedBalance: card.formattedBalance,
             balanceLabel: "AVAILABLE BALANCE",
             isPresented: $isPresented
+            // headerTrailing omitted → defaults to EmptyView()
         ) {
             DetailField(
                 label: "CARD NUMBER",
@@ -39,6 +40,6 @@ struct VirtualCardDetailPopupView: View {
             Divider().padding(.horizontal, 20)
             
             PlainField(label: "NAME", value: card.name, fullWidth: true)
-        }
+        }        
     }
 }

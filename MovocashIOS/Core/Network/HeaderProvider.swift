@@ -27,7 +27,7 @@ struct HeaderProvider {
 
         case .authorizedWithOffice:
             await addAuthorization(&headers, authManager: authManager)
-            headers["office-id"] = "1"
+            headers["office-id"] = "3"
         }
         return headers
     }

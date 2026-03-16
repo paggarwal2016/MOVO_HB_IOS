@@ -14,11 +14,13 @@ struct BalanceCardView: View {
     
     let account: SavingsAccountDetailsResponse
     var totalAvailableBalance: Decimal
+    var onCardTap: () -> Void
     var onPrimaryTap: () -> Void
+    var onCreateTap: () -> Void
     
     // MARK: - Computed
     
-    private var balanceParts: (whole: String, cents: String) { // "totalAccountBalance":0,"totalAvailableBalance":0}
+    private var balanceParts: (whole: String, cents: String) {
         let formatted = String(format: "%.2f", NSDecimalNumber(decimal: totalAvailableBalance).doubleValue)
         let parts = formatted.split(separator: ".")
         return (
@@ -32,23 +34,21 @@ struct BalanceCardView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             
-            // MARK: - Card Background
-            
+            // MARK: Card Background
             RoundedRectangle(cornerRadius: 15)
                 .fill(AppColors.secondary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 120)
+                .onTapGesture { onCardTap() }
                 .overlay(alignment: .bottomLeading) {
                     VStack(alignment: .leading, spacing: 6) {
                         
-                        // MARK: - Account Info
-                        
+                        // MARK: Account Info
                         HStack(spacing: 6) {
                             Text(account.nickname ?? "Primary Account")
                                 .font(.headline)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.black.opacity(0.6))
-                            
                             
                             if account.isPrimary {
                                 Text("Primary")
@@ -59,10 +59,9 @@ struct BalanceCardView: View {
                                     .padding(.vertical, 2)
                                     .background(.black.opacity(0.3))
                                     .clipShape(Capsule())
-                                    .onTapGesture {
-                                        onPrimaryTap()
-                                    }
+                                    .onTapGesture { onPrimaryTap() }
                             }
+                            
                             if account.status.rawValue == "Active" {
                                 Text(account.status.rawValue)
                                     .font(.caption2)
@@ -73,28 +72,44 @@ struct BalanceCardView: View {
                                     .background(.green.opacity(0.3))
                                     .clipShape(Capsule())
                             }
+                            
+                            Text("View")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.blue.opacity(0.3))
+                                .clipShape(Capsule())
+                            
+                            Spacer()
+                            
+                            // MARK: + Create Button
+                            Button(action: onCreateTap) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(.black.opacity(0.5))
+                            }
+                            .buttonStyle(.plain)
                         }
                         
-                        // MARK: - Balance
-                        
+                        // MARK: Balance
                         HStack(alignment: .lastTextBaseline, spacing: 1) {
                             Text("$")
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundStyle(.black)
-                            
                             Text(balanceParts.whole)
                                 .font(.system(size: 42, weight: .bold))
                                 .foregroundStyle(.black)
-                            
                             Text(".\(balanceParts.cents)")
                                 .font(.system(size: 26, weight: .bold))
                                 .foregroundStyle(.black)
+                            
                         }
                     }
                     .padding(.horizontal, 15)
                     .padding(.bottom, 18)
                 }
-            
         }
         .padding(.horizontal, 15)
     }

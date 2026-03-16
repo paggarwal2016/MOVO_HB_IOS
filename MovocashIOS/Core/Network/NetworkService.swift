@@ -171,9 +171,10 @@ actor NetworkService: NetworkServiceProtocol {
         }
         
         SecureLogger.debug("Response :\(String(data: data, encoding: .utf8) ?? "")", category: .network)
-        // Decode successful response
+        // Decode successful response — treat 204 / empty body as `{}`
+        let decodableData = data.isEmpty ? Data("{}".utf8) : data
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            return try JSONDecoder().decode(T.self, from: decodableData)
         } catch {
             SecureLogger.error("Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)", category: .network)
             throw NetworkError.decodingError
