@@ -113,10 +113,22 @@ final class AppLockManager: ObservableObject {
                 recordFailure()
                 return false
             }
-        } catch {
-            // passcode not set — shouldn't reach here in normal flow
+        } catch PasscodeError.notSet {
+            // No passcode stored — design contract says this shouldn't happen here.
+            // Treat as unlocked so the user is not permanently locked out.
             transitionToUnlocked()
             return true
+        } catch PasscodeError.migrationRequired {
+            // Stored hash used the old SHA-256 algorithm and has been cleared.
+            // Force the user through passcode setup again.
+            resetFailures()
+            transitionToUnlocked()
+            lockoutMessage = "Security upgrade required. Please set a new passcode."
+            return true
+        } catch {
+            // Keychain read failure or unknown error — do NOT unlock.
+            lockoutMessage = "Unable to verify passcode. Please restart the app."
+            return false
         }
     }
 
@@ -208,15 +220,20 @@ final class AppLockManager: ObservableObject {
         let secs = Config.lockoutSeconds
         lockoutMessage = "Too many attempts. Try again in \(secs)s."
         lockoutTask = Task {
-            for remaining in stride(from: secs - 1, through: 0, by: -1) {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                if remaining == 0 {
-                    failedAttempts = 0
-                    lockoutMessage = nil
-                    lockoutTask = nil
-                } else {
-                    lockoutMessage = "Too many attempts. Try again in \(remaining)s."
+            do {
+                for remaining in stride(from: secs - 1, through: 0, by: -1) {
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                    if remaining == 0 {
+                        failedAttempts = 0
+                        lockoutMessage = nil
+                        lockoutTask = nil
+                    } else {
+                        lockoutMessage = "Too many attempts. Try again in \(remaining)s."
+                    }
                 }
+            } catch {
+                // Task was cancelled (e.g. on logout) — leave state cleanup to the caller
+                return
             }
         }
     }

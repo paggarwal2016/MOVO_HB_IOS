@@ -22,7 +22,8 @@ enum Environment {
         }
 
         guard let url = URL(string: urlString) else {
-            fatalError("Invalid baseURL configuration: \(urlString)")
+            // These are hardcoded compile-time strings — failure is a developer error, not a runtime condition.
+            preconditionFailure("Invalid baseURL configuration: \(urlString)")
         }
 
         return url

@@ -15,10 +15,10 @@ struct CardSkeletonView: View {
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: 15)
                 .fill(Color.gray.opacity(0.2))
             
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: 15)
                 .fill(
                     LinearGradient(
                         colors: [.clear, .white.opacity(0.15), .clear],
@@ -28,7 +28,7 @@ struct CardSkeletonView: View {
                 )
                 .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: false), value: shimmer)
         }
-        .frame(height: 200)
+        .frame(height: 150)
         .padding(.horizontal)
         .onAppear { shimmer = true }
     }

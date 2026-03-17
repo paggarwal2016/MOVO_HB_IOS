@@ -19,6 +19,7 @@ struct MovocashIOSApp: App {
                 .environmentObject(appState)
                 .environmentObject(lockManager)
                 .networkMonitor(state: appState)
+                .globalToast()
                 .globalAlert()
                 .task {
                     // On first launch after install, evaluate whether to lock

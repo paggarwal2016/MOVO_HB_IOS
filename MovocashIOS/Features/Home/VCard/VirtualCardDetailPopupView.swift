@@ -1,0 +1,45 @@
+//
+//  VirtualCardDetailPopupView.swift
+//  MovocashIOS
+//
+//  Created by Vinu on 13/03/26.
+//
+
+import SwiftUI
+
+struct VirtualCardDetailPopupView: View {
+    
+    let card: VCardsResponse
+    @Binding var isPresented: Bool
+    @State private var copiedField: String?
+    
+    var body: some View {
+        BasePopupView(
+            nickName: "",
+            formattedBalance: card.formattedBalance,
+            balanceLabel: "AVAILABLE BALANCE",
+            isPresented: $isPresented
+            // headerTrailing omitted → defaults to EmptyView()
+        ) {
+            DetailField(
+                label: "CARD NUMBER",
+                value: card.cardNumber,
+                copiedField: $copiedField,
+                fullWidth: true,
+                accentColor: AppColors.primary
+            )
+            
+            Divider().padding(.horizontal, 20)
+            
+            HStack(alignment: .top, spacing: 0) {
+                PlainField(label: "EXP DATE", value: card.expiration, fullWidth: true)
+                Divider().frame(height: 60)
+                PlainField(label: "CVC", value: card.cvc2, fullWidth: true)
+            }
+            
+            Divider().padding(.horizontal, 20)
+            
+            PlainField(label: "NAME", value: card.name, fullWidth: true)
+        }        
+    }
+}

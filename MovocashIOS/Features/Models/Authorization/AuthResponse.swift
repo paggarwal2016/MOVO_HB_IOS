@@ -19,9 +19,14 @@ nonisolated struct RefreshTokenResponse: Decodable {
 
 nonisolated struct SuccessResponse: Decodable {
     let success: Bool
-    
+
     enum CodingKeys: String, CodingKey {
-        case success = "success"
+        case success
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try? decoder.container(keyedBy: CodingKeys.self)
+        success = (try? container?.decodeIfPresent(Bool.self, forKey: .success)) ?? true
     }
 }
 

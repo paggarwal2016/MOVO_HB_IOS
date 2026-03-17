@@ -1,64 +1,59 @@
 //
-//  CardDetailView.swift
+//  BasePopupView.swift
 //  MovocashIOS
 //
-//  Created by Movo Developer on 12/03/26.
+//  Created by Vinu on 13/03/26.
 //
 
 import SwiftUI
 
-struct CardDetailPopupView: View {
-    
-    let card: VCardsResponse
+struct BasePopupView<Content: View, HeaderTrailing: View>: View {
+
+    let nickName: String
+    let formattedBalance: String
+    let balanceLabel: String
     @Binding var isPresented: Bool
-    @State private var copiedField: String?
-    
-    private let brandColor = Color(hex: "#C0472B")
-    
+    @ViewBuilder let headerTrailing: HeaderTrailing  // ← NEW slot (pencil, etc.)
+    @ViewBuilder let content: Content
+
+    // Convenience init — no headerTrailing needed for other popups
+    init(nickName: String,
+        formattedBalance: String,
+        balanceLabel: String,
+        isPresented: Binding<Bool>,
+        @ViewBuilder headerTrailing: () -> HeaderTrailing = { EmptyView() },
+        @ViewBuilder content: () -> Content
+    ) {
+        self.nickName = nickName
+        self.formattedBalance = formattedBalance
+        self.balanceLabel = balanceLabel
+        self._isPresented = isPresented
+        self.headerTrailing = headerTrailing()
+        self.content = content()
+    }
+
     var body: some View {
         ZStack {
             Color.clear
                 .ignoresSafeArea()
                 .onTapGesture { isPresented = false }
-            
+
             VStack(spacing: 0) {
-                
+
+                // MARK: Header
                 ZStack(alignment: .topTrailing) {
                     headerCurve
-                    
-                    Button { isPresented = false } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(8)
-                            .background(.white.opacity(0.25))
-                            .clipShape(Circle())
+
+                    HStack(spacing: 8) {
+                        headerTrailing  // ← pencil or any custom button
+                        closeButton
                     }
                     .padding(16)
                 }
-                
-                VStack(spacing: 0) {
-                    DetailField(
-                        label: "CARD NUMBER",
-                        value: card.cardNumber,
-                        copiedField: $copiedField,
-                        fullWidth: true,
-                        accentColor: AppColors.primary
-                    )
-                    
-                    Divider().padding(.horizontal, 20)
-                    
-                    HStack(alignment: .top, spacing: 0) {
-                        PlainField(label: "EXP DATE", value: card.expiration, fullWidth: true)
-                        Divider().frame(height: 60)
-                        PlainField(label: "ZIP", value: card.lastFour, fullWidth: true)
-                    }
-                    
-                    Divider().padding(.horizontal, 20)
-                    
-                    PlainField(label: "DESIGN", value: card.name, fullWidth: true)
-                }
-                .padding(.bottom, 8)
+
+                // MARK: Content
+                VStack(spacing: 0) { content }
+                    .padding(.bottom, 8)
             }
             .background(Color(.systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -66,47 +61,43 @@ struct CardDetailPopupView: View {
             .padding(.horizontal, 15)
         }
     }
-    
-    // MARK: - Curved header
-    
-    private var headerCurve: some View {
-        ZStack {
-            Color.white
-            
-            GeometryReader { geo in
-                Path { path in
-                    let w = geo.size.width
-                    let h = geo.size.height
-                    path.move(to: CGPoint(x: 0, y: 0))
-                    path.addLine(to: CGPoint(x: w, y: 0))
-                    path.addLine(to: CGPoint(x: w, y: h - 30))
-                    path.addQuadCurve(
-                        to: CGPoint(x: 0, y: h - 30),
-                        control: CGPoint(x: w / 2, y: h + 20)
-                    )
-                    path.closeSubpath()
-                }
-                .fill(AppColors.primary)
-            }
-            
-            VStack(spacing: 6) {
-                Text("--")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.white.opacity(0.7))
-                
-                Text(card.formattedBalance)
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundStyle(.white)
-                
-                Text("AVAILABLE BALANCE")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.8))
-                    .tracking(1.5)
-            }
-            .padding(.vertical, 32)
+
+    // MARK: - Close Button
+
+    private var closeButton: some View {
+        Button { isPresented = false } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(8)
+                .background(.white.opacity(0.25))
+                .clipShape(Circle())
         }
-        .frame(height: 180)
-        .clipShape(RoundedCornersShape(corners: [.topLeft, .topRight], radius: 24))
+    }
+
+    // MARK: - Header Curve (unchanged)
+
+    private var headerCurve: some View {
+        AppColors.primary
+            .overlay {
+                VStack(spacing: 6) {
+                    if !nickName.isEmpty {
+                        Text(nickName)
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    Text(formattedBalance)
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text(balanceLabel)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .tracking(1.5)
+                }
+                .padding(.vertical, 32)
+            }
+            .frame(height: 165)
+            .clipShape(RoundedCornersShape(corners: [.topLeft, .topRight], radius: 24))
     }
 }
 
@@ -189,7 +180,7 @@ struct PlainField: View {
 struct RoundedCornersShape: Shape {
     var corners: UIRectCorner
     var radius: CGFloat
-    
+
     func path(in rect: CGRect) -> Path {
         let path = UIBezierPath(
             roundedRect: rect,
@@ -205,6 +196,6 @@ struct RoundedCornersShape: Shape {
 
 extension VCardsResponse {
     var formattedBalance: String {
-        return "$20,000.00" // replace with real balance field
+        return "$20,000.00" 
     }
 }

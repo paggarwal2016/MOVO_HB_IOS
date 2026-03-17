@@ -20,6 +20,9 @@ actor NetworkService: NetworkServiceProtocol {
 
     // Actor-protected state
     private var isRefreshing = false
+    /// Callers that arrived while a refresh was already in-flight are parked here.
+    /// When the refresh completes (or fails) every waiter is resumed exactly once.
+    private var refreshWaiters: [CheckedContinuation<Void, Error>] = []
     private var retryTracker: [URL: Int] = [:]
     private let maxRetry = 1
 
@@ -53,7 +56,7 @@ actor NetworkService: NetworkServiceProtocol {
     }
     
     // MARK: - Public Request
-    func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
+    func request<T: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> T {
         
         // Security check
         if await JailbreakDetector.shared.isJailbroken {
@@ -95,30 +98,51 @@ actor NetworkService: NetworkServiceProtocol {
     // MARK: - Refresh Token
     private func refreshToken() async throws {
         if isRefreshing {
-            while isRefreshing {
-                try await Task.sleep(nanoseconds: 200_000_000)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                refreshWaiters.append(continuation)
             }
             return
         }
 
         isRefreshing = true
-        defer { isRefreshing = false }
 
-        let refreshToken = try await keychain.get("refresh_token", biometricPrompt: nil)
+        do {
+            let token = try await keychain.get("refresh_token", biometricPrompt: nil)
 
-        guard !refreshToken.isEmpty else {
-            throw NetworkError.unauthorized
+            guard !token.isEmpty else {
+                isRefreshing = false
+                resumeWaiters(throwing: NetworkError.unauthorized)
+                throw NetworkError.unauthorized
+            }
+
+            let endpoint = AuthAPI.refreshToken(refreshToken: token)
+            let request = try await builder.build(from: endpoint)
+            let response: RefreshTokenResponse = try await performRequest(request)
+
+            // Store refreshed tokens directly
+            try await keychain.save(response.accessToken, for: "access_token", protection: .backgroundSafe)
+            try await keychain.save(response.refreshToken, for: "refresh_token", protection: .backgroundSafe)
+            await authManager.updateAccessToken(response.accessToken)
+
+            isRefreshing = false
+            resumeWaiters(throwing: nil)
+        } catch {
+            isRefreshing = false
+            resumeWaiters(throwing: error)
+            throw error
         }
+    }
 
-        let endpoint = AuthAPI.refreshToken(refreshToken: refreshToken)
-        let request = try await builder.build(from: endpoint)
-
-        let response: RefreshTokenResponse = try await performRequest(request)
-
-        // Store refreshed tokens directly
-        try await keychain.save(response.accessToken, for: "access_token", protection: .backgroundSafe)
-        try await keychain.save(response.refreshToken, for: "refresh_token", protection: .backgroundSafe)
-        await authManager.updateAccessToken(response.accessToken)
+    private func resumeWaiters(throwing error: Error?) {
+        let waiters = refreshWaiters
+        refreshWaiters = []
+        for waiter in waiters {
+            if let error {
+                waiter.resume(throwing: error)
+            } else {
+                waiter.resume()
+            }
+        }
     }
     
     // MARK: - Perform Request (Nonisolated for Swift 6 concurrency)
@@ -130,9 +154,31 @@ actor NetworkService: NetworkServiceProtocol {
             (data, response) = try await session.data(for: request)
         } catch let urlError as URLError where urlError.code == .cancelled {
             throw CancellationError()
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
+                 .internationalRoamingOff, .callIsActive:
+                SecureLogger.warning("No internet: \(urlError.code.rawValue)", category: .network)
+                throw NetworkError.noInternet
+
+            case .timedOut:
+                SecureLogger.warning("Request timed out", category: .network)
+                throw NetworkError.timeout
+
+            case .serverCertificateUntrusted, .serverCertificateHasUnknownRoot,
+                 .serverCertificateNotYetValid, .serverCertificateHasBadDate,
+                 .clientCertificateRejected, .clientCertificateRequired,
+                 .secureConnectionFailed, .cannotLoadFromNetwork:
+                SecureLogger.error("SSL/TLS failure (code \(urlError.code.rawValue)) — possible MITM", category: .network)
+                throw NetworkError.securityViolation
+
+            default:
+                SecureLogger.error("URLError \(urlError.code.rawValue): \(urlError.localizedDescription)", category: .network)
+                throw NetworkError.requestFailed(urlError.localizedDescription)
+            }
         } catch {
-            SecureLogger.error("Network error: \(error.localizedDescription)", category: .network)
-            throw NetworkError.noInternet
+            SecureLogger.error("Unexpected network error: \(error.localizedDescription)", category: .network)
+            throw NetworkError.requestFailed(error.localizedDescription)
         }
         
         // Validate HTTP response
@@ -171,9 +217,10 @@ actor NetworkService: NetworkServiceProtocol {
         }
         
         SecureLogger.debug("Response :\(String(data: data, encoding: .utf8) ?? "")", category: .network)
-        // Decode successful response
+        // Decode successful response — treat 204 / empty body as `{}`
+        let decodableData = data.isEmpty ? Data("{}".utf8) : data
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            return try JSONDecoder().decode(T.self, from: decodableData)
         } catch {
             SecureLogger.error("Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)", category: .network)
             throw NetworkError.decodingError

@@ -56,10 +56,6 @@ final class RSAKeyManager: Sendable {
     private static nonisolated let storageKey =
     AppInfo.bundleIdentifier + ".rsa.p256.privatekey"
     
-    // MARK: - Biometric Availability (kept for API compatibility — always false now)
-    
-    static func isBiometricAvailable() -> Bool { return true }
-    
     // MARK: - Generate Key Pair
     //
     // Flow:

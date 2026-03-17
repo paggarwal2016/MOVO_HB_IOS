@@ -16,6 +16,7 @@ enum NetworkStatus {
     case connected, disconnected
 }
 
+@MainActor
 final class AppState: ObservableObject {
     @Published var flow: AuthFlow = .splash
     @Published var context: String = ""

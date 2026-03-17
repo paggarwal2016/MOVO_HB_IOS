@@ -90,7 +90,7 @@ final class AuthViewModel: ObservableObject {
                 appState: appState
             )
             
-            await kycManager.configureSDK(officeId: "1")
+            await kycManager.configureSDK(officeId: "3")
             
             appState.otpVerified = true
             if appState.context == PhoneFlowType.login.rawValue {
@@ -212,7 +212,6 @@ extension AuthViewModel { // TODO: - Testing checking
             let success = await postEnroll(request: request)
             
             if success {
-                UserDefaults.standard.set(true, forKey: "rsa_enrolled")
                 SecureLogger.info("POST /rsa succeeded on attempt \(attempt)", category: .auth)
                 return true
             }
@@ -226,7 +225,6 @@ extension AuthViewModel { // TODO: - Testing checking
         }
         
         RSAKeyManager.deleteKey()
-        UserDefaults.standard.set(false, forKey: "rsa_enrolled")
         SecureLogger.error("POST /rsa failed after 2 attempts — key deleted", category: .auth)
         return false
     }
