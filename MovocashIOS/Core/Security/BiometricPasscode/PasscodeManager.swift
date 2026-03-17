@@ -9,6 +9,7 @@ import Foundation
 import Security
 import CryptoKit
 import LocalAuthentication
+import CommonCrypto
 
 // MARK: - Errors
 
@@ -20,6 +21,8 @@ enum PasscodeError: LocalizedError {
     case keyGenerationFailed(CFError?)
     case hashingFailed
     case notSet
+    /// Stored hash used the old SHA-256 algorithm. It has been cleared; user must re-set PIN.
+    case migrationRequired
 
     var errorDescription: String? {
         switch self {
@@ -30,6 +33,7 @@ enum PasscodeError: LocalizedError {
         case .keyGenerationFailed:   return "Secure Enclave key generation failed"
         case .hashingFailed:         return "PIN hashing failed"
         case .notSet:                return "No passcode has been set"
+        case .migrationRequired:     return "Passcode must be reset due to a security upgrade"
         }
     }
 }
@@ -54,10 +58,18 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     // MARK: Keychain keys
     private enum Keys {
         private static let prefix = AppInfo.bundleIdentifier
-        static let pinHash = prefix + ".pin.hash"
-        static let pinSalt = prefix + ".pin.salt"
-        static let bioKey  = prefix + ".bio.key"
+        static let pinHash    = prefix + ".pin.hash"
+        static let pinSalt    = prefix + ".pin.salt"
+        static let pinVersion = prefix + ".pin.version"  // absent = old SHA-256 (pre-migration)
+        static let bioKey     = prefix + ".bio.key"
     }
+
+    private enum HashVersion {
+        static let pbkdf2 = Data([0x01])   // version byte stored alongside the hash
+    }
+
+    // PBKDF2 iteration count — meets NIST SP 800-63B 2023 recommendation
+    private static let pbkdf2Iterations: UInt32 = 310_000
 
     // MARK: - Public state
 
@@ -84,17 +96,30 @@ final class PasscodeManager: PasscodeManaging, Sendable {
 
         try keychainWrite(key: Keys.pinSalt, data: salt)
         try keychainWrite(key: Keys.pinHash, data: hash)
+        try keychainWrite(key: Keys.pinVersion, data: HashVersion.pbkdf2)
     }
 
     // MARK: - Verify passcode
 
-    /// Returns true if pin matches stored hash. Throws PasscodeError.notSet if no passcode stored.
+    /// Returns true if pin matches stored hash.
+    /// Throws PasscodeError.notSet if no passcode is stored.
+    /// Throws PasscodeError.migrationRequired if an old SHA-256 hash is detected — the old
+    /// hash is cleared and the caller must direct the user to set a new passcode.
     func verifyPasscode(_ pin: String) throws -> Bool {
         guard let storedHash = try? keychainRead(key: Keys.pinHash),
               let salt        = try? keychainRead(key: Keys.pinSalt)
         else {
             throw PasscodeError.notSet
         }
+
+        // Version key absent → hash was written by the old SHA-256 code path.
+        // Clear the stale hash and force re-setup (Option A migration).
+        let version = try? keychainRead(key: Keys.pinVersion)
+        if version != HashVersion.pbkdf2 {
+            try? clearPasscode()
+            throw PasscodeError.migrationRequired
+        }
+
         let candidate = try computeHash(pin: pin, salt: salt)
         // Constant-time comparison to prevent timing attacks
         return constantTimeEqual(lhs: candidate, rhs: storedHash)
@@ -105,6 +130,7 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     func clearPasscode() throws {
         try keychainDelete(key: Keys.pinHash)
         try keychainDelete(key: Keys.pinSalt)
+        try keychainDelete(key: Keys.pinVersion)
     }
 
     // MARK: - Biometric Secure Enclave key
@@ -135,7 +161,7 @@ final class PasscodeManager: PasscodeManaging, Sendable {
             kSecAttrTokenID as String:            kSecAttrTokenIDSecureEnclave,
             kSecPrivateKeyAttrs as String: [
                 kSecAttrIsPermanent as String:    true,
-                kSecAttrApplicationTag as String: Keys.bioKey.data(using: .utf8)!,
+                kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
                 kSecAttrAccessControl as String:  access
             ]
         ]
@@ -148,7 +174,7 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     func clearBiometricKey() throws {
         let query: [String: Any] = [
             kSecClass as String:              kSecClassKey,
-            kSecAttrApplicationTag as String: Keys.bioKey.data(using: .utf8)!,
+            kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
             kSecAttrKeyType as String:        kSecAttrKeyTypeECSECPrimeRandom
         ]
         let status = SecItemDelete(query as CFDictionary)
@@ -164,13 +190,30 @@ final class PasscodeManager: PasscodeManaging, Sendable {
 
     // MARK: - Private helpers
 
+    /// Derives a 32-byte key from `pin` + `salt` using PBKDF2-HMAC-SHA256.
+    /// 310,000 iterations meets NIST SP 800-63B (2023) for low-entropy secrets.
     private func computeHash(pin: String, salt: Data) throws -> Data {
         guard let pinData = pin.data(using: .utf8) else { throw PasscodeError.hashingFailed }
-        var combined = salt
-        combined.append(pinData)
-        // SHA-256 via CryptoKit — runs in Secure Enclave-adjacent memory
-        let digest = SHA256.hash(data: combined)
-        return Data(digest)
+        var derivedKey = Data(count: 32)
+        let status = derivedKey.withUnsafeMutableBytes { derivedKeyBytes -> Int32 in
+            salt.withUnsafeBytes { saltBytes in
+                pinData.withUnsafeBytes { pinBytes in
+                    CCKeyDerivationPBKDF(
+                        CCPBKDFAlgorithm(kCCPBKDF2),
+                        pinBytes.baseAddress?.assumingMemoryBound(to: Int8.self),
+                        pinData.count,
+                        saltBytes.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                        salt.count,
+                        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+                        Self.pbkdf2Iterations,
+                        derivedKeyBytes.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                        32
+                    )
+                }
+            }
+        }
+        guard status == kCCSuccess else { throw PasscodeError.hashingFailed }
+        return derivedKey
     }
 
     /// Constant-time byte comparison (prevents timing side-channel)
@@ -184,7 +227,7 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     private func secureEnclaveKeyExists() -> Bool {
         let query: [String: Any] = [
             kSecClass as String:              kSecClassKey,
-            kSecAttrApplicationTag as String: Keys.bioKey.data(using: .utf8)!,
+            kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
             kSecAttrKeyType as String:        kSecAttrKeyTypeECSECPrimeRandom,
             kSecReturnRef as String:          false
         ]

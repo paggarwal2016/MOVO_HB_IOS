@@ -14,10 +14,15 @@ struct SavingAccountDetailView: View {
     let accountId: Int
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @StateObject private var savingVM = SavingsAccountViewModel(
-        network: AppContainer.shared.network,
-        alertManager: AppContainer.shared.alertManager
-    )
+    @StateObject private var savingVM: SavingsAccountViewModel
+
+    init(
+        accountId: Int,
+        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
+    ) {
+        self.accountId = accountId
+        _savingVM = StateObject(wrappedValue: savingVM)
+    }
 
     @State private var detail: SavingsAccountDetailsResponse?
     @State private var transactions: [TransactionItem] = []

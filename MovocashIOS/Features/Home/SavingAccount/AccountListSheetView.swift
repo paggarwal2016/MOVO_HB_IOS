@@ -12,10 +12,17 @@ struct AccountListSheetView: View {
     @Binding var selectedAccount: SavingsAccountDetailsResponse?
     @Binding var isPresented: Bool
 
-    @StateObject private var savingVM = SavingsAccountViewModel(
-        network: AppContainer.shared.network,
-        alertManager: AppContainer.shared.alertManager
-    )
+    @StateObject private var savingVM: SavingsAccountViewModel
+
+    init(
+        selectedAccount: Binding<SavingsAccountDetailsResponse?>,
+        isPresented: Binding<Bool>,
+        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
+    ) {
+        _selectedAccount = selectedAccount
+        _isPresented = isPresented
+        _savingVM = StateObject(wrappedValue: savingVM)
+    }
 
     @State private var accounts: [SavingsAccountDetailsResponse] = []
     @State private var primaryAccountId: Int?

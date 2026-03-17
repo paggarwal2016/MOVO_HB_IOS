@@ -17,6 +17,8 @@ enum NetworkError: LocalizedError, Sendable {
     case rateLimited
     case serverError
     case noInternet
+    case timeout
+    case requestFailed(String)
     case securityViolation
     case invalidURL
     case encodingError
@@ -24,40 +26,46 @@ enum NetworkError: LocalizedError, Sendable {
 
     var errorDescription: String? {
         switch self {
-            
+
         case .invalidResponse:
             return "Invalid server response"
-            
+
         case .unauthorized:
             return "Session expired. Please login again."
-            
+
         case .decodingError:
             return "Unable to process server data"
-            
+
         case .serverMessage(let msg):
             return msg
-            
+
         case .apiError(let code):
             return "Request failed with status code \(code)"
-            
+
         case .rateLimited:
             return "Too many requests. Please try again later."
-            
+
         case .serverError:
             return "Server is currently unavailable. Please try again."
-            
+
         case .noInternet:
             return "No internet connection"
-            
+
+        case .timeout:
+            return "The request timed out. Please try again."
+
+        case .requestFailed(let reason):
+            return "Request failed: \(reason)"
+
         case .securityViolation:
-            return "Secure connection failed"
-            
+            return "Secure connection failed. Please check your network."
+
         case .invalidURL:
             return "Invalid URL"
 
         case .encodingError:
             return "Failed to encode request data"
-            
+
         case .unknown:
             return "Something went wrong"
         }

@@ -26,7 +26,7 @@ final class AppContainer {
     }()
 
 
-    init() {
+    private init() {
         keychain = KeychainManager.shared
         authManager = AuthManager.shared
         alertManager = AlertManager.shared
@@ -50,8 +50,16 @@ final class AppContainer {
             alertManager: alertManager
         )
     }
-    
+
     func makeAppLockViewModel() -> AppLockViewModel {
         AppLockViewModel(lockManager: AppContainer.lockManager)
+    }
+
+    func makeVCardViewModel() -> VCardViewModel {
+        VCardViewModel(network: network, alertManager: alertManager)
+    }
+
+    func makeSavingsAccountViewModel() -> SavingsAccountViewModel {
+        SavingsAccountViewModel(network: network, alertManager: alertManager)
     }
 }

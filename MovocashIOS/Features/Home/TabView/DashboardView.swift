@@ -17,18 +17,22 @@ struct DashboardView: View {
     @EnvironmentObject var sessionManager: SessionManager
     
     // MARK: - VCard
-    
-    @StateObject private var vm = VCardViewModel(
-        network: AppContainer.shared.network,
-        alertManager: AppContainer.shared.alertManager
-    )
-    
+
+    @StateObject private var vm: VCardViewModel
+
     // MARK: - Savings
-    
-    @StateObject private var savingVM = SavingsAccountViewModel(
-        network: AppContainer.shared.network,
-        alertManager: AppContainer.shared.alertManager
-    )
+
+    @StateObject private var savingVM: SavingsAccountViewModel
+
+    // MARK: - Init
+
+    init(
+        vm: VCardViewModel = AppContainer.shared.makeVCardViewModel(),
+        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
+    ) {
+        _vm = StateObject(wrappedValue: vm)
+        _savingVM = StateObject(wrappedValue: savingVM)
+    }
     @State private var savingsList: SavingsAccountListResponse?
     @State private var selectedAccount: SavingsAccountDetailsResponse?
     @State private var showAccountList = false
@@ -110,8 +114,8 @@ struct DashboardView: View {
     private var headerView: some View {
         CustomHeaderView(userName: "Test", userImage: "user") {
             AlertManager.shared.showConfirmation(
-                title: "Info",
-                message: "Are you want to logout.",
+                title: "Log Out",
+                message: "Are you sure you want to log out?",
                 onConfirm: {
                     Task {
                         AppContainer.lockManager.logout()
@@ -190,12 +194,15 @@ struct DashboardView: View {
     // MARK: - Private Functions
     
     private func loadData() async {
-        async let savings: () = loadSavings()
-        await savings
+        await loadSavings()
     }
-    
+
     private func loadSavings() async {
-        do { savingsList = try await savingVM.getSavingAccountList() } catch {}
+        do {
+            savingsList = try await savingVM.getSavingAccountList()
+        } catch {
+            //ToastManager.shared.show("Failed to load accounts.", style: .error, position: .bottom)
+        }
     }
     
     private func updateNickname(name: String) async {

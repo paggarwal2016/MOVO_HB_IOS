@@ -78,9 +78,39 @@ final class SessionManager: ObservableObject {
             return false
         }
 
+        if isAccessTokenExpired(accessToken) {
+            // Token is stale — load it anyway so NetworkService's automatic
+            // 401-refresh flow can exchange the refresh token on the first request.
+            SecureLogger.warning("Access token expired on restore — refresh will occur on first request", category: .auth)
+        }
+
         await authManager.updateAccessToken(accessToken)
         appState.isAuthenticated = true
         return true
+    }
+
+    // MARK: - JWT Expiry
+    /// Decodes the JWT payload (no signature verification — server does that).
+    /// Returns true when the `exp` claim is in the past or the token is malformed.
+    private func isAccessTokenExpired(_ token: String) -> Bool {
+        let parts = token.components(separatedBy: ".")
+        guard parts.count == 3 else { return true }
+
+        // JWT uses base64url encoding — convert to standard base64
+        var base64 = parts[1]
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = base64.count % 4
+        if remainder > 0 { base64 += String(repeating: "=", count: 4 - remainder) }
+
+        guard let data = Data(base64Encoded: base64),
+              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let exp = payload["exp"] as? TimeInterval else {
+            return true
+        }
+
+        // 30-second buffer guards against clock skew on slow networks
+        return Date().timeIntervalSince1970 >= exp - 30
     }
 
     // MARK: - Logout

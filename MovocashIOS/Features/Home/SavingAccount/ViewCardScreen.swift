@@ -10,18 +10,19 @@ import SwiftUI
 struct ViewCardScreen: View {
     
     @Binding var isPresented: Bool
-    
-    @StateObject private var savingVM = SavingsAccountViewModel(
-        network: AppContainer.shared.network,
-        alertManager: AppContainer.shared.alertManager
-    )
-    
-    // MARK: - VCard
-    
-    @StateObject private var vm = VCardViewModel(
-        network: AppContainer.shared.network,
-        alertManager: AppContainer.shared.alertManager
-    )
+
+    @StateObject private var savingVM: SavingsAccountViewModel
+    @StateObject private var vm: VCardViewModel
+
+    init(
+        isPresented: Binding<Bool>,
+        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel(),
+        vm: VCardViewModel = AppContainer.shared.makeVCardViewModel()
+    ) {
+        _isPresented = isPresented
+        _savingVM = StateObject(wrappedValue: savingVM)
+        _vm = StateObject(wrappedValue: vm)
+    }
     @State private var card: VCardsResponse?
     @State private var showCardDetail = false
     @State private var revealedCard: VCardsResponse?

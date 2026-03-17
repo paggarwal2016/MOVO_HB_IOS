@@ -108,7 +108,7 @@ struct GlobalAlertModifier: ViewModifier {
                         if case .textInput = alertManager.currentAlert { return nil }
                         return alertManager.currentAlert
                     },
-                    set: { newValue in DispatchQueue.main.async { alertManager.currentAlert = newValue } }
+                    set: { newValue in Task { @MainActor in alertManager.currentAlert = newValue } }
                 )) { alert in
                     switch alert {
                     case .error(let message):
