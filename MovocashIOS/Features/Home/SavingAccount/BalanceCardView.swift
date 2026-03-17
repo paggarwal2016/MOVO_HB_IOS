@@ -17,6 +17,7 @@ struct BalanceCardView: View {
     var onCardTap: () -> Void
     var onPrimaryTap: () -> Void
     var onCreateTap: () -> Void
+    var onViewCardTap: () -> Void
     
     // MARK: - Computed
     
@@ -105,6 +106,18 @@ struct BalanceCardView: View {
                                 .font(.system(size: 26, weight: .bold))
                                 .foregroundStyle(.black)
                             
+                            Spacer()
+                            
+                            Button(action: {
+                                onViewCardTap()
+                            }) {
+                                Text("View Card")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                    .frame(width: 90, height: 30)
+                                    .background(.blue.opacity(0.8))
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
                     .padding(.horizontal, 15)

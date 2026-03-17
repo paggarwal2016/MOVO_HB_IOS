@@ -22,9 +22,6 @@ struct DashboardView: View {
         network: AppContainer.shared.network,
         alertManager: AppContainer.shared.alertManager
     )
-    @State private var card: VCardsResponse?
-    @State private var showCardDetail = false
-    @State private var revealedCard: VCardsResponse?
     
     // MARK: - Savings
     
@@ -39,6 +36,8 @@ struct DashboardView: View {
     @State private var showAccountDetail = false
     @State private var showCreateView = false
     @State private var showEditNickname = false
+    
+    @State private var showViewCard = false
     
     private var displayAccount: SavingsAccountDetailsResponse? {
         selectedAccount ?? savingsList?.accounts.first(where: { $0.isPrimary })
@@ -92,12 +91,16 @@ struct DashboardView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showViewCard) {
+            ViewCardScreen(isPresented: $showViewCard)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked else { return }
             await loadData()
         }
         .onAppear {
-            showCardDetail = false
             showCreateView = false
         }
     }
@@ -123,7 +126,6 @@ struct DashboardView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 20) {
                 savingsSection
-                vcardSection
                 Spacer()
             }
             .padding(.top, 16)
@@ -138,7 +140,8 @@ struct DashboardView: View {
                 totalAvailableBalance: savingsList?.totalAvailableBalance ?? 0.00,
                 onCardTap: { showAccountDetail = true },
                 onPrimaryTap: { showPrimaryAccountDetails = true },
-                onCreateTap: { showCreateView = true }
+                onCreateTap: { showCreateView = true },
+                onViewCardTap: { showViewCard = true }
             )
             PrimaryButton(
                 title: "View Cash Accounts",
@@ -154,34 +157,12 @@ struct DashboardView: View {
         }
     }
     
-    @ViewBuilder
-    private var vcardSection: some View {
-        switch vm.state {
-        case .loading where card == nil:
-            CardSkeletonView()
-        default:
-            if let card {
-                CustomCardView(
-                    title: "MOVO.",
-                    card: card,
-                    vm: vm,
-                    showCardDetail: $showCardDetail,
-                    revealedCard: $revealedCard
-                )
-            }
-        }
-    }
     
     // MARK: - Overlay
     
     @ViewBuilder
     private var overlayContent: some View {
-        if showCardDetail, let revealed = revealedCard {
-            dimmedOverlay { showCardDetail = false } content: {
-                VirtualCardDetailPopupView(card: revealed, isPresented: $showCardDetail)
-                    .padding(.horizontal, 15)
-            }
-        } else if showPrimaryAccountDetails, let display = displayAccount {
+        if showPrimaryAccountDetails, let display = displayAccount {
             dimmedOverlay { showPrimaryAccountDetails = false } content: {
                 SavingActDetailPopupView(
                     account: display,
@@ -210,17 +191,11 @@ struct DashboardView: View {
     
     private func loadData() async {
         async let savings: () = loadSavings()
-        async let vcard: () = loadCard()
         await savings
-        await vcard
     }
     
     private func loadSavings() async {
         do { savingsList = try await savingVM.getSavingAccountList() } catch {}
-    }
-    
-    private func loadCard() async {
-        do { card = try await vm.getVCard() } catch {}
     }
     
     private func updateNickname(name: String) async {
@@ -237,15 +212,19 @@ struct DashboardView: View {
     }
 
     private func createAccount(name: String) async {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            ToastManager.shared.show("Account name cannot be empty.", style: .error, position: .bottom)
+            return
+        }
         do {
             _ = try await savingVM.createSavingAccount(
-                request: SavingsAccountRequest.CreateAccount(nickname: name)
+                request: SavingsAccountRequest.CreateAccount(nickname: trimmed)
             )
-            ToastManager.shared.show("\"\(name)\" account created!", style: .success, position: .bottom)
-        } catch {}
-        
-        
-        // TODO: call savingVM.createAccount(name)
-        ToastManager.shared.show("\"\(name)\" account created!", style: .success, position: .bottom)
+            await loadSavings()
+            ToastManager.shared.show("\"\(trimmed)\" account created!", style: .success, position: .bottom)
+        } catch {
+            ToastManager.shared.show("Failed to create account. Please try again.", style: .error, position: .bottom)
+        }
     }
 }
