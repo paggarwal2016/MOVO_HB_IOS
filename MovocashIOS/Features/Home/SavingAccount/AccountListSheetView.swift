@@ -85,7 +85,6 @@ struct AccountListSheetView: View {
                 .presentationDragIndicator(.visible)
         }
         .globalAlert()
-        .globalToast()
         .task { await loadAccounts() }
     }
 

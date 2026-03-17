@@ -147,6 +147,10 @@ actor NetworkService: NetworkServiceProtocol {
     
     // MARK: - Perform Request (Nonisolated for Swift 6 concurrency)
     private nonisolated func performRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
+        
+#if DEBUG
+        debugPrintRequest(request)
+#endif
 
         // Network call
         let (data, response): (Data, URLResponse)
@@ -187,14 +191,11 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.invalidResponse
         }
         
-        if let jsonString = String(data: data, encoding: .utf8) {
 #if DEBUG
-            print("URL: \(String(describing: request.url))")
-            print("Response JSON: \(jsonString)")
+        debugPrintResponse(data: data, response: response)
 #endif
-        }
                 
-        SecureLogger.info("API Status Code: \(http.statusCode)", category: .network)
+        SecureLogger.info("API Success.", category: .network)
         
         if http.statusCode == 401 {
             throw NetworkError.unauthorized
@@ -216,7 +217,6 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.unknown
         }
         
-        SecureLogger.debug("Response :\(String(data: data, encoding: .utf8) ?? "")", category: .network)
         // Decode successful response — treat 204 / empty body as `{}`
         let decodableData = data.isEmpty ? Data("{}".utf8) : data
         do {
@@ -225,5 +225,78 @@ actor NetworkService: NetworkServiceProtocol {
             SecureLogger.error("Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)", category: .network)
             throw NetworkError.decodingError
         }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - Debug request and response - Future need remove
+// TODO: -
+
+
+extension NetworkService {
+    
+    nonisolated private func debugPrintRequest(_ request: URLRequest) {
+        
+        print("\n🚀 ===== REQUEST =====")
+        
+        if let method = request.httpMethod {
+            print("Method: \(method)")
+        }
+        
+        if let url = request.url {
+            print("URL: \(url.absoluteString)")
+        }
+        
+        if let headers = request.allHTTPHeaderFields {
+            print("Headers: \(headers)")
+        }
+        
+        if let body = request.httpBody,
+           let json = try? JSONSerialization.jsonObject(with: body),
+           let prettyData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+           let prettyString = String(data: prettyData, encoding: .utf8) {
+            
+            print("Body:\n\(prettyString)")
+            
+        } else if let body = request.httpBody,
+                  let bodyString = String(data: body, encoding: .utf8) {
+            
+            print("Body:\n\(bodyString)")
+        }
+        
+        print("======================\n")
+    }
+    
+    nonisolated private func debugPrintResponse(data: Data, response: URLResponse) {
+        
+        print("\n✅ ===== RESPONSE =====")
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            print("Status Code: \(httpResponse.statusCode)")
+            print("URL: \(httpResponse.url?.absoluteString ?? "")")
+        }
+        
+        if let json = try? JSONSerialization.jsonObject(with: data),
+           let prettyData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+           let prettyString = String(data: prettyData, encoding: .utf8) {
+            
+            print("Response Body:\n\(prettyString)")
+            
+        } else if let responseString = String(data: data, encoding: .utf8) {
+            
+            print("Response Body:\n\(responseString)")
+        }
+        
+        print("=======================\n")
     }
 }

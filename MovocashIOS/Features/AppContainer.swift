@@ -62,4 +62,8 @@ final class AppContainer {
     func makeSavingsAccountViewModel() -> SavingsAccountViewModel {
         SavingsAccountViewModel(network: network, alertManager: alertManager)
     }
+    
+    func makeTransactionViewModel() -> TransactionViewModel {
+        TransactionViewModel(network: network, alertManager: alertManager)
+    }
 }

@@ -42,6 +42,7 @@ struct DashboardView: View {
     @State private var showEditNickname = false
     
     @State private var showViewCard = false
+    @State private var showFunds = false
     
     private var displayAccount: SavingsAccountDetailsResponse? {
         selectedAccount ?? savingsList?.accounts.first(where: { $0.isPrimary })
@@ -100,6 +101,15 @@ struct DashboardView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showFunds) {
+            InternalTransferView(
+                toClientId: displayAccount?.clientId ?? 0,
+                fromAccount: savingsList?.accounts.first(where: { $0.isPrimary }),
+                nonPrimaryAccounts: savingsList?.accounts.filter({ !$0.isPrimary }) ?? []
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked else { return }
             await loadData()
@@ -153,6 +163,16 @@ struct DashboardView: View {
                 textColor: .black
             ) {
                 showAccountList = true
+            }
+            .padding()
+            .frame(height: 60)
+            
+            PrimaryButton(
+                title: "Funds Transfer",
+                backgroundColor: .red.opacity(0.1),
+                textColor: .black
+            ) {
+                showFunds = true
             }
             .padding()
             .frame(height: 60)
