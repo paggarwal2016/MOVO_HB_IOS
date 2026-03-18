@@ -66,4 +66,8 @@ final class AppContainer {
     func makeTransactionViewModel() -> TransactionViewModel {
         TransactionViewModel(network: network, alertManager: alertManager)
     }
+    
+    func makeUserViewModel() -> UserViewModel {
+        UserViewModel(network: network, alertManager: alertManager)
+    }
 }

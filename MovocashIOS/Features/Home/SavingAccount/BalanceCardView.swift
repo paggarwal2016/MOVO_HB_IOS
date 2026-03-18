@@ -2,7 +2,7 @@
 //  BalanceCardView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 13/03/26.
+//  Created by Movo Developer on 13/03/26.
 //
 
 import Foundation
@@ -37,7 +37,7 @@ struct BalanceCardView: View {
             
             // MARK: Card Background
             RoundedRectangle(cornerRadius: 15)
-                .fill(AppColors.secondary)
+                .fill(AppColors.secondary.opacity(0.8))
                 .frame(maxWidth: .infinity)
                 .frame(height: 120)
                 .onTapGesture { onCardTap() }
@@ -52,37 +52,13 @@ struct BalanceCardView: View {
                                 .foregroundStyle(.black.opacity(0.6))
                             
                             if account.isPrimary {
-                                Text("Primary")
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(.black.opacity(0.3))
-                                    .clipShape(Capsule())
-                                    .onTapGesture { onPrimaryTap() }
+                                StatusBadge(status: .cardPrimary, action: { onPrimaryTap() })
                             }
                             
                             if account.status.rawValue == "Active" {
-                                Text(account.status.rawValue)
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(.green.opacity(0.3))
-                                    .clipShape(Capsule())
+                                StatusBadge(status: .cardActive)
                             }
-                            
-                            Text("View")
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(.blue.opacity(0.3))
-                                .clipShape(Capsule())
-                            
+                                                        
                             Spacer()
                             
                             // MARK: + Create Button
@@ -108,16 +84,8 @@ struct BalanceCardView: View {
                             
                             Spacer()
                             
-                            Button(action: {
-                                onViewCardTap()
-                            }) {
-                                Text("View Card")
-                                    .font(.subheadline)
-                                    .foregroundColor(.white)
-                                    .frame(width: 90, height: 30)
-                                    .background(.blue.opacity(0.8))
-                                    .clipShape(Capsule())
-                            }
+                            StatusBadge(status: .cardView, size: .large, action: { onViewCardTap() } )
+                
                         }
                     }
                     .padding(.horizontal, 15)

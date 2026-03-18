@@ -8,11 +8,17 @@
 import Foundation
 import SwiftUI
 
+enum Tab: Hashable {
+    case home
+    case accounts
+    case contact
+    case profile
+}
+
 struct HomeTabBarView: View {
-    @EnvironmentObject var appState: AppState
     @EnvironmentObject var authVM: AuthViewModel
     
-    @State private var selectedTab = 0
+    @State private var selectedTab: Tab = .home
     
     init() {
         let appearance = UITabBarAppearance()
@@ -26,37 +32,51 @@ struct HomeTabBarView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             
+            // MARK: Home
             NavigationStack {
                 DashboardView()
             }
             .tabItem {
                 Label("Home", systemImage: "house.fill")
             }
-            .tag(0)
+            .tag(Tab.home)
             
             
+            // MARK: Accounts
             NavigationStack {
                 AccountsView()
             }
             .tabItem {
                 Label("Send Money", systemImage: "creditcard.fill")
             }
-            .tag(1)
+            .tag(Tab.accounts)
             
+            
+            // MARK: Contact
             NavigationStack {
                 ProfileView()
             }
             .tabItem {
-                Label("Contact", systemImage: "person.fill")
+                Label("Contact", systemImage: "gearshape.fill")
             }
-            .tag(2)
+            .tag(Tab.contact)
+            
+            
+            // MARK: Profile
+            NavigationStack {
+                UserProfileView()
+            }
+            .tabItem {
+                Label("Profile", systemImage: "person.fill")
+            }
+            .tag(Tab.profile)
         }
-        .tint(AppColors.primary) // Active tab color
+        .tint(AppColors.primary)
         .task {
-//            if !RSAKeyManager.isRegistered() { // TODO: - Testing checking
-//                UserDefaults.standard.set(false, forKey: "rsa_enrolled")
-//                await authVM.enrollRSASilently(appState: appState)
-//            }
+            //            if !RSAKeyManager.isRegistered() { // TODO: - Testing checking
+            //                UserDefaults.standard.set(false, forKey: "rsa_enrolled")
+            //                await authVM.enrollRSASilently(appState: appState)
+            //            }
         }
     }
 }
