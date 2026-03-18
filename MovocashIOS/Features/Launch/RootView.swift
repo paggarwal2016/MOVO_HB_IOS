@@ -13,6 +13,7 @@ struct RootView: View {
     @StateObject private var authVM      = AppContainer.shared.makeAuthViewModel()
     @StateObject private var lockManager = AppContainer.lockManager
     @StateObject private var lockVM      = AppContainer.shared.makeAppLockViewModel()
+    @StateObject private var userVM      = AppContainer.shared.makeUserViewModel()
     
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     
@@ -77,6 +78,7 @@ struct RootView: View {
                 }
             }
             .environmentObject(authVM)
+            .environmentObject(userVM)
             .environmentObject(lockManager)
             .environmentObject(AppContainer.shared.sessionManager)
             .animation(.easeInOut, value: appState.flow)

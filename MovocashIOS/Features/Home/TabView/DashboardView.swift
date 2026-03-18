@@ -218,11 +218,7 @@ struct DashboardView: View {
     }
 
     private func loadSavings() async {
-        do {
-            savingsList = try await savingVM.getSavingAccountList()
-        } catch {
-            //ToastManager.shared.show("Failed to load accounts.", style: .error, position: .bottom)
-        }
+        savingsList = try? await savingVM.getSavingAccountList()
     }
     
     private func updateNickname(name: String) async {

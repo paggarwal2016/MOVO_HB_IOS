@@ -2,7 +2,7 @@
 //  TransactionResponse.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 17/03/26.
+//  Created by Movo Developer on 17/03/26.
 //
 
 import Foundation
@@ -15,7 +15,7 @@ nonisolated struct TransactionResponse: Decodable {
     let balance: Decimal
 }
 
-struct Transaction: Decodable, Identifiable {
+struct Transaction: Decodable, Identifiable, Sendable {
     let id: Int
     let status: String
     let location: String?
@@ -26,7 +26,7 @@ struct Transaction: Decodable, Identifiable {
     let type: TransactionType
     let date: String
 
-    private static let dateFormatter = ISO8601DateFormatter()
+    nonisolated(unsafe) private static let dateFormatter = ISO8601DateFormatter()
 
     func toItem() -> TransactionItem {
         let isCredit = type == .deposit
@@ -45,7 +45,7 @@ struct Transaction: Decodable, Identifiable {
     }
 }
 
-enum TransactionType: String, Decodable {
+enum TransactionType: String, Decodable, Sendable {
     case deposit  = "Deposit"
     case withdraw = "Withdraw"
     case payment  = "Payment"
@@ -54,7 +54,7 @@ enum TransactionType: String, Decodable {
 
 // MARK: - TransactionItem
 
-struct TransactionItem: Identifiable {
+struct TransactionItem: Identifiable, Sendable {
     let id: Int
     let title: String
     let subtitle: String
@@ -79,6 +79,7 @@ struct TransactionItem: Identifiable {
     }
 
     // Static dummy data — allocated once, never recreated
+#if DEBUG
     static let dummy: [TransactionItem] = [
         TransactionItem(id: 1, title: "Eva Novak",     subtitle: "Deposit",  amount: 5710.20, isCredit: true,  date: Date(), rawDate: ""),
         TransactionItem(id: 2, title: "Binance",       subtitle: "Deposit",  amount: 714.00,  isCredit: true,  date: Date(), rawDate: ""),
@@ -89,6 +90,7 @@ struct TransactionItem: Identifiable {
         TransactionItem(id: 7, title: "Megogo",        subtitle: "Withdraw", amount: 847.20,  isCredit: false, date: Date(), rawDate: ""),
         TransactionItem(id: 8, title: "Emilia Costa",  subtitle: "Deposit",  amount: 147.00,  isCredit: true,  date: Date(), rawDate: ""),
     ]
+#endif
 }
 
 
