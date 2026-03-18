@@ -39,7 +39,7 @@ class BaseViewModel: ObservableObject {
             throw CancellationError()
         } catch {
             state = .idle
-            alertManager.showError(error.localizedDescription)
+            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
             throw error
         }
     }
