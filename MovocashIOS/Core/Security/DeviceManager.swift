@@ -26,13 +26,21 @@ final class DeviceManager {
 
         // Use identifierForVendor
         if let idfv = UIDevice.current.identifierForVendor?.uuidString {
-            try? await keychain.save(idfv, for: deviceKey, protection: .backgroundSafe)
+            do {
+                try await keychain.save(idfv, for: deviceKey, protection: .backgroundSafe)
+            } catch {
+                SecureLogger.error("DeviceManager: failed to persist IDFV — \(error.localizedDescription)", category: .security)
+            }
             return idfv
         }
 
         // Generate fallback UUID
         let generated = UUID().uuidString
-        try? await keychain.save(generated, for: deviceKey, protection: .backgroundSafe)
+        do {
+            try await keychain.save(generated, for: deviceKey, protection: .backgroundSafe)
+        } catch {
+            SecureLogger.error("DeviceManager: failed to persist generated device ID — \(error.localizedDescription)", category: .security)
+        }
 
         return generated
     }

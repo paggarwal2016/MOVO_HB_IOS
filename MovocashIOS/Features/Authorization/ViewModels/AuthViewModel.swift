@@ -90,7 +90,7 @@ final class AuthViewModel: ObservableObject {
                 appState: appState
             )
             
-            await kycManager.configureSDK(officeId: "3")
+            await kycManager.configureSDK(officeId: AppConfig.officeId)
             
             appState.otpVerified = true
             if appState.context == PhoneFlowType.login.rawValue {
@@ -263,7 +263,7 @@ extension AuthViewModel { // TODO: - Testing checking
             SecureLogger.info("tokenRSA success — session started", category: .auth)
         } catch {
             SecureLogger.error("tokenRSA failed: \(error.localizedDescription)", category: .auth)
-            alertManager.showError("Biometric login failed. Please log in with your phone number.")
+            //TODO: - alertManager.showError("Biometric login failed. Please log in with your phone number.")
         }
     }
     

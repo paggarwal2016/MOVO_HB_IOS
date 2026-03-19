@@ -23,7 +23,6 @@ actor NetworkService: NetworkServiceProtocol {
     /// Callers that arrived while a refresh was already in-flight are parked here.
     /// When the refresh completes (or fails) every waiter is resumed exactly once.
     private var refreshWaiters: [CheckedContinuation<Void, Error>] = []
-    private var retryTracker: [URL: Int] = [:]
     private let maxRetry = 2
 
     // Custom session for security
@@ -73,7 +72,6 @@ actor NetworkService: NetworkServiceProtocol {
         SecureLogger.debug("API URL: \(url)", category: .network)
         
         // Attempt the initial request, then retry up to maxRetry times.
-        // retryTracker is always cleared in the defer block regardless of outcome.
         var lastError: NetworkError = .unknown
 
         for attempt in 0...maxRetry {
@@ -91,14 +89,10 @@ actor NetworkService: NetworkServiceProtocol {
                 switch error {
                 case .unauthorized:
                     guard attempt < maxRetry else { break }
-                    retryTracker[url] = attempt + 1
-                    defer { retryTracker[url] = nil }
                     try await refreshToken()
 
                 case .rateLimited, .serverError:
                     guard attempt < maxRetry else { break }
-                    retryTracker[url] = attempt + 1
-                    defer { retryTracker[url] = nil }
                     let backoff = UInt64(200_000_000) * UInt64(attempt + 1) // 200ms, 400ms, 600ms
                     try await Task.sleep(nanoseconds: backoff)
 
