@@ -89,6 +89,12 @@ final class AppLockManager: ObservableObject {
         guard isPasscodeSet else { return }
         state = .locked
     }
+    
+    /// Resets lock state to unlocked after new-user onboarding completes (e.g. post-KYC).
+    /// Use only when the user has just finished registration and should proceed directly to home.
+    func resetToUnlocked() {
+        state = .unlocked
+    }
 
     /// Call once after session restore to decide whether to lock.
     func evaluateOnLaunch() {

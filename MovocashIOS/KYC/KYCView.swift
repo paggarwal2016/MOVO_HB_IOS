@@ -20,10 +20,11 @@ struct KYCView: View {
             .task {
                 do {
                     _ = try await kycManager.start()
+                    appState.isNewRegistration = true
                     appState.flow = .home
                 } catch {
                     //TODO: Future Implementation will check below code logic
-                    AppContainer.shared.lockManager.logout()
+                    AppContainer.lockManager.logout()
                     await sessionManager.logout(appState: appState)
                     appState.flow = .getStartedPhone
                     //alertManager.showError(error.localizedDescription)

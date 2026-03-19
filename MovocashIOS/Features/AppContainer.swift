@@ -17,7 +17,12 @@ final class AppContainer {
     let alertManager: AlertManagerProtocol
     let kycManager: KYCManagerProtocol
     let sessionManager: SessionManager
-    let lockManager: AppLockManager
+    static let lockManager: AppLockManager = {
+        AppLockManager(
+            passcodeManager: PasscodeManager(),
+            biometricManager: BiometricManager()
+        )
+    }()
 
     private init() {
         keychain = KeychainManager.shared
@@ -25,10 +30,6 @@ final class AppContainer {
         alertManager = AlertManager.shared
         network = NetworkService.shared
         kycManager = KYCManager.shared
-        lockManager = AppLockManager(
-            passcodeManager: PasscodeManager(),
-            biometricManager: BiometricManager()
-        )
         sessionManager = SessionManager(
             authManager: authManager,
             keychain: keychain,
@@ -49,7 +50,7 @@ final class AppContainer {
     }
 
     func makeAppLockViewModel() -> AppLockViewModel {
-        AppLockViewModel(lockManager: lockManager)
+        AppLockViewModel(lockManager: AppContainer.lockManager)
     }
 
     func makeVCardViewModel() -> VCardViewModel {

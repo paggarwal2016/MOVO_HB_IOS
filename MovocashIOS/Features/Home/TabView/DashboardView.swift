@@ -128,7 +128,7 @@ struct DashboardView: View {
                 message: "Are you sure you want to log out?",
                 onConfirm: {
                     Task {
-                        AppContainer.shared.lockManager.logout()
+                        AppContainer.lockManager.logout()
                         await sessionManager.logout(appState: appState)
                     }
                 }

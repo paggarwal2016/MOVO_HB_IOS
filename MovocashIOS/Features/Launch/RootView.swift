@@ -11,17 +11,9 @@ struct RootView: View {
 
     @EnvironmentObject var appState: AppState
     @StateObject private var authVM      = AppContainer.shared.makeAuthViewModel()
-    @StateObject private var lockManager = AppContainer.shared.lockManager
+    @StateObject private var lockManager = AppContainer.lockManager
     @StateObject private var lockVM      = AppContainer.shared.makeAppLockViewModel()
     @StateObject private var userVM      = AppContainer.shared.makeUserViewModel()
-
-    /// Hoisted here so SwiftUI initialises it once for the lifetime of RootView.
-    /// Using the static lockManager avoids a self-reference during property init.
-    @StateObject private var passcodeSetupVM: AppLockViewModel = {
-        let vm = AppLockViewModel(lockManager: AppContainer.shared.lockManager)
-        vm.isSetupMode = true
-        return vm
-    }()
     
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     
@@ -49,7 +41,11 @@ struct RootView: View {
                     // ── Step 1: set + confirm passcode ─────────────────────────
                 case .setupPasscode:
                     PasscodeSetupView(
-                        vm: passcodeSetupVM,
+                        vm: {
+                            let vm = AppLockViewModel(lockManager: lockManager)
+                            vm.isSetupMode = true   // routes appendDigit → setupFlow
+                            return vm
+                        }(),
                         onSuccess: {
                             // Passcode confirmed — move to biometric opt-in
                             if lockManager.isBiometricAvailable {
@@ -88,7 +84,9 @@ struct RootView: View {
             .animation(.easeInOut, value: appState.flow)
             
             // ── Lock overlay (returning users / background lock) ───────────
-            if lockManager.state == .locked {
+            // Suppressed during new-user registration arrival to prevent
+            // spurious lock overlays caused by KYC UIViewController teardown.
+            if lockManager.state == .locked && !appState.isNewRegistration {
                 AppLockView(vm: lockVM, autoTriggerBiometric: false)
                     .transition(.opacity)
                     .zIndex(10)
