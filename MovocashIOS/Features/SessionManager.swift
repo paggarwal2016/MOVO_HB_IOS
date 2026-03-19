@@ -40,7 +40,7 @@ final class SessionManager: ObservableObject {
         await authManager.updateAccessToken(accessToken)
 
         // Store securely
-        try storeTokens(
+        try await storeTokens(
             accessToken: accessToken,
             refreshToken: refreshToken
         )
@@ -53,26 +53,25 @@ final class SessionManager: ObservableObject {
     func storeTokens(
         accessToken: String,
         refreshToken: String
-    ) throws { 
+    ) async throws {
 
-        try keychain.save(
+        try await keychain.save(
             accessToken,
-            for: "access_token", 
+            for: "access_token",
             protection: .backgroundSafe
         )
 
-        try keychain.save(
+        try await keychain.save(
             refreshToken,
             for: "refresh_token",
             protection: .backgroundSafe
         )
-        
     }
 
     // MARK: - Restore Session
     func restoreSession(appState: AppState) async -> Bool {
-        guard let accessToken = try? keychain.get("access_token", biometricPrompt: nil),
-              let refreshToken = try? keychain.get("refresh_token", biometricPrompt: nil),
+        guard let accessToken = try? await keychain.get("access_token", biometricPrompt: nil),
+              let refreshToken = try? await keychain.get("refresh_token", biometricPrompt: nil),
               !accessToken.isEmpty,
               !refreshToken.isEmpty else {
             return false
@@ -118,8 +117,12 @@ final class SessionManager: ObservableObject {
 
         await authManager.clearSession()
 
-        try? keychain.delete("access_token")
-        try? keychain.delete("refresh_token")
+        do {
+            try await keychain.delete("access_token")
+            try await keychain.delete("refresh_token")
+        } catch {
+            SecureLogger.error("Failed to delete tokens on logout: \(error.localizedDescription)", category: .auth)
+        }
 
         kycManager.clearSession()
 
@@ -142,6 +145,6 @@ final class SessionManager: ObservableObject {
         appState.otpVerified = false
         appState.isAuthenticated = false
         appState.flow = .choice
-        RSAKeyManager.deleteKey() // TODO: - Testing checking
+        RSAKeyManager.deleteKey() // Ensures biometric re-enrollment on next login
     }
 }

@@ -67,11 +67,9 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
             
         case .enrollRSA(let request):
-            SecureLogger.debug("Enroll RSA \(request)", category: .general)
             return try JSONEncoder().encode(request)
-            
+
         case .tokenRSA(let request):
-            SecureLogger.debug("Token RSA \(request)", category: .general)
             return try JSONEncoder().encode(request)
         }
     }

@@ -191,7 +191,7 @@ extension AuthViewModel { // TODO: - Testing checking
         case .success(let publicKey):
             let enrolled = await postEnrollWithRetry(
                 request: RSAEnrollRequest(publicKey: publicKey,
-                                          deviceId: DeviceManager.shared.deviceID)
+                                          deviceId: await DeviceManager.shared.deviceID())
             )
             guard enrolled else {
                 SecureLogger.error("Enroll failed — aborting", category: .auth)
@@ -247,7 +247,7 @@ extension AuthViewModel { // TODO: - Testing checking
     
     // ── POST /auth/token-rsa + start session ──────────────────────────────────
     private func tokenRSAAndStartSession(signedMessage: String, appState: AppState) async {
-        let deviceId = DeviceManager.shared.deviceID
+        let deviceId = await DeviceManager.shared.deviceID()
         do {
             let response: RSATokenResponse = try await network.request(
                 AuthAPI.tokenRSA(request: RSATokenRequest(
@@ -263,7 +263,7 @@ extension AuthViewModel { // TODO: - Testing checking
             SecureLogger.info("tokenRSA success — session started", category: .auth)
         } catch {
             SecureLogger.error("tokenRSA failed: \(error.localizedDescription)", category: .auth)
-            //alertManager.showError(". Please try again.") TODO: - Future
+            alertManager.showError("Biometric login failed. Please log in with your phone number.")
         }
     }
     
@@ -273,7 +273,7 @@ extension AuthViewModel { // TODO: - Testing checking
             return
         }
         
-        let deviceId  = DeviceManager.shared.deviceID
+        let deviceId  = await DeviceManager.shared.deviceID()
         let challenge = RSAKeyManager.buildChallenge(deviceId: deviceId)
         
         switch RSAKeyManager.sign(challenge: challenge, reason: "Authenticate to access MovoCash") {

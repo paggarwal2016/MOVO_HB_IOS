@@ -28,10 +28,16 @@ final class ScreenSecurityManager: ObservableObject {
 
     var onScreenshotDetected: (() async -> Void)?
 
+    private var observerTokens: [NSObjectProtocol] = []
+
     private init() {
         observeRecording()
         observeAppState()
         observeScreenshot()
+    }
+
+    deinit {
+        observerTokens.forEach { NotificationCenter.default.removeObserver($0) }
     }
 }
 
@@ -39,7 +45,7 @@ final class ScreenSecurityManager: ObservableObject {
 private extension ScreenSecurityManager {
 
     func observeRecording() {
-        NotificationCenter.default.addObserver(
+        let token = NotificationCenter.default.addObserver(
             forName: UIScreen.capturedDidChangeNotification,
             object: nil,
             queue: nil
@@ -48,10 +54,11 @@ private extension ScreenSecurityManager {
                 ScreenSecurityManager.shared.isCaptured = UIScreen.main.isCaptured
             }
         }
+        observerTokens.append(token)
     }
 
     func observeAppState() {
-        NotificationCenter.default.addObserver(
+        let resignToken = NotificationCenter.default.addObserver(
             forName: UIApplication.willResignActiveNotification,
             object: nil,
             queue: nil
@@ -61,7 +68,7 @@ private extension ScreenSecurityManager {
             }
         }
 
-        NotificationCenter.default.addObserver(
+        let activeToken = NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification,
             object: nil,
             queue: nil
@@ -70,10 +77,12 @@ private extension ScreenSecurityManager {
                 ScreenSecurityManager.shared.isInBackground = false
             }
         }
+
+        observerTokens.append(contentsOf: [resignToken, activeToken])
     }
 
     func observeScreenshot() {
-        NotificationCenter.default.addObserver(
+        let token = NotificationCenter.default.addObserver(
             forName: UIApplication.userDidTakeScreenshotNotification,
             object: nil,
             queue: nil
@@ -82,6 +91,7 @@ private extension ScreenSecurityManager {
                 await ScreenSecurityManager.shared.onScreenshotDetected?()
             }
         }
+        observerTokens.append(token)
     }
 }
 

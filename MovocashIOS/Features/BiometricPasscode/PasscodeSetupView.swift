@@ -26,7 +26,7 @@ struct PasscodeSetupView: View {
                 if vm.setupStep == .enterNew {
                     HStack {
                         BackButton { //TODO: Future Implementation will check below code logic
-                            AppContainer.lockManager.logout()
+                            AppContainer.shared.lockManager.logout()
                             Task {
                                 await sessionManager.logout(appState: appState)
                                 appState.flow = .loginPhone

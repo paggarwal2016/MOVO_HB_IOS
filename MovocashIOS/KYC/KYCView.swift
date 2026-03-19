@@ -23,7 +23,7 @@ struct KYCView: View {
                     appState.flow = .home
                 } catch {
                     //TODO: Future Implementation will check below code logic
-                    AppContainer.lockManager.logout()
+                    AppContainer.shared.lockManager.logout()
                     await sessionManager.logout(appState: appState)
                     appState.flow = .getStartedPhone
                     //alertManager.showError(error.localizedDescription)

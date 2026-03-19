@@ -12,11 +12,11 @@ import LocalAuthentication
 // MARK: - KeychainManager Protocol
 
 protocol KeychainManagerProtocol: Sendable {
-    func save(_ value: String, for key: String, protection: KeychainProtection) throws
-    
-    func get(_ key: String, biometricPrompt: String?) throws -> String
-    
-    func delete(_ key: String) throws
+    func save(_ value: String, for key: String, protection: KeychainProtection) async throws
+
+    func get(_ key: String, biometricPrompt: String?) async throws -> String
+
+    func delete(_ key: String) async throws
 }
 
 
@@ -35,7 +35,7 @@ final class KeychainManager: KeychainManagerProtocol {
         _ value: String,
         for key: String,
         protection: KeychainProtection
-    ) throws {
+    ) async throws {
         
         guard let data = value.data(using: .utf8) else {
             SecureLogger.error("Invalid data for key '\(key)'", category: .auth)
@@ -62,7 +62,10 @@ final class KeychainManager: KeychainManagerProtocol {
                 &error
             ) else {
                 SecureLogger.error("Failed creating biometric access control for '\(key)'", category: .auth)
-                throw error!.takeRetainedValue() as Error
+                if let cfError = error?.takeRetainedValue() {
+                    throw cfError as Error
+                }
+                throw KeychainError.unexpectedStatus(errSecParam)
             }
             query[kSecAttrAccessControl as String] = access
             SecureLogger.info("Saving '\(key)' as BIOMETRIC PROTECTED")
@@ -90,7 +93,7 @@ final class KeychainManager: KeychainManagerProtocol {
     func get(
         _ key: String,
         biometricPrompt: String? = nil
-    ) throws -> String {
+    ) async throws -> String {
         
         var query = baseQuery(for: key)
         query[kSecReturnData as String] = true
@@ -137,14 +140,16 @@ final class KeychainManager: KeychainManagerProtocol {
     
     // MARK: DELETE
     
-    func delete(_ key: String) throws {
+    func delete(_ key: String) async throws {
         let query = baseQuery(for: key)
         let status = SecItemDelete(query as CFDictionary)
-        
-        if status != errSecSuccess && status != errSecItemNotFound {
-            SecureLogger.info("Deleted key '\(key)'")
+
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            SecureLogger.error("Delete failed for '\(key)' OSStatus: \(status)", category: .auth)
             try checkStatus(status)
+            return
         }
+        SecureLogger.info("Deleted key '\(key)' successfully")
     }
     
     // MARK: Helpers

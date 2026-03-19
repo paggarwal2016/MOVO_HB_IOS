@@ -8,12 +8,20 @@
 import SwiftUI
 
 struct RootView: View {
-    
+
     @EnvironmentObject var appState: AppState
     @StateObject private var authVM      = AppContainer.shared.makeAuthViewModel()
-    @StateObject private var lockManager = AppContainer.lockManager
+    @StateObject private var lockManager = AppContainer.shared.lockManager
     @StateObject private var lockVM      = AppContainer.shared.makeAppLockViewModel()
     @StateObject private var userVM      = AppContainer.shared.makeUserViewModel()
+
+    /// Hoisted here so SwiftUI initialises it once for the lifetime of RootView.
+    /// Using the static lockManager avoids a self-reference during property init.
+    @StateObject private var passcodeSetupVM: AppLockViewModel = {
+        let vm = AppLockViewModel(lockManager: AppContainer.shared.lockManager)
+        vm.isSetupMode = true
+        return vm
+    }()
     
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     
@@ -41,11 +49,7 @@ struct RootView: View {
                     // ── Step 1: set + confirm passcode ─────────────────────────
                 case .setupPasscode:
                     PasscodeSetupView(
-                        vm: {
-                            let vm = AppLockViewModel(lockManager: lockManager)
-                            vm.isSetupMode = true   // routes appendDigit → setupFlow
-                            return vm
-                        }(),
+                        vm: passcodeSetupVM,
                         onSuccess: {
                             // Passcode confirmed — move to biometric opt-in
                             if lockManager.isBiometricAvailable {
@@ -91,8 +95,8 @@ struct RootView: View {
                     .ignoresSafeArea()
             }
         }
-        .onChange(of: scenePhase) { lockManager.handleScenePhase($0) }
-        .onChange(of: appState.otpVerified) { verified in
+        .onChangeCompat(of: scenePhase) { newPhase in lockManager.handleScenePhase(newPhase) }
+        .onChangeCompat(of: appState.otpVerified) { verified in
             guard verified else { return }
             if lockManager.isPasscodeSet {
                 // Returning user — passcode already set, lock overlay handles unlock

@@ -11,7 +11,7 @@ import Combine
 @main
 struct MovocashIOSApp: App {
     @StateObject private var appState = AppState()
-    @StateObject private var lockManager = AppContainer.lockManager
+    @StateObject private var lockManager = AppContainer.shared.lockManager
     
     var body: some Scene {
         WindowGroup {

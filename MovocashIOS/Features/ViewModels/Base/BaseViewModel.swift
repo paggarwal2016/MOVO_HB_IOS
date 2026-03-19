@@ -33,6 +33,7 @@ class BaseViewModel: ObservableObject {
         do {
             let result = try await operation()
             state = .success
+            defer { state = .idle }
             return result
         } catch is CancellationError {
             state = .idle

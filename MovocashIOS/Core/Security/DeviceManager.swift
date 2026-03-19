@@ -16,24 +16,24 @@ final class DeviceManager {
     
     private init() {}
     
-    var deviceID: String {
-        
+    func deviceID() async -> String {
+
         // Check if device ID already exists
-        if let saved = try? keychain.get(deviceKey),
+        if let saved = try? await keychain.get(deviceKey, biometricPrompt: nil),
            !saved.isEmpty {
             return saved
         }
-        
+
         // Use identifierForVendor
         if let idfv = UIDevice.current.identifierForVendor?.uuidString {
-            try? keychain.save(idfv, for: deviceKey, protection: .backgroundSafe)
+            try? await keychain.save(idfv, for: deviceKey, protection: .backgroundSafe)
             return idfv
         }
-        
+
         // Generate fallback UUID
         let generated = UUID().uuidString
-        try? keychain.save(generated, for: deviceKey, protection: .backgroundSafe)
-                
+        try? await keychain.save(generated, for: deviceKey, protection: .backgroundSafe)
+
         return generated
     }
 }
