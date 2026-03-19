@@ -20,6 +20,7 @@ struct KYCView: View {
             .task {
                 do {
                     _ = try await kycManager.start()
+                    appState.isNewRegistration = true
                     appState.flow = .home
                 } catch {
                     //TODO: Future Implementation will check below code logic

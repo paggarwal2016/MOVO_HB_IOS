@@ -17,14 +17,12 @@ final class AppContainer {
     let alertManager: AlertManagerProtocol
     let kycManager: KYCManagerProtocol
     let sessionManager: SessionManager
-    
     static let lockManager: AppLockManager = {
         AppLockManager(
             passcodeManager: PasscodeManager(),
             biometricManager: BiometricManager()
         )
     }()
-
 
     private init() {
         keychain = KeychainManager.shared

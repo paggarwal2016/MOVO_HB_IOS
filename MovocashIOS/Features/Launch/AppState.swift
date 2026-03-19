@@ -24,4 +24,7 @@ final class AppState: ObservableObject {
     @Published var kycVerified: Bool = false
     @Published var isAuthenticated: Bool = false
     @Published var networkStatus: NetworkStatus = .connected
+    /// Set to true when a new user completes KYC and is arriving at home for the
+    /// first time. Cleared by HomeTabBarView.onAppear once the home screen is live.
+    @Published var isNewRegistration: Bool = false
 }

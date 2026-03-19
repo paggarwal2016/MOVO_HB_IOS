@@ -18,7 +18,7 @@ enum HeaderType: Sendable {
 struct HeaderProvider {
 
     static func headers(for type: HeaderType, authManager: AuthManagerProtocol) async -> [String: String] {
-        var headers: [String: String] = baseHeaders()
+        var headers: [String: String] = await baseHeaders()
         switch type {
         case .default:
             break
@@ -27,7 +27,7 @@ struct HeaderProvider {
 
         case .authorizedWithOffice:
             await addAuthorization(&headers, authManager: authManager)
-            headers["office-id"] = "3"
+            headers["office-id"] = AppConfig.officeId
         }
         return headers
     }
@@ -37,13 +37,14 @@ struct HeaderProvider {
 
 private extension HeaderProvider {
     
-    static func baseHeaders() -> [String: String] {
-        [
+    static func baseHeaders() async -> [String: String] {
+        let deviceID = await DeviceManager.shared.deviceID()
+        return [
             "Content-Type": "application/json",
             "Accept": "application/json",
             "x-platform": "ios",
             "x-bundle-id": AppInfo.bundleIdentifier,
-            "X-Device-ID": DeviceManager.shared.deviceID,
+            "X-Device-ID": deviceID,
             "X-App-Version": AppInfo.version,
             "X-Request-ID": UUID().uuidString
         ]

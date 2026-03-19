@@ -79,15 +79,17 @@ final class KYCManager: KYCManagerProtocol {
         presenter = topVC
         
         return try await withCheckedThrowingContinuation { continuation in
-            
+
             var resumed = false
-            
+            var successToken: NSObjectProtocol?
+            var errorToken: NSObjectProtocol?
+
             func resumeOnce(_ result: Result<User, Error>) {
                 guard !resumed else { return }
                 resumed = true
-                
+
                 cleanup()
-                
+
                 switch result {
                 case .success(let user):
                     continuation.resume(returning: user)
@@ -95,47 +97,48 @@ final class KYCManager: KYCManagerProtocol {
                     continuation.resume(throwing: error)
                 }
             }
-            
+
             func cleanup() {
-                NotificationCenter.default.removeObserver(self)
+                if let t = successToken { NotificationCenter.default.removeObserver(t) }
+                if let t = errorToken   { NotificationCenter.default.removeObserver(t) }
                 dismiss()
             }
-            
+
             func dismiss() {
                 Task { @MainActor in
                     self.presenter?.dismiss(animated: true)
                     self.presenter = nil
                 }
             }
-            
+
             // SUCCESS
-            NotificationCenter.default.addObserver(
+            successToken = NotificationCenter.default.addObserver(
                 forName: .verificationCompleted,
                 object: nil,
                 queue: .main
             ) { notification in
-                
+
                 guard let user = notification.object as? User else {
                     resumeOnce(.failure(KYCError.unknown))
                     return
                 }
                 resumeOnce(.success(user))
             }
-            
+
             // ERROR
-            NotificationCenter.default.addObserver(
+            errorToken = NotificationCenter.default.addObserver(
                 forName: .scannerError,
                 object: nil,
                 queue: .main
             ) { notification in
-                
+
                 if let error = notification.object as? Error {
                     resumeOnce(.failure(KYCError.sdkError(error.localizedDescription)))
                 } else {
                     resumeOnce(.failure(KYCError.unknown))
                 }
             }
-            
+
             MobileBankingSDK.startKyc(presentingViewController: topVC)
         }
     }

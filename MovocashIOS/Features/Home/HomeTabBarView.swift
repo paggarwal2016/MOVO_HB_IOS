@@ -17,6 +17,7 @@ enum Tab: Hashable {
 
 struct HomeTabBarView: View {
     @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject var appState: AppState
     
     @State private var selectedTab: Tab = .home
     
@@ -72,6 +73,14 @@ struct HomeTabBarView: View {
             .tag(Tab.profile)
         }
         .tint(AppColors.primary)
+        .onAppear {
+            // New user just landed on home after completing registration.
+            // Clear the flag and reset any spurious lock from KYC UIViewController teardown.
+            if appState.isNewRegistration {
+                AppContainer.lockManager.resetToUnlocked()
+                appState.isNewRegistration = false
+            }
+        }
         .task {
             //            if !RSAKeyManager.isRegistered() { // TODO: - Testing checking
             //                UserDefaults.standard.set(false, forKey: "rsa_enrolled")

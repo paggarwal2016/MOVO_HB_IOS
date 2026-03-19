@@ -23,8 +23,7 @@ actor NetworkService: NetworkServiceProtocol {
     /// Callers that arrived while a refresh was already in-flight are parked here.
     /// When the refresh completes (or fails) every waiter is resumed exactly once.
     private var refreshWaiters: [CheckedContinuation<Void, Error>] = []
-    private var retryTracker: [URL: Int] = [:]
-    private let maxRetry = 1
+    private let maxRetry = 2
 
     // Custom session for security
     private let session: URLSession
@@ -72,27 +71,38 @@ actor NetworkService: NetworkServiceProtocol {
         
         SecureLogger.debug("API URL: \(url)", category: .network)
         
-        do {
-            return try await performRequest(request)
-        } catch let error as NetworkError {
-            let retry = retryTracker[url] ?? 0
-            guard retry < maxRetry else { throw error }
-            
-            retryTracker[url] = retry + 1
-            
-            switch error {
-            case .unauthorized:
-                try await refreshToken()
-            case .rateLimited, .serverError:
-                try await Task.sleep(nanoseconds: 200_000_000)
-            default:
-                throw error
+        // Attempt the initial request, then retry up to maxRetry times.
+        var lastError: NetworkError = .unknown
+
+        for attempt in 0...maxRetry {
+            do {
+                if attempt == 0 {
+                    return try await performRequest(request)
+                } else {
+                    let retryRequest = try await builder.build(from: endpoint)
+                    return try await performRequest(retryRequest)
+                }
+            } catch let error as NetworkError {
+                lastError = error
+
+                // Only retry on specific recoverable errors
+                switch error {
+                case .unauthorized:
+                    guard attempt < maxRetry else { break }
+                    try await refreshToken()
+
+                case .rateLimited, .serverError:
+                    guard attempt < maxRetry else { break }
+                    let backoff = UInt64(200_000_000) * UInt64(attempt + 1) // 200ms, 400ms, 600ms
+                    try await Task.sleep(nanoseconds: backoff)
+
+                default:
+                    throw error
+                }
             }
-            
-            retryTracker[url] = nil
-            let retryRequest = try await builder.build(from: endpoint)
-            return try await performRequest(retryRequest)
         }
+
+        throw lastError
     }
     
     // MARK: - Refresh Token

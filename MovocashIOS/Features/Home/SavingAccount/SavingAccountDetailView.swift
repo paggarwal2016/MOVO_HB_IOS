@@ -15,13 +15,16 @@ struct SavingAccountDetailView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var savingVM: SavingsAccountViewModel
+    @StateObject private var transVM: TransactionViewModel
 
     init(
         accountId: Int,
-        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
+        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel(),
+        transVM: TransactionViewModel = AppContainer.shared.makeTransactionViewModel()
     ) {
         self.accountId = accountId
         _savingVM = StateObject(wrappedValue: savingVM)
+        _transVM = StateObject(wrappedValue: transVM)
     }
 
     @State private var detail: SavingsAccountDetailsResponse?
@@ -220,6 +223,14 @@ struct SavingAccountDetailView: View {
             detail = try await savingVM.getSavingAccountDetails(accountID: accountId)
         } catch {
             ToastManager.shared.show("Failed to load account details.", style: .error, position: .bottom)
+        }
+        do {
+            let response = try await transVM.getTransactionList(max: 50, accountId: accountId)
+            transactions = response.transactions.isEmpty
+                ? TransactionItem.dummy
+                : response.transactions.map { $0.toItem() }
+        } catch {
+            transactions = TransactionItem.dummy
         }
     }
 }

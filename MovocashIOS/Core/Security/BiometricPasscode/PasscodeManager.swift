@@ -1,5 +1,5 @@
 //
-//  PasscodeManaging.swift
+//  PasscodeManager.swift
 //  MovocashIOS
 //
 //  Created by Movo Developer on 10/03/26.
@@ -23,6 +23,8 @@ enum PasscodeError: LocalizedError {
     case notSet
     /// Stored hash used the old SHA-256 algorithm. It has been cleared; user must re-set PIN.
     case migrationRequired
+    /// PIN does not meet the minimum length requirement.
+    case invalidPin(minimumLength: Int)
 
     var errorDescription: String? {
         switch self {
@@ -34,6 +36,7 @@ enum PasscodeError: LocalizedError {
         case .hashingFailed:         return "PIN hashing failed"
         case .notSet:                return "No passcode has been set"
         case .migrationRequired:     return "Passcode must be reset due to a security upgrade"
+        case .invalidPin(let min):   return "PIN must be at least \(min) digits"
         }
     }
 }
@@ -55,6 +58,11 @@ protocol PasscodeManaging {
 
 final class PasscodeManager: PasscodeManaging, Sendable {
 
+    // Serializes all keychain operations. NSRecursiveLock is required because
+    // clearAll() calls clearPasscode() + clearBiometricKey(), both of which
+    // also acquire the lock — a plain NSLock would deadlock on re-entry.
+    private let lock = NSRecursiveLock()
+
     // MARK: Keychain keys
     private enum Keys {
         private static let prefix = AppInfo.bundleIdentifier
@@ -74,29 +82,32 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     // MARK: - Public state
 
     var isPasscodeSet: Bool {
-        (try? keychainRead(key: Keys.pinHash)) != nil
+        lock.withLock { (try? keychainRead(key: Keys.pinHash)) != nil }
     }
 
     var isBiometricKeyEnrolled: Bool {
-        secureEnclaveKeyExists()
+        lock.withLock { secureEnclaveKeyExists() }
     }
 
     // MARK: - Set passcode
 
     func setPasscode(_ pin: String) throws {
-        guard !pin.isEmpty else { throw PasscodeError.hashingFailed }
+        try lock.withLock {
+            let minimumPinLength = 4
+            guard pin.count >= minimumPinLength else { throw PasscodeError.invalidPin(minimumLength: minimumPinLength) }
 
-        // Generate a 32-byte random salt
-        var saltBytes = [UInt8](repeating: 0, count: 32)
-        let result = SecRandomCopyBytes(kSecRandomDefault, saltBytes.count, &saltBytes)
-        guard result == errSecSuccess else { throw PasscodeError.hashingFailed }
-        let salt = Data(saltBytes)
+            // Generate a 32-byte random salt
+            var saltBytes = [UInt8](repeating: 0, count: 32)
+            let result = SecRandomCopyBytes(kSecRandomDefault, saltBytes.count, &saltBytes)
+            guard result == errSecSuccess else { throw PasscodeError.hashingFailed }
+            let salt = Data(saltBytes)
 
-        let hash = try computeHash(pin: pin, salt: salt)
+            let hash = try computeHash(pin: pin, salt: salt)
 
-        try keychainWrite(key: Keys.pinSalt, data: salt)
-        try keychainWrite(key: Keys.pinHash, data: hash)
-        try keychainWrite(key: Keys.pinVersion, data: HashVersion.pbkdf2)
+            try keychainWrite(key: Keys.pinSalt, data: salt)
+            try keychainWrite(key: Keys.pinHash, data: hash)
+            try keychainWrite(key: Keys.pinVersion, data: HashVersion.pbkdf2)
+        }
     }
 
     // MARK: - Verify passcode
@@ -106,31 +117,49 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     /// Throws PasscodeError.migrationRequired if an old SHA-256 hash is detected — the old
     /// hash is cleared and the caller must direct the user to set a new passcode.
     func verifyPasscode(_ pin: String) throws -> Bool {
-        guard let storedHash = try? keychainRead(key: Keys.pinHash),
-              let salt        = try? keychainRead(key: Keys.pinSalt)
-        else {
-            throw PasscodeError.notSet
-        }
+        try lock.withLock {
+            // Read hash + salt — map only errSecItemNotFound to .notSet;
+            // any other OS error propagates as a real keychainRead failure.
+            let storedHash: Data
+            let salt: Data
+            do {
+                storedHash = try keychainRead(key: Keys.pinHash)
+                salt       = try keychainRead(key: Keys.pinSalt)
+            } catch PasscodeError.keychainRead(errSecItemNotFound) {
+                throw PasscodeError.notSet
+            }
 
-        // Version key absent → hash was written by the old SHA-256 code path.
-        // Clear the stale hash and force re-setup (Option A migration).
-        let version = try? keychainRead(key: Keys.pinVersion)
-        if version != HashVersion.pbkdf2 {
-            try? clearPasscode()
-            throw PasscodeError.migrationRequired
-        }
+            // Read version — distinguish "legitimately absent" (old SHA-256 hash,
+            // errSecItemNotFound) from a transient keychain error (propagate as-is).
+            let version: Data?
+            do {
+                version = try keychainRead(key: Keys.pinVersion)
+            } catch PasscodeError.keychainRead(errSecItemNotFound) {
+                version = nil   // Key absent — old SHA-256 hash, migration needed
+            }
+            // Any other keychainRead error propagates automatically (no catch needed).
 
-        let candidate = try computeHash(pin: pin, salt: salt)
-        // Constant-time comparison to prevent timing attacks
-        return constantTimeEqual(lhs: candidate, rhs: storedHash)
+            if version != HashVersion.pbkdf2 {
+                // Propagate deletion errors instead of silencing them — a failed
+                // delete would leave the stale hash and loop back here on every verify.
+                try clearPasscode()
+                throw PasscodeError.migrationRequired
+            }
+
+            let candidate = try computeHash(pin: pin, salt: salt)
+            // Constant-time comparison to prevent timing attacks
+            return constantTimeEqual(lhs: candidate, rhs: storedHash)
+        }
     }
 
     // MARK: - Clear passcode
 
     func clearPasscode() throws {
-        try keychainDelete(key: Keys.pinHash)
-        try keychainDelete(key: Keys.pinSalt)
-        try keychainDelete(key: Keys.pinVersion)
+        try lock.withLock {
+            try keychainDelete(key: Keys.pinHash)
+            try keychainDelete(key: Keys.pinSalt)
+            try keychainDelete(key: Keys.pinVersion)
+        }
     }
 
     // MARK: - Biometric Secure Enclave key
@@ -138,54 +167,60 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     /// Creates a Secure Enclave private key that requires biometric auth on every use.
     /// We only need the key to exist — its presence is the "biometric enrolled" signal.
     func enrollBiometricKey() throws {
-        guard SecureEnclave.isAvailable else {
-            throw PasscodeError.secureEnclaveUnavailable
-        }
-        // Remove any stale key first
-        try? clearBiometricKey()
+        try lock.withLock {
+            guard SecureEnclave.isAvailable else {
+                throw PasscodeError.secureEnclaveUnavailable
+            }
+            // Remove any stale key first
+            try? clearBiometricKey()
 
-        var error: Unmanaged<CFError>?
-        let access = SecAccessControlCreateWithFlags(
-            kCFAllocatorDefault,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            [.privateKeyUsage, .biometryCurrentSet],
-            &error
-        )
-        guard let access, error == nil else {
-            throw PasscodeError.keyGenerationFailed(error?.takeRetainedValue())
-        }
+            var error: Unmanaged<CFError>?
+            let access = SecAccessControlCreateWithFlags(
+                kCFAllocatorDefault,
+                kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+                [.privateKeyUsage, .biometryCurrentSet],
+                &error
+            )
+            guard let access, error == nil else {
+                throw PasscodeError.keyGenerationFailed(error?.takeRetainedValue())
+            }
 
-        let attributes: [String: Any] = [
-            kSecAttrKeyType as String:            kSecAttrKeyTypeECSECPrimeRandom,
-            kSecAttrKeySizeInBits as String:      256,
-            kSecAttrTokenID as String:            kSecAttrTokenIDSecureEnclave,
-            kSecPrivateKeyAttrs as String: [
-                kSecAttrIsPermanent as String:    true,
-                kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
-                kSecAttrAccessControl as String:  access
+            let attributes: [String: Any] = [
+                kSecAttrKeyType as String:            kSecAttrKeyTypeECSECPrimeRandom,
+                kSecAttrKeySizeInBits as String:      256,
+                kSecAttrTokenID as String:            kSecAttrTokenIDSecureEnclave,
+                kSecPrivateKeyAttrs as String: [
+                    kSecAttrIsPermanent as String:    true,
+                    kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
+                    kSecAttrAccessControl as String:  access
+                ]
             ]
-        ]
 
-        guard SecKeyCreateRandomKey(attributes as CFDictionary, &error) != nil else {
-            throw PasscodeError.keyGenerationFailed(error?.takeRetainedValue())
+            guard SecKeyCreateRandomKey(attributes as CFDictionary, &error) != nil else {
+                throw PasscodeError.keyGenerationFailed(error?.takeRetainedValue())
+            }
         }
     }
 
     func clearBiometricKey() throws {
-        let query: [String: Any] = [
-            kSecClass as String:              kSecClassKey,
-            kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
-            kSecAttrKeyType as String:        kSecAttrKeyTypeECSECPrimeRandom
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw PasscodeError.keychainDelete(status)
+        try lock.withLock {
+            let query: [String: Any] = [
+                kSecClass as String:              kSecClassKey,
+                kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
+                kSecAttrKeyType as String:        kSecAttrKeyTypeECSECPrimeRandom
+            ]
+            let status = SecItemDelete(query as CFDictionary)
+            guard status == errSecSuccess || status == errSecItemNotFound else {
+                throw PasscodeError.keychainDelete(status)
+            }
         }
     }
 
     func clearAll() throws {
-        try? clearPasscode()
-        try? clearBiometricKey()
+        try lock.withLock {
+            try clearPasscode()
+            try clearBiometricKey()
+        }
     }
 
     // MARK: - Private helpers
@@ -194,22 +229,27 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     /// 310,000 iterations meets NIST SP 800-63B (2023) for low-entropy secrets.
     private func computeHash(pin: String, salt: Data) throws -> Data {
         guard let pinData = pin.data(using: .utf8) else { throw PasscodeError.hashingFailed }
+        // Copy PIN bytes into a mutable buffer so they can be zeroed after use.
+        var pinBytes = [UInt8](pinData)
+        defer {
+            // Zero the PIN bytes immediately after derivation to minimise
+            // the window in which sensitive data is readable in memory.
+            for i in pinBytes.indices { pinBytes[i] = 0 }
+        }
         var derivedKey = Data(count: 32)
         let status = derivedKey.withUnsafeMutableBytes { derivedKeyBytes -> Int32 in
             salt.withUnsafeBytes { saltBytes in
-                pinData.withUnsafeBytes { pinBytes in
-                    CCKeyDerivationPBKDF(
-                        CCPBKDFAlgorithm(kCCPBKDF2),
-                        pinBytes.baseAddress?.assumingMemoryBound(to: Int8.self),
-                        pinData.count,
-                        saltBytes.baseAddress?.assumingMemoryBound(to: UInt8.self),
-                        salt.count,
-                        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
-                        Self.pbkdf2Iterations,
-                        derivedKeyBytes.baseAddress?.assumingMemoryBound(to: UInt8.self),
-                        32
-                    )
-                }
+                CCKeyDerivationPBKDF(
+                    CCPBKDFAlgorithm(kCCPBKDF2),
+                    pinBytes,
+                    pinBytes.count,
+                    saltBytes.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                    salt.count,
+                    CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+                    Self.pbkdf2Iterations,
+                    derivedKeyBytes.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                    32
+                )
             }
         }
         guard status == kCCSuccess else { throw PasscodeError.hashingFailed }
@@ -264,14 +304,12 @@ final class PasscodeManager: PasscodeManaging, Sendable {
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data else {
-            throw PasscodeError.keychainRead(status)
-        }
+        guard status == errSecSuccess else { throw PasscodeError.keychainRead(status) }
+        guard let data = result as? Data else { throw PasscodeError.keychainRead(errSecInternalError) }
         return data
     }
 
-    @discardableResult
-    private func keychainDelete(key: String) throws -> Bool {
+    private func keychainDelete(key: String) throws {
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrAccount as String: key
@@ -280,6 +318,5 @@ final class PasscodeManager: PasscodeManaging, Sendable {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw PasscodeError.keychainDelete(status)
         }
-        return true
     }
 }

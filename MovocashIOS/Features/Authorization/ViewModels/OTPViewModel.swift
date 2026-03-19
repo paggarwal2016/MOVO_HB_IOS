@@ -40,12 +40,17 @@ final class OTPViewModel: ObservableObject {
         remainingSeconds = seconds
         state = .counting
 
-        timerTask = Task { [weak self] in
+        // Anchor to a fixed deadline so loop overhead never accumulates as drift
+        let deadline = Date().addingTimeInterval(TimeInterval(seconds))
+
+        timerTask = Task { @MainActor [weak self] in
             guard let self else { return }
 
-            while self.remainingSeconds > 0 && !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second in nanoseconds
-                self.remainingSeconds -= 1
+            while !Task.isCancelled {
+                let remaining = Int(deadline.timeIntervalSinceNow.rounded(.up))
+                self.remainingSeconds = max(0, remaining)
+                guard remaining > 0 else { break }
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
 
             if !Task.isCancelled {

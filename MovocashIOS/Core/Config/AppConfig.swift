@@ -18,4 +18,6 @@ final class AppConfig {
     static var baseURL: URL {
         environment.baseURL
     }
+
+    static let officeId: String = "3"
 }

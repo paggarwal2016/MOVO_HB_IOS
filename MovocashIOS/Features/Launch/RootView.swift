@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct RootView: View {
-    
+
     @EnvironmentObject var appState: AppState
     @StateObject private var authVM      = AppContainer.shared.makeAuthViewModel()
     @StateObject private var lockManager = AppContainer.lockManager
@@ -84,15 +84,17 @@ struct RootView: View {
             .animation(.easeInOut, value: appState.flow)
             
             // ── Lock overlay (returning users / background lock) ───────────
-            if lockManager.state == .locked {
+            // Suppressed during new-user registration arrival to prevent
+            // spurious lock overlays caused by KYC UIViewController teardown.
+            if lockManager.state == .locked && !appState.isNewRegistration {
                 AppLockView(vm: lockVM, autoTriggerBiometric: false)
                     .transition(.opacity)
                     .zIndex(10)
                     .ignoresSafeArea()
             }
         }
-        .onChange(of: scenePhase) { lockManager.handleScenePhase($0) }
-        .onChange(of: appState.otpVerified) { verified in
+        .onChangeCompat(of: scenePhase) { newPhase in lockManager.handleScenePhase(newPhase) }
+        .onChangeCompat(of: appState.otpVerified) { verified in
             guard verified else { return }
             if lockManager.isPasscodeSet {
                 // Returning user — passcode already set, lock overlay handles unlock

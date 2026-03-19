@@ -21,11 +21,6 @@ struct MovocashIOSApp: App {
                 .networkMonitor(state: appState)
                 .globalToast()
                 .globalAlert()
-                .task {
-                    // On first launch after install, evaluate whether to lock
-                    // SplashScreen handles session restore; lock eval happens after
-                    lockManager.evaluateOnLaunch()
-                }
             //.sensitiveScreen() TODO: Future Implementation will check this logic
         }
     }
