@@ -14,17 +14,21 @@ struct InternalTransferView: View {
 
     // Pre-loaded from DashboardView
     private let toClientId: Int
-    private let fromAccount: SavingsAccountDetailsResponse?
-    private let nonPrimaryAccounts: [SavingsAccountDetailsResponse]
+    private let allAccounts: [SavingsAccountDetailsResponse]
 
     // Editable
     @State private var amountText = ""
     @State private var descriptionText = ""
+    @State private var selectedFromAccount: SavingsAccountDetailsResponse?
     @State private var selectedToAccount: SavingsAccountDetailsResponse?
+
+    private var availableToAccounts: [SavingsAccountDetailsResponse] {
+        allAccounts.filter { $0.id != selectedFromAccount?.id }
+    }
 
     private var amount: Double { Double(amountText) ?? 0 }
     private var isValid: Bool {
-        amount > 0 && selectedToAccount != nil && fromAccount != nil && !descriptionText.isEmpty
+        amount > 0 && selectedFromAccount != nil && selectedToAccount != nil && !descriptionText.isEmpty
     }
 
     init(
@@ -34,8 +38,9 @@ struct InternalTransferView: View {
         transVM: TransactionViewModel = AppContainer.shared.makeTransactionViewModel()
     ) {
         self.toClientId = toClientId
-        self.fromAccount = fromAccount
-        self.nonPrimaryAccounts = nonPrimaryAccounts
+        let primary = fromAccount.map { [$0] } ?? []
+        self.allAccounts = primary + nonPrimaryAccounts
+        _selectedFromAccount = State(initialValue: fromAccount)
         _transVM = StateObject(wrappedValue: transVM)
     }
 
@@ -102,8 +107,7 @@ struct InternalTransferView: View {
     private var fieldsCard: some View {
         VStack(spacing: 0) {
             FieldRow(label: "From account") {
-                Text(fromAccount?.accountNumber ?? "—")
-                    .font(.system(size: 14, weight: .medium))
+                fromAccountPicker
             }
             Divider()
             FieldRow(label: "To account") {
@@ -125,15 +129,62 @@ struct InternalTransferView: View {
         .card()
     }
 
-    private var toAccountPicker: some View {
+    private var fromAccountPicker: some View {
         Group {
-            if nonPrimaryAccounts.isEmpty {
+            if allAccounts.isEmpty {
                 Text("No accounts")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             } else {
                 Menu {
-                    ForEach(nonPrimaryAccounts) { account in
+                    ForEach(allAccounts) { account in
+                        Button {
+                            selectedFromAccount = account
+                            // Reset "To" if it's now the same as "From"
+                            if selectedToAccount?.id == account.id {
+                                selectedToAccount = nil
+                            }
+                        } label: {
+                            VStack(alignment: .leading) {
+                                Text(account.nickname ?? account.clientName)
+                                Text(account.maskedAccountNumber)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        if let account = selectedFromAccount {
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(account.nickname ?? account.clientName)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.primary)
+                                Text(account.maskedAccountNumber)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text("Select account")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private var toAccountPicker: some View {
+        Group {
+            if availableToAccounts.isEmpty {
+                Text("No accounts")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            } else {
+                Menu {
+                    ForEach(availableToAccounts) { account in
                         Button {
                             selectedToAccount = account
                         } label: {
@@ -188,6 +239,7 @@ struct InternalTransferView: View {
     private var confirmButton: some View {
         VStack(spacing: 10) {
             Button {
+                UIApplication().dismissKeyboard()
                 Task { await submitTransfer() }
             } label: {
                 Text("Confirm transfer")
@@ -208,7 +260,7 @@ struct InternalTransferView: View {
     // MARK: - Submit
 
     private func submitTransfer() async {
-        guard let toAccount = selectedToAccount, let from = fromAccount else { return }
+        guard let toAccount = selectedToAccount, let from = selectedFromAccount else { return }
         let request = TransactionRequest.Internal(
             description: descriptionText,
             amount: amount,

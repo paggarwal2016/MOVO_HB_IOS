@@ -59,7 +59,6 @@ struct UserProfileView: View {
             accountStatusSection(profile)
         }
         .listStyle(.insetGrouped)
-        .refreshable { await userVM.fetchProfile() }
     }
     
     // MARK: - Sections  (profile passed in, no more dangling reference)

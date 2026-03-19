@@ -78,8 +78,7 @@ struct TransactionItem: Identifiable, Sendable {
         return "\(prefix)$\(str)"
     }
 
-    // Static dummy data — allocated once, never recreated
-#if DEBUG
+    // Static dummy data — shown when API returns empty array
     static let dummy: [TransactionItem] = [
         TransactionItem(id: 1, title: "Eva Novak",     subtitle: "Deposit",  amount: 5710.20, isCredit: true,  date: Date(), rawDate: ""),
         TransactionItem(id: 2, title: "Binance",       subtitle: "Deposit",  amount: 714.00,  isCredit: true,  date: Date(), rawDate: ""),
@@ -90,7 +89,6 @@ struct TransactionItem: Identifiable, Sendable {
         TransactionItem(id: 7, title: "Megogo",        subtitle: "Withdraw", amount: 847.20,  isCredit: false, date: Date(), rawDate: ""),
         TransactionItem(id: 8, title: "Emilia Costa",  subtitle: "Deposit",  amount: 147.00,  isCredit: true,  date: Date(), rawDate: ""),
     ]
-#endif
 }
 
 
