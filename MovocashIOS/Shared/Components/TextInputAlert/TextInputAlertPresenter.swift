@@ -150,6 +150,7 @@ struct TextInputAlertPresenter<Content: View>: View {
         let name = inputText.trimmingCharacters(in: .whitespaces)
         isPresented = false
         inputText = ""
+        UIApplication.shared.dismissKeyboard()
         onCreate(name)
     }
 
