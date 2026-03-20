@@ -25,44 +25,12 @@ struct CustomHeaderView: View {
             HStack(spacing: 12) {
                 
                 // MARK: - User Image
-                
-                Image(userImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 56, height: 56)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.cyan, lineWidth: 2.5)
-                    )
-                
-                // MARK: - Greeting + Name
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Good day,")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.85))
-                    
-                    Text(userName)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white)
-                }
-                
+                ProfileImageView(imageURL: userImage,
+                                 userName: userName,
+                                 width: 50,
+                                 height: 50)
+
                 Spacer()
-                
-                // MARK: - Bell Button
-                
-                Button {
-                    // notifications
-                } label: {
-                    Image(systemName: "bell.fill")
-                        .font(.title3)
-                        .foregroundStyle(AppColors.primary)
-                        .frame(width: 44, height: 44)
-                        .background(.white)
-                        .clipShape(Circle())
-                }
                 
                 // MARK: - Logout Button
                 
@@ -81,6 +49,6 @@ struct CustomHeaderView: View {
             .padding(.trailing, 16)
             .padding(.bottom, 15)
         }
-        .frame(height: 75)
+        .frame(height: 70)
     }
 }

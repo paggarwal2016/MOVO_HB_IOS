@@ -32,17 +32,21 @@ struct ViewCardScreen: View {
         ZStack {
             NavigationStack {
                 vcardSection
-                    Spacer()
+                
+                if card != nil {
+                    PrimaryButton(title: "Activate your card") {
+                        showAddCard = true
+                    }
+                    .padding()
+                    .padding(.top, 40)
+                }
+                                
+                Spacer()
                     .navigationTitle("View Card")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { isPresented = false }
-                                .foregroundStyle(AppColors.primary)
-                                .fontWeight(.semibold)
-                        }
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button("Add") { showAddCard = true }
                                 .foregroundStyle(AppColors.primary)
                                 .fontWeight(.semibold)
                         }
@@ -53,13 +57,17 @@ struct ViewCardScreen: View {
                 SpinnerView()
             }
         }
-        .textInputAlert(
+        .pinInputAlert(
             isPresented: $showAddCard,
-            title: "Add New Card",
-            message: "Enter a card pin 4 digit",
-            placeholder: "Type here...",
-            onCreate: { name in
-                Task { await addCard(pin: name) }
+            title: "Activate Card",
+            message: "",
+            pinPlaceholder: "4-digit PIN",
+            confirmPlaceholder: "Re-enter PIN",
+            config: TextInputAlertConfig(primaryLabel: "Activate",
+                                         secondaryLabel: "Cancel"),
+            style: .center,
+            onCreate: { pin in
+                Task { await addCard(pin: pin) }
             }
         )
         .overlay { overlayContent }
@@ -114,6 +122,9 @@ struct ViewCardScreen: View {
     }
     
     private func addCard(pin: String) async {
-        do { card = try await vm.postVCard(request: VCardsRequest(pin: pin)) } catch {}
+        do {
+            card = try await vm.postVCard(request: VCardsRequest(pin: pin))
+            ToastManager.shared.show("Success.", style: .success, position: .bottom)
+        } catch {}
     }
 }

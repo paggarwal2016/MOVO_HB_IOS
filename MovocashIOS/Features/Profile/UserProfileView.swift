@@ -66,7 +66,10 @@ struct UserProfileView: View {
     private func avatarSection(_ profile: UserProfileResponse) -> some View {
         Section {
             VStack(spacing: 10) {
-                AvatarView(initials: profile.initials, imageURL: profile.profilePicture)
+                ProfileImageView(imageURL: profile.profilePicture,
+                                 userName: profile.fullName,
+                                 width: 65,
+                                 height: 65)
                 Text(profile.fullName)
                     .font(.title2).fontWeight(.semibold)
                 Text("@\(profile.username)")
@@ -148,37 +151,5 @@ struct ProfileRow: View {
                 .multilineTextAlignment(.trailing)
         }
         .font(.subheadline)
-    }
-}
-
-struct AvatarView: View {
-    let initials: String
-    let imageURL: String?
-    
-    var body: some View {
-        Group {
-            if let url = imageURL, let parsed = URL(string: url) {
-                AsyncImage(url: parsed) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    initialsCircle
-                }
-            } else {
-                initialsCircle
-            }
-        }
-        .frame(width: 80, height: 80)
-        .clipShape(Circle())
-    }
-    
-    private var initialsCircle: some View {
-        Circle()
-            .fill(Color.blue.opacity(0.15))
-            .overlay(
-                Text(initials)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.blue)
-            )
     }
 }
