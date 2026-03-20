@@ -239,7 +239,7 @@ struct InternalTransferView: View {
     private var confirmButton: some View {
         VStack(spacing: 10) {
             Button {
-                UIApplication().dismissKeyboard()
+                UIApplication.shared.dismissKeyboard()
                 Task { await submitTransfer() }
             } label: {
                 Text("Confirm transfer")

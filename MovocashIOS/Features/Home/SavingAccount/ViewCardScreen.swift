@@ -26,6 +26,7 @@ struct ViewCardScreen: View {
     @State private var card: VCardsResponse?
     @State private var showCardDetail = false
     @State private var revealedCard: VCardsResponse?
+    @State private var showAddCard = false
     
     var body: some View {
         ZStack {
@@ -40,6 +41,11 @@ struct ViewCardScreen: View {
                                 .foregroundStyle(AppColors.primary)
                                 .fontWeight(.semibold)
                         }
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Add") { showAddCard = true }
+                                .foregroundStyle(AppColors.primary)
+                                .fontWeight(.semibold)
+                        }
                     }
             }
             
@@ -47,6 +53,15 @@ struct ViewCardScreen: View {
                 SpinnerView()
             }
         }
+        .textInputAlert(
+            isPresented: $showAddCard,
+            title: "Add New Card",
+            message: "Enter a card pin 4 digit",
+            placeholder: "Type here...",
+            onCreate: { name in
+                Task { await addCard(pin: name) }
+            }
+        )
         .overlay { overlayContent }
         .task {
             await loadCard()
@@ -96,5 +111,9 @@ struct ViewCardScreen: View {
     
     private func loadCard() async {
         do { card = try await vm.getVCard() } catch {}
+    }
+    
+    private func addCard(pin: String) async {
+        do { card = try await vm.postVCard(request: VCardsRequest(pin: pin)) } catch {}
     }
 }
