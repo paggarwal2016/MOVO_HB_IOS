@@ -28,7 +28,7 @@ struct InternalTransferView: View {
 
     private var amount: Double { Double(amountText) ?? 0 }
     private var isValid: Bool {
-        amount > 0 && selectedFromAccount != nil && selectedToAccount != nil && !descriptionText.isEmpty
+        amount > 0 && selectedFromAccount != nil && selectedToAccount != nil
     }
 
     init(
@@ -59,7 +59,7 @@ struct InternalTransferView: View {
                     .padding(.vertical, 12)
                 }
             }
-            .navigationTitle("Internal transfer")
+            .navigationTitle("Money Transfer")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -112,11 +112,6 @@ struct InternalTransferView: View {
             Divider()
             FieldRow(label: "To account") {
                 toAccountPicker
-            }
-            Divider()
-            FieldRow(label: "Client ID") {
-                Text("\(toClientId)")
-                    .font(.system(size: 14, weight: .medium))
             }
             Divider()
             FieldRow(label: "Description") {
@@ -224,9 +219,6 @@ struct InternalTransferView: View {
     private var summaryCard: some View {
         let formatted = amount.formatted(.currency(code: "USD"))
         return VStack(spacing: 0) {
-            SummaryRow(label: "Transfer amount", value: formatted)
-            SummaryRow(label: "Fee", value: "$0.00")
-            Divider().padding(.vertical, 8)
             SummaryRow(label: "Total deducted", value: formatted, bold: true)
         }
         .padding(16)
@@ -242,7 +234,7 @@ struct InternalTransferView: View {
                 UIApplication.shared.dismissKeyboard()
                 Task { await submitTransfer() }
             } label: {
-                Text("Confirm transfer")
+                Text("Confirm Transfer")
                     .font(.system(size: 15, weight: .medium))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 15)
@@ -251,9 +243,6 @@ struct InternalTransferView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .disabled(!isValid)
-            Text("Transfers are usually instant")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
         }
     }
 

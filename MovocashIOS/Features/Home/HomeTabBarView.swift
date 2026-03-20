@@ -82,10 +82,9 @@ struct HomeTabBarView: View {
             }
         }
         .task {
-            //            if !RSAKeyManager.isRegistered() { // TODO: - Testing checking
-            //                UserDefaults.standard.set(false, forKey: "rsa_enrolled")
-            //                await authVM.enrollRSASilently(appState: appState)
-            //            }
+            if !RSAKeyManager.isRegistered() { // TODO: - Testing checking
+                await authVM.enrollRSASilently(appState: appState)
+            }
         }
     }
 }

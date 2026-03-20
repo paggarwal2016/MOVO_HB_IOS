@@ -17,11 +17,13 @@ struct SavingActDetailPopupView: View {
 
     var body: some View {
         BasePopupView(
-            nickName: account.nickname ?? "",
-            formattedBalance: account.formattedBalance,
-            balanceLabel: "AVAILABLE BALANCE",
+            mode: .balance(
+                nickName: account.nickname ?? "",
+                formattedBalance: account.formattedBalance,
+                balanceLabel: "AVAILABLE BALANCE"
+            ),
             isPresented: $isPresented,
-            headerTrailing: { editButton }   // ← pass edit button into header
+            headerTrailing: { editButton }
         ) {
             DetailField(
                 label: "ACCOUNT NUMBER",

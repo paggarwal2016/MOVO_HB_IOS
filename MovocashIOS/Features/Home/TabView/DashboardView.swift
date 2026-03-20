@@ -34,7 +34,6 @@ struct DashboardView: View {
         _savingVM = StateObject(wrappedValue: savingVM)
     }
     @State private var savingsList: SavingsAccountListResponse?
-    @State private var selectedAccount: SavingsAccountDetailsResponse?
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
     @State private var showAccountDetail = false
@@ -45,7 +44,14 @@ struct DashboardView: View {
     @State private var showFunds = false
     
     private var displayAccount: SavingsAccountDetailsResponse? {
-        selectedAccount ?? savingsList?.accounts.first(where: { $0.isPrimary })
+        savingsList?.accounts.first(where: { $0.isPrimary })
+    }
+    
+    private var isViewCashAccount: Bool {
+        guard let account = savingsList?.accounts.first(where: { !$0.isPrimary }) else {
+            return false
+        }
+        return !account.isPrimary
     }
     
     // MARK: - Body
@@ -92,7 +98,7 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showAccountList) {
-            AccountListSheetView(selectedAccount: $selectedAccount, isPresented: $showAccountList)
+            AccountListSheetView(savingsList: $savingsList, isPresented: $showAccountList)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -122,7 +128,7 @@ struct DashboardView: View {
     // MARK: - Subviews
     
     private var headerView: some View {
-        CustomHeaderView(userName: "Test", userImage: "user") {
+        CustomHeaderView(userName: "LAYTON B CHRISTENSEN", userImage: "user") {
             AlertManager.shared.showConfirmation(
                 title: "Log Out",
                 message: "Are you sure you want to log out?",
@@ -151,24 +157,27 @@ struct DashboardView: View {
         if let account = displayAccount {
             BalanceCardView(
                 account: account,
-                totalAvailableBalance: savingsList?.totalAvailableBalance ?? 0.00,
+                totalAvailableBalance: account.availableBalance,
                 onCardTap: { showAccountDetail = true },
                 onPrimaryTap: { showPrimaryAccountDetails = true },
                 onCreateTap: { showCreateView = true },
                 onViewCardTap: { showViewCard = true }
             )
-            PrimaryButton(
-                title: "View Cash Accounts",
-                backgroundColor: .gray.opacity(0.1),
-                textColor: .black
-            ) {
-                showAccountList = true
+            
+            if isViewCashAccount {
+                PrimaryButton(
+                    title: "View Cash Accounts",
+                    backgroundColor: .gray.opacity(0.1),
+                    textColor: .black
+                ) {
+                    showAccountList = true
+                }
+                .padding()
+                .frame(height: 60)
             }
-            .padding()
-            .frame(height: 60)
             
             PrimaryButton(
-                title: "Funds Transfer",
+                title: "Move Money",
                 backgroundColor: .red.opacity(0.1),
                 textColor: .black
             ) {

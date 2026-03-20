@@ -7,26 +7,29 @@
 
 import SwiftUI
 
+// MARK: - Mode
+
+enum BasePopupMode {
+    case simple
+    case balance(nickName: String, formattedBalance: String, balanceLabel: String)
+}
+
+// MARK: - BasePopupView
+
 struct BasePopupView<Content: View, HeaderTrailing: View>: View {
 
-    let nickName: String
-    let formattedBalance: String
-    let balanceLabel: String
+    let mode: BasePopupMode
     @Binding var isPresented: Bool
-    @ViewBuilder let headerTrailing: HeaderTrailing  // ← NEW slot (pencil, etc.)
+    @ViewBuilder let headerTrailing: HeaderTrailing
     @ViewBuilder let content: Content
 
-    // Convenience init — no headerTrailing needed for other popups
-    init(nickName: String,
-        formattedBalance: String,
-        balanceLabel: String,
+    init(
+        mode: BasePopupMode,
         isPresented: Binding<Bool>,
         @ViewBuilder headerTrailing: () -> HeaderTrailing = { EmptyView() },
         @ViewBuilder content: () -> Content
     ) {
-        self.nickName = nickName
-        self.formattedBalance = formattedBalance
-        self.balanceLabel = balanceLabel
+        self.mode = mode
         self._isPresented = isPresented
         self.headerTrailing = headerTrailing()
         self.content = content()
@@ -41,12 +44,24 @@ struct BasePopupView<Content: View, HeaderTrailing: View>: View {
             VStack(spacing: 0) {
 
                 // MARK: Header
-                ZStack(alignment: .topTrailing) {
-                    headerCurve
+                switch mode {
+                case .balance(let nickName, let formattedBalance, let balanceLabel):
+                    ZStack(alignment: .topTrailing) {
+                        headerCurve(nickName: nickName, formattedBalance: formattedBalance, balanceLabel: balanceLabel)
+                        HStack(spacing: 8) {
+                            headerTrailing
+                            closeButton(foreground: .white, background: .white.opacity(0.25))
+                        }
+                        .padding(16)
+                    }
 
-                    HStack(spacing: 8) {
-                        headerTrailing  // ← pencil or any custom button
-                        closeButton
+                case .simple:
+                    HStack {
+                        Spacer()
+                        HStack(spacing: 8) {
+                            headerTrailing
+                            closeButton(foreground: Color(.label), background: Color(.systemGray5))
+                        }
                     }
                     .padding(16)
                 }
@@ -64,20 +79,20 @@ struct BasePopupView<Content: View, HeaderTrailing: View>: View {
 
     // MARK: - Close Button
 
-    private var closeButton: some View {
+    private func closeButton(foreground: Color, background: Color) -> some View {
         Button { isPresented = false } label: {
             Image(systemName: "xmark")
                 .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(foreground)
                 .padding(8)
-                .background(.white.opacity(0.25))
+                .background(background)
                 .clipShape(Circle())
         }
     }
 
-    // MARK: - Header Curve (unchanged)
+    // MARK: - Header Curve
 
-    private var headerCurve: some View {
+    private func headerCurve(nickName: String, formattedBalance: String, balanceLabel: String) -> some View {
         AppColors.primary
             .overlay {
                 VStack(spacing: 6) {
@@ -188,14 +203,5 @@ struct RoundedCornersShape: Shape {
             cornerRadii: CGSize(width: radius, height: radius)
         )
         return Path(path.cgPath)
-    }
-}
-
-
-// MARK: - VCardsResponse extension
-
-extension VCardsResponse {
-    var formattedBalance: String {
-        return "$20,000.00" 
     }
 }

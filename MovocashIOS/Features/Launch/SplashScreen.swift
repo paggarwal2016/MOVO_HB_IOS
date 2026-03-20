@@ -39,6 +39,9 @@ struct SplashScreen: View {
             }
             
             // TODO: - Testing checking
+            if RSAKeyManager.isRegistered() {
+                await authVM.loginWithRSA(appState: appState)
+            }
 //            if lockManager.state == .locked {
 //                if RSAKeyManager.isRegistered() {
 //                    await authVM.loginWithRSA(appState: appState)

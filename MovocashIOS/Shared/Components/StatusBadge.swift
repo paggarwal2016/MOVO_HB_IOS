@@ -40,7 +40,7 @@ enum BadgeStatus {
         case .cardFrozen:        return "Frozen"
         case .cardPending:       return "Pending"
         case .cardClosed:        return "Closed"
-        case .cardView:          return "View"
+        case .cardView:          return "View Card"
         case .emailVerified:     return "Email verified"
         case .emailUnverified:   return "Email unverified"
         case .smsVerified:       return "SMS verified"

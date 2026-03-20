@@ -9,17 +9,16 @@ import SwiftUI
 
 struct AccountListSheetView: View {
 
-    @Binding var selectedAccount: SavingsAccountDetailsResponse?
+    @Binding var savingsList: SavingsAccountListResponse?
     @Binding var isPresented: Bool
-
     @StateObject private var savingVM: SavingsAccountViewModel
 
     init(
-        selectedAccount: Binding<SavingsAccountDetailsResponse?>,
+        savingsList: Binding<SavingsAccountListResponse?>,
         isPresented: Binding<Bool>,
         savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
     ) {
-        _selectedAccount = selectedAccount
+        _savingsList = savingsList
         _isPresented = isPresented
         _savingVM = StateObject(wrappedValue: savingVM)
     }
@@ -93,8 +92,7 @@ struct AccountListSheetView: View {
     private var accountList: some View {
         List(accounts, id: \.id) { account in
             AccountRowView(
-                account: account,
-                isSelected: selectedAccount?.id == account.id
+                account: account
             )
             .contentShape(Rectangle())
             .onTapGesture {
@@ -129,8 +127,10 @@ struct AccountListSheetView: View {
     private func loadAccounts() async {
         do {
             let response = try await savingVM.getSavingAccountList()
+            savingsList = response
             accounts = response.accounts.filter { !$0.isPrimary }
             primaryAccountId = response.accounts.first(where: { $0.isPrimary })?.id
+            if accounts.count == 0 { isPresented = false }
         } catch {
             ToastManager.shared.show("Failed to load accounts.", style: .error, position: .bottom)
         }
@@ -177,7 +177,7 @@ struct AccountListSheetView: View {
     private func confirmDelete(account: SavingsAccountDetailsResponse) {
         AlertManager.shared.showConfirmation(
             title: "Delete Account",
-            message: "Are you sure you want to delete \"\(account.nickname ?? account.maskedAccountNumber)\"?",
+            message: "Are you sure you want to delete \"\(account.nickname ?? account.maskedAccountNumber) Account\"?",
             onConfirm: {
                 Task { await deleteAccount(account) }
             }
@@ -211,7 +211,6 @@ struct AccountListSheetView: View {
 struct AccountRowView: View {
 
     let account: SavingsAccountDetailsResponse
-    let isSelected: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -250,10 +249,6 @@ struct AccountRowView: View {
         .padding(14)
         .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(isSelected ? AppColors.primary : Color.clear, lineWidth: 1.5)
-        )
         .padding(.horizontal, 16)
         .padding(.vertical, 4)
     }

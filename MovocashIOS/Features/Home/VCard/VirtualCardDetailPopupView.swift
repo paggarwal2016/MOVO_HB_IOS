@@ -15,11 +15,8 @@ struct VirtualCardDetailPopupView: View {
     
     var body: some View {
         BasePopupView(
-            nickName: "",
-            formattedBalance: card.formattedBalance,
-            balanceLabel: "AVAILABLE BALANCE",
+            mode: .simple,
             isPresented: $isPresented
-            // headerTrailing omitted → defaults to EmptyView()
         ) {
             DetailField(
                 label: "CARD NUMBER",
