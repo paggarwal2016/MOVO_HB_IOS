@@ -38,17 +38,6 @@ struct SplashScreen: View {
                 await lockManager.unlockWithBiometric()
             }
             
-            // TODO: - Testing checking
-            if RSAKeyManager.isRegistered() {
-                await authVM.loginWithRSA(appState: appState)
-            }
-//            if lockManager.state == .locked {
-//                if RSAKeyManager.isRegistered() {
-//                    await authVM.loginWithRSA(appState: appState)
-//                } else {
-//                    await lockManager.unlockWithBiometric()
-//                }
-//            }
         }
     }
 }
