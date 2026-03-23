@@ -257,11 +257,8 @@ struct InternalTransferView: View {
             toClientId: toClientId,
             fromAccountId: from.id
         )
-        do {
-            _ = try await transVM.postInternal(request: request)
+        await transVM.submitInternalTransfer(request: request) {
             dismiss()
-        } catch {
-            // Handled by BaseViewModel / ToastManager
         }
     }
 }

@@ -39,4 +39,21 @@ final class UserViewModel: BaseViewModel {
             // Error already surfaced via toast in BaseViewModel.perform
         }
     }
+    
+    // MARK: - Delete Account
+
+    func deleteAccount() async -> Bool {
+        do {
+            let _: SuccessResponse = try await perform { [weak self] in
+                guard let self else { throw ModelError.deallocated }
+                return try await network.request(UserAPI.deleteProfile)
+            }
+            profile = nil
+            return true
+        } catch is CancellationError {
+            return false
+        } catch {
+            return false
+        }
+    }
 }

@@ -17,7 +17,6 @@ struct SecuritySettingsView: View {
     // Inline confirmation / alert state
     @State private var showDisableBiometricAlert = false
     @State private var showRemovePasscodeAlert   = false
-    @State private var errorMessage: String?     = nil
 
     enum Route: Identifiable {
         case changePasscode
@@ -38,7 +37,7 @@ struct SecuritySettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         // Error banner
         .safeAreaInset(edge: .top) {
-            if let msg = errorMessage {
+            if let msg = lockManager.revocationError {
                 errorBanner(msg)
             }
         }
@@ -74,7 +73,7 @@ struct SecuritySettingsView: View {
         }
         // Disable biometric confirmation
         .alert("Disable \(lockManager.biometricType.displayName)?", isPresented: $showDisableBiometricAlert) {
-            Button("Disable", role: .destructive) { revokeBiometric() }
+            Button("Disable", role: .destructive) { lockManager.revokeBiometricSafely() }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("You'll need your passcode to unlock MovoCash.")
@@ -150,8 +149,7 @@ struct SecuritySettingsView: View {
                     // Toggle on
                     Button {
                         guard lockManager.isPasscodeSet else {
-                            errorMessage = "Set a passcode first to enable biometrics."
-                            autoDismissError()
+                            lockManager.showTemporaryError("Set a passcode first to enable biometrics.")
                             return
                         }
                         route = .enrollBiometric
@@ -196,21 +194,6 @@ struct SecuritySettingsView: View {
 
     // MARK: - Helpers
 
-    private func revokeBiometric() {
-        do {
-            try lockManager.revokeBiometrics()
-        } catch {
-            errorMessage = error.localizedDescription
-            autoDismissError()
-        }
-    }
-
-    private func autoDismissError() {
-        Task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            errorMessage = nil
-        }
-    }
 
     // MARK: - Reusable row
 
@@ -253,7 +236,7 @@ struct SecuritySettingsView: View {
             .frame(maxWidth: .infinity)
             .background(Color.red.gradient)
             .transition(.move(edge: .top).combined(with: .opacity))
-            .animation(.spring(), value: errorMessage)
+            .animation(.spring(), value: lockManager.revocationError)
     }
 }
 

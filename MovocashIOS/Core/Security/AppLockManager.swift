@@ -26,11 +26,12 @@ final class AppLockManager: ObservableObject {
     @Published private(set) var state: LockState = .unlocked
     @Published private(set) var failedAttempts: Int = 0
     @Published var lockoutMessage: String? = nil
+    @Published var revocationError: String? = nil
 
     // MARK: Config
 
     private enum Config {
-        static let maxAttempts       = 5
+        static let maxAttempts       = 3
         static let lockoutSeconds    = 30
         static let backgroundTimeout: TimeInterval = 30  // lock after 30 s in background
     }
@@ -187,6 +188,22 @@ final class AppLockManager: ObservableObject {
 
     func revokeBiometrics() throws {
         try passcodeManager.clearBiometricKey()
+    }
+
+    func revokeBiometricSafely() {
+        do {
+            try revokeBiometrics()
+        } catch {
+            showTemporaryError(error.localizedDescription)
+        }
+    }
+
+    func showTemporaryError(_ message: String) {
+        revocationError = message
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            revocationError = nil
+        }
     }
 
     // MARK: - Sensitive action challenge

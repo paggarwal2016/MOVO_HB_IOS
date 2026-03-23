@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 @MainActor
 final class KYCViewModel: ObservableObject {
@@ -20,17 +21,16 @@ final class KYCViewModel: ObservableObject {
 
     // MARK: - Start Verification
 
-    func startVerification(appState: AppState) async {
+    func startVerification(onSuccess: @escaping () -> Void, onFailure: @escaping () -> Void) async {
         do {
             _ = try await kycManager.start()
-            //TODO: OSCAR Implementation
-            appState.flow = .home
-        } catch let error as KYCError {
-            appState.flow = .getStartedPhone
-            alertManager.showError(error.localizedDescription)
+            onSuccess()
+        } catch _ as KYCError {
+            alertManager.showError("Your KYC verification is not completed. Please complete verification to continue.")
+            onFailure()
         } catch {
-            appState.flow = .getStartedPhone
-            alertManager.showError(error.localizedDescription)
+            alertManager.showError("Your KYC verification is not completed. Please complete verification to continue.")
+            onFailure()
         }
     }
 }

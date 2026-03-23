@@ -67,10 +67,10 @@ struct OTPScreen: View {
                     UIApplication.shared.dismissKeyboard()
                     Task {
                         await otpVM.submitOTP { code in
-                            await authVM.completeOTPVerification(
-                                code: code,
-                                appState: appState
-                            )
+                            await authVM.completeOTPVerification(code: code, appState: appState) { destination in
+                                appState.otpVerified = true
+                                appState.flow = destination
+                            }
                         }
                     }
                 }
@@ -94,10 +94,10 @@ struct OTPScreen: View {
                 UIApplication.shared.dismissKeyboard()
                 Task {
                     await otpVM.submitOTP { code in
-                        await authVM.completeOTPVerification(
-                            code: code,
-                            appState: appState
-                        )
+                        await authVM.completeOTPVerification(code: code, appState: appState) { destination in
+                            appState.otpVerified = true
+                            appState.flow = destination
+                        }
                     }
                 }
             }

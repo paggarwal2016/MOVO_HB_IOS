@@ -64,6 +64,10 @@ final class OTPViewModel: ObservableObject {
         timerTask = nil
     }
 
+    deinit {
+        timerTask?.cancel()
+    }
+
     // MARK: - Submit OTP
     func submitOTP(onVerify: @escaping (String) async -> Void) async {
         guard isValidOTP else { return }

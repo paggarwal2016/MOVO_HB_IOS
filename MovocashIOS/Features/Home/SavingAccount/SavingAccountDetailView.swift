@@ -27,21 +27,19 @@ struct SavingAccountDetailView: View {
         _transVM = StateObject(wrappedValue: transVM)
     }
 
-    @State private var detail: SavingsAccountDetailsResponse?
-    @State private var transactions: [TransactionItem] = []
     @State private var copiedField: String?
 
     var body: some View {
         ZStack {
             NavigationStack {
                 Group {
-                    if let detail {
+                    if let detail = savingVM.accountDetail {
                         detailContent(detail)
                     } else {
                         Color(.systemGroupedBackground).ignoresSafeArea()
                     }
                 }
-                .navigationTitle(detail?.nickname ?? "Account Details")
+                .navigationTitle(savingVM.accountDetail?.nickname ?? "Account Details")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -178,7 +176,7 @@ struct SavingAccountDetailView: View {
                     .font(.headline)
                     .fontWeight(.semibold)
                 Spacer()
-                Text("\(transactions.isEmpty ? TransactionItem.dummy.count : transactions.count)")
+                Text("\(transVM.transactions.count)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -188,7 +186,7 @@ struct SavingAccountDetailView: View {
             Divider().padding(.horizontal, 16)
 
             // MARK: List
-            let items = transactions.isEmpty ? TransactionItem.dummy : transactions
+            let items = transVM.transactions
 
             if items.isEmpty {
                 VStack(spacing: 8) {
@@ -219,19 +217,8 @@ struct SavingAccountDetailView: View {
     // MARK: - Load
 
     private func loadDetail() async {
-        do {
-            detail = try await savingVM.getSavingAccountDetails(accountID: accountId)
-        } catch {
-            ToastManager.shared.show("Failed to load account details.", style: .error, position: .bottom)
-        }
-        do {
-            let response = try await transVM.getTransactionList(max: 50, accountId: accountId)
-            transactions = response.transactions.isEmpty
-                ? TransactionItem.dummy
-                : response.transactions.map { $0.toItem() }
-        } catch {
-            transactions = TransactionItem.dummy
-        }
+        await savingVM.loadAccountDetail(accountID: accountId)
+        await transVM.loadTransactions(max: 50, accountId: accountId)
     }
 }
 
