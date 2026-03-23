@@ -112,6 +112,22 @@ final class SessionManager: ObservableObject {
         return Date().timeIntervalSince1970 >= exp - 30
     }
 
+    // MARK: - Logout with Confirmation
+
+    func logoutWithConfirmation(appState: AppState, onLockout: @escaping () -> Void) {
+        alertManager.showConfirmation(
+            title: "Log Out",
+            message: "Are you sure you want to log out?",
+            onConfirm: {
+                Task {
+                    onLockout()
+                    await self.logout(appState: appState)
+                }
+            },
+            onCancel: nil
+        )
+    }
+
     // MARK: - Logout
     func logout(appState: AppState) async {
 

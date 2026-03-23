@@ -94,7 +94,8 @@ actor NetworkService: NetworkServiceProtocol {
                 case .rateLimited, .serverError:
                     guard attempt < maxRetry else { break }
                     let backoff = UInt64(200_000_000) * UInt64(attempt + 1) // 200ms, 400ms, 600ms
-                    try await Task.sleep(nanoseconds: backoff)
+                    let jitter = UInt64.random(in: 0..<50_000_000) // up to 50ms
+                    try await Task.sleep(nanoseconds: backoff + jitter)
 
                 default:
                     throw error

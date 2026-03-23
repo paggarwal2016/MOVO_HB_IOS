@@ -68,4 +68,8 @@ final class AppContainer {
     func makeUserViewModel() -> UserViewModel {
         UserViewModel(network: network, alertManager: alertManager)
     }
+
+    func makeKYCViewModel() -> KYCViewModel {
+        KYCViewModel(kycManager: kycManager, alertManager: alertManager)
+    }
 }

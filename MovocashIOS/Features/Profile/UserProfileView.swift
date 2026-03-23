@@ -11,6 +11,8 @@ import SwiftUI
 struct UserProfileView: View {
     
     @EnvironmentObject var userVM: UserViewModel
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var sessionManager: SessionManager
     
     var body: some View {
         
@@ -31,7 +33,7 @@ struct UserProfileView: View {
     }
     
     // MARK: - Empty / Error State
-
+    
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "person.crop.circle.badge.exclamationmark")
@@ -46,7 +48,7 @@ struct UserProfileView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-
+    
     // MARK: - Profile List
     
     private func profileList(_ profile: UserProfileResponse) -> some View {
@@ -57,6 +59,23 @@ struct UserProfileView: View {
             addressSection(profile)
             idVerificationSection(profile)
             accountStatusSection(profile)
+            
+            PrimaryButton(title: "Delete Account") {
+                AlertManager.shared.showConfirmation(
+                    title: "Delete",
+                    message: "Are you sure you want to permanently delete your account?",
+                    onConfirm: {
+                        Task {
+                            let success = await userVM.deleteAccount()
+                            if success {
+                                AppContainer.lockManager.logout()
+                                await sessionManager.logout(appState: appState)
+                                ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
+                            }
+                        }
+                    }
+                )
+            }
         }
         .listStyle(.insetGrouped)
     }
@@ -67,7 +86,7 @@ struct UserProfileView: View {
         Section {
             VStack(spacing: 10) {
                 ProfileImageView(imageURL: profile.profilePicture,
-                                 userName: profile.fullName,
+                                 userName: profile.initials,
                                  width: 65,
                                  height: 65)
                 Text(profile.fullName)

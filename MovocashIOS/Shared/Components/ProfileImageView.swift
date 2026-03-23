@@ -2,7 +2,7 @@
 //  ProfileImageView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 20/03/26.
+//  Created by Movo Developer on 20/03/26.
 //
 
 import Foundation
@@ -18,16 +18,6 @@ struct ProfileImageView: View {
     var borderColor: Color = .clear
     var borderWidth: CGFloat = 0
     var showOnline: Bool = false
-    
-    // MARK: - Initials
-    var initials: String {
-        let words = userName
-            .trimmingCharacters(in: .whitespaces)
-            .components(separatedBy: " ")
-        let letters = words.compactMap { $0.first }
-        let result = String(letters.prefix(2)).uppercased()
-        return result.isEmpty ? "?" : result
-    }
     
     // MARK: - Font scales with size
     var fontSize: Font {
@@ -107,7 +97,7 @@ struct ProfileImageView: View {
         Circle()
             .fill(.gray) // avatarColor
             .overlay(
-                Text(initials)
+                Text(userName)
                     .font(fontSize)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)

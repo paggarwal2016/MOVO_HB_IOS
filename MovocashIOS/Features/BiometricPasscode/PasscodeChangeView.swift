@@ -9,19 +9,14 @@ import SwiftUI
 
 struct PasscodeChangeView: View {
 
-    let lockManager: AppLockManager
     var onDismiss: () -> Void
 
-    // 3-step flow
-    enum ChangeStep { case verifyOld, enterNew, confirmNew, success }
+    @StateObject private var vm: AppLockViewModel
 
-    @State private var step: ChangeStep = .verifyOld
-    @State private var pinInput:    String = ""
-    @State private var oldPin:      String = ""
-    @State private var newPin:      String = ""
-    @State private var shouldShake: Bool   = false
-    @State private var statusMessage: String = ""
-    @State private var isLoading:   Bool   = false
+    init(lockManager: AppLockManager, onDismiss: @escaping () -> Void) {
+        self.onDismiss = onDismiss
+        _vm = StateObject(wrappedValue: AppLockViewModel(lockManager: lockManager))
+    }
 
     private let pinLength = AppLockViewModel.pinLength
 
@@ -51,31 +46,28 @@ struct PasscodeChangeView: View {
                     Spacer().frame(height: 40)
 
                     // Dots or success badge
-                    if step == .success {
+                    if vm.changeStep == .success {
                         successBadge
                     } else {
-                        PINDotsView(filledCount: pinInput.count, total: pinLength)
-                            .modifier(ShakeModifier(trigger: shouldShake))
+                        PINDotsView(filledCount: vm.pinInput.count, total: pinLength)
+                            .modifier(ShakeModifier(trigger: vm.shouldShake))
                     }
 
                     // Status / error
-                    Text(statusMessage)
+                    Text(vm.changeStatusMessage)
                         .font(.footnote)
                         .foregroundStyle(.red)
                         .frame(height: 24)
                         .padding(.top, 16)
-                        .animation(.default, value: statusMessage)
+                        .animation(.default, value: vm.changeStatusMessage)
 
                     Spacer().frame(height: 32)
 
                     // PIN pad or Done button
-                    if step != .success {
+                    if vm.changeStep != .success {
                         PINPadView(
-                            onDigit: handleDigit,
-                            onDelete: {
-                                guard !pinInput.isEmpty else { return }
-                                pinInput.removeLast()
-                            },
+                            onDigit: { vm.handleChangeDigit($0) },
+                            onDelete: { vm.deleteLastDigit() },
                             onBiometric: nil,
                             biometricIcon: ""
                         )
@@ -96,13 +88,16 @@ struct PasscodeChangeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if step != .success {
-                        Button("Cancel", action: onDismiss)
+                    if vm.changeStep != .success {
+                        Button("Cancel") {
+                            vm.resetChangeFlow()
+                            onDismiss()
+                        }
                     }
                 }
             }
             .overlay {
-                if isLoading {
+                if vm.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(.ultraThinMaterial)
@@ -111,117 +106,28 @@ struct PasscodeChangeView: View {
         }
     }
 
-    // MARK: - Input handling
-
-    private func handleDigit(_ digit: String) {
-        guard pinInput.count < pinLength else { return }
-        pinInput.append(digit)
-        if pinInput.count == pinLength {
-            Task { await advance() }
-        }
-    }
-
-    // MARK: - Step machine
-
-    private func advance() async {
-        let entered = pinInput
-
-        switch step {
-
-        // ── Step 1: verify current passcode ─────────────────────────────
-        case .verifyOld:
-            isLoading = true
-            do {
-                let ok = try lockManager.passcodeManager.verifyPasscode(entered)
-                if ok {
-                    oldPin = entered
-                    clearInput()
-                    statusMessage = ""
-                    step = .enterNew
-                } else {
-                    shake(message: "Incorrect passcode. Try again.")
-                }
-            } catch {
-                shake(message: error.localizedDescription)
-            }
-            isLoading = false
-
-        // ── Step 2: enter new passcode ───────────────────────────────────
-        case .enterNew:
-            guard entered != oldPin else {
-                shake(message: "New passcode must differ from current one.")
-                return
-            }
-            newPin = entered
-            clearInput()
-            statusMessage = ""
-            step = .confirmNew
-
-        // ── Step 3: confirm new passcode ─────────────────────────────────
-        case .confirmNew:
-            guard entered == newPin else {
-                shake(message: "Passcodes don't match. Start over.")
-                clearInput()
-                newPin = ""
-                step = .enterNew
-                return
-            }
-            isLoading = true
-            do {
-                try await lockManager.changePasscode(old: oldPin, new: newPin)
-                step = .success
-                statusMessage = ""
-            } catch {
-                shake(message: error.localizedDescription)
-                step = .verifyOld
-                oldPin = ""
-                newPin = ""
-            }
-            isLoading = false
-
-        case .success:
-            break
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func clearInput() { pinInput = "" }
-
-    private func shake(message: String) {
-        statusMessage = message
-        clearInput()
-        shouldShake = false
-        Task {
-            try? await Task.sleep(nanoseconds: 50_000_000)
-            shouldShake = true
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            shouldShake = false
-        }
-    }
-
     // MARK: - Text helpers
 
     private var stepTitle: String {
-        switch step {
-        case .verifyOld:   return "Enter Current Passcode"
-        case .enterNew:    return "Enter New Passcode"
-        case .confirmNew:  return "Confirm New Passcode"
-        case .success:     return "Passcode Changed"
+        switch vm.changeStep {
+        case .verifyOld:  return "Enter Current Passcode"
+        case .enterNew:   return "Enter New Passcode"
+        case .confirmNew: return "Confirm New Passcode"
+        case .success:    return "Passcode Changed"
         }
     }
 
     private var stepSubtitle: String {
-        switch step {
-        case .verifyOld:   return "Confirm your identity before making changes"
-        case .enterNew:    return "Choose a new 6-digit passcode"
-        case .confirmNew:  return "Re-enter your new passcode to confirm"
-        case .success:     return "Your passcode has been updated"
+        switch vm.changeStep {
+        case .verifyOld:  return "Confirm your identity before making changes"
+        case .enterNew:   return "Choose a new 6-digit passcode"
+        case .confirmNew: return "Re-enter your new passcode to confirm"
+        case .success:    return "Your passcode has been updated"
         }
     }
 
     private var stepIcon: String {
-        switch step {
+        switch vm.changeStep {
         case .verifyOld, .enterNew, .confirmNew: return "lock.rotation"
         case .success:                           return "checkmark.shield.fill"
         }
@@ -232,6 +138,6 @@ struct PasscodeChangeView: View {
             .font(.system(size: 72))
             .foregroundStyle(.green)
             .transition(.scale.combined(with: .opacity))
-            .animation(.spring(response: 0.4), value: step)
+            .animation(.spring(response: 0.4), value: vm.changeStep == .success)
     }
 }

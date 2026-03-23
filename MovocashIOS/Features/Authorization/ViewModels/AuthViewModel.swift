@@ -80,25 +80,21 @@ final class AuthViewModel: ObservableObject {
     
     // MARK: - Complete OTP Verification Flow
     
-    func completeOTPVerification(code: String, appState: AppState) async {
+    func completeOTPVerification(code: String, appState: AppState, onNavigate: @escaping (AuthFlow) -> Void) async {
         do {
             let response = try await validateOTP(code: code)
-            
+
             try await sessionManager.startSession(
                 accessToken: response.accessToken,
                 refreshToken: response.refreshToken,
                 appState: appState
             )
-            
+
             await kycManager.configureSDK(officeId: AppConfig.officeId)
-            
-            appState.otpVerified = true
-            if appState.context == PhoneFlowType.login.rawValue {
-                appState.flow = .home
-            } else {
-                appState.flow = .setupPasscode
-            }
+
+            let destination: AuthFlow = context == PhoneFlowType.login.rawValue ? .home : .setupPasscode
             reset()
+            onNavigate(destination)
         } catch {
             alertManager.showError(error.localizedDescription)
         }

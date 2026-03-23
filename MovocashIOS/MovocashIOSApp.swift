@@ -12,7 +12,11 @@ import Combine
 struct MovocashIOSApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var lockManager = AppContainer.lockManager
-    
+
+    init() {
+        TabBarAppearance.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

@@ -105,11 +105,9 @@ struct CustomCardView: View {
     private func revealCard() async {
         isRevealing = true
         defer { isRevealing = false }
-        do {
-            let request = VCardsRequest(pin: card.lastFour)
-            let response = try await vm.postVCard(request: request)
-            revealedCard  = response
+        await vm.revealCard(pin: card.lastFour) { response in
+            revealedCard = response
             showCardDetail = true
-        } catch {}
+        }
     }
 }
