@@ -169,7 +169,7 @@ extension AuthViewModel { // TODO: - Testing checking
         
         if RSAKeyManager.isRegistered() {
             SecureLogger.info("Already enrolled — calling loginWithRSA", category: .auth)
-            await loginWithRSA(appState: appState)
+            await loginWithRSA(appState: appState, fromEnrollment: true)
         } else {
             SecureLogger.info("Not enrolled — starting enroll flow", category: .auth)
             await runEnrollFlow(appState: appState)
