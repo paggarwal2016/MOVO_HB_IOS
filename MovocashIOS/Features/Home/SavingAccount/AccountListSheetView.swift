@@ -61,8 +61,8 @@ struct AccountListSheetView: View {
         }
         .textInputAlert(
             isPresented: $showCreateAccount,
-            title: "New Account",
-            message: "Enter a name for your new savings account.",
+            title: "Create Cash Card",
+            message: "Enter a name for your new cash card account.",
             placeholder: "Type here...",
             onCreate: { name in
                 Task { await createAccount(name: name) }

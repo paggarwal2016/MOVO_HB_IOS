@@ -72,4 +72,5 @@ final class AppContainer {
     func makeKYCViewModel() -> KYCViewModel {
         KYCViewModel(kycManager: kycManager, alertManager: alertManager)
     }
+
 }

@@ -16,7 +16,6 @@ struct BalanceCardView: View {
     var totalAvailableBalance: Decimal
     var onCardTap: () -> Void
     var onPrimaryTap: () -> Void
-    var onCreateTap: () -> Void
     var onViewCardTap: () -> Void
     
     // MARK: - Computed
@@ -58,16 +57,8 @@ struct BalanceCardView: View {
                             if account.status.rawValue == "Active" {
                                 StatusBadge(status: .cardActive)
                             }
-                                                        
-                            Spacer()
                             
-                            // MARK: + Create Button
-                            Button(action: onCreateTap) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 22))
-                                    .foregroundStyle(.black.opacity(0.5))
-                            }
-                            .buttonStyle(.plain)
+                            Spacer()
                         }
                         
                         // MARK: Balance
@@ -85,7 +76,7 @@ struct BalanceCardView: View {
                             Spacer()
                             
                             StatusBadge(status: .cardView, size: .large, action: { onViewCardTap() } )
-                
+                            
                         }
                     }
                     .padding(.horizontal, 15)
