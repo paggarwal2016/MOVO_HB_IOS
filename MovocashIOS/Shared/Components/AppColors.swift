@@ -39,3 +39,4 @@ struct AppColors {
     
     static let accent1 = UIColor(red: 181/255, green: 49/255, blue: 62/255, alpha: 1)
 }
+

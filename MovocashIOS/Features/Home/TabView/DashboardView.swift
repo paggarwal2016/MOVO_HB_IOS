@@ -18,15 +18,15 @@ struct DashboardView: View {
     @EnvironmentObject var userVM: UserViewModel
     
     // MARK: - VCard
-
+    
     @StateObject private var vm: VCardViewModel
-
+    
     // MARK: - Savings
-
+    
     @StateObject private var savingVM: SavingsAccountViewModel
-
+    
     // MARK: - Init
-
+    
     init(
         vm: VCardViewModel = AppContainer.shared.makeVCardViewModel(),
         savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
@@ -43,10 +43,12 @@ struct DashboardView: View {
     @State private var showViewCard = false
     @State private var showFunds = false
     
+    @State private var showContactList = false
+    
     private var displayAccount: SavingsAccountDetailsResponse? {
         savingVM.accountList?.accounts.first(where: { $0.isPrimary })
     }
-
+    
     private var isViewCashAccount: Bool {
         guard let account = savingVM.accountList?.accounts.first(where: { !$0.isPrimary }) else {
             return false
@@ -59,7 +61,7 @@ struct DashboardView: View {
     var body: some View {
         ZStack(alignment: .top) {
             Color(.systemGroupedBackground).ignoresSafeArea()
-
+            
             VStack(spacing: 0) {
                 headerView
                 scrollContent
@@ -68,8 +70,8 @@ struct DashboardView: View {
         .overlay { overlayContent }
         .textInputAlert(
             isPresented: $showCreateView,
-            title: "New Account",
-            message: "Enter a name for your new savings account.",
+            title: "Create Cash Card",
+            message: "Enter a name for your new cash card account.",
             placeholder: "Type here...",
             onCreate: { name in
                 Task { await savingVM.createAccount(name: name) }
@@ -117,6 +119,11 @@ struct DashboardView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showContactList) {
+            ContactView(isPresented: $showContactList)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked else { return }
             await loadData()
@@ -154,9 +161,18 @@ struct DashboardView: View {
                 totalAvailableBalance: account.availableBalance,
                 onCardTap: { showAccountDetail = true },
                 onPrimaryTap: { showPrimaryAccountDetails = true },
-                onCreateTap: { showCreateView = true },
                 onViewCardTap: { showViewCard = true }
             )
+            
+            PrimaryButton(
+                title: "Create Cash Card",
+                backgroundColor: Color.softBlue.opacity(0.1),
+                textColor: .black
+            ) {
+                showCreateView = true
+            }
+            .padding()
+            .frame(height: 60)
             
             if isViewCashAccount {
                 PrimaryButton(
@@ -179,6 +195,13 @@ struct DashboardView: View {
             }
             .padding()
             .frame(height: 60)
+            
+            ActionCard(title: "Quick transfers",
+                       description: "Send money instantly to anyone in your contact list.",
+                       buttonLabel: "Add people") {
+                showContactList = true
+                print("Quick transfer tapped")
+            }
         } else if savingVM.state == .loading {
             CardSkeletonView()
         }
@@ -215,7 +238,7 @@ struct DashboardView: View {
     }
     
     // MARK: - Private Functions
-
+    
     private func loadData() async {
         await savingVM.loadAccounts()
     }

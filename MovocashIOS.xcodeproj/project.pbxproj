@@ -45,6 +45,8 @@
 		14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B824E02F51898E003ACBD0 /* KYCManager.swift */; };
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
+		14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D8165E2F73C30300B7D1EF /* ActionCard.swift */; };
+		14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D816602F73D3B100B7D1EF /* ContactsManager.swift */; };
 		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
 		14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5952F504AF8000D84FD /* NetworkError.swift */; };
 		14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */; };
@@ -128,6 +130,8 @@
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14C623DE2F6AC39100D0B719 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		14C623E02F6AC7AC00D0B719 /* StatusRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusRow.swift; sourceTree = "<group>"; };
+		14D8165E2F73C30300B7D1EF /* ActionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionCard.swift; sourceTree = "<group>"; };
+		14D816602F73D3B100B7D1EF /* ContactsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsManager.swift; sourceTree = "<group>"; };
 		14DBC5912F50204D000D84FD /* SecureLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureLogger.swift; sourceTree = "<group>"; };
 		14DBC5952F504AF8000D84FD /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
 		14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSecurityManager.swift; sourceTree = "<group>"; };
@@ -375,6 +379,8 @@
 				14C623E02F6AC7AC00D0B719 /* StatusRow.swift */,
 				1445791A2F6D430500EADEA2 /* ProfileImageView.swift */,
 				1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */,
+				14D8165E2F73C30300B7D1EF /* ActionCard.swift */,
+				14D816602F73D3B100B7D1EF /* ContactsManager.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -612,6 +618,7 @@
 				140DF3522F5591A80060C1B7 /* AppColors.swift in Sources */,
 				14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */,
 				1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */,
+				14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */,
 				14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */,
 				146819802F4DE6CF00BED014 /* MovocashIOSApp.swift in Sources */,
 				146819812F4DE6CF00BED014 /* HTTPMethod.swift in Sources */,
@@ -621,6 +628,7 @@
 				146819832F4DE6CF00BED014 /* AuthManager.swift in Sources */,
 				146819842F4DE6CF00BED014 /* JailbreakDetector.swift in Sources */,
 				142337BE2F5807FB0030B4E7 /* OTPScreen.swift in Sources */,
+				14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */,
 				14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */,
 				14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
@@ -814,6 +822,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MovoCash;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Enable Movo to upload camera photos and for your identification";
+				INFOPLIST_KEY_NSContactsUsageDescription = "We need access to your contacts to add people for transfers.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to verify your identity for account security.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone may be required during identity verification.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -852,6 +861,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MovoCash;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Enable Movo to upload camera photos and for your identification";
+				INFOPLIST_KEY_NSContactsUsageDescription = "We need access to your contacts to add people for transfers.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to verify your identity for account security.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone may be required during identity verification.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

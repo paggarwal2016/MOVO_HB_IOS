@@ -20,6 +20,7 @@ struct MovocashIOSApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .preferredColorScheme(.light)
                 .environmentObject(appState)
                 .environmentObject(lockManager)
                 .networkMonitor(state: appState)
