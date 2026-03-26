@@ -66,6 +66,9 @@ struct AppLockView: View {
                 Spacer()
             }
         }
+        .onAppear {
+            vm.clearInput()
+        }
         .task {
             if autoTriggerBiometric && vm.showBiometric {
                 await vm.submitBiometric()
@@ -91,7 +94,7 @@ struct AppLockView: View {
 
     private var alphanumericField: some View {
         SecureField("Enter passcode", text: $vm.alphanumericInput)
-            .textContentType(.password)
+            .textContentType(.init(rawValue: ""))
             .keyboardType(.default)
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
