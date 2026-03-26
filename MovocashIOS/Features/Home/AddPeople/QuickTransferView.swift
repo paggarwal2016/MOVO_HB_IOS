@@ -38,8 +38,8 @@ struct QuickTransferView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     contactCard
-                    amountCard
                     accountCard
+                    amountCard
                     Spacer().frame(height: 88)
                 }
                 .padding(.horizontal, 16)

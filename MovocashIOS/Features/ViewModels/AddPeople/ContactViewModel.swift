@@ -12,7 +12,7 @@ final class ContactViewModel: BaseViewModel {
 
     @Published var contacts: [AppContact] = []
     @Published var search = ""
-    @Published private(set) var favorites: Set<UUID> = []
+    @Published private(set) var favorites: Set<String> = []
     @Published private(set) var loadError: String? = nil
 
     private let service: ContactsServiceProtocol
