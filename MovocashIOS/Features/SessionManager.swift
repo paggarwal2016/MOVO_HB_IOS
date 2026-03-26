@@ -120,8 +120,8 @@ final class SessionManager: ObservableObject {
             message: "Are you sure you want to log out?",
             onConfirm: {
                 Task {
-                    onLockout()
                     await self.logout(appState: appState)
+                    onLockout()
                 }
             },
             onCancel: nil

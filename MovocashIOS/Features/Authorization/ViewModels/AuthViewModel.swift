@@ -176,7 +176,7 @@ extension AuthViewModel { // TODO: - Testing checking
     private func runEnrollFlow(appState: AppState) async {
         
         let keyResult = await Task.detached(priority: .background) {
-            RSAKeyManager.generateKeyPair()
+            await RSAKeyManager.generateKeyPair()
         }.value
         
         switch keyResult {
@@ -271,8 +271,13 @@ extension AuthViewModel { // TODO: - Testing checking
         
         let deviceId  = await DeviceManager.shared.deviceID()
         let challenge = RSAKeyManager.buildChallenge(deviceId: deviceId)
-        
-        switch RSAKeyManager.sign(challenge: challenge, reason: "Authenticate to access MovoCash") {
+
+        // Run sign on a background thread — SE signing blocks until Face ID / Touch ID completes.
+        let signResult = await Task.detached(priority: .userInitiated) {
+            await RSAKeyManager.sign(challenge: challenge, reason: "Authenticate to access MovoCash")
+        }.value
+
+        switch signResult {
         case .failure(let error):
             SecureLogger.error("sign failed: \(error)", category: .auth)
             if error == .keyNotFound && !fromEnrollment {

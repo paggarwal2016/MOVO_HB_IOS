@@ -120,11 +120,9 @@ actor NetworkService: NetworkServiceProtocol {
         do {
             let token = try await keychain.get("refresh_token", biometricPrompt: nil)
 
-            guard !token.isEmpty else {
-                isRefreshing = false
-                resumeWaiters(throwing: NetworkError.unauthorized)
-                throw NetworkError.unauthorized
-            }
+            // Empty token throws and falls through to the single catch below,
+            // which is the only place resumeWaiters is called for error paths.
+            guard !token.isEmpty else { throw NetworkError.unauthorized }
 
             let endpoint = AuthAPI.refreshToken(refreshToken: token)
             let request = try await builder.build(from: endpoint)
@@ -136,10 +134,10 @@ actor NetworkService: NetworkServiceProtocol {
             await authManager.updateAccessToken(response.accessToken)
 
             isRefreshing = false
-            resumeWaiters(throwing: nil)
+            resumeWaiters(throwing: nil)       // success — single resume point
         } catch {
             isRefreshing = false
-            resumeWaiters(throwing: error)
+            resumeWaiters(throwing: error)     // all failures — single resume point
             throw error
         }
     }

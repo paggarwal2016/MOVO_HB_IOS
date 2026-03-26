@@ -104,6 +104,14 @@ struct RootView: View {
                 appState.flow = .setupPasscode
             }
         }
+        .onChangeCompat(of: lockManager.requiresPhoneLogin) { required in
+            guard required else { return }
+            Task {
+                await AppContainer.shared.sessionManager.logout(appState: appState)
+                lockManager.logout()
+                appState.flow = .loginPhone
+            }
+        }
     }
     
     // MARK: -

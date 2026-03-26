@@ -125,7 +125,7 @@ struct DashboardView: View {
                 .presentationDragIndicator(.visible)
         }
         .task(id: lockManager.state) {
-            guard lockManager.state == .unlocked else { return }
+            guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
             await loadData()
         }
         .onAppear {
