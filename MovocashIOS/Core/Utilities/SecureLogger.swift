@@ -33,7 +33,15 @@ enum SecureCategory: String {
 actor SecureLogger {
 
     private static let subsystem = AppInfo.bundleIdentifier
-    private static var loggers: [String: Logger] = [:]
+
+    // Pre-created loggers — static let is initialised once by Swift runtime,
+    // safe for concurrent access with no locking required.
+    private static let authLogger     = Logger(subsystem: subsystem, category: SecureCategory.auth.rawValue)
+    private static let kycLogger      = Logger(subsystem: subsystem, category: SecureCategory.kyc.rawValue)
+    private static let networkLogger  = Logger(subsystem: subsystem, category: SecureCategory.network.rawValue)
+    private static let paymentLogger  = Logger(subsystem: subsystem, category: SecureCategory.payment.rawValue)
+    private static let generalLogger  = Logger(subsystem: subsystem, category: SecureCategory.general.rawValue)
+    private static let securityLogger = Logger(subsystem: subsystem, category: SecureCategory.security.rawValue)
 
     private init() {}
 
@@ -92,7 +100,7 @@ actor SecureLogger {
         #if DEBUG
         let sanitized = sanitize(message)
         let context = "[\(file):\(line)] \(function)"
-        let logger = getLogger(for: category.rawValue)
+        let logger = getLogger(for: category)
 
         switch level {
         case .debug:
@@ -107,14 +115,15 @@ actor SecureLogger {
         #endif
     }
 
-    private static func getLogger(for category: String) -> Logger {
-        if let existing = loggers[category] {
-            return existing
+    private static func getLogger(for category: SecureCategory) -> Logger {
+        switch category {
+        case .auth:     return authLogger
+        case .kyc:      return kycLogger
+        case .network:  return networkLogger
+        case .payment:  return paymentLogger
+        case .general:  return generalLogger
+        case .security: return securityLogger
         }
-
-        let newLogger = Logger(subsystem: subsystem, category: category)
-        loggers[category] = newLogger
-        return newLogger
     }
 }
 

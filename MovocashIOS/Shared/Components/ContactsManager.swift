@@ -32,6 +32,12 @@ final class ContactsService: ContactsServiceProtocol {
         let granted = try await CNContactStore().requestAccess(for: .contacts)
         guard granted else { throw ContactsError.permissionDenied }
 
+        // Fast-fail if the task was already cancelled before we start work.
+        try Task.checkCancellation()
+
+        // The DispatchQueue block below is the only place that calls
+        // continuation.resume — exactly once on success or failure.
+        // No second resume path exists, so double-resume is not possible.
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
