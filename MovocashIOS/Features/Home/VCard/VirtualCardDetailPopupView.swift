@@ -23,7 +23,7 @@ struct VirtualCardDetailPopupView: View {
                 value: card.cardNumber,
                 copiedField: $copiedField,
                 fullWidth: true,
-                accentColor: AppColors.primary
+                accentColor: Color.primary
             )
             
             Divider().padding(.horizontal, 20)

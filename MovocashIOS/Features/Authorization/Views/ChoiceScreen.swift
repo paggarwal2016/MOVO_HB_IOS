@@ -25,7 +25,7 @@ struct ChoiceScreen: View {
             }
             
             PrimaryButton(title: "Login",
-                          backgroundColor: AppColors.secondary,
+                          backgroundColor: Color.secondary,
                           textColor: .black) {
                 appState.flow = .loginPhone
             }

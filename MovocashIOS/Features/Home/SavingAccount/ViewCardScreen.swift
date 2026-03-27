@@ -50,7 +50,7 @@ struct ViewCardScreen: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { isPresented = false }
-                                .foregroundStyle(AppColors.primary)
+                                .foregroundStyle(Color.primary)
                                 .fontWeight(.semibold)
                         }
                     }

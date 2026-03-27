@@ -26,7 +26,7 @@ struct BiometricEnrollView: View {
                 // Icon
                 Image(systemName: lockManager.biometricType.systemImageName)
                     .font(.system(size: 72, weight: .ultraLight))
-                    .foregroundStyle(AppColors.primary)
+                    .foregroundStyle(Color.primary)
                     .padding(.bottom, 32)
 
                 // Title
@@ -68,7 +68,7 @@ struct BiometricEnrollView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(AppColors.primary)
+                    .background(Color.primary)
                     .clipShape(RoundedCorner(radius: 12))
                 }
                 .disabled(isEnrolling)

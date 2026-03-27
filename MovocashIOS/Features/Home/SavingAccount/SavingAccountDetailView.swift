@@ -44,7 +44,7 @@ struct SavingAccountDetailView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") { dismiss() }
-                            .foregroundStyle(AppColors.primary)
+                            .foregroundStyle(Color.primary)
                             .fontWeight(.semibold)
                     }
                 }
@@ -77,7 +77,7 @@ struct SavingAccountDetailView: View {
         ZStack(alignment: .bottomLeading) {
             RoundedRectangle(cornerRadius: 20)
                 .fill(LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary.opacity(0.7)],
+                    colors: [Color.primary, Color.primary.opacity(0.7)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))

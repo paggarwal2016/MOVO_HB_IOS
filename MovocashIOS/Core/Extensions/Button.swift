@@ -11,7 +11,7 @@ import SwiftUI
 struct PrimaryButton: View {
     
     let title: String
-    var backgroundColor: Color = AppColors.primary
+    var backgroundColor: Color = Color.primary
     var textColor: Color = .white
     var isLoading: Bool = false
     var isEnabled: Bool = true
@@ -97,7 +97,7 @@ struct FilledButtonStyle: ButtonStyle {
         configuration.label
             .frame(maxWidth: .infinity)
             .padding()
-            .background(AppColors.primary)
+            .background(Color.primary)
             .foregroundColor(.white)
             .cornerRadius(8)
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
@@ -109,7 +109,7 @@ struct BorderButtonStyle: ButtonStyle {
         configuration.label
             .frame(maxWidth: .infinity)
             .padding()
-            .background(AppColors.primary)
+            .background(Color.primary)
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
             .foregroundColor(.blue)
             .scaleEffect(configuration.isPressed ? 0.95 : 1)

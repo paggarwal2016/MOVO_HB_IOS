@@ -70,7 +70,6 @@ struct InternalTransferView: View {
                             .frame(width: 36, height: 36)
                             .background(Color(.systemBackground))
                             .clipShape(Circle())
-                            .overlay(Circle().stroke(Color(.separator), lineWidth: 0.5))
                     }
                 }
             }

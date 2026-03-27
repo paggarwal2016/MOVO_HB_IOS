@@ -150,31 +150,31 @@ final class KYCManager: KYCManagerProtocol {
         
         return Theme(
             backgroundGradient: [
-                AppColors.background,
-                AppColors.background
+                Color.background,
+                Color.background
             ], // Back theme
             
             accentColor: .white, // Try againing and icon Disclaimer
             
             labelProps: LabelProps(
-                primaryTextColor: AppColors.primaryText, // look correct, first , last , let's confirm
-                secondaryTextColor: AppColors.secondaryText,// first, last, title color
+                primaryTextColor: Color.primaryText, // look correct, first , last , let's confirm
+                secondaryTextColor: Color.secondaryText,// first, last, title color
                 titleFont: .monospacedSystemFont(ofSize: 28, weight: .bold),
                 bodyFont:  .monospacedSystemFont(ofSize: 17, weight: .regular),
                 inputLabelFont: .monospacedSystemFont(ofSize: 14, weight: .medium)
             ),
             
             buttonProps: ButtonProps(
-                color: AppColors.accent1,// Looks good! and Next button and get Started
+                color: Color.accent1,// Looks good! and Next button and get Started
                 textColor: .white, // action button color
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 18, weight: .bold)
             ),
             
             inputProps: InputProps(
-                backgroundColor: AppColors.inputBackground, // input field background color
-                textColor: AppColors.inputText, // input field text color
-                placeholderColor: AppColors.inputPlaceholder, // SSN placeholder color
+                backgroundColor: Color.inputBackground, // input field background color
+                textColor: Color.inputText, // input field text color
+                placeholderColor: Color.inputPlaceholder, // SSN placeholder color
                 borderColor: .white, // corner border color
                 borderWidth: 1.5,
                 cornerRadius: 8,

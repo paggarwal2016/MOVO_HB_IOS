@@ -22,6 +22,36 @@ extension Color {
 
 extension Color {
     
+    // MARK: - Brand
+    static let primary = Color(red: 181/255, green: 49/255, blue: 62/255) // Red
+    static let secondary = Color(red: 220/255, green: 223/255, blue: 228/255) // gray
+    
+    // MARK: - Background
+    static let background = UIColor.black
+    static let backgroundSwiftUI = Color.black
+    
+    // MARK: - Labels
+    static let primaryText = UIColor.lightGray
+    static let secondaryText = UIColor.gray
+    
+    static let primaryTextSwiftUI = Color(.lightGray)
+    static let secondaryTextSwiftUI = Color(.gray)
+    
+    // MARK: - Input
+    static let inputBackground = UIColor(white: 0.12, alpha: 1)
+    static let inputText = UIColor.white
+    static let inputPlaceholder = UIColor.gray
+    
+    // MARK: - Accent
+    static let accent = UIColor(
+        red: 77/255,
+        green: 163/255,
+        blue: 255/255,
+        alpha: 1
+    )
+    
+    static let accent1 = UIColor(red: 181/255, green: 49/255, blue: 62/255, alpha: 1)
+    
     // MARK: - Primary (Blue)
     static let primaryBlue = Color(red: 0/255, green: 102/255, blue: 204/255)
     static let navyBlue = Color(red: 10/255, green: 31/255, blue: 68/255)
@@ -38,8 +68,6 @@ extension Color {
     static let softBackground = Color(red: 230/255, green: 235/255, blue: 240/255)
     
     // MARK: - Text
-    static let primaryText = Color(red: 20/255, green: 20/255, blue: 20/255)
-    static let secondaryText = Color(red: 100/255, green: 100/255, blue: 100/255)
     static let mutedText = Color(red: 150/255, green: 150/255, blue: 150/255)
     
     // MARK: - Status

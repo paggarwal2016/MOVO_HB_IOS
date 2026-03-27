@@ -47,12 +47,12 @@ struct AccountListSheetView: View {
                             } label: {
                                 Image(systemName: "plus")
                                     .fontWeight(.semibold)
-                                    .foregroundStyle(AppColors.primary)
+                                    .foregroundStyle(Color.primary)
                             }
                         }
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { isPresented = false }
-                                .foregroundStyle(AppColors.primary)
+                                .foregroundStyle(Color.primary)
                                 .fontWeight(.semibold)
                         }
                         ToolbarItem(placement: .topBarTrailing) {
@@ -102,7 +102,7 @@ struct AccountListSheetView: View {
             sortDirection = sortDirection == .asc ? .desc : .asc
         } label: {
             Image(systemName: sortDirection == .asc ? "arrow.up" : "arrow.down")
-                .foregroundStyle(AppColors.primary)
+                .foregroundStyle(Color.primary)
                 .fontWeight(.semibold)
         }
     }
@@ -127,7 +127,7 @@ struct AccountListSheetView: View {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
-                .tint(AppColors.primary)
+                .tint(Color.primary)
 
                 Button {
                     accountToEdit = account
@@ -135,7 +135,7 @@ struct AccountListSheetView: View {
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
-                .tint(AppColors.secondary)
+                .tint(Color.secondary)
             }
         }
         .listStyle(.plain)
@@ -239,9 +239,9 @@ struct AccountRowView: View {
 
             Image(systemName: "banknote")
                 .font(.title2)
-                .foregroundStyle(AppColors.primary)
+                .foregroundStyle(Color.primary)
                 .frame(width: 44, height: 44)
-                .background(AppColors.primary.opacity(0.1))
+                .background(Color.primary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             // MARK: - Info

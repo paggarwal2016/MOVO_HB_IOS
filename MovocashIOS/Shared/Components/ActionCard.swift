@@ -22,13 +22,13 @@ struct ActionCard: View {
             
             Text(description)
                 .font(.system(size: 14))
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
                 .lineSpacing(4)
             
             Button(action: onButtonTap) {
                 Text(buttonLabel)
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                     .background(Color(.systemGray6))

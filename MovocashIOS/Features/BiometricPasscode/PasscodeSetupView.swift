@@ -43,7 +43,7 @@ struct PasscodeSetupView: View {
                 VStack(spacing: 8) {
                     Image(systemName: stepIcon)
                         .font(.system(size: 44, weight: .light))
-                        .foregroundStyle(AppColors.primary)
+                        .foregroundStyle(Color.primary)
                         .accessibilityHidden(true)
                     Text(stepTitle)
                         .font(.title2.bold())
