@@ -34,7 +34,7 @@ final class SavingsAccountViewModel: BaseViewModel {
         do {
             accountList = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
-                return try await network.request(SavingsAccountAPI.list)
+                return try await network.request(SavingsAccountAPI.list())
             }
         } catch is CancellationError {
             // cancelled — no action
@@ -88,10 +88,13 @@ final class SavingsAccountViewModel: BaseViewModel {
 
     // MARK: - Get List
 
-    func getSavingAccountList() async throws -> SavingsAccountListResponse {
+    func getSavingAccountList(
+        sortBy: SavingsSortBy? = nil,
+        sortDirection: SavingsSortDirection? = nil
+    ) async throws -> SavingsAccountListResponse {
         try await perform { [weak self] in
             guard let self else { throw ModelError.deallocated }
-            return try await network.request(SavingsAccountAPI.list)
+            return try await network.request(SavingsAccountAPI.list(sortBy: sortBy, sortDirection: sortDirection))
         }
     }
 

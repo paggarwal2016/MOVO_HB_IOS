@@ -24,6 +24,21 @@ struct ContactView: View {
                 contentBody
             }
             .background(Color(.systemBackground))
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { isPresented = false } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color(.systemGray6), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             .navigationDestination(for: AppContact.self) { contact in
                 QuickTransferView(contact: contact)
             }
@@ -85,26 +100,15 @@ struct ContactView: View {
     // MARK: - Header
     
     private var headerSection: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Send Money")
-                    .font(.system(size: 22, weight: .bold))
-                Text("Select a recipient from your contacts")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-            }
-            Spacer()
-            Button { isPresented = false } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 32, height: 32)
-                    .background(Color(.systemGray6), in: Circle())
-            }
-            .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Send Money")
+                .font(.system(size: 22, weight: .bold))
+            Text("Select a recipient from your contacts")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
-        .padding(.top, 20)
         .padding(.bottom, 10)
     }
     

@@ -31,6 +31,9 @@ struct AccountListSheetView: View {
     @State private var showEditNickname = false
     @State private var accountToEdit: SavingsAccountDetailsResponse?
 
+    @State private var sortBy: SavingsSortBy = .id
+    @State private var sortDirection: SavingsSortDirection = .asc
+
     var body: some View {
         ZStack {
             NavigationStack {
@@ -51,6 +54,9 @@ struct AccountListSheetView: View {
                             Button("Done") { isPresented = false }
                                 .foregroundStyle(AppColors.primary)
                                 .fontWeight(.semibold)
+                        }
+                        ToolbarItem(placement: .topBarTrailing) {
+                            sortMenuButton
                         }
                     }
             }
@@ -85,6 +91,20 @@ struct AccountListSheetView: View {
         }
         .globalAlert()
         .task { await loadAccounts() }
+        .onChange(of: sortBy) { _ in Task { await loadAccounts() } }
+        .onChange(of: sortDirection) { _ in Task { await loadAccounts() } }
+    }
+
+    // MARK: - Sort Direction Toggle
+
+    private var sortMenuButton: some View {
+        Button {
+            sortDirection = sortDirection == .asc ? .desc : .asc
+        } label: {
+            Image(systemName: sortDirection == .asc ? "arrow.up" : "arrow.down")
+                .foregroundStyle(AppColors.primary)
+                .fontWeight(.semibold)
+        }
     }
 
     // MARK: - Account List
@@ -126,7 +146,7 @@ struct AccountListSheetView: View {
 
     private func loadAccounts() async {
         do {
-            let response = try await savingVM.getSavingAccountList()
+            let response = try await savingVM.getSavingAccountList(sortBy: sortBy, sortDirection: sortDirection)
             savingsList = response
             accounts = response.accounts.filter { !$0.isPrimary }
             primaryAccountId = response.accounts.first(where: { $0.isPrimary })?.id

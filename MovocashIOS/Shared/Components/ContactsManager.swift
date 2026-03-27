@@ -35,36 +35,27 @@ final class ContactsService: ContactsServiceProtocol {
         // Fast-fail if the task was already cancelled before we start work.
         try Task.checkCancellation()
 
-        // The DispatchQueue block below is the only place that calls
-        // continuation.resume — exactly once on success or failure.
-        // No second resume path exists, so double-resume is not possible.
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    let store = CNContactStore()
-                    let keys = [CNContactIdentifierKey, CNContactGivenNameKey, CNContactFamilyNameKey,
-                                CNContactPhoneNumbersKey] as [CNKeyDescriptor]
-                    let request = CNContactFetchRequest(keysToFetch: keys)
-                    var result: [AppContact] = []
-                    try store.enumerateContacts(with: request) { contact, _ in
-                        let name = "\(contact.givenName) \(contact.familyName)"
-                            .trimmingCharacters(in: .whitespaces)
-                        let phone = contact.phoneNumbers.first?.value.stringValue ?? ""
-                        let initials = "\(contact.givenName.prefix(1))\(contact.familyName.prefix(1))"
-                        guard !name.isEmpty else { return }
-                        result.append(AppContact(
-                            id: contact.identifier,
-                            name: name,
-                            phone: phone,
-                            initials: initials
-                        ))
-                    }
-                    continuation.resume(returning: result.sorted { $0.name < $1.name })
-                } catch {
-                    continuation.resume(throwing: error)
-                }
+        return try await Task.detached(priority: .userInitiated) {
+            let store = CNContactStore()
+            let keys = [CNContactIdentifierKey, CNContactGivenNameKey, CNContactFamilyNameKey,
+                        CNContactPhoneNumbersKey] as [CNKeyDescriptor]
+            let request = CNContactFetchRequest(keysToFetch: keys)
+            var result: [AppContact] = []
+            try store.enumerateContacts(with: request) { contact, _ in
+                let name = "\(contact.givenName) \(contact.familyName)"
+                    .trimmingCharacters(in: .whitespaces)
+                let phone = contact.phoneNumbers.first?.value.stringValue ?? ""
+                let initials = "\(contact.givenName.prefix(1))\(contact.familyName.prefix(1))"
+                guard !name.isEmpty else { return }
+                result.append(AppContact(
+                    id: contact.identifier,
+                    name: name,
+                    phone: phone,
+                    initials: initials
+                ))
             }
-        }
+            return result.sorted { $0.name < $1.name }
+        }.value
     }
 }
 

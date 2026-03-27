@@ -7,17 +7,19 @@
 
 import Foundation
 
+// MARK: - API
+
 enum SavingsAccountAPI: Endpoint {
-    
-    case list
+
+    case list(sortBy: SavingsSortBy? = nil, sortDirection: SavingsSortDirection? = nil)
     case create(SavingsAccountRequest.CreateAccount)
     case update(SavingsAccountRequest.UpdateAccount)
     case delete(SavingsAccountRequest.DeleteAccount)
     case details(accountId: Int)
-    
+
     // MARK: - Environment Configure
     var environment: Environment { AppConfig.environment }
-    
+
     // MARK: - URL Path
     var path: String {
         switch self {
@@ -27,30 +29,44 @@ enum SavingsAccountAPI: Endpoint {
             return "/savings/account/\(accountId)"
         }
     }
-    
+
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
         case .list, .details: return .GET
-        case .create: return .POST
-        case .update: return .PATCH
-        case .delete: return .DELETE
+        case .create:         return .POST
+        case .update:         return .PATCH
+        case .delete:         return .DELETE
         }
     }
-    
+
     // MARK: - Header Configure
     var headerType: HeaderType { .authorized }
-    
+
     // MARK: - Query Items
-    var queryItems: [URLQueryItem]? { nil }
-    
+    var queryItems: [URLQueryItem]? {
+        switch self {
+        case .list(let sortBy, let sortDirection):
+            var items: [URLQueryItem] = []
+            if let sortBy {
+                items.append(URLQueryItem(name: "sortBy", value: sortBy.rawValue))
+            }
+            if let sortDirection {
+                items.append(URLQueryItem(name: "sortDirection", value: sortDirection.rawValue))
+            }
+            return items.isEmpty ? nil : items
+        default:
+            return nil
+        }
+    }
+
     // MARK: - Body
     var body: Data? {
         get throws {
             try encodeBody()
         }
     }
-    
+
     private func encodeBody() throws -> Data? {
         switch self {
         case .list, .details:
@@ -64,4 +80,3 @@ enum SavingsAccountAPI: Endpoint {
         }
     }
 }
-
