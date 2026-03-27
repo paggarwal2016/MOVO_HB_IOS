@@ -7,8 +7,6 @@
 
 import Foundation
 
-// MARK: - API
-
 enum SavingsAccountAPI: Endpoint {
 
     case list(sortBy: SavingsSortBy? = nil, sortDirection: SavingsSortDirection? = nil)
