@@ -19,7 +19,7 @@ struct CustomHeaderView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            AppColors.primary
+            Color.primary
                 .ignoresSafeArea(edges: .top)
             
             HStack(spacing: 12) {
@@ -39,7 +39,7 @@ struct CustomHeaderView: View {
                 } label: {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                         .font(.title3)
-                        .foregroundStyle(AppColors.primary)
+                        .foregroundStyle(Color.primary)
                         .frame(width: 44, height: 44)
                         .background(.white)
                         .clipShape(Circle())

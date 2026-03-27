@@ -61,7 +61,7 @@ struct HomeTabBarView: View {
             tabContent(for: .accounts)
             tabContent(for: .profile)
         }
-        .tint(AppColors.primary)
+        .tint(Color.primary)
         .onAppear(perform: handleOnAppear)
         .task { await handleOnTask() }
     }

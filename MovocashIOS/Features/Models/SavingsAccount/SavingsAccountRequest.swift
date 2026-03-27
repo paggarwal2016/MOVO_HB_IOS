@@ -26,3 +26,23 @@ enum SavingsAccountRequest {
         let accountId: Int
     }
 }
+
+
+// MARK: - Sort Options
+
+enum SavingsSortBy: String, Equatable {
+    case id
+    case clientId
+    case accountNumber
+    case clientName
+    case status
+    case accountBalance
+    case availableBalance
+    case nickname
+    case isPrimary
+}
+
+enum SavingsSortDirection: String, Equatable {
+    case asc
+    case desc
+}

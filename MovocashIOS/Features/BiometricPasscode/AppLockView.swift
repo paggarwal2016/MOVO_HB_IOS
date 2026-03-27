@@ -82,7 +82,7 @@ struct AppLockView: View {
         VStack(spacing: 12) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 48, weight: .light))
-                .foregroundStyle(AppColors.primary)
+                .foregroundStyle(Color.primary)
                 .accessibilityHidden(true)
             Text("MovoCash")
                 .font(.title2.bold())

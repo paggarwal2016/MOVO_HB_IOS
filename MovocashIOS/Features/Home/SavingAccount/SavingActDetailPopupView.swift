@@ -30,7 +30,7 @@ struct SavingActDetailPopupView: View {
                 value: account.accountNumber,
                 copiedField: $copiedField,
                 fullWidth: true,
-                accentColor: AppColors.primary
+                accentColor: Color.primary
             )
 
             Divider().padding(.horizontal, 20)

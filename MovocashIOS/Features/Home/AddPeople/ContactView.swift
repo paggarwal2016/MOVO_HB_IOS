@@ -24,6 +24,21 @@ struct ContactView: View {
                 contentBody
             }
             .background(Color(.systemBackground))
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { isPresented = false } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.gray)
+                            .frame(width: 32, height: 32)
+                            .background(Color(.systemGray6), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             .navigationDestination(for: AppContact.self) { contact in
                 QuickTransferView(contact: contact)
             }
@@ -57,10 +72,10 @@ struct ContactView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 36))
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
             Text(message)
                 .font(.system(size: 15))
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
             Button("Open Settings") {
@@ -76,7 +91,7 @@ struct ContactView: View {
             .clipShape(Capsule())
             Text("You may need to reopen the app after granting access.")
                 .font(.system(size: 13))
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
@@ -85,26 +100,15 @@ struct ContactView: View {
     // MARK: - Header
     
     private var headerSection: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Send Money")
-                    .font(.system(size: 22, weight: .bold))
-                Text("Select a recipient from your contacts")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-            }
-            Spacer()
-            Button { isPresented = false } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 32, height: 32)
-                    .background(Color(.systemGray6), in: Circle())
-            }
-            .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Send Money")
+                .font(.system(size: 22, weight: .bold))
+            Text("Select a recipient from your contacts")
+                .font(.system(size: 13))
+                .foregroundColor(.gray)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
-        .padding(.top, 20)
         .padding(.bottom, 10)
     }
     
@@ -113,13 +117,13 @@ struct ContactView: View {
     private var searchBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
             TextField("Search contacts", text: $viewModel.search)
                 .autocorrectionDisabled()
             if !viewModel.search.isEmpty {
                 Button { viewModel.search = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                 }
                 .buttonStyle(.plain)
             }
@@ -175,7 +179,7 @@ struct ContactView: View {
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
             .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(.secondary)
+            .foregroundColor(.gray)
             .textCase(.uppercase)
             .tracking(0.6)
     }
@@ -217,13 +221,13 @@ struct ContactView: View {
                         .font(.system(size: 15, weight: .medium))
                     Text(contact.phone)
                         .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                 }
                 Spacer()
                 Button { viewModel.toggleFavorite(contact) } label: {
                     Image(systemName: starred ? "star.fill" : "star")
                         .font(.system(size: 18))
-                        .foregroundColor(starred ? AppColors.primary : Color(.systemGray3))
+                        .foregroundColor(starred ? Color.primary : Color(.systemGray3))
                 }
                 .buttonStyle(.plain)
             }

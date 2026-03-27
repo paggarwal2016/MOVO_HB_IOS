@@ -31,11 +31,14 @@ struct AccountListSheetView: View {
     @State private var showEditNickname = false
     @State private var accountToEdit: SavingsAccountDetailsResponse?
 
+    @State private var sortBy: SavingsSortBy = .id
+    @State private var sortDirection: SavingsSortDirection = .asc
+
     var body: some View {
         ZStack {
             NavigationStack {
                 accountList
-                    .navigationTitle("Accounts")
+                    .navigationTitle("Cash Cards")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {
@@ -44,13 +47,16 @@ struct AccountListSheetView: View {
                             } label: {
                                 Image(systemName: "plus")
                                     .fontWeight(.semibold)
-                                    .foregroundStyle(AppColors.primary)
+                                    .foregroundStyle(Color.primary)
                             }
                         }
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { isPresented = false }
-                                .foregroundStyle(AppColors.primary)
+                                .foregroundStyle(Color.primary)
                                 .fontWeight(.semibold)
+                        }
+                        ToolbarItem(placement: .topBarTrailing) {
+                            sortMenuButton
                         }
                     }
             }
@@ -85,6 +91,20 @@ struct AccountListSheetView: View {
         }
         .globalAlert()
         .task { await loadAccounts() }
+        .onChange(of: sortBy) { _ in Task { await loadAccounts() } }
+        .onChange(of: sortDirection) { _ in Task { await loadAccounts() } }
+    }
+
+    // MARK: - Sort Direction Toggle
+
+    private var sortMenuButton: some View {
+        Button {
+            sortDirection = sortDirection == .asc ? .desc : .asc
+        } label: {
+            Image(systemName: sortDirection == .asc ? "arrow.up" : "arrow.down")
+                .foregroundStyle(Color.primary)
+                .fontWeight(.semibold)
+        }
     }
 
     // MARK: - Account List
@@ -107,7 +127,7 @@ struct AccountListSheetView: View {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
-                .tint(AppColors.primary)
+                .tint(Color.primary)
 
                 Button {
                     accountToEdit = account
@@ -115,7 +135,7 @@ struct AccountListSheetView: View {
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
-                .tint(AppColors.secondary)
+                .tint(Color.secondary)
             }
         }
         .listStyle(.plain)
@@ -126,7 +146,7 @@ struct AccountListSheetView: View {
 
     private func loadAccounts() async {
         do {
-            let response = try await savingVM.getSavingAccountList()
+            let response = try await savingVM.getSavingAccountList(sortBy: sortBy, sortDirection: sortDirection)
             savingsList = response
             accounts = response.accounts.filter { !$0.isPrimary }
             primaryAccountId = response.accounts.first(where: { $0.isPrimary })?.id
@@ -219,9 +239,9 @@ struct AccountRowView: View {
 
             Image(systemName: "banknote")
                 .font(.title2)
-                .foregroundStyle(AppColors.primary)
+                .foregroundStyle(Color.primary)
                 .frame(width: 44, height: 44)
-                .background(AppColors.primary.opacity(0.1))
+                .background(Color.primary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             // MARK: - Info

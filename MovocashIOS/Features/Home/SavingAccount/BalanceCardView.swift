@@ -36,7 +36,7 @@ struct BalanceCardView: View {
             
             // MARK: Card Background
             RoundedRectangle(cornerRadius: 15)
-                .fill(AppColors.secondary.opacity(0.8))
+                .fill(Color.secondary.opacity(0.8))
                 .frame(maxWidth: .infinity)
                 .frame(height: 120)
                 .onTapGesture { onCardTap() }

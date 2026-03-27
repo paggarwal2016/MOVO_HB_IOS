@@ -93,7 +93,7 @@ struct BasePopupView<Content: View, HeaderTrailing: View>: View {
     // MARK: - Header Curve
 
     private func headerCurve(nickName: String, formattedBalance: String, balanceLabel: String) -> some View {
-        AppColors.primary
+        Color.primary
             .overlay {
                 VStack(spacing: 6) {
                     if !nickName.isEmpty {

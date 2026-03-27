@@ -79,7 +79,7 @@ struct QuickTransferView: View {
                     .font(.system(size: 16, weight: .semibold))
                 Text(contact.phone)
                     .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.gray)
             }
             Spacer()
         }
@@ -96,11 +96,11 @@ struct QuickTransferView: View {
             Text("AMOUNT")
                 .font(.system(size: 11, weight: .medium))
                 .tracking(0.8)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.gray)
             HStack(alignment: .top, spacing: 4) {
                 Text("$")
                     .font(.system(size: 20, weight: .light))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.gray)
                     .padding(.top, 6)
                 TextField("0", text: $amountText)
                     .font(.system(size: 48, weight: .light))
@@ -122,7 +122,7 @@ struct QuickTransferView: View {
         HStack {
             Text("From account")
                 .font(.system(size: 13))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.gray)
             Spacer()
             if savingVM.state == .loading {
                 ProgressView()
@@ -130,7 +130,7 @@ struct QuickTransferView: View {
             } else if accounts.isEmpty {
                 Text("No accounts")
                     .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.gray)
             } else {
                 Menu {
                     ForEach(accounts) { account in
@@ -152,16 +152,16 @@ struct QuickTransferView: View {
                                     .foregroundStyle(.primary)
                                 Text(account.maskedAccountNumber)
                                     .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.gray)
                             }
                         } else {
                             Text("Select account")
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.gray)
                         }
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.gray)
                     }
                 }
             }
@@ -184,7 +184,7 @@ struct QuickTransferView: View {
                 .font(.system(size: 15, weight: .medium))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(isValid ? AppColors.primary : Color(.systemGray5))
+                .background(isValid ? Color.primary : Color(.systemGray5))
                 .foregroundStyle(isValid ? Color.white : Color(.tertiaryLabel))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }

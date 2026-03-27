@@ -10,16 +10,19 @@ import SwiftUI
 struct ViewCardScreen: View {
     
     @Binding var isPresented: Bool
+    let accountId: Int
 
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var vm: VCardViewModel
 
     init(
         isPresented: Binding<Bool>,
+        accountId: Int,
         savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel(),
         vm: VCardViewModel = AppContainer.shared.makeVCardViewModel()
     ) {
         _isPresented = isPresented
+        self.accountId = accountId
         _savingVM = StateObject(wrappedValue: savingVM)
         _vm = StateObject(wrappedValue: vm)
     }
@@ -47,7 +50,7 @@ struct ViewCardScreen: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { isPresented = false }
-                                .foregroundStyle(AppColors.primary)
+                                .foregroundStyle(Color.primary)
                                 .fontWeight(.semibold)
                         }
                     }
@@ -60,7 +63,7 @@ struct ViewCardScreen: View {
         .pinInputAlert(
             isPresented: $showAddCard,
             title: "Activate Card",
-            message: "",
+            message: "In order to activate card you need to create 4 digit PIN",
             pinPlaceholder: "4-digit PIN",
             confirmPlaceholder: "Re-enter PIN",
             config: TextInputAlertConfig(primaryLabel: "Activate",
@@ -123,7 +126,7 @@ struct ViewCardScreen: View {
     
     private func addCard(pin: String) async {
         do {
-            card = try await vm.postVCard(request: VCardsRequest(pin: pin))
+            card = try await vm.postVCard(request: VCardsRequest(pin: pin, accountId: accountId))
             ToastManager.shared.show("Success.", style: .success, position: .bottom)
         } catch {}
     }

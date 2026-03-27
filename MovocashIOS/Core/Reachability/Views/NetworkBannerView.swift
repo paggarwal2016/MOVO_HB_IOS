@@ -21,7 +21,7 @@ struct NetworkBannerView: View {
             Spacer()
         }
         .padding()
-        .background(AppColors.primary)
+        .background(Color.primary)
     }
 }
 

@@ -11,13 +11,13 @@ import SwiftUI
 
 struct TextInputAlertConfig {
     // Header
-    var headerBackground: Color  = AppColors.primary
+    var headerBackground: Color  = Color.primary
     var titleColor: Color        = .white
     var messageColor: Color      = .white.opacity(0.85)
     var headerIcon: String?      = nil
 
     // Primary (Create) button
-    var primaryColor: Color      = AppColors.primary
+    var primaryColor: Color      = Color.primary
     var primaryLabel: String     = "Create"
 
     // Secondary (Cancel) button
@@ -114,7 +114,7 @@ struct TextInputAlertView: View {
                             .foregroundStyle(isEmpty ? config.primaryColor.opacity(0.4) : config.primaryColor)
                     }
                 }
-                .background(AppColors.secondary)
+                .background(Color.secondary)
                 // bottom two corners only
                 .clipShape(UnevenRoundedRectangle(
                     topLeadingRadius: 0,
