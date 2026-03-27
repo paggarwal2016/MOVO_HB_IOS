@@ -35,7 +35,7 @@ struct AccountListSheetView: View {
         ZStack {
             NavigationStack {
                 accountList
-                    .navigationTitle("Accounts")
+                    .navigationTitle("Cash Cards")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {

@@ -106,9 +106,11 @@ struct DashboardView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showViewCard) {
-            ViewCardScreen(isPresented: $showViewCard)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+            if let account = displayAccount {
+                ViewCardScreen(isPresented: $showViewCard, accountId: account.id)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
         }
         .sheet(isPresented: $showFunds) {
             InternalTransferView(
@@ -176,7 +178,7 @@ struct DashboardView: View {
             
             if isViewCashAccount {
                 PrimaryButton(
-                    title: "View Cash Accounts",
+                    title: "View Cash Cards",
                     backgroundColor: .gray.opacity(0.1),
                     textColor: .black
                 ) {

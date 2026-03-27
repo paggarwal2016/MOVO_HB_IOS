@@ -11,9 +11,7 @@ import Foundation
 
 struct VCardsRequest: Codable, Equatable, Sendable {
     let pin: String
-    enum CodingKeys: String, CodingKey {
-        case pin = "pin"
-    }
+    let accountId: Int
 }
 
 // MARK: - VCards Provision
@@ -23,10 +21,4 @@ struct VCardsProvisionRequest: Codable, Equatable, Sendable {
     let nonce: String
     let nonceSignature: String
     let certificateChain: [String]
-    enum CodingKeys: String, CodingKey {
-        case provider = "provider"
-        case nonce = "nonce"
-        case nonceSignature = "nonceSignature"
-        case certificateChain = "certificateChain"
-    }
 }

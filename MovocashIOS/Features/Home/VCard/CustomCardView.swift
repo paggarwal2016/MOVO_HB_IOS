@@ -105,9 +105,11 @@ struct CustomCardView: View {
     private func revealCard() async {
         isRevealing = true
         defer { isRevealing = false }
-        await vm.revealCard(pin: card.lastFour) { response in
-            revealedCard = response
+        do {
+            revealedCard = try await vm.getVCard()
             showCardDetail = true
+        } catch {
+            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
         }
     }
 }
