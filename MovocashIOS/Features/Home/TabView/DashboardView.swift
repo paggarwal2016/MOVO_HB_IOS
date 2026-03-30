@@ -100,13 +100,18 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showFunds) {
-            InternalTransferView(
-                toClientId: displayAccount?.clientId ?? 0,
-                fromAccount: savingVM.accountList?.accounts.first(where: { $0.isPrimary }),
-                nonPrimaryAccounts: savingVM.accountList?.accounts.filter({ !$0.isPrimary }) ?? []
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            if let account = displayAccount {
+                InternalTransferView(
+                    toClientId: account.clientId,
+                    fromAccount: account,
+                    nonPrimaryAccounts: savingVM.accountList?.accounts.filter({ !$0.isPrimary }) ?? [],
+                    onDismiss: {
+                        Task { await loadData() }
+                    }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
         }
         .sheet(isPresented: $showContactList) {
             ContactView(isPresented: $showContactList)
@@ -147,7 +152,6 @@ struct DashboardView: View {
         if let account = displayAccount {
             BalanceCardView(
                 account: account,
-                totalAvailableBalance: account.availableBalance,
                 onCardTap: { showAccountDetail = true },
                 onPrimaryTap: { showPrimaryAccountDetails = true },
                 onViewCardTap: { showViewCard = true }
@@ -189,7 +193,7 @@ struct DashboardView: View {
                        description: "Send money instantly to anyone in your contact list.",
                        buttonLabel: "Add people") {
                 showContactList = true
-                print("Quick transfer tapped")
+                SecureLogger.debug("Quick transfer tapped", category: .general)
             }
         } else if savingVM.state == .loading {
             CardSkeletonView()

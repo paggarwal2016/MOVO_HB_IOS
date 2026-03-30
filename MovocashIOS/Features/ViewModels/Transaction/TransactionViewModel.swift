@@ -18,39 +18,20 @@ final class TransactionViewModel: BaseViewModel {
     // MARK: - Dependencies
 
     private let network: NetworkServiceProtocol
-    
+
     // MARK: - Init
-    
+
     init(network: NetworkServiceProtocol,
          alertManager: AlertManagerProtocol) {
         self.network = network
         super.init(alertManager: alertManager)
     }
-    
-    // MARK: - Get
-    
-    func getTransactionList(max: Int, accountId: Int) async throws -> TransactionResponse {
-        try await perform { [weak self] in
-            guard let self else { throw ModelError.deallocated }
-            return try await network.request(TransactionAPI.lists(max: max, accountId: accountId))
-        }
-    }
-        
-    // MARK: - Post
-    
-    func postWithdrawal(request: TransactionRequest.Withdrawal) async throws -> TransactionWithdrawalResponse {
-        try await perform { [weak self] in
-            guard let self else { throw ModelError.deallocated }
-            return try await network.request(TransactionAPI.withdrawals(request))
-        }
-    }
-        
-    // MARK: - Post Internal
 
-    func postInternal(request: TransactionRequest.Internal) async throws -> TransferInternalResponse {
-        try await perform { [weak self] in
-            guard let self else { throw ModelError.deallocated }
-            return try await network.request(TransactionAPI.internals(request))
+    // MARK: - Post Withdrawal
+
+    func postWithdrawal(request: TransactionRequest.Withdrawal) async throws -> TransactionWithdrawalResponse {
+        try await perform {
+            try await self.network.request(TransactionAPI.withdrawals(request))
         }
     }
 
@@ -58,33 +39,32 @@ final class TransactionViewModel: BaseViewModel {
 
     func loadTransactions(max: Int, accountId: Int) async {
         do {
-            let response: TransactionResponse = try await perform { [weak self] in
-                guard let self else { throw ModelError.deallocated }
-                return try await network.request(TransactionAPI.lists(max: max, accountId: accountId))
+            let response: TransactionResponse = try await perform {
+                try await self.network.request(TransactionAPI.lists(max: max, accountId: accountId))
             }
-            transactions = response.transactions.isEmpty
-                ? TransactionItem.dummy
-                : response.transactions.map { $0.toItem() }
+            transactions = response.transactions.map { $0.toItem() }
         } catch is CancellationError {
             // cancelled — no action
         } catch {
-            transactions = TransactionItem.dummy
+            // error surfaced via BaseViewModel toast
         }
     }
 
     // MARK: - Submit Internal Transfer
 
-    func submitInternalTransfer(request: TransactionRequest.Internal, onSuccess: @escaping () -> Void) async {
+    /// Returns `true` on success. Errors are surfaced via BaseViewModel toast.
+    @discardableResult
+    func submitInternalTransfer(request: TransactionRequest.Internal) async -> Bool {
         do {
-            let _: TransferInternalResponse = try await perform { [weak self] in
-                guard let self else { throw ModelError.deallocated }
-                return try await network.request(TransactionAPI.internals(request))
+            let _: TransferInternalResponse = try await perform {
+                try await self.network.request(TransactionAPI.internals(request))
             }
-            onSuccess()
+            return true
         } catch is CancellationError {
-            // cancelled — no action
+            return false
         } catch {
             // error surfaced via BaseViewModel toast
+            return false
         }
     }
 }

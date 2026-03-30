@@ -21,7 +21,9 @@ struct InternalTransferView: View {
     @State private var descriptionText = ""
     @State private var selectedFromAccount: SavingsAccountDetailsResponse?
     @State private var selectedToAccount: SavingsAccountDetailsResponse?
-
+    
+    var onDismiss:() -> Void
+    
     private var availableToAccounts: [SavingsAccountDetailsResponse] {
         allAccounts.filter { $0.id != selectedFromAccount?.id }
     }
@@ -35,13 +37,15 @@ struct InternalTransferView: View {
         toClientId: Int,
         fromAccount: SavingsAccountDetailsResponse?,
         nonPrimaryAccounts: [SavingsAccountDetailsResponse],
-        transVM: TransactionViewModel = AppContainer.shared.makeTransactionViewModel()
+        transVM: TransactionViewModel = AppContainer.shared.makeTransactionViewModel(),
+        onDismiss: @escaping () -> Void,
     ) {
         self.toClientId = toClientId
         let primary = fromAccount.map { [$0] } ?? []
         self.allAccounts = primary + nonPrimaryAccounts
         _selectedFromAccount = State(initialValue: fromAccount)
         _transVM = StateObject(wrappedValue: transVM)
+        self.onDismiss = onDismiss
     }
 
     var body: some View {
@@ -71,6 +75,11 @@ struct InternalTransferView: View {
                             .background(Color(.systemBackground))
                             .clipShape(Circle())
                     }
+                }
+            }
+            .overlay {
+                if transVM.state == .loading {
+                    SpinnerView()
                 }
             }
         }
@@ -256,9 +265,10 @@ struct InternalTransferView: View {
             toClientId: toClientId,
             fromAccountId: from.id
         )
-        await transVM.submitInternalTransfer(request: request) {
-            dismiss()
-        }
+        guard await transVM.submitInternalTransfer(request: request) else { return }
+        ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)
+        dismiss()
+        onDismiss()
     }
 }
 

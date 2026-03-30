@@ -13,6 +13,17 @@ nonisolated struct TransactionResponse: Decodable {
     let transactions: [Transaction]
     let settledBalance: Decimal
     let balance: Decimal
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        transactions    = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
+        settledBalance  = try container.decodeIfPresent(Decimal.self, forKey: .settledBalance) ?? 0
+        balance         = try container.decodeIfPresent(Decimal.self, forKey: .balance) ?? 0
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case transactions, settledBalance, balance
+    }
 }
 
 struct Transaction: Decodable, Identifiable, Sendable {
@@ -26,6 +37,23 @@ struct Transaction: Decodable, Identifiable, Sendable {
     let type: TransactionType
     let date: String
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id          = try container.decode(Int.self, forKey: .id)
+        status      = try container.decodeIfPresent(String.self, forKey: .status) ?? ""
+        location    = try container.decodeIfPresent(String.self, forKey: .location)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        amount      = try container.decodeIfPresent(Decimal.self, forKey: .amount) ?? 0
+        to          = try container.decodeIfPresent(String.self, forKey: .to)
+        from        = try container.decodeIfPresent(String.self, forKey: .from)
+        type        = try container.decodeIfPresent(TransactionType.self, forKey: .type) ?? .unknown
+        date        = try container.decodeIfPresent(String.self, forKey: .date) ?? ""
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, status, location, description, amount, to, from, type, date
+    }
+
     func toItem() -> TransactionItem {
         let isCredit = type == .deposit
         let title    = isCredit
@@ -35,7 +63,7 @@ struct Transaction: Decodable, Identifiable, Sendable {
         return TransactionItem(
             id:       id,
             title:    title,
-            subtitle: type.rawValue,
+            subtitle: type.displayTitle,
             amount:   amount,
             isCredit: isCredit,
             date:     formatter.date(from: date) ?? Date(),
@@ -49,6 +77,15 @@ enum TransactionType: String, Decodable, Sendable {
     case withdraw = "Withdraw"
     case payment  = "Payment"
     case transfer = "Transfer"
+    case unknown  = "Unknown"
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = TransactionType(rawValue: raw) ?? .unknown
+    }
+
+    var displayTitle: String { rawValue }
 }
 
 // MARK: - TransactionItem
@@ -76,18 +113,6 @@ struct TransactionItem: Identifiable, Sendable {
         let str    = Self.amountFormatter.string(from: NSNumber(value: abs)) ?? String(format: "%.2f", abs)
         return "\(prefix)$\(str)"
     }
-
-    // Static dummy data — shown when API returns empty array
-    static let dummy: [TransactionItem] = [
-        TransactionItem(id: 1, title: "Eva Novak",     subtitle: "Deposit",  amount: 5710.20, isCredit: true,  date: Date(), rawDate: ""),
-        TransactionItem(id: 2, title: "Binance",       subtitle: "Deposit",  amount: 714.00,  isCredit: true,  date: Date(), rawDate: ""),
-        TransactionItem(id: 3, title: "Henrik Jansen", subtitle: "Deposit",  amount: 428.00,  isCredit: true,  date: Date(), rawDate: ""),
-        TransactionItem(id: 4, title: "Multiplex",     subtitle: "Payment",  amount: 124.55,  isCredit: false, date: Date(), rawDate: ""),
-        TransactionItem(id: 5, title: "Nike",          subtitle: "Payment",  amount: 328.96,  isCredit: false, date: Date(), rawDate: ""),
-        TransactionItem(id: 6, title: "Matteo Ricci",  subtitle: "Deposit",  amount: 548.00,  isCredit: true,  date: Date(), rawDate: ""),
-        TransactionItem(id: 7, title: "Megogo",        subtitle: "Withdraw", amount: 847.20,  isCredit: false, date: Date(), rawDate: ""),
-        TransactionItem(id: 8, title: "Emilia Costa",  subtitle: "Deposit",  amount: 147.00,  isCredit: true,  date: Date(), rawDate: ""),
-    ]
 }
 
 
