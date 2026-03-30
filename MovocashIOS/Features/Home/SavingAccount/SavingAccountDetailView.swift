@@ -142,7 +142,7 @@ struct SavingAccountDetailView: View {
                         .foregroundStyle(.white.opacity(0.7))
                         .tracking(1.2)
                     Text(detail.formattedBalance)
-                        .font(.system(size: 32, weight: .bold))
+                        .font(.system(size: 25, weight: .semibold))
                         .foregroundStyle(.white)
                 }
 
@@ -215,8 +215,8 @@ struct SavingAccountDetailView: View {
                         TransactionRow(item: item)
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 5)
             }
         }
         .background(Color(.systemBackground))
@@ -240,7 +240,7 @@ struct TransactionRow: View {
     let item: TransactionItem
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ZStack {
                 Circle()
                     .fill(item.isCredit ? Color.green.opacity(0.12) : Color.red.opacity(0.12))
@@ -270,11 +270,11 @@ struct TransactionRow: View {
 
             Text(item.amountFormatted)
                 .font(.subheadline)
-                .fontWeight(.semibold)
+                .fontWeight(.medium)
                 .foregroundStyle(item.isCredit ? .green : .red)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
