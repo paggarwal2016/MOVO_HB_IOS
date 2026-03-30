@@ -91,7 +91,8 @@ final class SessionManager: ObservableObject {
 
     // MARK: - JWT Expiry
     /// Decodes the JWT payload (no signature verification — server does that).
-    /// Returns true when the `exp` claim is in the past or the token is malformed.
+    /// Returns true when the `exp` claim is in the past, the token is malformed,
+    /// or the expiry is suspiciously far in the future (possible token injection).
     private func isAccessTokenExpired(_ token: String) -> Bool {
         let parts = token.components(separatedBy: ".")
         guard parts.count == 3 else { return true }
@@ -109,8 +110,22 @@ final class SessionManager: ObservableObject {
             return true
         }
 
+        let now = Date().timeIntervalSince1970
+
+        // Sanity check: a legitimate JWT should never expire more than 24 hours out.
+        // An exp beyond this window is suspicious — could indicate a tampered token
+        // injected into local storage. Force a refresh rather than trusting the claim.
+        let twentyFourHours: TimeInterval = 24 * 60 * 60
+        if exp > now + twentyFourHours {
+            SecureLogger.warning(
+                "JWT exp is suspiciously far in the future — forcing token refresh",
+                category: .security
+            )
+            return true
+        }
+
         // 30-second buffer guards against clock skew on slow networks
-        return Date().timeIntervalSince1970 >= exp - 30
+        return now >= exp - 30
     }
 
     // MARK: - Logout with Confirmation

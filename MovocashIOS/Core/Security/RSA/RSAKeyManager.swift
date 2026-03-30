@@ -67,11 +67,20 @@ final class RSAKeyManager: Sendable {
         useSecureEnclave ? generateSEKeyPair() : generateSoftwareKeyPair()
     }
 
-    /// Builds a time-bound challenge: "login:{deviceId}:{unixTimestamp}"
+    /// Builds a time-bound challenge string and returns it as UTF-8 data.
+    ///
+    /// Format without nonce:  `login:{deviceId}:{unixTimestamp}`
+    /// Format with nonce:     `login:{deviceId}:{unixTimestamp}:{nonce}`
+    ///
     /// The server rejects challenges older than ±30 s.
-    static func buildChallenge(deviceId: String) -> Data {
-        let message = "login:\(deviceId):\(Int(Date().timeIntervalSince1970))"
-        SecureLogger.info("Challenge built", category: .auth)
+    /// Providing a server-issued `nonce` eliminates the replay window entirely —
+    /// the server must enforce single-use nonce uniqueness for this to be effective.
+    static func buildChallenge(deviceId: String, nonce: String? = nil) -> Data {
+        var message = "login:\(deviceId):\(Int(Date().timeIntervalSince1970))"
+        if let nonce {
+            message += ":\(nonce)"
+        }
+        SecureLogger.info("Challenge built\(nonce != nil ? " (with server nonce)" : "")", category: .auth)
         return Data(message.utf8)
     }
 

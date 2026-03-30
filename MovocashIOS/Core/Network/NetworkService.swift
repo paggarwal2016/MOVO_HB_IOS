@@ -48,7 +48,7 @@ actor NetworkService: NetworkServiceProtocol {
 
         self.session = URLSession(
             configuration: config,
-            delegate: SecureSessionDelegate(), // customizable
+            delegate: SecureSessionDelegate(enabled: false), // TODO: - configure the cert and set true
             delegateQueue: nil
         )
         self.builder = RequestBuilder(authManager: authManager)
