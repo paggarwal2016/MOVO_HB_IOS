@@ -11,19 +11,27 @@ import SwiftUI
 struct DashboardView: View {
     
     // MARK: - Environment
-    
+
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var userVM: UserViewModel
-    
+
     // MARK: - VCard
 
-    @StateObject private var vm = AppContainer.shared.makeVCardViewModel()
+    @StateObject private var vm: VCardViewModel
 
     // MARK: - Savings
 
-    @StateObject private var savingVM = AppContainer.shared.makeSavingsAccountViewModel()
+    @StateObject private var savingVM: SavingsAccountViewModel
+
+    private let container: AppContainer
+
+    init(container: AppContainer) {
+        self.container = container
+        _vm = StateObject(wrappedValue: container.makeVCardViewModel())
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+    }
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
     @State private var showAccountDetail = false
@@ -82,19 +90,19 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
-                SavingAccountDetailView(accountId: account.id)
+                SavingAccountDetailView(accountId: account.id, container: container)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showAccountList) {
-            AccountListSheetView(savingsList: $savingVM.accountList, isPresented: $showAccountList)
+            AccountListSheetView(savingsList: $savingVM.accountList, isPresented: $showAccountList, container: container)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showViewCard) {
             if let account = displayAccount {
-                ViewCardScreen(isPresented: $showViewCard, accountId: account.id)
+                ViewCardScreen(isPresented: $showViewCard, accountId: account.id, container: container)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
@@ -105,6 +113,7 @@ struct DashboardView: View {
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.accounts.filter({ !$0.isPrimary }) ?? [],
+                    container: container,
                     onDismiss: {
                         Task { await loadData() }
                     }
@@ -132,7 +141,7 @@ struct DashboardView: View {
     private var headerView: some View {
         CustomHeaderView(userName: userVM.profile?.initials ?? "", userImage: userVM.profile?.profilePicture ?? "") {
             sessionManager.logoutWithConfirmation(appState: appState) {
-                AppContainer.lockManager.logout()
+                lockManager.logout()
             }
         }
     }

@@ -11,7 +11,12 @@ struct KYCView: View {
 
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var sessionManager: SessionManager
-    @StateObject private var kycVM = AppContainer.shared.makeKYCViewModel()
+    @EnvironmentObject var lockManager: AppLockManager
+    @StateObject private var kycVM: KYCViewModel
+
+    init(container: AppContainer) {
+        _kycVM = StateObject(wrappedValue: container.makeKYCViewModel())
+    }
 
     var body: some View {
         Color.clear
@@ -22,7 +27,7 @@ struct KYCView: View {
                 } onFailure: {
                     //TODO: Future Implementation will check below code logic
                     Task {
-                        AppContainer.lockManager.logout()
+                        lockManager.logout()
                         await sessionManager.logout(appState: appState)
                         appState.flow = .getStartedPhone
                     }

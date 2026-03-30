@@ -12,6 +12,7 @@ struct ContactView: View {
     @Binding var isPresented: Bool
     @StateObject private var viewModel: ContactViewModel
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var container: AppContainer
     
     init(isPresented: Binding<Bool>, service: ContactsServiceProtocol = ContactsService()) {
         _viewModel = StateObject(wrappedValue: ContactViewModel(service: service, alertManager: AlertManager.shared))
@@ -40,7 +41,7 @@ struct ContactView: View {
                 }
             }
             .navigationDestination(for: AppContact.self) { contact in
-                QuickTransferView(contact: contact)
+                QuickTransferView(contact: contact, container: container)
             }
         }
         .task {

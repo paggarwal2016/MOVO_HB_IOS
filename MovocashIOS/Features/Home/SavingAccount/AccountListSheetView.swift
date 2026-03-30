@@ -13,14 +13,17 @@ struct AccountListSheetView: View {
     @Binding var isPresented: Bool
     @StateObject private var savingVM: SavingsAccountViewModel
 
+    private let container: AppContainer
+
     init(
         savingsList: Binding<SavingsAccountListResponse?>,
         isPresented: Binding<Bool>,
-        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
+        container: AppContainer
     ) {
         _savingsList = savingsList
         _isPresented = isPresented
-        _savingVM = StateObject(wrappedValue: savingVM)
+        self.container = container
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
 
     @State private var accounts: [SavingsAccountDetailsResponse] = []
@@ -85,7 +88,7 @@ struct AccountListSheetView: View {
             }
         )
         .sheet(item: $selectedDetailAccount) { account in
-            SavingAccountDetailView(accountId: account.id)
+            SavingAccountDetailView(accountId: account.id, container: container)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }

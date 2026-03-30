@@ -10,34 +10,36 @@ import SwiftUI
 struct RootView: View {
 
     @EnvironmentObject var appState: AppState
-    @StateObject private var authVM      = AppContainer.shared.makeAuthViewModel()
-    @StateObject private var lockManager = AppContainer.lockManager
-    @StateObject private var lockVM      = AppContainer.shared.makeAppLockViewModel()
-    @StateObject private var userVM      = AppContainer.shared.makeUserViewModel()
-    
+    @EnvironmentObject private var container: AppContainer
+    @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var lockManager: AppLockManager
+    @EnvironmentObject private var lockVM: AppLockViewModel
+    @EnvironmentObject private var userVM: UserViewModel
+    @EnvironmentObject private var sessionManager: SessionManager
+
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
-    
+
     var body: some View {
         ZStack {
-            
+
             // ── Main flow ──────────────────────────────────────────────────
             NavigationStack {
                 switch appState.flow {
                 case .splash:
                     SplashScreen()
-                    
+
                 case .choice:
                     ChoiceScreen()
-                    
+
                 case .loginPhone:
                     PhoneNumberScreen(flowType: .login)
-                    
+
                 case .getStartedPhone:
                     PhoneNumberScreen(flowType: .getStarted)
-                    
+
                 case .otp:
                     OTPScreen(authVM: authVM)
-                    
+
                     // ── Step 1: set + confirm passcode ─────────────────────────
                 case .setupPasscode:
                     PasscodeSetupView(
@@ -55,7 +57,7 @@ struct RootView: View {
                             }
                         }
                     )
-                    
+
                     // ── Step 2: biometric opt-in ───────────────────────────────
                 case .enableBiometrics:
                     BiometricEnrollView(
@@ -69,10 +71,10 @@ struct RootView: View {
                             advanceAfterSecurity()
                         }   // skipped  → home or kyc
                     )
-                    
+
                 case .kyc:
-                    KYCView()
-                    
+                    KYCView(container: container)
+
                 case .home:
                     HomeTabBarView()
                 }
@@ -80,9 +82,9 @@ struct RootView: View {
             .environmentObject(authVM)
             .environmentObject(userVM)
             .environmentObject(lockManager)
-            .environmentObject(AppContainer.shared.sessionManager)
+            .environmentObject(sessionManager)
             .animation(.easeInOut, value: appState.flow)
-            
+
             // ── Lock overlay (returning users / background lock) ───────────
             // Suppressed during new-user registration arrival to prevent
             // spurious lock overlays caused by KYC UIViewController teardown.
@@ -107,15 +109,15 @@ struct RootView: View {
         .onChangeCompat(of: lockManager.requiresPhoneLogin) { required in
             guard required else { return }
             Task {
-                await AppContainer.shared.sessionManager.logout(appState: appState)
+                await sessionManager.logout(appState: appState)
                 lockManager.logout()
                 appState.flow = .loginPhone
             }
         }
     }
-    
+
     // MARK: -
-    
+
     /// After biometric step:
     /// registration → KYC  |  login (KYC already done) → Home
     private func advanceAfterSecurity() {

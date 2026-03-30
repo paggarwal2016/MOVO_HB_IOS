@@ -13,6 +13,7 @@ struct UserProfileView: View {
     @EnvironmentObject var userVM: UserViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var sessionManager: SessionManager
+    @EnvironmentObject var lockManager: AppLockManager
     
     var body: some View {
         
@@ -68,7 +69,7 @@ struct UserProfileView: View {
                         Task {
                             let success = await userVM.deleteAccount()
                             if success {
-                                AppContainer.lockManager.logout()
+                                lockManager.logout()
                                 await sessionManager.logout(appState: appState)
                                 ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
                             }

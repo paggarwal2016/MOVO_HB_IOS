@@ -12,6 +12,7 @@ struct SplashScreen: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject var sessionManager: SessionManager
 
     var body: some View {
         ZStack {
@@ -23,7 +24,7 @@ struct SplashScreen: View {
         .task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
 
-            let restored = await AppContainer.shared.sessionManager
+            let restored = await sessionManager
                 .restoreSession(appState: appState)
 
             guard restored else {

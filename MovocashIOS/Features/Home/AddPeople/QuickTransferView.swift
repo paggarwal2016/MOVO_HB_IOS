@@ -19,10 +19,10 @@ struct QuickTransferView: View {
 
     init(
         contact: AppContact,
-        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
+        container: AppContainer
     ) {
         self.contact = contact
-        _savingVM = StateObject(wrappedValue: savingVM)
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
 
     private var amount: Double { Double(amountText) ?? 0 }

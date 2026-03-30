@@ -10,6 +10,7 @@ import SwiftUI
 struct PasscodeSetupView: View {
 
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var lockManager: AppLockManager
     @ObservedObject var vm: AppLockViewModel
     @EnvironmentObject var sessionManager: SessionManager
 
@@ -26,7 +27,7 @@ struct PasscodeSetupView: View {
                 if vm.setupStep == .enterNew {
                     HStack {
                         BackButton { //TODO: Future Implementation will check below code logic
-                            AppContainer.lockManager.logout()
+                            lockManager.logout()
                             Task {
                                 await sessionManager.logout(appState: appState)
                                 appState.flow = .loginPhone
