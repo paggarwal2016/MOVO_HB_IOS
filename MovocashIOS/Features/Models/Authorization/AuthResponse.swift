@@ -13,7 +13,7 @@ nonisolated struct RefreshTokenResponse: Decodable {
 }
 
 nonisolated struct SuccessResponse: Decodable {
-    let success: Bool
+    let success: Bool?
 }
 
 nonisolated struct APIErrorResponse: Decodable {
