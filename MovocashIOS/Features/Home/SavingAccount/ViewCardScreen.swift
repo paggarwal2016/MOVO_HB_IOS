@@ -12,20 +12,8 @@ struct ViewCardScreen: View {
     @Binding var isPresented: Bool
     let accountId: Int
 
-    @StateObject private var savingVM: SavingsAccountViewModel
-    @StateObject private var vm: VCardViewModel
-
-    init(
-        isPresented: Binding<Bool>,
-        accountId: Int,
-        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel(),
-        vm: VCardViewModel = AppContainer.shared.makeVCardViewModel()
-    ) {
-        _isPresented = isPresented
-        self.accountId = accountId
-        _savingVM = StateObject(wrappedValue: savingVM)
-        _vm = StateObject(wrappedValue: vm)
-    }
+    @StateObject private var savingVM = AppContainer.shared.makeSavingsAccountViewModel()
+    @StateObject private var vm = AppContainer.shared.makeVCardViewModel()
     @State private var card: VCardsResponse?
     @State private var showCardDetail = false
     @State private var revealedCard: VCardsResponse?
@@ -106,18 +94,6 @@ struct ViewCardScreen: View {
             }
         }
         
-    }
-    
-    @ViewBuilder
-    private func dimmedOverlay(onDismiss: @escaping () -> Void, content: () -> some View) -> some View {
-        ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-                .onTapGesture { onDismiss() }
-            content()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
     }
     
     private func loadCard() async {

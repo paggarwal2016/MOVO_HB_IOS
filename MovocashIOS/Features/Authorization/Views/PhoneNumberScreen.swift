@@ -8,11 +8,6 @@
 import Foundation
 import SwiftUI
 
-enum PhoneFlowType : String {
-    case login = "login"
-    case getStarted = "registration"
-}
-
 struct PhoneNumberScreen: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var authVM: AuthViewModel
@@ -71,7 +66,7 @@ struct PhoneNumberScreen: View {
         }
         .onAppear() {
             authVM.reset()
-            appState.context = flowType.rawValue
+            appState.context = flowType
         }
     }
 }

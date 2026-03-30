@@ -79,3 +79,22 @@ extension View {
         modifier(NetworkMonitorModifier(appState: state))
     }
 }
+
+
+
+extension View {
+    @ViewBuilder
+    func dimmedOverlay<Content: View>(
+        onDismiss: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+            content()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
+    }
+}

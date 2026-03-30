@@ -18,22 +18,12 @@ struct DashboardView: View {
     @EnvironmentObject var userVM: UserViewModel
     
     // MARK: - VCard
-    
-    @StateObject private var vm: VCardViewModel
-    
+
+    @StateObject private var vm = AppContainer.shared.makeVCardViewModel()
+
     // MARK: - Savings
-    
-    @StateObject private var savingVM: SavingsAccountViewModel
-    
-    // MARK: - Init
-    
-    init(
-        vm: VCardViewModel = AppContainer.shared.makeVCardViewModel(),
-        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
-    ) {
-        _vm = StateObject(wrappedValue: vm)
-        _savingVM = StateObject(wrappedValue: savingVM)
-    }
+
+    @StateObject private var savingVM = AppContainer.shared.makeSavingsAccountViewModel()
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
     @State private var showAccountDetail = false
@@ -50,10 +40,7 @@ struct DashboardView: View {
     }
     
     private var isViewCashAccount: Bool {
-        guard let account = savingVM.accountList?.accounts.first(where: { !$0.isPrimary }) else {
-            return false
-        }
-        return !account.isPrimary
+        savingVM.accountList?.accounts.contains(where: { !$0.isPrimary }) ?? false
     }
     
     // MARK: - Body
@@ -225,18 +212,6 @@ struct DashboardView: View {
             }
         }
         
-    }
-    
-    @ViewBuilder
-    private func dimmedOverlay(onDismiss: @escaping () -> Void, content: () -> some View) -> some View {
-        ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-                .onTapGesture { onDismiss() }
-            content()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
     }
     
     // MARK: - Private Functions

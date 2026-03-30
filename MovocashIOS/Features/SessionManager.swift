@@ -12,6 +12,7 @@ import Combine
 @MainActor
 final class SessionManager: ObservableObject {
 
+    private var logoutTask: Task<Void, Never>?
     private let authManager: AuthManagerProtocol
     private let keychain: KeychainManagerProtocol
     private let kycManager: KYCManagerProtocol
@@ -118,8 +119,11 @@ final class SessionManager: ObservableObject {
         alertManager.showConfirmation(
             title: "Log Out",
             message: "Are you sure you want to log out?",
-            onConfirm: {
-                Task {
+            onConfirm: { [weak self] in
+                guard let self else { return }
+                logoutTask?.cancel()
+                logoutTask = Task { @MainActor [weak self] in
+                    guard let self else { return }
                     await self.logout(appState: appState)
                     onLockout()
                 }
@@ -157,7 +161,7 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Reset App State
     private func resetAppState(_ appState: AppState) {
-        appState.context = ""
+        appState.context = nil
         appState.otpVerified = false
         appState.isAuthenticated = false
         appState.flow = .choice

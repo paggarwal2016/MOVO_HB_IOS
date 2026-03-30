@@ -26,20 +26,19 @@ struct Transaction: Decodable, Identifiable, Sendable {
     let type: TransactionType
     let date: String
 
-    nonisolated(unsafe) private static let dateFormatter = ISO8601DateFormatter()
-
     func toItem() -> TransactionItem {
         let isCredit = type == .deposit
         let title    = isCredit
             ? (from ?? description ?? "Unknown")
             : (to   ?? description ?? "Unknown")
+        let formatter = ISO8601DateFormatter()
         return TransactionItem(
             id:       id,
             title:    title,
             subtitle: type.rawValue,
             amount:   amount,
             isCredit: isCredit,
-            date:     Self.dateFormatter.date(from: date) ?? Date(),
+            date:     formatter.date(from: date) ?? Date(),
             rawDate:  date
         )
     }

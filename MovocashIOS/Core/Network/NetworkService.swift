@@ -23,7 +23,7 @@ actor NetworkService: NetworkServiceProtocol {
     /// Callers that arrived while a refresh was already in-flight are parked here.
     /// When the refresh completes (or fails) every waiter is resumed exactly once.
     private var refreshWaiters: [CheckedContinuation<Void, Error>] = []
-    private let maxRetry = 2
+    private let maxAttempts = 3  // 1 initial attempt + 2 retries
 
     // Custom session for security
     private let session: URLSession
@@ -71,10 +71,10 @@ actor NetworkService: NetworkServiceProtocol {
         
         SecureLogger.debug("API URL: \(url)", category: .network)
         
-        // Attempt the initial request, then retry up to maxRetry times.
+        // Attempt the initial request, then retry up to maxAttempts - 1 times.
         var lastError: NetworkError = .unknown
 
-        for attempt in 0...maxRetry {
+        for attempt in 0..<maxAttempts {
             do {
                 if attempt == 0 {
                     return try await performRequest(request)
@@ -88,12 +88,14 @@ actor NetworkService: NetworkServiceProtocol {
                 // Only retry on specific recoverable errors
                 switch error {
                 case .unauthorized:
-                    guard attempt < maxRetry else { break }
+                    // Refresh the token exactly once (on first failure only).
+                    // If the retry also returns 401, throw immediately.
+                    guard attempt == 0 else { throw error }
                     try await refreshToken()
 
                 case .rateLimited, .serverError:
-                    guard attempt < maxRetry else { break }
-                    let backoff = UInt64(200_000_000) * UInt64(attempt + 1) // 200ms, 400ms, 600ms
+                    guard attempt < maxAttempts - 1 else { break }
+                    let backoff = UInt64(200_000_000) * UInt64(attempt + 1) // 200ms, 400ms
                     let jitter = UInt64.random(in: 0..<50_000_000) // up to 50ms
                     try await Task.sleep(nanoseconds: backoff + jitter)
 

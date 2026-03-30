@@ -12,6 +12,11 @@ enum AuthFlow {
     case splash, choice, loginPhone, getStartedPhone, otp, setupPasscode, enableBiometrics, kyc, home
 }
 
+enum PhoneFlowType: String {
+    case login = "login"
+    case getStarted = "registration"
+}
+
 enum NetworkStatus {
     case connected, disconnected
 }
@@ -19,7 +24,7 @@ enum NetworkStatus {
 @MainActor
 final class AppState: ObservableObject {
     @Published var flow: AuthFlow = .splash
-    @Published var context: String = ""
+    @Published var context: PhoneFlowType?
     @Published var otpVerified: Bool = false
     @Published var kycVerified: Bool = false
     @Published var isAuthenticated: Bool = false

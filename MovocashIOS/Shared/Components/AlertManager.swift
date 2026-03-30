@@ -8,20 +8,16 @@
 import SwiftUI
 import Combine
 
-enum AppAlertType: Identifiable {
+enum AppAlertType {
     case error(message: String)
     case confirmation(title: String, message: String)
     case custom(title: String, message: String, primary: String, secondary: String?)
     case textInput(title: String, message: String, placeholder: String)
+}
 
-    var id: String {
-        switch self {
-        case .error(let message): return "error_\(message)"
-        case .confirmation(let title, let message): return "confirmation_\(title)_\(message)"
-        case .custom(let title, let message, _, _): return "custom_\(title)_\(message)"
-        case .textInput(let title, _, _): return "textInput_\(title)"
-        }
-    }
+struct IdentifiedAlert: Identifiable {
+    let id = UUID()
+    let type: AppAlertType
 }
 
 // MARK: - AlertManager Protocol
@@ -43,7 +39,7 @@ extension AlertManagerProtocol {
 @MainActor
 final class AlertManager: ObservableObject, AlertManagerProtocol {
     static let shared = AlertManager()
-    @Published var currentAlert: AppAlertType?
+    @Published var currentAlert: IdentifiedAlert?
     @Published var inputText: String = ""
 
     private var primaryAction: (() -> Void)?
@@ -54,23 +50,23 @@ final class AlertManager: ObservableObject, AlertManagerProtocol {
     // MARK: - Show Alerts
     func showError(_ message: String, onDismiss: (() -> Void)? = nil) {
         primaryAction = onDismiss
-        currentAlert = .error(message: message)
+        currentAlert = IdentifiedAlert(type: .error(message: message))
     }
 
     func showConfirmation(title: String, message: String, onConfirm: (() -> Void)? = nil, onCancel: (() -> Void)? = nil) {
         primaryAction = onConfirm
         secondaryAction = onCancel
-        currentAlert = .confirmation(title: title, message: message)
+        currentAlert = IdentifiedAlert(type: .confirmation(title: title, message: message))
     }
 
     func showCustom(title: String, message: String, primary: String, secondary: String? = nil, onPrimary: (() -> Void)? = nil, onSecondary: (() -> Void)? = nil) {
         primaryAction = onPrimary
         secondaryAction = onSecondary
-        currentAlert = .custom(title: title, message: message, primary: primary, secondary: secondary)
+        currentAlert = IdentifiedAlert(type: .custom(title: title, message: message, primary: primary, secondary: secondary))
     }
-    
+
     // MARK: NEW — Text Input Alert
-    
+
     func showTextInput(
         title: String,
         message: String,
@@ -84,7 +80,7 @@ final class AlertManager: ObservableObject, AlertManagerProtocol {
             onCreate?(self.inputText)
         }
         secondaryAction = onCancel
-        currentAlert = .textInput(title: title, message: message, placeholder: placeholder)
+        currentAlert = IdentifiedAlert(type: .textInput(title: title, message: message, placeholder: placeholder))
     }
 
 
@@ -105,12 +101,12 @@ struct GlobalAlertModifier: ViewModifier {
                 // Existing native alerts (exclude textInput)
                 .alert(item: Binding(
                     get: {
-                        if case .textInput = alertManager.currentAlert { return nil }
+                        if case .textInput = alertManager.currentAlert?.type { return nil }
                         return alertManager.currentAlert
                     },
                     set: { newValue in Task { @MainActor in alertManager.currentAlert = newValue } }
                 )) { alert in
-                    switch alert {
+                    switch alert.type {
                     case .error(let message):
                         return Alert(
                             title: Text("Error"), message: Text(message),
@@ -141,7 +137,7 @@ struct GlobalAlertModifier: ViewModifier {
                 }
 
             // NEW — TextInput overlay alert
-            if case .textInput(let title, let message, let placeholder) = alertManager.currentAlert {
+            if case .textInput(let title, let message, let placeholder) = alertManager.currentAlert?.type {
                 TextInputAlertView(
                     title: title,
                     message: message,

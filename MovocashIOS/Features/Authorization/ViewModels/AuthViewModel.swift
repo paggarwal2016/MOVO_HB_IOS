@@ -14,7 +14,7 @@ final class AuthViewModel: ObservableObject {
     @Published var showOTP: Bool = false
     @Published var phoneNumber: String = ""
     @Published var phoneDisplayText: String = ""
-    @Published var context: String = ""
+    @Published var context: PhoneFlowType?
     private var isEnrolling = false
     
     private let network: NetworkServiceProtocol
@@ -48,7 +48,7 @@ final class AuthViewModel: ObservableObject {
         
         do {
             let _: SuccessResponse = try await network.request(
-                AuthAPI.messengerOTP(phoneNumber: phoneNumber, context: context)
+                AuthAPI.messengerOTP(phoneNumber: phoneNumber, context: context?.rawValue ?? "")
             )
             state = .otpSent
             showOTP = true
@@ -92,7 +92,7 @@ final class AuthViewModel: ObservableObject {
 
             await kycManager.configureSDK(officeId: AppConfig.officeId)
 
-            let destination: AuthFlow = context == PhoneFlowType.login.rawValue ? .home : .setupPasscode
+            let destination: AuthFlow = context == .login ? .home : .setupPasscode
             reset()
             onNavigate(destination)
         } catch {
