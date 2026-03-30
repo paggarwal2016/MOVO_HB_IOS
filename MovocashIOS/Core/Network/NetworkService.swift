@@ -118,6 +118,7 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         isRefreshing = true
+        defer { isRefreshing = false }
 
         do {
             let token = try await keychain.get("refresh_token", biometricPrompt: nil)
@@ -135,10 +136,8 @@ actor NetworkService: NetworkServiceProtocol {
             try await keychain.save(response.refreshToken, for: "refresh_token", protection: .backgroundSafe)
             await authManager.updateAccessToken(response.accessToken)
 
-            isRefreshing = false
             resumeWaiters(throwing: nil)       // success — single resume point
         } catch {
-            isRefreshing = false
             resumeWaiters(throwing: error)     // all failures — single resume point
             throw error
         }
