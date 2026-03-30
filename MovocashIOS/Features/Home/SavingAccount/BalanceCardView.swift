@@ -45,7 +45,7 @@ struct BalanceCardView: View {
                 // MARK: Balance
                 HStack {
                     Text(account.formattedBalance)
-                        .font(.system(size: 30, weight: .bold))
+                        .font(.system(size: 25, weight: .semibold))
                         .foregroundStyle(.black)
                     
                     Spacer()
