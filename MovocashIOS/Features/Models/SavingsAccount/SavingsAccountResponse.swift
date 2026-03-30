@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import SwiftUI
 
 // MARK: - Savings List
 
@@ -32,7 +31,7 @@ nonisolated struct SavingsAccountDetailsResponse: Decodable, Sendable, Identifia
     
     // MARK: - Coding Keys
     
-    enum CodingKeys: String, CodingKey {
+    enum CodingKeys: CodingKey {
         case id
         case accountNumber
         case clientName
@@ -144,13 +143,4 @@ enum AccountStatus: String, Decodable, Sendable {
         }
     }
     
-    var color: Color {
-        switch self {
-        case .active:   return .green
-        case .inactive: return .gray
-        case .frozen:   return .blue
-        case .closed:   return .red
-        case .unknown:  return .orange
-        }
-    }
 }

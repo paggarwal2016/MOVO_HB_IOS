@@ -43,8 +43,6 @@ actor SecureLogger {
     private static let generalLogger  = Logger(subsystem: subsystem, category: SecureCategory.general.rawValue)
     private static let securityLogger = Logger(subsystem: subsystem, category: SecureCategory.security.rawValue)
 
-    private init() {}
-
     // MARK: - Public APIs
 
     static func debug(

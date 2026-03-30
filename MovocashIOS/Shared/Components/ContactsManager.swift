@@ -8,7 +8,6 @@
 import Foundation
 @preconcurrency import Contacts
 import SwiftUI
-import Combine
 
 // MARK: - Protocol (the key to DI + testability)
 

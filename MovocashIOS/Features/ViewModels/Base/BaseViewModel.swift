@@ -8,12 +8,20 @@
 import Foundation
 import Combine
 
+// MARK: - ViewState
+
+enum ViewState: Equatable {
+    case idle
+    case loading
+    case success
+}
+
 @MainActor
 class BaseViewModel: ObservableObject {
-    
+
     // MARK: - Published
-    
-    @Published private(set) var state: AuthState = .idle
+
+    @Published private(set) var state: ViewState = .idle
     
     // MARK: - Dependencies
     

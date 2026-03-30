@@ -17,14 +17,10 @@ struct SavingAccountDetailView: View {
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var transVM: TransactionViewModel
 
-    init(
-        accountId: Int,
-        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel(),
-        transVM: TransactionViewModel = AppContainer.shared.makeTransactionViewModel()
-    ) {
+    init(accountId: Int) {
         self.accountId = accountId
-        _savingVM = StateObject(wrappedValue: savingVM)
-        _transVM = StateObject(wrappedValue: transVM)
+        _savingVM = StateObject(wrappedValue: AppContainer.shared.makeSavingsAccountViewModel())
+        _transVM = StateObject(wrappedValue: AppContainer.shared.makeTransactionViewModel())
     }
 
     @State private var copiedField: String?

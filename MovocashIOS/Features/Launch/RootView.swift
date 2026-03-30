@@ -120,9 +120,9 @@ struct RootView: View {
     /// registration → KYC  |  login (KYC already done) → Home
     private func advanceAfterSecurity() {
         switch appState.context {
-        case PhoneFlowType.getStarted.rawValue:   // "registration"
+        case .getStarted:
             appState.flow = .kyc
-        default:                                  // "login" or anything else
+        default:
             appState.flow = .home
         }
     }
