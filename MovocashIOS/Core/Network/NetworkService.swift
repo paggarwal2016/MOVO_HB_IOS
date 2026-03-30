@@ -42,7 +42,7 @@ actor NetworkService: NetworkServiceProtocol {
         config.timeoutIntervalForResource = 30       // Total resource timeout
 
         // Security best practices
-        config.waitsForConnectivity = true           // Wait for network recovery
+        config.waitsForConnectivity = false          // Fail fast — noInternet error handled in URLError categorization
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.urlCache = nil
 
@@ -224,7 +224,7 @@ actor NetworkService: NetworkServiceProtocol {
                 SecureLogger.error("API Error: \(apiError.message)", category: .network)
                 throw NetworkError.serverMessage(apiError.message)
             }
-            throw NetworkError.unknown
+            throw NetworkError.apiError(http.statusCode)
         }
         
         // Decode successful response — treat 204 / empty body as `{}`
