@@ -15,21 +15,25 @@ struct MovocashIOSApp: App {
     @StateObject private var authVM: AuthViewModel
     @StateObject private var userVM: UserViewModel
     @StateObject private var lockVM: AppLockViewModel
+    @StateObject private var passcodeSetupVM: AppLockViewModel
 
     init() {
         let c = AppContainer()
-        _appState    = StateObject(wrappedValue: AppState())
-        _container   = StateObject(wrappedValue: c)
-        _lockManager = StateObject(wrappedValue: c.lockManager)
-        _authVM      = StateObject(wrappedValue: c.makeAuthViewModel())
-        _userVM      = StateObject(wrappedValue: c.makeUserViewModel())
-        _lockVM      = StateObject(wrappedValue: c.makeAppLockViewModel())
+        let setupVM = AppLockViewModel(lockManager: c.lockManager)
+        setupVM.isSetupMode = true
+        _appState         = StateObject(wrappedValue: AppState())
+        _container        = StateObject(wrappedValue: c)
+        _lockManager      = StateObject(wrappedValue: c.lockManager)
+        _authVM           = StateObject(wrappedValue: c.makeAuthViewModel())
+        _userVM           = StateObject(wrappedValue: c.makeUserViewModel())
+        _lockVM           = StateObject(wrappedValue: c.makeAppLockViewModel())
+        _passcodeSetupVM  = StateObject(wrappedValue: setupVM)
         TabBarAppearance.configure()
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView(passcodeSetupVM: passcodeSetupVM)
                 .preferredColorScheme(.light)
                 .environmentObject(appState)
                 .environmentObject(container)

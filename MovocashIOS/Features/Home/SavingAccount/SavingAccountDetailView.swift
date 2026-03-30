@@ -26,31 +26,45 @@ struct SavingAccountDetailView: View {
     @State private var copiedField: String?
 
     var body: some View {
-        ZStack {
-            NavigationStack {
-                Group {
-                    if let detail = savingVM.accountDetail {
-                        detailContent(detail)
-                    } else {
-                        Color(.systemGroupedBackground).ignoresSafeArea()
-                    }
-                }
-                .navigationTitle(savingVM.accountDetail?.nickname ?? "Account Details")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
-                            .foregroundStyle(Color.primary)
-                            .fontWeight(.semibold)
-                    }
+        NavigationStack {
+            Group {
+                if savingVM.state == .loading || transVM.state == .loading {
+                    skeletonContent
+                } else if let detail = savingVM.accountDetail {
+                    detailContent(detail)
+                } else {
+                    Color(.systemGroupedBackground).ignoresSafeArea()
                 }
             }
-
-            if savingVM.state == .loading {
-                SpinnerView()
+            .navigationTitle(savingVM.accountDetail?.nickname ?? "Account Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(Color.primary)
+                        .fontWeight(.semibold)
+                }
             }
         }
         .task { await loadDetail() }
+    }
+
+    // MARK: - Skeleton
+
+    private var skeletonContent: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 12) {
+                AccountCardSkeleton()
+                VStack(spacing: 8) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        TransactionRowSkeleton()
+                    }
+                }
+                .padding(.horizontal, 10)
+            }
+            .padding(.vertical, 10)
+        }
+        .background(Color(.systemGroupedBackground))
     }
 
     // MARK: - Detail Content
@@ -213,8 +227,9 @@ struct SavingAccountDetailView: View {
     // MARK: - Load
 
     private func loadDetail() async {
-        await savingVM.loadAccountDetail(accountID: accountId)
-        await transVM.loadTransactions(max: 50, accountId: accountId)
+        async let accountDetail: Void = savingVM.loadAccountDetail(accountID: accountId)
+        async let transactions: Void = transVM.loadTransactions(max: 50, accountId: accountId)
+        _ = await (accountDetail, transactions)
     }
 }
 

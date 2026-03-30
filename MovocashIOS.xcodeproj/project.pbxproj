@@ -44,6 +44,8 @@
 		14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B824E02F51898E003ACBD0 /* KYCManager.swift */; };
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
+		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
+		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
 		14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D8165E2F73C30300B7D1EF /* ActionCard.swift */; };
 		14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D816602F73D3B100B7D1EF /* ContactsManager.swift */; };
 		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
@@ -128,6 +130,8 @@
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14C623DE2F6AC39100D0B719 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		14C623E02F6AC7AC00D0B719 /* StatusRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusRow.swift; sourceTree = "<group>"; };
+		14D36C582F7AAF150024760F /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
+		14D36C592F7AAF150024760F /* SkeletonViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonViews.swift; sourceTree = "<group>"; };
 		14D8165E2F73C30300B7D1EF /* ActionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionCard.swift; sourceTree = "<group>"; };
 		14D816602F73D3B100B7D1EF /* ContactsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsManager.swift; sourceTree = "<group>"; };
 		14DBC5912F50204D000D84FD /* SecureLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureLogger.swift; sourceTree = "<group>"; };
@@ -368,6 +372,8 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				14D36C582F7AAF150024760F /* ShimmerModifier.swift */,
+				14D36C592F7AAF150024760F /* SkeletonViews.swift */,
 				1489F26B2F67E0C20046FAD4 /* TextInputAlert */,
 				146819702F4DE6CF00BED014 /* SpinnerView.swift */,
 				146819A02F4F0A2100BED014 /* AlertManager.swift */,
@@ -621,6 +627,8 @@
 				146819822F4DE6CF00BED014 /* SSLPinning.swift in Sources */,
 				142337C02F5808250030B4E7 /* KYCView.swift in Sources */,
 				146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */,
+				14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */,
+				14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */,
 				146819832F4DE6CF00BED014 /* AuthManager.swift in Sources */,
 				146819842F4DE6CF00BED014 /* JailbreakDetector.swift in Sources */,
 				142337BE2F5807FB0030B4E7 /* OTPScreen.swift in Sources */,

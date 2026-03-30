@@ -9,6 +9,18 @@ import Foundation
 import SwiftUI
 import Combine
 
+// MARK: - Session Restore Result
+
+enum SessionRestoreResult {
+    /// Tokens found and loaded — proceed to home.
+    case restored
+    /// No tokens in keychain — user has never logged in or explicitly logged out.
+    case notLoggedIn
+    /// Keychain is temporarily locked (device rebooted, not yet unlocked).
+    /// Tokens exist — do not present login, show a retry prompt instead.
+    case keychainLocked
+}
+
 @MainActor
 final class SessionManager: ObservableObject {
 
@@ -70,23 +82,40 @@ final class SessionManager: ObservableObject {
     }
 
     // MARK: - Restore Session
-    func restoreSession(appState: AppState) async -> Bool {
-        guard let accessToken = try? await keychain.get("access_token", biometricPrompt: nil),
-              let refreshToken = try? await keychain.get("refresh_token", biometricPrompt: nil),
-              !accessToken.isEmpty,
-              !refreshToken.isEmpty else {
-            return false
-        }
 
-        if isAccessTokenExpired(accessToken) {
-            // Token is stale — load it anyway so NetworkService's automatic
-            // 401-refresh flow can exchange the refresh token on the first request.
-            SecureLogger.warning("Access token expired on restore — refresh will occur on first request", category: .auth)
-        }
+    func restoreSession(appState: AppState) async -> SessionRestoreResult {
+        do {
+            let accessToken  = try await keychain.get("access_token",  biometricPrompt: nil)
+            let refreshToken = try await keychain.get("refresh_token", biometricPrompt: nil)
 
-        await authManager.updateAccessToken(accessToken)
-        appState.isAuthenticated = true
-        return true
+            guard !accessToken.isEmpty, !refreshToken.isEmpty else {
+                return .notLoggedIn
+            }
+
+            if isAccessTokenExpired(accessToken) {
+                // Token is stale — load it anyway so NetworkService's automatic
+                // 401-refresh flow can exchange the refresh token on the first request.
+                SecureLogger.warning("Access token expired on restore — refresh will occur on first request", category: .auth)
+            }
+
+            await authManager.updateAccessToken(accessToken)
+            appState.isAuthenticated = true
+            return .restored
+
+        } catch KeychainError.interactionNotAllowed {
+            // Device rebooted and has not been unlocked yet — tokens exist but are
+            // temporarily inaccessible. Do NOT treat this as "not logged in".
+            SecureLogger.warning("Keychain locked on session restore — device not yet unlocked since boot", category: .auth)
+            return .keychainLocked
+
+        } catch KeychainError.itemNotFound {
+            SecureLogger.info("No session tokens found — user not logged in", category: .auth)
+            return .notLoggedIn
+
+        } catch {
+            SecureLogger.error("Unexpected keychain error on session restore: \(error.localizedDescription)", category: .auth)
+            return .notLoggedIn
+        }
     }
 
     // MARK: - JWT Expiry

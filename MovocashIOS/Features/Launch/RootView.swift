@@ -17,6 +17,10 @@ struct RootView: View {
     @EnvironmentObject private var userVM: UserViewModel
     @EnvironmentObject private var sessionManager: SessionManager
 
+    /// Passed directly — NOT via environment — to avoid AppLockViewModel type
+    /// collision with lockVM which would cause SwiftUI to serve the wrong instance.
+    @ObservedObject var passcodeSetupVM: AppLockViewModel
+
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -43,11 +47,7 @@ struct RootView: View {
                     // ── Step 1: set + confirm passcode ─────────────────────────
                 case .setupPasscode:
                     PasscodeSetupView(
-                        vm: {
-                            let vm = AppLockViewModel(lockManager: lockManager)
-                            vm.isSetupMode = true   // routes appendDigit → setupFlow
-                            return vm
-                        }(),
+                        vm: passcodeSetupVM,
                         onSuccess: {
                             // Passcode confirmed — move to biometric opt-in
                             if lockManager.isBiometricAvailable {

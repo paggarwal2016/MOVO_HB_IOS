@@ -24,19 +24,29 @@ struct SplashScreen: View {
         .task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
 
-            let restored = await sessionManager
-                .restoreSession(appState: appState)
+            let result = await sessionManager.restoreSession(appState: appState)
 
-            guard restored else {
+            switch result {
+            case .restored:
+                lockManager.evaluateOnLaunch()
+                appState.flow = .home
+                if lockManager.state == .locked {
+                    await lockManager.unlockWithBiometric()
+                }
+
+            case .keychainLocked:
+                // Tokens exist but keychain is locked — device rebooted and not yet
+                // unlocked. Inform the user and fall back to login rather than
+                // silently appearing as if they were never logged in.
+                ToastManager.shared.show(
+                    "Your session could not be restored. Please unlock your device and try again.",
+                    style: .error,
+                    position: .bottom
+                )
                 appState.flow = .choice
-                return
-            }
 
-            lockManager.evaluateOnLaunch()
-            appState.flow = .home
-
-            if lockManager.state == .locked {
-                await lockManager.unlockWithBiometric()
+            case .notLoggedIn:
+                appState.flow = .choice
             }
             
         }

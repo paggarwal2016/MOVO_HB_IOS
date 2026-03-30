@@ -91,6 +91,7 @@ struct PasscodeSetupView: View {
                 Spacer()
             }
         }
+        .onAppear { vm.resetSetupFlow() }
         // Auto-advance the moment setupStep becomes .success
         .onChange(of: vm.setupStep) { step in
             if step == .success {
