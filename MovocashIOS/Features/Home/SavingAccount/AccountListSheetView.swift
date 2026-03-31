@@ -13,14 +13,17 @@ struct AccountListSheetView: View {
     @Binding var isPresented: Bool
     @StateObject private var savingVM: SavingsAccountViewModel
 
+    private let container: AppContainer
+
     init(
         savingsList: Binding<SavingsAccountListResponse?>,
         isPresented: Binding<Bool>,
-        savingVM: SavingsAccountViewModel = AppContainer.shared.makeSavingsAccountViewModel()
+        container: AppContainer
     ) {
         _savingsList = savingsList
         _isPresented = isPresented
-        _savingVM = StateObject(wrappedValue: savingVM)
+        self.container = container
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
 
     @State private var accounts: [SavingsAccountDetailsResponse] = []
@@ -61,7 +64,8 @@ struct AccountListSheetView: View {
                     }
             }
 
-            if savingVM.state == .loading {
+            // Show SpinnerView only during add/update/delete (list already populated)
+            if savingVM.state == .loading && !accounts.isEmpty {
                 SpinnerView()
             }
         }
@@ -85,7 +89,7 @@ struct AccountListSheetView: View {
             }
         )
         .sheet(item: $selectedDetailAccount) { account in
-            SavingAccountDetailView(accountId: account.id)
+            SavingAccountDetailView(accountId: account.id, container: container)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -110,32 +114,40 @@ struct AccountListSheetView: View {
     // MARK: - Account List
 
     private var accountList: some View {
-        List(accounts, id: \.id) { account in
-            AccountRowView(
-                account: account
-            )
-            .contentShape(Rectangle())
-            .onTapGesture {
-                selectedDetailAccount = account
-            }
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color(.systemGroupedBackground))
-            .listRowInsets(EdgeInsets())
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button {
-                    confirmDelete(account: account)
-                } label: {
-                    Label("Delete", systemImage: "trash")
+        List {
+            if savingVM.state == .loading && accounts.isEmpty {
+                // First-time load — show skeleton placeholders
+                ForEach(0..<4, id: \.self) { _ in
+                    AccountRowSkeleton()
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color(.systemGroupedBackground))
+                        .listRowInsets(EdgeInsets())
                 }
-                .tint(Color.primary)
+            } else {
+                ForEach(accounts, id: \.id) { account in
+                    AccountRowView(account: account)
+                        .contentShape(Rectangle())
+                        .onTapGesture { selectedDetailAccount = account }
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color(.systemGroupedBackground))
+                        .listRowInsets(EdgeInsets())
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                confirmDelete(account: account)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .tint(Color.primary)
 
-                Button {
-                    accountToEdit = account
-                    showEditNickname = true
-                } label: {
-                    Label("Edit", systemImage: "pencil")
+                            Button {
+                                accountToEdit = account
+                                showEditNickname = true
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .tint(Color.secondary)
+                        }
                 }
-                .tint(Color.secondary)
             }
         }
         .listStyle(.plain)

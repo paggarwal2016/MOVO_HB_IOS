@@ -42,13 +42,13 @@ actor NetworkService: NetworkServiceProtocol {
         config.timeoutIntervalForResource = 30       // Total resource timeout
 
         // Security best practices
-        config.waitsForConnectivity = true           // Wait for network recovery
+        config.waitsForConnectivity = false          // Fail fast — noInternet error handled in URLError categorization
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.urlCache = nil
 
         self.session = URLSession(
             configuration: config,
-            delegate: SecureSessionDelegate(), // customizable
+            delegate: SecureSessionDelegate(enabled: false), // TODO: - configure the cert and set true
             delegateQueue: nil
         )
         self.builder = RequestBuilder(authManager: authManager)
@@ -118,6 +118,7 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         isRefreshing = true
+        defer { isRefreshing = false }
 
         do {
             let token = try await keychain.get("refresh_token", biometricPrompt: nil)
@@ -135,10 +136,8 @@ actor NetworkService: NetworkServiceProtocol {
             try await keychain.save(response.refreshToken, for: "refresh_token", protection: .backgroundSafe)
             await authManager.updateAccessToken(response.accessToken)
 
-            isRefreshing = false
             resumeWaiters(throwing: nil)       // success — single resume point
         } catch {
-            isRefreshing = false
             resumeWaiters(throwing: error)     // all failures — single resume point
             throw error
         }
@@ -225,7 +224,7 @@ actor NetworkService: NetworkServiceProtocol {
                 SecureLogger.error("API Error: \(apiError.message)", category: .network)
                 throw NetworkError.serverMessage(apiError.message)
             }
-            throw NetworkError.unknown
+            throw NetworkError.apiError(http.statusCode)
         }
         
         // Decode successful response — treat 204 / empty body as `{}`

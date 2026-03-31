@@ -91,6 +91,15 @@ final class AppLockViewModel: ObservableObject {
         alphanumericInput = ""
     }
 
+    /// Resets all setup-flow state. Call when PasscodeSetupView appears.
+    func resetSetupFlow() {
+        setupStep     = .enterNew
+        firstEntryPin = ""
+        statusMessage = ""
+        shouldShake   = false
+        clearInput()
+    }
+
     // MARK: - Unlock submit
 
     func submitPIN() async {

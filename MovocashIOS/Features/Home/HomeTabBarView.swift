@@ -52,6 +52,8 @@ struct HomeTabBarView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var userVM: UserViewModel
+    @EnvironmentObject private var container: AppContainer
+    @EnvironmentObject private var lockManager: AppLockManager
     
     @State private var selectedTab: Tab = .home
     
@@ -86,7 +88,7 @@ private extension HomeTabBarView {
     @ViewBuilder
     func destination(for tab: Tab) -> some View {
         switch tab {
-        case .home:     DashboardView()
+        case .home:     DashboardView(container: container)
         case .accounts: AccountsView()
         case .profile:  UserProfileView()
         }
@@ -100,7 +102,7 @@ private extension HomeTabBarView {
     
     func handleOnAppear() {
         guard appState.isNewRegistration else { return }
-        AppContainer.lockManager.resetToUnlocked()
+        lockManager.resetToUnlocked()
         appState.isNewRegistration = false
     }
     

@@ -13,12 +13,13 @@ struct UserProfileView: View {
     @EnvironmentObject var userVM: UserViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var sessionManager: SessionManager
+    @EnvironmentObject var lockManager: AppLockManager
     
     var body: some View {
         
         Group {
             if userVM.state == .loading {
-                SpinnerView()
+                profileSkeleton
             } else if let profile = userVM.profile {
                 profileList(profile)
             } else {
@@ -32,6 +33,27 @@ struct UserProfileView: View {
         }
     }
     
+    // MARK: - Profile Skeleton
+
+    private var profileSkeleton: some View {
+        List {
+            Section {
+                ProfileAvatarSkeleton()
+            }
+            Section("Personal info") {
+                ForEach(0..<4, id: \.self) { _ in ProfileRowSkeleton() }
+            }
+            Section("Contact") {
+                ForEach(0..<2, id: \.self) { _ in ProfileRowSkeleton(leadingWidth: 50, trailingWidth: 150) }
+            }
+            Section("Address") {
+                ForEach(0..<4, id: \.self) { _ in ProfileRowSkeleton(leadingWidth: 60, trailingWidth: 130) }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .allowsHitTesting(false)
+    }
+
     // MARK: - Empty / Error State
     
     private var emptyState: some View {
@@ -68,7 +90,7 @@ struct UserProfileView: View {
                         Task {
                             let success = await userVM.deleteAccount()
                             if success {
-                                AppContainer.lockManager.logout()
+                                lockManager.logout()
                                 await sessionManager.logout(appState: appState)
                                 ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
                             }

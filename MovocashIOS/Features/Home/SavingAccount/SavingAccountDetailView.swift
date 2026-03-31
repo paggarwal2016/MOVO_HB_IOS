@@ -17,40 +17,54 @@ struct SavingAccountDetailView: View {
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var transVM: TransactionViewModel
 
-    init(accountId: Int) {
+    init(accountId: Int, container: AppContainer) {
         self.accountId = accountId
-        _savingVM = StateObject(wrappedValue: AppContainer.shared.makeSavingsAccountViewModel())
-        _transVM = StateObject(wrappedValue: AppContainer.shared.makeTransactionViewModel())
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
     }
 
     @State private var copiedField: String?
 
     var body: some View {
-        ZStack {
-            NavigationStack {
-                Group {
-                    if let detail = savingVM.accountDetail {
-                        detailContent(detail)
-                    } else {
-                        Color(.systemGroupedBackground).ignoresSafeArea()
-                    }
-                }
-                .navigationTitle(savingVM.accountDetail?.nickname ?? "Account Details")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
-                            .foregroundStyle(Color.primary)
-                            .fontWeight(.semibold)
-                    }
+        NavigationStack {
+            Group {
+                if savingVM.state == .loading || transVM.state == .loading {
+                    skeletonContent
+                } else if let detail = savingVM.accountDetail {
+                    detailContent(detail)
+                } else {
+                    Color(.systemGroupedBackground).ignoresSafeArea()
                 }
             }
-
-            if savingVM.state == .loading {
-                SpinnerView()
+            .navigationTitle(savingVM.accountDetail?.nickname ?? "Account Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(Color.primary)
+                        .fontWeight(.semibold)
+                }
             }
         }
         .task { await loadDetail() }
+    }
+
+    // MARK: - Skeleton
+
+    private var skeletonContent: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 12) {
+                AccountCardSkeleton()
+                VStack(spacing: 8) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        TransactionRowSkeleton()
+                    }
+                }
+                .padding(.horizontal, 10)
+            }
+            .padding(.vertical, 10)
+        }
+        .background(Color(.systemGroupedBackground))
     }
 
     // MARK: - Detail Content
@@ -128,7 +142,7 @@ struct SavingAccountDetailView: View {
                         .foregroundStyle(.white.opacity(0.7))
                         .tracking(1.2)
                     Text(detail.formattedBalance)
-                        .font(.system(size: 32, weight: .bold))
+                        .font(.system(size: 25, weight: .semibold))
                         .foregroundStyle(.white)
                 }
 
@@ -201,8 +215,8 @@ struct SavingAccountDetailView: View {
                         TransactionRow(item: item)
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 5)
             }
         }
         .background(Color(.systemBackground))
@@ -213,8 +227,9 @@ struct SavingAccountDetailView: View {
     // MARK: - Load
 
     private func loadDetail() async {
-        await savingVM.loadAccountDetail(accountID: accountId)
-        await transVM.loadTransactions(max: 50, accountId: accountId)
+        async let accountDetail: Void = savingVM.loadAccountDetail(accountID: accountId)
+        async let transactions: Void = transVM.loadTransactions(max: 50, accountId: accountId)
+        _ = await (accountDetail, transactions)
     }
 }
 
@@ -225,7 +240,7 @@ struct TransactionRow: View {
     let item: TransactionItem
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ZStack {
                 Circle()
                     .fill(item.isCredit ? Color.green.opacity(0.12) : Color.red.opacity(0.12))
@@ -255,11 +270,11 @@ struct TransactionRow: View {
 
             Text(item.amountFormatted)
                 .font(.subheadline)
-                .fontWeight(.semibold)
+                .fontWeight(.medium)
                 .foregroundStyle(item.isCredit ? .green : .red)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }

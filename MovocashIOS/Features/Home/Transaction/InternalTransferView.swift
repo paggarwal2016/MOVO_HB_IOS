@@ -37,14 +37,14 @@ struct InternalTransferView: View {
         toClientId: Int,
         fromAccount: SavingsAccountDetailsResponse?,
         nonPrimaryAccounts: [SavingsAccountDetailsResponse],
-        transVM: TransactionViewModel = AppContainer.shared.makeTransactionViewModel(),
+        container: AppContainer,
         onDismiss: @escaping () -> Void,
     ) {
         self.toClientId = toClientId
         let primary = fromAccount.map { [$0] } ?? []
         self.allAccounts = primary + nonPrimaryAccounts
         _selectedFromAccount = State(initialValue: fromAccount)
-        _transVM = StateObject(wrappedValue: transVM)
+        _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         self.onDismiss = onDismiss
     }
 

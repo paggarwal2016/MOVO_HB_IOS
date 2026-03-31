@@ -12,8 +12,15 @@ struct ViewCardScreen: View {
     @Binding var isPresented: Bool
     let accountId: Int
 
-    @StateObject private var savingVM = AppContainer.shared.makeSavingsAccountViewModel()
-    @StateObject private var vm = AppContainer.shared.makeVCardViewModel()
+    @StateObject private var savingVM: SavingsAccountViewModel
+    @StateObject private var vm: VCardViewModel
+
+    init(isPresented: Binding<Bool>, accountId: Int, container: AppContainer) {
+        _isPresented = isPresented
+        self.accountId = accountId
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        _vm = StateObject(wrappedValue: container.makeVCardViewModel())
+    }
     @State private var card: VCardsResponse?
     @State private var showCardDetail = false
     @State private var revealedCard: VCardsResponse?
