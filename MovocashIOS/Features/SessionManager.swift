@@ -180,6 +180,7 @@ final class SessionManager: ObservableObject {
     func logout(appState: AppState) async {
 
         await authManager.clearSession()
+        await PushManager.shared.deleteTokenOnLogout()
 
         do {
             try await keychain.delete("access_token")

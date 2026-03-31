@@ -16,6 +16,7 @@ struct RootView: View {
     @EnvironmentObject private var lockVM: AppLockViewModel
     @EnvironmentObject private var userVM: UserViewModel
     @EnvironmentObject private var sessionManager: SessionManager
+    @EnvironmentObject private var pushManager: PushManager
 
     /// Passed directly — NOT via environment — to avoid AppLockViewModel type
     /// collision with lockVM which would cause SwiftUI to serve the wrong instance.
@@ -105,6 +106,7 @@ struct RootView: View {
                 // New user or first login — go through security setup
                 appState.flow = .setupPasscode
             }
+            Task { await pushManager.requestPermission() }
         }
         .onChangeCompat(of: lockManager.requiresPhoneLogin) { required in
             guard required else { return }

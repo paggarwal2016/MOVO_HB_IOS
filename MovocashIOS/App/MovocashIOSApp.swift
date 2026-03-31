@@ -9,6 +9,7 @@ import SwiftUI
 
 @main
 struct MovocashIOSApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var appState: AppState
     @StateObject private var container: AppContainer
     @StateObject private var lockManager: AppLockManager
@@ -16,6 +17,7 @@ struct MovocashIOSApp: App {
     @StateObject private var userVM: UserViewModel
     @StateObject private var lockVM: AppLockViewModel
     @StateObject private var passcodeSetupVM: AppLockViewModel
+    @StateObject private var pushManager: PushManager
 
     init() {
         let c = AppContainer()
@@ -28,6 +30,7 @@ struct MovocashIOSApp: App {
         _userVM           = StateObject(wrappedValue: c.makeUserViewModel())
         _lockVM           = StateObject(wrappedValue: c.makeAppLockViewModel())
         _passcodeSetupVM  = StateObject(wrappedValue: setupVM)
+        _pushManager      = StateObject(wrappedValue: PushManager.shared)
         TabBarAppearance.configure()
     }
 
@@ -42,9 +45,15 @@ struct MovocashIOSApp: App {
                 .environmentObject(userVM)
                 .environmentObject(lockVM)
                 .environmentObject(container.sessionManager)
+                .environmentObject(pushManager)
                 .networkMonitor(state: appState)
                 .globalToast()
                 .globalAlert()
         }
     }
 }
+
+
+
+
+
