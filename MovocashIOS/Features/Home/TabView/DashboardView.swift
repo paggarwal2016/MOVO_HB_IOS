@@ -25,12 +25,17 @@ struct DashboardView: View {
 
     @StateObject private var savingVM: SavingsAccountViewModel
 
+    // MARK: - ACH / Wallet
+
+    @StateObject private var achVM: ACHViewModel
+
     private let container: AppContainer
 
     init(container: AppContainer) {
         self.container = container
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        _achVM = StateObject(wrappedValue: container.makeACHViewModel())
     }
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
@@ -197,6 +202,38 @@ struct DashboardView: View {
             }
             .padding()
             .frame(height: 60)
+            
+            PrimaryButton(title: "Activate your card") {
+//                Task {
+//                    await achVM.activateVirtualCard(
+//                        pin: "1991",
+//                        accountId: 479,
+//                        localizedDescription: "Virtual Debit Card"
+//                    )
+//                    
+//                    guard let accountId = displayAccount?.id else { return }
+//                    let response = try? await achVM.fetchLinkToken(accountID: accountId)
+//             }
+                
+                
+                // working true
+//                Task {
+//                      let canAdd = await achVM.checkCanAddToWallet(
+//                          primaryAccountNumberSuffix: "000000227",
+//                          localizedDescription: "Test"
+//                      )
+//                      print("canAddVirtualCardToAppleWallet: \(canAdd)") // true
+//                  }
+                
+                
+//                Task {
+//                    await achVM.activateCard(pin: "1991", accountId: 227)
+//                    print("virtualCard",achVM.virtualCard)
+//                }
+                                
+            }
+            .padding()
+            .padding(.top, 40)
             
             ActionCard(title: "Quick transfers",
                        description: "Send money instantly to anyone in your contact list.",

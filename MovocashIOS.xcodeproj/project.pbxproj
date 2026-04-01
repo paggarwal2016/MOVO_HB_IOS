@@ -12,7 +12,6 @@
 		142337BC2F5807C70030B4E7 /* PhoneNumberScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */; };
 		142337BE2F5807FB0030B4E7 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BD2F5807FB0030B4E7 /* OTPScreen.swift */; };
 		142337C02F5808250030B4E7 /* KYCView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BF2F5808250030B4E7 /* KYCView.swift */; };
-		142D702B2F70F6B10012BEF7 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 142D702A2F70F6B10012BEF7 /* MobileBankingSDK */; };
 		1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791A2F6D430500EADEA2 /* ProfileImageView.swift */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
 		146819772F4DE6CF00BED014 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194F2F4DE6CF00BED014 /* Environment.swift */; };
@@ -58,6 +57,7 @@
 		14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */; };
 		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
 		14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */; };
+		14FF6F262F7CF18200EC0B57 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14FF6F252F7CF18200EC0B57 /* MobileBankingSDK */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -144,6 +144,7 @@
 		14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderProvider.swift; sourceTree = "<group>"; };
 		14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
 		14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberValidator.swift; sourceTree = "<group>"; };
+		14FF6F272F7CF24900EC0B57 /* MovocashIOSRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSRelease.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -212,6 +213,16 @@
 			path = Reachability;
 			sourceTree = "<group>";
 		};
+		14FF6FB42F7CF58500EC0B57 /* Service */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Service;
+			sourceTree = "<group>";
+		};
+		14FF6FB62F7CF58500EC0B57 /* ViewModel */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -219,7 +230,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				142D702B2F70F6B10012BEF7 /* MobileBankingSDK in Frameworks */,
+				14FF6F262F7CF18200EC0B57 /* MobileBankingSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,6 +372,8 @@
 		1468196F2F4DE6CF00BED014 /* KYC */ = {
 			isa = PBXGroup;
 			children = (
+				14FF6FB42F7CF58500EC0B57 /* Service */,
+				14FF6FB62F7CF58500EC0B57 /* ViewModel */,
 				142337BF2F5808250030B4E7 /* KYCView.swift */,
 				146BBC712F71243A00B3593A /* KYCViewModel.swift */,
 				14DCE1382F595474008A8DC4 /* KYCEnum.swift */,
@@ -400,6 +413,7 @@
 		146819762F4DE6CF00BED014 /* MovocashIOS */ = {
 			isa = PBXGroup;
 			children = (
+				14FF6F272F7CF24900EC0B57 /* MovocashIOSRelease.entitlements */,
 				146819602F4DE6CF00BED014 /* Core */,
 				1468196D2F4DE6CF00BED014 /* Features */,
 				1468196F2F4DE6CF00BED014 /* KYC */,
@@ -486,10 +500,12 @@
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,
+				14FF6FB42F7CF58500EC0B57 /* Service */,
+				14FF6FB62F7CF58500EC0B57 /* ViewModel */,
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (
-				142D702A2F70F6B10012BEF7 /* MobileBankingSDK */,
+				14FF6F252F7CF18200EC0B57 /* MobileBankingSDK */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -568,7 +584,7 @@
 			mainGroup = 14BF482E2F4C873A00FD7B53;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				142D70292F70F6B10012BEF7 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				14FF6F242F7CF18200EC0B57 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -858,9 +874,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = MovocashIOS/MovocashIOSRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 57J74H5MVZ;
+				DEVELOPMENT_TEAM = EW9324XEV9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MovoCash;
@@ -918,6 +935,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = EW9324XEV9;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
@@ -957,6 +975,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = EW9324XEV9;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "test.MOVO-HB-IOSUITests";
@@ -1013,20 +1032,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		142D70292F70F6B10012BEF7 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+		14FF6F242F7CF18200EC0B57 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.5.0;
+				minimumVersion = 1.6.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		142D702A2F70F6B10012BEF7 /* MobileBankingSDK */ = {
+		14FF6F252F7CF18200EC0B57 /* MobileBankingSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 142D70292F70F6B10012BEF7 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			package = 14FF6F242F7CF18200EC0B57 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
 			productName = MobileBankingSDK;
 		};
 /* End XCSwiftPackageProductDependency section */

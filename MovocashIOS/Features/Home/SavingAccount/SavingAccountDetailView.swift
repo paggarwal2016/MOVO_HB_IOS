@@ -16,11 +16,14 @@ struct SavingAccountDetailView: View {
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var transVM: TransactionViewModel
+    @StateObject private var achVM: ACHViewModel
+    @State private var showAddCard = false
 
     init(accountId: Int, container: AppContainer) {
         self.accountId = accountId
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
+        _achVM = StateObject(wrappedValue: container.makeACHViewModel())
     }
 
     @State private var copiedField: String?
@@ -46,6 +49,25 @@ struct SavingAccountDetailView: View {
                 }
             }
         }
+        .pinInputAlert(
+            isPresented: $showAddCard,
+            title: "Activate Card",
+            message: "In order to activate card you need to create 4 digit PIN",
+            pinPlaceholder: "4-digit PIN",
+            confirmPlaceholder: "Re-enter PIN",
+            config: TextInputAlertConfig(primaryLabel: "Activate",
+                                         secondaryLabel: "Cancel"),
+            style: .center,
+            onCreate: { pin in
+                Task {
+                    await achVM.activateVirtualCard(
+                        pin: pin,
+                        accountId: accountId,
+                        localizedDescription: "Virtual Debit Card"
+                    )
+                }
+            }
+        )
         .task { await loadDetail() }
     }
 
@@ -74,6 +96,11 @@ struct SavingAccountDetailView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
                 accountCard(detail)
+                PrimaryButton(title: "Activate your card") {
+                    showAddCard = true
+                }
+                .padding()
+                .padding(.top, 40)
                 transactionSection
             }
             .padding(.vertical, 10)
@@ -229,7 +256,9 @@ struct SavingAccountDetailView: View {
     private func loadDetail() async {
         async let accountDetail: Void = savingVM.loadAccountDetail(accountID: accountId)
         async let transactions: Void = transVM.loadTransactions(max: 50, accountId: accountId)
-        _ = await (accountDetail, transactions)
+        async let transactions1: Void = achVM.fetchTransactions(max: 50)
+        _ = await (accountDetail, transactions, transactions1)
+        await print("transactions::::", transactions)
     }
 }
 
