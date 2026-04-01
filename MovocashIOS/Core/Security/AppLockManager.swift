@@ -163,6 +163,12 @@ final class AppLockManager: ObservableObject {
         self.config = .default
         self.clock = SystemClock()
         restorePersistedState()
+        // Lock immediately so the first SwiftUI render never shows the dashboard
+        // before the passcode screen — prevents the flash on cold launch and
+        // notification tap.
+        if passcodeManager.isPasscodeSet {
+            state = .locked
+        }
     }
 
     // MARK: - Init (Testing)
@@ -180,6 +186,9 @@ final class AppLockManager: ObservableObject {
         self.config = config
         self.clock = clock
         restorePersistedState()
+        if passcodeManager.isPasscodeSet {
+            state = .locked
+        }
     }
 
     // MARK: - Convenience
@@ -199,9 +208,18 @@ final class AppLockManager: ObservableObject {
             guard let since = backgroundedAt else { return }
             backgroundedAt = nil
             let elapsed = clock.now().timeIntervalSince(since)
-            guard elapsed >= config.backgroundTimeout, isPasscodeSet else { return }
-            lock()
-            Task { await unlockWithBiometric() }
+            guard isPasscodeSet else { return }
+            // Lock synchronously before SwiftUI re-renders. For short backgrounds
+            // (< timeout) we immediately unlock in the same synchronous block —
+            // SwiftUI batches both state changes into one render so the dashboard
+            // never flashes. For long backgrounds (>= timeout) we stay locked and
+            // optionally trigger biometric.
+            state = .locked
+            if elapsed < config.backgroundTimeout {
+                state = .unlocked
+            } else {
+                Task { await unlockWithBiometric() }
+            }
         default:
             break
         }

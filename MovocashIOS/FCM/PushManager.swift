@@ -17,13 +17,18 @@ enum PushSource { case foreground, background, tap}
 @MainActor
 class PushManager: ObservableObject {
     static let shared = PushManager()
-    private init() {}
-    
+
+    private let unreadCountKey = "pushUnreadCount"
+
     @Published var fcmToken: String = ""
     @Published var permissionStatus: UNAuthorizationStatus = .notDetermined
     @Published var messages: [PushMessage] = []
-    @Published var unreadCount: Int = 0
+    @Published var unreadCount: Int
     @Published var latestMessage: PushMessage?
+
+    private init() {
+        unreadCount = UserDefaults.standard.integer(forKey: "pushUnreadCount")
+    }
     
     
     func requestPermission() async {
@@ -52,13 +57,14 @@ class PushManager: ObservableObject {
         fcmToken = token
         UserDefaults.standard.set(token, forKey: "fcmToken")
         uploadTokenToServer(token)
-        subscribleToDefaultTopics()
+        subscribeToDefaultTopics()
     }
     
     func fetchToken() async {
         do {
             let token = try await Messaging.messaging().token()
-            fcmToken  = token
+            fcmToken = token
+            UserDefaults.standard.set(token, forKey: "fcmToken")
         } catch {
             //CrashlyticsManager.shared.record
             SecureLogger.error("FCM token fetch")
@@ -85,12 +91,41 @@ class PushManager: ObservableObject {
         let msg = PushMessage(userInfo: userInfo)
         messages.insert(msg, at: 0)
         latestMessage = msg
-        if source == .foreground { unreadCount += 1 }
+
+        switch source {
+        case .foreground:
+            updateBadge(to: unreadCount + 1)
+        case .background:
+            // Sync with the badge value set by APNs in the payload
+            if let aps = userInfo["aps"] as? [String: Any],
+               let badge = aps["badge"] as? Int {
+                updateBadge(to: badge)
+            }
+        case .tap:
+            break // clearBadgeOnActive() handles this when app opens
+        }
+
         //        CrashlyticsManager.shared.log
         SecureLogger.debug("Push received: type=\(msg.type.rawValue) source=\(source)")
     }
+
+    // Called from AppDelegate.applicationDidBecomeActive
+    func clearBadgeOnActive() {
+        updateBadge(to: 0)
+    }
+
+    // ── Private ──────────────────────────────────────────
+    private func updateBadge(to count: Int) {
+        unreadCount = count
+        UserDefaults.standard.set(count, forKey: unreadCountKey)
+        if #available(iOS 16.0, *) {
+            UNUserNotificationCenter.current().setBadgeCount(count) { _ in }
+        } else {
+            UIApplication.shared.applicationIconBadgeNumber = count
+        }
+    }
     
-    private func subscribleToDefaultTopics() {
+    private func subscribeToDefaultTopics() {
         ["transactions", "alerts", "promotions", "market_updates"].forEach {
             Messaging.messaging().subscribe(toTopic: $0) { _ in }
         }
@@ -111,10 +146,10 @@ class PushManager: ObservableObject {
     }
     
     // ── UI helpers ───────────────────────────────────────
-    func markAllRead() { unreadCount = 0 }
+    func markAllRead() { updateBadge(to: 0) }
     func clearAll() {
         messages.removeAll()
-        unreadCount = 0
+        updateBadge(to: 0)
     }
     
     private func uploadTokenToServer(_ token: String) {

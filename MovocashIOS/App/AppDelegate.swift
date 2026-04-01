@@ -29,7 +29,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
             let settings = await UNUserNotificationCenter.current().notificationSettings()
-            if settings.authorizationStatus == .authorized {
+            if settings.authorizationStatus == .authorized ||
+               settings.authorizationStatus == .provisional {
                 UIApplication.shared.registerForRemoteNotifications()
             }
         }
@@ -48,6 +49,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        SecureLogger.error("APNs registration failed: \(error.localizedDescription)")
     }
     
     // ── MessagingDelegate ───────────────────────────────
@@ -78,8 +80,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     ) {
         let userInfo = response.notification.request.content.userInfo
         Task { @MainActor in PushManager.shared.handle(userInfo: userInfo, source: .tap) }
-        Task { @MainActor in DeepLinkRouter.shared.routeFromPush(userInfo: userInfo) }
+       //TODO: - Task { @MainActor in DeepLinkRouter.shared.routeFromPush(userInfo: userInfo) }
         handler()
+    }
+
+    // Clear badge when user opens app
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        Task { @MainActor in PushManager.shared.clearBadgeOnActive() }
     }
 
     // Background / silent push
