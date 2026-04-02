@@ -20,7 +20,6 @@
 		146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819542F4DE6CF00BED014 /* NetworkService.swift */; };
 		1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468195E2F4DE6CF00BED014 /* AppInfo.swift */; };
 		1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819642F4DE6CF00BED014 /* AuthViewModel.swift */; };
-		146819802F4DE6CF00BED014 /* MovocashIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */; };
 		146819812F4DE6CF00BED014 /* HTTPMethod.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819532F4DE6CF00BED014 /* HTTPMethod.swift */; };
 		146819822F4DE6CF00BED014 /* SSLPinning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819562F4DE6CF00BED014 /* SSLPinning.swift */; };
 		146819832F4DE6CF00BED014 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819582F4DE6CF00BED014 /* AuthManager.swift */; };
@@ -42,6 +41,10 @@
 		146BBC722F71243A00B3593A /* KYCViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146BBC712F71243A00B3593A /* KYCViewModel.swift */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
 		14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B824E02F51898E003ACBD0 /* KYCManager.swift */; };
+		14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */; };
+		14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */; };
+		14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3E2F7BB64000607891 /* FirebaseMessaging */; };
+		14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */; };
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
@@ -114,7 +117,6 @@
 		146819662F4DE6CF00BED014 /* CompromisedDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompromisedDeviceView.swift; sourceTree = "<group>"; };
 		146819702F4DE6CF00BED014 /* SpinnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerView.swift; sourceTree = "<group>"; };
 		146819732F4DE6CF00BED014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSApp.swift; sourceTree = "<group>"; };
 		146819942F4DE71C00BED014 /* MovocashIOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSTests.swift; sourceTree = "<group>"; };
 		146819972F4DE72C00BED014 /* MovocashIOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSTests.swift; sourceTree = "<group>"; };
 		146819982F4DE72C00BED014 /* MovocashIOSTestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovocashIOSTestsLaunchTests.swift; sourceTree = "<group>"; };
@@ -125,6 +127,7 @@
 		146BBC712F71243A00B3593A /* KYCViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCViewModel.swift; sourceTree = "<group>"; };
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
 		14B824E02F51898E003ACBD0 /* KYCManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCManager.swift; sourceTree = "<group>"; };
+		14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -144,6 +147,8 @@
 		14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderProvider.swift; sourceTree = "<group>"; };
 		14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
 		14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberValidator.swift; sourceTree = "<group>"; };
+		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -212,6 +217,16 @@
 			path = Reachability;
 			sourceTree = "<group>";
 		};
+		14FC32572F7BE4370063F6FD /* FCM */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FCM;
+			sourceTree = "<group>";
+		};
+		14FC325D2F7BE8FF0063F6FD /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = App;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -219,6 +234,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */,
+				14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */,
+				14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */,
 				142D702B2F70F6B10012BEF7 /* MobileBankingSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -400,12 +418,16 @@
 		146819762F4DE6CF00BED014 /* MovocashIOS */ = {
 			isa = PBXGroup;
 			children = (
+				14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */,
+				14FC32662F7C028A0063F6FD /* Info.plist */,
+				14FC325D2F7BE8FF0063F6FD /* App */,
+				14FC32572F7BE4370063F6FD /* FCM */,
 				146819602F4DE6CF00BED014 /* Core */,
 				1468196D2F4DE6CF00BED014 /* Features */,
 				1468196F2F4DE6CF00BED014 /* KYC */,
 				146819722F4DE6CF00BED014 /* Shared */,
 				146819732F4DE6CF00BED014 /* Assets.xcassets */,
-				146819752F4DE6CF00BED014 /* MovocashIOSApp.swift */,
+				14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */,
 				140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */,
 			);
 			path = MovocashIOS;
@@ -486,10 +508,15 @@
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,
+				14FC32572F7BE4370063F6FD /* FCM */,
+				14FC325D2F7BE8FF0063F6FD /* App */,
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (
 				142D702A2F70F6B10012BEF7 /* MobileBankingSDK */,
+				14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */,
+				14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */,
+				14BA4E3E2F7BB64000607891 /* FirebaseMessaging */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -569,6 +596,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				142D70292F70F6B10012BEF7 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -589,6 +617,7 @@
 			files = (
 				146819902F4DE6CF00BED014 /* Assets.xcassets in Resources */,
 				140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */,
+				14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -622,7 +651,6 @@
 				1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */,
 				14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */,
 				14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */,
-				146819802F4DE6CF00BED014 /* MovocashIOSApp.swift in Sources */,
 				146819812F4DE6CF00BED014 /* HTTPMethod.swift in Sources */,
 				146819822F4DE6CF00BED014 /* SSLPinning.swift in Sources */,
 				142337C02F5808250030B4E7 /* KYCView.swift in Sources */,
@@ -819,11 +847,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = MovocashIOS/MovocashIOSDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = EW9324XEV9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MovocashIOS/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MovoCash;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Enable Movo to upload camera photos and for your identification";
 				INFOPLIST_KEY_NSContactsUsageDescription = "We need access to your contacts to add people for transfers.";
@@ -860,9 +890,10 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 57J74H5MVZ;
+				DEVELOPMENT_TEAM = EW9324XEV9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MovocashIOS/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MovoCash;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Enable Movo to upload camera photos and for your identification";
 				INFOPLIST_KEY_NSContactsUsageDescription = "We need access to your contacts to add people for transfers.";
@@ -897,6 +928,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = EW9324XEV9;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
@@ -938,6 +970,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = EW9324XEV9;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "test.MOVO-HB-IOSUITests";
@@ -1021,6 +1054,14 @@
 				minimumVersion = 1.5.0;
 			};
 		};
+		14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1028,6 +1069,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 142D70292F70F6B10012BEF7 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
 			productName = MobileBankingSDK;
+		};
+		14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		14BA4E3E2F7BB64000607891 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
