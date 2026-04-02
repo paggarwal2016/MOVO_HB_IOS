@@ -61,6 +61,7 @@
 		14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */; };
 		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
 		14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */; };
+		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -149,6 +150,7 @@
 		14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberValidator.swift; sourceTree = "<group>"; };
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
+		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -301,6 +303,7 @@
 		1468195F2F4DE6CF00BED014 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */,
 				1468195E2F4DE6CF00BED014 /* AppInfo.swift */,
 				14DBC5912F50204D000D84FD /* SecureLogger.swift */,
 			);
@@ -653,6 +656,7 @@
 				14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */,
 				146819812F4DE6CF00BED014 /* HTTPMethod.swift in Sources */,
 				146819822F4DE6CF00BED014 /* SSLPinning.swift in Sources */,
+				14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */,
 				142337C02F5808250030B4E7 /* KYCView.swift in Sources */,
 				146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */,
 				14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */,

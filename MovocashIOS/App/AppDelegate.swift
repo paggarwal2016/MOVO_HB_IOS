@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 31/03/26.
+//  Created by Movo Developer on 31/03/26.
 //
 
 import UIKit
@@ -21,10 +21,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         
         // 1. Firebase
         FirebaseApp.configure()
+        // 2. Analytics
+        Task { @MainActor in AnalyticsManager.shared.reapplyIdentity() }
+
+        // 3. Crashlytics — set user info after login
         
-        // 2. Crashlytics — set user info after login
-        
-        // 3. Set delegate — permission is requested after login (RootView)
+        // 4. Set delegate — permission is requested after login (RootView)
         // Re-register silently if already authorized (returning users)
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
@@ -35,7 +37,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             }
         }
         
-        // 4. FCM delegate
+        // 5. FCM delegate
         Messaging.messaging().delegate = self
         
         return true

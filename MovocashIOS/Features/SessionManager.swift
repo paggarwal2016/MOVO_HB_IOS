@@ -29,17 +29,20 @@ final class SessionManager: ObservableObject {
     private let keychain: KeychainManagerProtocol
     private let kycManager: KYCManagerProtocol
     private let alertManager: AlertManagerProtocol
+    private let analytics: AnalyticsTracking
 
     init(
         authManager: AuthManagerProtocol,
         keychain: KeychainManagerProtocol,
         kycManager: KYCManagerProtocol,
-        alertManager: AlertManagerProtocol
+        alertManager: AlertManagerProtocol,
+        analytics: AnalyticsTracking
     ) {
         self.authManager = authManager
         self.keychain = keychain
         self.kycManager = kycManager
         self.alertManager = alertManager
+        self.analytics = analytics
     }
 
     // MARK: - Start Session
@@ -60,6 +63,8 @@ final class SessionManager: ObservableObject {
 
         // Update UI state
         appState.isAuthenticated = true
+        
+        analytics.identifyUser(from: accessToken)
     }
 
     // MARK: - Store Tokens
@@ -100,6 +105,7 @@ final class SessionManager: ObservableObject {
 
             await authManager.updateAccessToken(accessToken)
             appState.isAuthenticated = true
+            analytics.identifyUser(from: accessToken)
             return .restored
 
         } catch KeychainError.interactionNotAllowed {
@@ -123,21 +129,10 @@ final class SessionManager: ObservableObject {
     /// Returns true when the `exp` claim is in the past, the token is malformed,
     /// or the expiry is suspiciously far in the future (possible token injection).
     private func isAccessTokenExpired(_ token: String) -> Bool {
-        let parts = token.components(separatedBy: ".")
-        guard parts.count == 3 else { return true }
-
-        // JWT uses base64url encoding — convert to standard base64
-        var base64 = parts[1]
-            .replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
-        let remainder = base64.count % 4
-        if remainder > 0 { base64 += String(repeating: "=", count: 4 - remainder) }
-
-        guard let data = Data(base64Encoded: base64),
-              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let exp = payload["exp"] as? TimeInterval else {
-            return true
-        }
+        guard
+            let payload = JWTDecoder.decodePayload(token),
+            let exp = payload["exp"] as? TimeInterval
+        else { return true }
 
         let now = Date().timeIntervalSince1970
 
@@ -178,7 +173,8 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Logout
     func logout(appState: AppState) async {
-
+        analytics.trackLogout()
+        analytics.clearIdentity()
         await authManager.clearSession()
         await PushManager.shared.deleteTokenOnLogout()
 
@@ -196,7 +192,7 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Force Logout
     func forceLogout(appState: AppState) async {
-
+        analytics.trackSessionExpired()
         await logout(appState: appState)
 
         alertManager.showError(

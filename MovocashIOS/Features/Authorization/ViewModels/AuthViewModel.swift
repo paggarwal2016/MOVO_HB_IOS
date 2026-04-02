@@ -23,14 +23,16 @@ final class AuthViewModel: ObservableObject {
     private let sessionManager: SessionManager
     private let kycManager: KYCManagerProtocol
     private let alertManager: AlertManagerProtocol
-    
+    private let analytics: AnalyticsTracking
+
     init(
         network: NetworkServiceProtocol,
         keychain: KeychainManagerProtocol,
         authManager: AuthManagerProtocol,
         sessionManager: SessionManager,
         kycManager: KYCManagerProtocol,
-        alertManager: AlertManagerProtocol
+        alertManager: AlertManagerProtocol,
+        analytics: AnalyticsTracking
     ) {
         self.network = network
         self.keychain = keychain
@@ -38,6 +40,7 @@ final class AuthViewModel: ObservableObject {
         self.sessionManager = sessionManager
         self.kycManager = kycManager
         self.alertManager = alertManager
+        self.analytics = analytics
     }
     
     //MARK: - Send OTP
@@ -81,6 +84,7 @@ final class AuthViewModel: ObservableObject {
     // MARK: - Complete OTP Verification Flow
     
     func completeOTPVerification(code: String, appState: AppState, onNavigate: @escaping (AuthFlow) -> Void) async {
+        analytics.trackLoginAttempt(method: .otp)
         do {
             let response = try await validateOTP(code: code)
 
@@ -90,12 +94,14 @@ final class AuthViewModel: ObservableObject {
                 appState: appState
             )
 
+            analytics.trackLogin(method: .otp)
             await kycManager.configureSDK(officeId: AppConfig.officeId)
 
             let destination: AuthFlow = context == .login ? .home : .setupPasscode
             reset()
             onNavigate(destination)
         } catch {
+            analytics.trackLoginFailed(method: .otp, errorCode: error.localizedDescription)
             alertManager.showError(error.localizedDescription)
         }
     }
@@ -256,6 +262,7 @@ extension AuthViewModel { // TODO: - Testing checking
                 refreshToken: response.refreshToken,
                 appState:     appState
             )
+            analytics.trackLogin(method: .biometric)
             SecureLogger.info("tokenRSA success — session started", category: .auth)
         } catch {
             SecureLogger.error("tokenRSA failed: \(error.localizedDescription)", category: .auth)
@@ -277,14 +284,17 @@ extension AuthViewModel { // TODO: - Testing checking
             await RSAKeyManager.sign(challenge: challenge, reason: "Authenticate to access MovoCash")
         }.value
 
+        analytics.trackLoginAttempt(method: .biometric)
+
         switch signResult {
         case .failure(let error):
             SecureLogger.error("sign failed: \(error)", category: .auth)
+            analytics.trackLoginFailed(method: .biometric, errorCode: error.localizedDescription)
             if error == .keyNotFound && !fromEnrollment {
                 await runEnrollFlow(appState: appState)
             }
             return
-            
+
         case .success(let signedMessage):
             SecureLogger.info("sign success — calling tokenRSA", category: .auth)
             await tokenRSAAndStartSession(signedMessage: signedMessage, appState: appState)
