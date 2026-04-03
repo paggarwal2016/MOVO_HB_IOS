@@ -12,7 +12,6 @@
 		142337BC2F5807C70030B4E7 /* PhoneNumberScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */; };
 		142337BE2F5807FB0030B4E7 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BD2F5807FB0030B4E7 /* OTPScreen.swift */; };
 		142337C02F5808250030B4E7 /* KYCView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BF2F5808250030B4E7 /* KYCView.swift */; };
-		142D702B2F70F6B10012BEF7 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 142D702A2F70F6B10012BEF7 /* MobileBankingSDK */; };
 		1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791A2F6D430500EADEA2 /* ProfileImageView.swift */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
 		146819772F4DE6CF00BED014 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194F2F4DE6CF00BED014 /* Environment.swift */; };
@@ -51,6 +50,7 @@
 		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
 		14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D8165E2F73C30300B7D1EF /* ActionCard.swift */; };
 		14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D816602F73D3B100B7D1EF /* ContactsManager.swift */; };
+		14DA94452F7FB27500B4510C /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14DA94442F7FB27500B4510C /* MobileBankingSDK */; };
 		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
 		14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5952F504AF8000D84FD /* NetworkError.swift */; };
 		14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */; };
@@ -234,10 +234,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14DA94452F7FB27500B4510C /* MobileBankingSDK in Frameworks */,
 				14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */,
 				14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */,
 				14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */,
-				142D702B2F70F6B10012BEF7 /* MobileBankingSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -513,10 +513,10 @@
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (
-				142D702A2F70F6B10012BEF7 /* MobileBankingSDK */,
 				14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */,
 				14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */,
 				14BA4E3E2F7BB64000607891 /* FirebaseMessaging */,
+				14DA94442F7FB27500B4510C /* MobileBankingSDK */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -595,8 +595,8 @@
 			mainGroup = 14BF482E2F4C873A00FD7B53;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				142D70292F70F6B10012BEF7 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 				14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				14DA94432F7FB27500B4510C /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -1046,14 +1046,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		142D70292F70F6B10012BEF7 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.5.0;
-			};
-		};
 		14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -1062,14 +1054,17 @@
 				minimumVersion = 12.11.0;
 			};
 		};
+		14DA94432F7FB27500B4510C /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		142D702A2F70F6B10012BEF7 /* MobileBankingSDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 142D70292F70F6B10012BEF7 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
-			productName = MobileBankingSDK;
-		};
 		14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
@@ -1084,6 +1079,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
+		};
+		14DA94442F7FB27500B4510C /* MobileBankingSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14DA94432F7FB27500B4510C /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			productName = MobileBankingSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
