@@ -14,6 +14,7 @@ enum AuthAPI: Endpoint {
     case refreshToken(refreshToken: String)
     case enrollRSA(request: RSAEnrollRequest)
     case tokenRSA(request: RSATokenRequest)
+    case nonceRSA(request: RSANonceRequest)
     
     // MARK: - Environment Configure
     var environment: Environment { AppConfig.environment }
@@ -26,6 +27,7 @@ enum AuthAPI: Endpoint {
         case .refreshToken: return "/auth/refreshToken"
         case .enrollRSA: return "/rsa"
         case .tokenRSA: return "/auth/token-rsa"
+        case .nonceRSA: return "/rsa/nonce"
         }
     }
     
@@ -37,7 +39,7 @@ enum AuthAPI: Endpoint {
         switch self {
         case .messengerOTP,.tokenSMS:
             return .default
-        case .refreshToken, .enrollRSA, .tokenRSA:
+        case .refreshToken, .enrollRSA, .tokenRSA, .nonceRSA:
             return .authorized
         }
     }
@@ -70,6 +72,9 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
 
         case .tokenRSA(let request):
+            return try JSONEncoder().encode(request)
+            
+        case .nonceRSA(let request):
             return try JSONEncoder().encode(request)
         }
     }

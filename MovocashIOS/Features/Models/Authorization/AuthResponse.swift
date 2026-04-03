@@ -25,3 +25,7 @@ nonisolated struct RSATokenResponse: Decodable {
     let accessToken: String
     let refreshToken: String
 }
+
+nonisolated struct RSANonceResponse: Decodable {
+    let nonce: String
+}
