@@ -60,11 +60,10 @@ actor PlaidService {
     // MARK: - ACH
 
     func getLinkToken(accountID: Int? = nil) async throws -> GetPlaidLinkTokenResponse {
-        let platform = await AppInfo.platform
         return try await withCheckedThrowingContinuation { continuation in
             MobileBankingSDK.getPlaidLinkToken(
                 accountId: accountID,
-                platform: platform,
+                platform: "ios",
                 bundleId: AppInfo.bundleIdentifier
             ) { result in
                 continuation.resume(with: result)
