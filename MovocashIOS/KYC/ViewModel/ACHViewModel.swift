@@ -14,6 +14,7 @@ import UIKit
 final class ACHViewModel: ObservableObject {
 
     private let service: PlaidService
+    private let plaidLinkManager = PlaidLinkManager()
 
     // MARK: - Published State
 
@@ -109,6 +110,51 @@ final class ACHViewModel: ObservableObject {
         await perform {
             try await self.service.setDefaultAchAccount(achAccountId: achAccountId)
         }
+    }
+
+    // MARK: - Plaid Link Flow
+
+    /// Full Plaid Link flow: fetch token → present Plaid UI → link account on backend.
+    func startPlaidLink(accountID: Int? = nil) async {
+        let tokenResponse: GetPlaidLinkTokenResponse
+        do {
+            tokenResponse = try await fetchLinkToken(accountID: accountID)
+        } catch {
+            return
+        }
+
+        guard !tokenResponse.linkToken.isEmpty else {
+            AlertManager.shared.showError("Unable to start bank linking. Please try again.")
+            return
+        }
+
+        guard let presenter = await waitForPresentableViewController() else {
+            AlertManager.shared.showError(PlaidLinkError.noPresenter.localizedDescription)
+            return
+        }
+
+        let plaidResult: PlaidLinkResult
+        do {
+            plaidResult = try await plaidLinkManager.openLink(
+                token: tokenResponse.linkToken,
+                presenter: presenter
+            )
+        } catch {
+            if case PlaidLinkError.linkExited(nil) = error {
+                SecureLogger.info("Plaid Link closed by user", category: .payment)
+                return
+            }
+            AlertManager.shared.showError(error.localizedDescription)
+            return
+        }
+
+        let request = LinkPlaidAccountRequestBody(
+            public_token: plaidResult.publicToken,
+            metadata: plaidResult.metadata,
+            shouldGetIdentity: nil
+        )
+
+        await linkPlaidAccount(request: request)
     }
 
     // MARK: - Transactions

@@ -57,7 +57,8 @@
 		14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */; };
 		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
 		14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */; };
-		14FF6F262F7CF18200EC0B57 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14FF6F252F7CF18200EC0B57 /* MobileBankingSDK */; };
+		9981BBA92F85246C009F6ADE /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9981BBA82F85246C009F6ADE /* LinkKit */; };
+		9981BBAC2F852491009F6ADE /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 9981BBAB2F852491009F6ADE /* MobileBankingSDK */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -230,7 +231,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14FF6F262F7CF18200EC0B57 /* MobileBankingSDK in Frameworks */,
+				9981BBAC2F852491009F6ADE /* MobileBankingSDK in Frameworks */,
+				9981BBA92F85246C009F6ADE /* LinkKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -505,7 +507,8 @@
 			);
 			name = MovocashIOS;
 			packageProductDependencies = (
-				14FF6F252F7CF18200EC0B57 /* MobileBankingSDK */,
+				9981BBA82F85246C009F6ADE /* LinkKit */,
+				9981BBAB2F852491009F6ADE /* MobileBankingSDK */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -584,7 +587,8 @@
 			mainGroup = 14BF482E2F4C873A00FD7B53;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				14FF6F242F7CF18200EC0B57 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				9981BBA72F85246C009F6ADE /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
+				9981BBAA2F852491009F6ADE /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -1032,20 +1036,33 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		14FF6F242F7CF18200EC0B57 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+		9981BBA72F85246C009F6ADE /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/plaid/plaid-link-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.0.4;
+			};
+		};
+		9981BBAA2F852491009F6ADE /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.6.0;
+				minimumVersion = 1.7.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		14FF6F252F7CF18200EC0B57 /* MobileBankingSDK */ = {
+		9981BBA82F85246C009F6ADE /* LinkKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 14FF6F242F7CF18200EC0B57 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			package = 9981BBA72F85246C009F6ADE /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
+			productName = LinkKit;
+		};
+		9981BBAB2F852491009F6ADE /* MobileBankingSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9981BBAA2F852491009F6ADE /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
 			productName = MobileBankingSDK;
 		};
 /* End XCSwiftPackageProductDependency section */

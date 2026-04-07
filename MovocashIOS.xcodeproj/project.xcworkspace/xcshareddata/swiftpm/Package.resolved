@@ -1,5 +1,5 @@
 {
-  "originHash" : "853e8037dc6a0e2cdb2c2d37da0be3c44d775ffac291505ee7dc6b2da9de678a",
+  "originHash" : "9d1276350b9ddf04de48aadca989103e6aabf60af2c27100133e69910e751e93",
   "pins" : [
     {
       "identity" : "blinkid-ios",
@@ -15,7 +15,16 @@
       "kind" : "registry",
       "location" : "",
       "state" : {
-        "version" : "1.6.0"
+        "version" : "1.7.0"
+      }
+    },
+    {
+      "identity" : "plaid-link-ios-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/plaid/plaid-link-ios-spm.git",
+      "state" : {
+        "revision" : "1a4e2241f8968deebd3ecd9ebc128fa91ccc9f49",
+        "version" : "6.4.7"
       }
     }
   ],

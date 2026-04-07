@@ -202,7 +202,18 @@ struct DashboardView: View {
             }
             .padding()
             .frame(height: 60)
-            
+
+            PrimaryButton(
+                title: "Link Bank Account",
+                backgroundColor: Color.softBlue.opacity(0.1),
+                textColor: .black,
+                isLoading: achVM.state == .loading
+            ) {
+                Task { await achVM.startPlaidLink() }
+            }
+            .padding()
+            .frame(height: 60)
+
             PrimaryButton(title: "Activate your card") {
 //                Task {
 //                    await achVM.activateVirtualCard(

@@ -99,6 +99,7 @@ final class SessionManager: ObservableObject {
             }
 
             await authManager.updateAccessToken(accessToken)
+            await kycManager.configureSDK(officeId: AppConfig.officeId)
             appState.isAuthenticated = true
             return .restored
 
