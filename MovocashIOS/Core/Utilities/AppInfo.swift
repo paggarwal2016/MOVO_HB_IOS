@@ -24,4 +24,14 @@ enum AppInfo {
     nonisolated static var bundleIdentifier: String {
         Bundle.main.bundleIdentifier ?? "com.unknown.app"
     }
+    
+    static var platform: String {
+    #if os(iOS)
+            return "ios"
+    #elseif os(macOS)
+            return "macos"
+    #else
+            return "Unknown"
+    #endif
+        }
 }

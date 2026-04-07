@@ -37,6 +37,10 @@
 		146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A02F4F0A2100BED014 /* AlertManager.swift */; };
 		146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A22F4F272500BED014 /* PhoneFormatter.swift */; };
 		146BBC722F71243A00B3593A /* KYCViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146BBC712F71243A00B3593A /* KYCViewModel.swift */; };
+		14716A2D2F8544AE00198064 /* PlaidLinkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716A2C2F8544AE00198064 /* PlaidLinkManager.swift */; };
+		14716A302F85452800198064 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 14716A2F2F85452800198064 /* LinkKit */; };
+		14716A322F85457200198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716A312F85457200198064 /* PlaidService.swift */; };
+		14716C1A2F854B3500198064 /* ACHViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716C192F854B3500198064 /* ACHViewModel.swift */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
 		14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B824E02F51898E003ACBD0 /* KYCManager.swift */; };
 		14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */; };
@@ -124,6 +128,9 @@
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		146819A22F4F272500BED014 /* PhoneFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFormatter.swift; sourceTree = "<group>"; };
 		146BBC712F71243A00B3593A /* KYCViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCViewModel.swift; sourceTree = "<group>"; };
+		14716A2C2F8544AE00198064 /* PlaidLinkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidLinkManager.swift; sourceTree = "<group>"; };
+		14716A312F85457200198064 /* PlaidService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidService.swift; sourceTree = "<group>"; };
+		14716C192F854B3500198064 /* ACHViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACHViewModel.swift; sourceTree = "<group>"; };
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
 		14B824E02F51898E003ACBD0 /* KYCManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCManager.swift; sourceTree = "<group>"; };
 		14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -238,6 +245,7 @@
 				14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */,
 				14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */,
 				14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */,
+				14716A302F85452800198064 /* LinkKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -380,9 +388,12 @@
 			isa = PBXGroup;
 			children = (
 				14DA97F52F84D3FC00B4510C /* PickDocumentView.swift */,
+				14716C192F854B3500198064 /* ACHViewModel.swift */,
 				146BBC712F71243A00B3593A /* KYCViewModel.swift */,
 				14DCE1382F595474008A8DC4 /* KYCEnum.swift */,
 				14B824E02F51898E003ACBD0 /* KYCManager.swift */,
+				14716A2C2F8544AE00198064 /* PlaidLinkManager.swift */,
+				14716A312F85457200198064 /* PlaidService.swift */,
 			);
 			path = KYC;
 			sourceTree = "<group>";
@@ -517,6 +528,7 @@
 				14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */,
 				14BA4E3E2F7BB64000607891 /* FirebaseMessaging */,
 				14DA94442F7FB27500B4510C /* MobileBankingSDK */,
+				14716A2F2F85452800198064 /* LinkKit */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -597,6 +609,7 @@
 			packageReferences = (
 				14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				14DA94432F7FB27500B4510C /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				14716A2E2F85452800198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -663,6 +676,7 @@
 				14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */,
 				14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
+				14716A322F85457200198064 /* PlaidService.swift in Sources */,
 				146BBC722F71243A00B3593A /* KYCViewModel.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
@@ -670,12 +684,14 @@
 				14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */,
 				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
 				14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */,
+				14716C1A2F854B3500198064 /* ACHViewModel.swift in Sources */,
 				14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */,
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
 				1468198A2F4DE6CF00BED014 /* AppConfig.swift in Sources */,
 				1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */,
 				14DA97F62F84D3FC00B4510C /* PickDocumentView.swift in Sources */,
 				1468199D2F4EDEF000BED014 /* OTPDigitBox.swift in Sources */,
+				14716A2D2F8544AE00198064 /* PlaidLinkManager.swift in Sources */,
 				14DCE2872F5ABA38008A8DC4 /* AppContainer.swift in Sources */,
 				1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */,
 				146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */,
@@ -1046,6 +1062,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		14716A2E2F85452800198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/plaid/plaid-link-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.0.4;
+			};
+		};
 		14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -1065,6 +1089,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		14716A2F2F85452800198064 /* LinkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14716A2E2F85452800198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
+			productName = LinkKit;
+		};
 		14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
