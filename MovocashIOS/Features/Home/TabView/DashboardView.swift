@@ -153,11 +153,11 @@ struct DashboardView: View {
     
     private var scrollContent: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
+            VStack(spacing: 15) {
                 savingsSection
                 Spacer()
             }
-            .padding(.top, 16)
+            .padding(.top, 15)
         }
     }
     
@@ -202,55 +202,20 @@ struct DashboardView: View {
             }
             .padding()
             .frame(height: 60)
-
-            PrimaryButton(
-                title: "Link Bank Account",
-                backgroundColor: Color.softBlue.opacity(0.1),
-                textColor: .black,
-                isLoading: achVM.state == .loading
-            ) {
-                Task { await achVM.startPlaidLink() }
-            }
-            .padding()
-            .frame(height: 60)
-
-            PrimaryButton(title: "Activate your card") {
-//                Task {
-//                    await achVM.activateVirtualCard(
-//                        pin: "1991",
-//                        accountId: 479,
-//                        localizedDescription: "Virtual Debit Card"
-//                    )
-//                    
-//                    guard let accountId = displayAccount?.id else { return }
-//                    let response = try? await achVM.fetchLinkToken(accountID: accountId)
-//             }
-                
-                
-                // working true
-//                Task {
-//                      let canAdd = await achVM.checkCanAddToWallet(
-//                          primaryAccountNumberSuffix: "000000227",
-//                          localizedDescription: "Test"
-//                      )
-//                      print("canAddVirtualCardToAppleWallet: \(canAdd)") // true
-//                  }
-                
-                
-//                Task {
-//                    await achVM.activateCard(pin: "1991", accountId: 227)
-//                    print("virtualCard",achVM.virtualCard)
-//                }
-                                
-            }
-            .padding()
-            .padding(.top, 40)
             
-            ActionCard(title: "Quick transfers",
+            ActionCard(title: "Quick Transfers",
                        description: "Send money instantly to anyone in your contact list.",
                        buttonLabel: "Add people") {
                 showContactList = true
                 SecureLogger.debug("Quick transfer tapped", category: .general)
+            }
+            
+            ActionCard(title: "Link Bank Account",
+                       description: "To make inverstments, deposits, withdrawals and securely link your bank account.",
+                       buttonLabel: "Connect bank",
+                       isLoading: achVM.state == .loading) {
+                Task { await achVM.startPlaidLink() }
+                SecureLogger.debug("Link your bank tapped", category: .general)
             }
         } else if savingVM.state == .loading {
             CardSkeletonView()

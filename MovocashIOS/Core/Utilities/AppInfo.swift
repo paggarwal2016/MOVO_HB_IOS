@@ -27,13 +27,9 @@ enum AppInfo {
     
     static var platform: String {
 #if os(iOS)
-        return "iOS"
+        return "ios"
 #elseif os(macOS)
-        return "macOS"
-#elseif os(tvOS)
-        return "tvOS"
-#elseif os(watchOS)
-        return "watchOS"
+        return "macos"
 #else
         return "Unknown"
 #endif
