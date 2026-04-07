@@ -14,7 +14,7 @@ import SwiftUI
 
 @MainActor
 protocol KYCManagerProtocol {
-    func configureSDK(officeId: String) async
+    func configureSDK(officeId: String) async throws
     func start() async throws -> User
     func clearSession()
     func updateToken(_ token: String)
@@ -35,24 +35,31 @@ final class KYCManager: KYCManagerProtocol {
     }
 
     // MARK: - Configure SDK
-    func configureSDK(officeId: String) async {
+    func configureSDK(officeId: String) async throws {
 
         SecureLogger.info("Starting KYC configuration", category: .kyc)
 
         guard let token = await authManager.getAccessToken() else {
-            SecureLogger.error("Missing access token", category: .kyc)
-            return
+            SecureLogger.error("Missing access token — aborting KYC configure", category: .kyc)
+            throw KYCError.notConfigured
         }
-        
+
         let baseURL = AppConfig.baseURL.absoluteString
-        
+
+        #if DEBUG
+        let verboseLogs = true
+        #else
+        let verboseLogs = false
+        #endif
+
         MobileBankingSDK.configure(
             authToken: token,
             baseUrl: baseURL,
             officeId: officeId,
-            theme: makeKYCTheme()
+            theme: makeKYCTheme(),
+            enableVerboseLogs: verboseLogs
         )
-        
+
         SecureLogger.info("KYC SDK configured", category: .kyc)
     }
     
@@ -71,24 +78,25 @@ final class KYCManager: KYCManagerProtocol {
     // MARK: - Start KYC Flow
     
     func start() async throws -> User {
-        
+
         guard let topVC = UIApplication.topViewController() else {
             throw KYCError.noPresenter
         }
-        
+
         presenter = topVC
-        
+
         return try await withCheckedThrowingContinuation { continuation in
 
             var resumed = false
             var successToken: NSObjectProtocol?
             var errorToken: NSObjectProtocol?
+            var cancelToken: NSObjectProtocol?
 
-            func resumeOnce(_ result: Result<User, Error>) {
+            func resumeOnce(_ result: Result<User, Error>, needsDismiss: Bool) {
                 guard !resumed else { return }
                 resumed = true
 
-                cleanup()
+                cleanup(dismiss: needsDismiss)
 
                 switch result {
                 case .success(let user):
@@ -98,45 +106,53 @@ final class KYCManager: KYCManagerProtocol {
                 }
             }
 
-            func cleanup() {
+            func cleanup(dismiss: Bool) {
                 if let t = successToken { NotificationCenter.default.removeObserver(t) }
                 if let t = errorToken   { NotificationCenter.default.removeObserver(t) }
-                dismiss()
+                if let t = cancelToken  { NotificationCenter.default.removeObserver(t) }
+                if dismiss { dismissPresenter() }
             }
 
-            func dismiss() {
+            func dismissPresenter() {
                 Task { @MainActor in
                     self.presenter?.dismiss(animated: true)
                     self.presenter = nil
                 }
             }
 
-            // SUCCESS
+            // SUCCESS — SDK dismisses its own UI, no manual dismiss needed
             successToken = NotificationCenter.default.addObserver(
                 forName: .verificationCompleted,
                 object: nil,
                 queue: .main
             ) { notification in
-
                 guard let user = notification.object as? User else {
-                    resumeOnce(.failure(KYCError.unknown))
+                    resumeOnce(.failure(KYCError.unknown), needsDismiss: false)
                     return
                 }
-                resumeOnce(.success(user))
+                resumeOnce(.success(user), needsDismiss: false)
             }
 
-            // ERROR
+            // ERROR — SDK may not dismiss, force dismiss
             errorToken = NotificationCenter.default.addObserver(
                 forName: .scannerError,
                 object: nil,
                 queue: .main
             ) { notification in
-
                 if let error = notification.object as? Error {
-                    resumeOnce(.failure(KYCError.sdkError(error.localizedDescription)))
+                    resumeOnce(.failure(KYCError.sdkError(error.localizedDescription)), needsDismiss: true)
                 } else {
-                    resumeOnce(.failure(KYCError.unknown))
+                    resumeOnce(.failure(KYCError.unknown), needsDismiss: true)
                 }
+            }
+
+            // CANCELLED — user tapped cancel on failed-verification screen
+            cancelToken = NotificationCenter.default.addObserver(
+                forName: .verificationCanceled,
+                object: nil,
+                queue: .main
+            ) { _ in
+                resumeOnce(.failure(KYCError.cancelled), needsDismiss: true)
             }
 
             MobileBankingSDK.startKyc(presentingViewController: topVC)
@@ -184,27 +200,4 @@ final class KYCManager: KYCManagerProtocol {
     }
 }
 
-// MARK: - Top View Controller Helper
-
-extension UIApplication {
-    
-    static func topViewController(
-        base: UIViewController? = UIApplication.shared
-            .connectedScenes
-            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
-            .first?
-            .rootViewController
-    ) -> UIViewController? {
-        if let nav = base as? UINavigationController {
-            return topViewController(base: nav.visibleViewController)
-        }
-        if let tab = base as? UITabBarController {
-            return topViewController(base: tab.selectedViewController)
-        }
-        if let presented = base?.presentedViewController {
-            return topViewController(base: presented)
-        }
-        return base
-    }
-}
 
