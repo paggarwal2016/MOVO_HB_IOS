@@ -89,7 +89,7 @@ final class AuthViewModel: ObservableObject {
                 appState: appState
             )
 
-            await kycManager.configureSDK(officeId: AppConfig.officeId)
+            try await kycManager.configureSDK(officeId: AppConfig.officeId)
 
             let destination: AuthFlow = context == .login ? .home : .setupPasscode
             reset()

@@ -22,8 +22,6 @@ enum KYCError: LocalizedError, Equatable {
     case notConfigured
     case noPresenter
     case cancelled
-    case rejected
-    case timeout
     case sdkError(String)
     case unknown
     
@@ -35,10 +33,6 @@ enum KYCError: LocalizedError, Equatable {
             return "Unable to start verification."
         case .cancelled:
             return "Verification was cancelled."
-        case .rejected:
-            return "Verification was not approved."
-        case .timeout:
-            return "Verification timed out. Please try again."
         case .sdkError(let message):
             return message
         case .unknown:

@@ -22,6 +22,16 @@ struct SplashScreen: View {
                 .scaledToFit()
         }
         .task {
+            // If app was killed mid-KYC, logout immediately before anything else
+            if UserDefaults.standard.bool(forKey: "kycInProgress") {
+                UserDefaults.standard.removeObject(forKey: "kycInProgress")
+                lockManager.logout()
+                await sessionManager.logout(appState: appState)
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                appState.flow = .choice
+                return
+            }
+
             try? await Task.sleep(nanoseconds: 2_000_000_000)
 
             let result = await sessionManager.restoreSession(appState: appState)

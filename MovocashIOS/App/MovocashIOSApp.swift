@@ -17,6 +17,7 @@ struct MovocashIOSApp: App {
     @StateObject private var userVM: UserViewModel
     @StateObject private var lockVM: AppLockViewModel
     @StateObject private var passcodeSetupVM: AppLockViewModel
+    @StateObject private var kycVM: KYCViewModel
     @StateObject private var pushManager: PushManager
 
     init() {
@@ -30,13 +31,14 @@ struct MovocashIOSApp: App {
         _userVM           = StateObject(wrappedValue: c.makeUserViewModel())
         _lockVM           = StateObject(wrappedValue: c.makeAppLockViewModel())
         _passcodeSetupVM  = StateObject(wrappedValue: setupVM)
+        _kycVM            = StateObject(wrappedValue: c.makeKYCViewModel())
         _pushManager      = StateObject(wrappedValue: PushManager.shared)
         TabBarAppearance.configure()
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView(passcodeSetupVM: passcodeSetupVM)
+            RootView(passcodeSetupVM: passcodeSetupVM, kycVM: kycVM)
                 .preferredColorScheme(.light)
                 .environmentObject(appState)
                 .environmentObject(container)
