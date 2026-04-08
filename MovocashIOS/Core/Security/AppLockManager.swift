@@ -147,6 +147,7 @@ final class AppLockManager: ObservableObject {
     let passcodeManager: PasscodeManaging
     let biometricManager: BiometricManaging
 
+    private let analytics: AnalyticsTracking
     private let storage: LockoutStorage
     private let config: AppLockConfig
     private let clock: AppLockClock
@@ -156,9 +157,14 @@ final class AppLockManager: ObservableObject {
 
     // MARK: - Init (Production)
 
-    init(passcodeManager: PasscodeManaging, biometricManager: BiometricManaging) {
+    init(
+        passcodeManager: PasscodeManaging,
+        biometricManager: BiometricManaging,
+        analytics: AnalyticsTracking? = nil
+    ) {
         self.passcodeManager = passcodeManager
         self.biometricManager = biometricManager
+        self.analytics = analytics ?? AnalyticsManager.shared
         self.storage = KeychainLockoutStorage()
         self.config = .default
         self.clock = SystemClock()
@@ -178,10 +184,12 @@ final class AppLockManager: ObservableObject {
         biometricManager: BiometricManaging,
         storage: LockoutStorage,
         config: AppLockConfig,
-        clock: AppLockClock
+        clock: AppLockClock,
+        analytics: AnalyticsTracking? = nil
     ) {
         self.passcodeManager = passcodeManager
         self.biometricManager = biometricManager
+        self.analytics = analytics ?? AnalyticsManager.shared
         self.storage = storage
         self.config = config
         self.clock = clock
@@ -250,9 +258,17 @@ final class AppLockManager: ObservableObject {
             if ok {
                 resetFailures()
                 transitionToUnlocked()
+                analytics.log(AnalyticsEvent.biometricAuth, params: [
+                    AnalyticsParam.method: "passcode",
+                    AnalyticsParam.reason: "unlock_success"
+                ])
                 return true
             } else {
                 recordFailure()
+                analytics.log(AnalyticsEvent.suspiciousActivity, params: [
+                    AnalyticsParam.reason: "wrong_passcode",
+                    AnalyticsParam.count: failedAttempts
+                ])
                 return false
             }
         } catch PasscodeError.notSet {
@@ -277,7 +293,15 @@ final class AppLockManager: ObservableObject {
             try await biometricManager.evaluate(reason: "Unlock MovoCash")
             resetFailures()
             transitionToUnlocked()
+            analytics.log(AnalyticsEvent.biometricAuth, params: [
+                AnalyticsParam.method: "biometric",
+                AnalyticsParam.reason: "unlock_success"
+            ])
         } catch let err as BiometricError {
+            analytics.log(AnalyticsEvent.suspiciousActivity, params: [
+                AnalyticsParam.reason: "biometric_failed",
+                AnalyticsParam.errorCode: err.localizedDescription
+            ])
             if err.shouldFallbackToPasscode {
                 if case .lockout = err {
                     lockoutMessage = err.errorDescription
@@ -292,12 +316,14 @@ final class AppLockManager: ObservableObject {
 
     func setupPasscode(_ pin: String) async throws {
         try passcodeManager.setPasscode(pin)
+        analytics.log(AnalyticsEvent.pinChanged, params: [AnalyticsParam.type: "setup"])
     }
 
     func changePasscode(old: String, new: String) async throws {
         let ok = try passcodeManager.verifyPasscode(old)
         guard ok else { throw AppLockError.wrongPasscode }
         try passcodeManager.setPasscode(new)
+        analytics.log(AnalyticsEvent.pinChanged, params: [AnalyticsParam.type: "change"])
     }
 
     func removePasscode(confirmedWith pin: String) async throws {
@@ -311,10 +337,12 @@ final class AppLockManager: ObservableObject {
 
     func enrollBiometrics() throws {
         try passcodeManager.enrollBiometricKey()
+        analytics.log(AnalyticsEvent.biometricEnrolled)
     }
 
     func revokeBiometrics() throws {
         try passcodeManager.clearBiometricKey()
+        analytics.log(AnalyticsEvent.biometricRevoked)
     }
 
     func revokeBiometricSafely() {
@@ -400,6 +428,9 @@ final class AppLockManager: ObservableObject {
                 Date.distantFuture.timeIntervalSince1970,
                 forKey: LockoutKey.expiry
             )
+            analytics.log(AnalyticsEvent.lockoutPermanent, params: [
+                AnalyticsParam.lockoutRound: lockoutRound
+            ])
             return
         }
 
@@ -409,6 +440,10 @@ final class AppLockManager: ObservableObject {
         let expiry        = clock.now().addingTimeInterval(duration)
 
         storage.saveDouble(expiry.timeIntervalSince1970, forKey: LockoutKey.expiry)
+        analytics.log(AnalyticsEvent.lockoutTriggered, params: [
+            AnalyticsParam.lockoutRound: lockoutRound,
+            AnalyticsParam.lockoutDuration: Int(duration)
+        ])
         startCountdown(seconds: Int(duration))
     }
 

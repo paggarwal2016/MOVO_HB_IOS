@@ -16,9 +16,15 @@ final class ContactViewModel: BaseViewModel {
     @Published private(set) var loadError: String? = nil
 
     private let service: ContactsServiceProtocol
+    private let analytics: AnalyticsTracking
 
-    init(service: ContactsServiceProtocol, alertManager: AlertManagerProtocol) {
+    init(
+        service: ContactsServiceProtocol,
+        alertManager: AlertManagerProtocol,
+        analytics: AnalyticsTracking? = nil
+    ) {
         self.service = service
+        self.analytics = analytics ?? AnalyticsManager.shared
         super.init(alertManager: alertManager)
     }
 
@@ -35,8 +41,14 @@ final class ContactViewModel: BaseViewModel {
     func toggleFavorite(_ contact: AppContact) {
         if favorites.contains(contact.id) {
             favorites.remove(contact.id)
+            analytics.log(AnalyticsEvent.contactUnfavorited, params: [
+                AnalyticsParam.contactId: contact.id
+            ])
         } else {
             favorites.insert(contact.id)
+            analytics.log(AnalyticsEvent.contactFavorited, params: [
+                AnalyticsParam.contactId: contact.id
+            ])
         }
         // API call here after success need to validate the favorites value
     }
@@ -50,8 +62,14 @@ final class ContactViewModel: BaseViewModel {
         do {
             let result = try await perform { try await self.service.fetchContacts() }
             contacts = result
+            analytics.log(AnalyticsEvent.contactListViewed, params: [
+                AnalyticsParam.count: result.count
+            ])
         } catch {
             loadError = error.localizedDescription
+            analytics.log(AnalyticsEvent.contactListFailed, params: [
+                AnalyticsParam.errorCode: error.localizedDescription
+            ])
         }
     }
 }

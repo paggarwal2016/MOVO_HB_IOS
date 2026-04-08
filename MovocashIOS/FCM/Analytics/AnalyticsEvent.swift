@@ -13,91 +13,100 @@ enum AnalyticsEvent {
 
     // MARK: - General
     static let screenView            = "screen_view"
-    static let sessionStarted        = "session_started"
 
     // MARK: - Auth
     static let loginAttempt          = "login_attempt"
     static let loginSuccess          = "login_success"
     static let loginFailed           = "login_failed"
-    static let signUp                = "sign_up"
     static let logout                = "user_logout"
-    static let reLoginSuccess        = "re_login_success"  // ← added: token expiry re-login
-    static let sessionExpired        = "session_expired"   // ← added: token expired event
-    static let tokenRefreshed        = "token_refreshed"   // ← added: silent refresh tracking
+    static let sessionExpired        = "session_expired"
+    static let tokenRefreshed        = "token_refreshed"
 
     // MARK: - Security
     static let biometricAuth         = "biometric_auth"
-    static let twoFATriggered        = "two_fa_triggered"
-    static let twoFACompleted        = "two_fa_completed"
+    static let biometricEnrolled     = "biometric_enrolled"
+    static let biometricRevoked      = "biometric_revoked"
     static let suspiciousActivity    = "suspicious_activity_flagged"
     static let pinChanged            = "pin_changed"
+    static let lockoutTriggered      = "lockout_triggered"
+    static let lockoutPermanent      = "lockout_permanent"
 
     // MARK: - KYC
     static let kycStarted            = "kyc_started"
-    static let kycStepCompleted      = "kyc_step_completed"
     static let kycStepFailed         = "kyc_step_failed"
     static let kycCompleted          = "kyc_completed"
     static let kycAbandoned          = "kyc_abandoned"
-    static let kycResubmitted        = "kyc_resubmitted"
-
-    // MARK: - Transactions / Payments
-    static let transactionInitiated  = "transaction_initiated"
-    static let transactionSuccess    = "transaction_success"
-    static let transactionFailed     = "transaction_failed"
-
-    static let paymentInitiated      = "payment_initiated"
-    static let paymentSuccess        = "payment_success"
-    static let paymentFailed         = "payment_failed"
-    static let paymentCancelled      = "payment_cancelled"
-    static let paymentRetried        = "payment_retried"
-
-    // MARK: - Cards / Payment Methods
-    static let cardAdded             = "card_added"
-    static let paymentMethodAdded    = "payment_method_added"
-    static let paymentMethodRemoved  = "payment_method_removed"
 
     // MARK: - Accounts / Balances
     static let accountViewed         = "account_viewed"
     static let accountDeleted        = "account_deleted"
-    static let balanceChecked        = "balance_checked"
-    static let statementViewed       = "statement_viewed"
-    static let accountLinked         = "account_linked"
 
-    // MARK: - Investments / Loans / Budget
-    static let loanApplied           = "loan_applied"
-    static let investmentMade        = "investment_made"
-    static let budgetSet             = "budget_set"
+    // MARK: - Savings Accounts
+    static let savingsAccountListViewed   = "savings_account_list_viewed"
+    static let savingsAccountDetailViewed = "savings_account_detail_viewed"
+    static let savingsAccountCreated      = "savings_account_created"
+    static let savingsAccountCreateFailed = "savings_account_create_failed"
+    static let savingsNicknameUpdated     = "savings_nickname_updated"
+    static let savingsAccountDeleted      = "savings_account_deleted"
 
-    // MARK: - Engagement
-    static let featureViewed         = "feature_viewed"
-    static let offerTapped           = "offer_tapped"
-    static let offerDismissed        = "offer_dismissed"
-    static let searchPerformed       = "search_performed"
-    static let notificationTapped    = "notification_tapped"
-    static let deepLinkOpened        = "deep_link_opened"
+    // MARK: - Rewards
+    static let rewardViewed               = "reward_viewed"
+    static let rewardFetchFailed          = "reward_fetch_failed"
+    static let rewardRedeemed             = "reward_redeemed"
+    static let rewardRedemptionFailed     = "reward_redemption_failed"
+    static let rewardEnrolled             = "reward_enrolled"
+    static let rewardEnrollFailed         = "reward_enroll_failed"
+
+    // MARK: - Withdrawals / Transfers
+    static let withdrawalInitiated        = "withdrawal_initiated"
+    static let withdrawalFailed           = "withdrawal_failed"
+    static let transactionListViewed      = "transaction_list_viewed"
+    static let internalTransferInitiated  = "internal_transfer_initiated"
+    static let internalTransferFailed     = "internal_transfer_failed"
+
+    // MARK: - Contacts
+    static let contactListViewed          = "contact_list_viewed"
+    static let contactListFailed          = "contact_list_failed"
+    static let contactFavorited           = "contact_favorited"
+    static let contactUnfavorited         = "contact_unfavorited"
+
+    // MARK: - VCards
+    static let vcardViewed                = "vcard_viewed"
+    static let vcardFetchFailed           = "vcard_fetch_failed"
+    static let vcardCreated               = "vcard_created"
+    static let vcardCreateFailed          = "vcard_create_failed"
+
+    // MARK: - Plaid Link
+    static let plaidLinkStarted           = "plaid_link_started"
+    static let plaidLinkSuccess           = "plaid_link_success"
+    static let plaidLinkExited            = "plaid_link_exited"
+    static let plaidLinkFailed            = "plaid_link_failed"
 
     // MARK: - Errors
     static let appError              = "app_error"
-    static let networkError          = "network_error"
-    static let apiError              = "api_error"
 }
 
 // MARK: - Event Parameter Keys
-// ← fixed: was missing entirely — raw strings were used in AnalyticsManager
 
 enum AnalyticsParam {
     static let screenName       = "screen_name"
     static let method           = "method"
-    static let currency         = "currency"
     static let amount           = "amount"
-    static let transactionId    = "transaction_id"
     static let type             = "type"
     static let errorCode        = "error_code"
     static let kycStep          = "kyc_step"
-    static let loanType         = "loan_type"
-    static let assetClass       = "asset_class"
     static let reason           = "reason"
     static let step             = "step"
+    static let accountId        = "account_id"
+    static let accountName      = "account_name"
+    static let savingsAccountId = "savings_account_id"
+    static let toAccountId      = "to_account_id"
+    static let fromAccountId    = "from_account_id"
+    static let count            = "count"
+    static let contactId        = "contact_id"
+    static let institutionName  = "institution_name"
+    static let lockoutRound     = "lockout_round"
+    static let lockoutDuration  = "lockout_duration"
 }
 
 // MARK: - User Property Values
@@ -110,36 +119,12 @@ enum AuthStatusValue {
 // MARK: - User Property Keys
 
 enum UserPropertyKey {
-    static let accountTier          = "account_tier"
     static let kycStatus            = "kyc_status"
-    static let authStatus           = "auth_status"        // ← added: track login/logout state
-    static let preferredProduct     = "preferred_product"
-    static let preferredPayment     = "preferred_payment_method"
-    static let notificationsEnabled = "notifications_enabled"
+    static let authStatus           = "auth_status"
     static let biometricEnabled     = "biometric_enabled"
-    static let appVersion           = "app_version"
 }
 
 // MARK: - Supporting Enums
-
-enum PaymentMethod: String {
-    case upi        = "upi"
-    case card       = "card"
-    case neft       = "neft"
-    case rtgs       = "rtgs"
-    case imps       = "imps"
-    case wallet     = "wallet"
-    case netBanking = "net_banking"
-}
-
-enum PaymentFlow: String {
-    case p2p        = "p2p"
-    case merchant   = "merchant"
-    case billPay    = "bill_pay"
-    case recharge   = "recharge"
-    case investment = "investment"
-    case loanEMI    = "loan_emi"
-}
 
 enum KYCStep: String {
     case idVerified      = "id_verified"

@@ -19,12 +19,17 @@ final class SavingsAccountViewModel: BaseViewModel {
     // MARK: - Dependencies
 
     private let network: NetworkServiceProtocol
-    
+    private let analytics: AnalyticsTracking
+
     // MARK: - Init
-    
-    init(network: NetworkServiceProtocol,
-         alertManager: AlertManagerProtocol) {
+
+    init(
+        network: NetworkServiceProtocol,
+        alertManager: AlertManagerProtocol,
+        analytics: AnalyticsTracking? = nil
+    ) {
         self.network = network
+        self.analytics = analytics ?? AnalyticsManager.shared
         super.init(alertManager: alertManager)
     }
     
@@ -36,6 +41,7 @@ final class SavingsAccountViewModel: BaseViewModel {
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(SavingsAccountAPI.list())
             }
+            analytics.log(AnalyticsEvent.savingsAccountListViewed)
         } catch is CancellationError {
             // cancelled — no action
         } catch {
@@ -53,6 +59,10 @@ final class SavingsAccountViewModel: BaseViewModel {
                     SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId))
                 )
             }
+            analytics.log(AnalyticsEvent.savingsNicknameUpdated, params: [
+                AnalyticsParam.accountId: accountId,
+                AnalyticsParam.accountName: name
+            ])
             await loadAccounts()
             ToastManager.shared.show("Nickname updated!", style: .success, position: .bottom)
         } catch is CancellationError {
@@ -77,11 +87,17 @@ final class SavingsAccountViewModel: BaseViewModel {
                     SavingsAccountAPI.create(SavingsAccountRequest.CreateAccount(nickname: trimmed))
                 )
             }
+            analytics.log(AnalyticsEvent.savingsAccountCreated, params: [
+                AnalyticsParam.accountName: trimmed
+            ])
             await loadAccounts()
             ToastManager.shared.show("\"\(trimmed)\" account created!", style: .success, position: .bottom)
         } catch is CancellationError {
             // cancelled — no action
         } catch {
+            analytics.log(AnalyticsEvent.savingsAccountCreateFailed, params: [
+                AnalyticsParam.accountName: trimmed
+            ])
             ToastManager.shared.show("Failed to create account. Please try again.", style: .error, position: .bottom)
         }
     }
@@ -119,10 +135,14 @@ final class SavingsAccountViewModel: BaseViewModel {
     // MARK: - Delete Account
     
     func deleteSavingAccount(request: SavingsAccountRequest.DeleteAccount) async throws -> SuccessResponse {
-        try await perform { [weak self] in
+        let result: SuccessResponse = try await perform { [weak self] in
             guard let self else { throw ModelError.deallocated }
             return try await network.request(SavingsAccountAPI.delete(request))
         }
+        analytics.log(AnalyticsEvent.savingsAccountDeleted, params: [
+            AnalyticsParam.accountId: request.accountId
+        ])
+        return result
     }
         
     // MARK: - Account Details
@@ -140,6 +160,9 @@ final class SavingsAccountViewModel: BaseViewModel {
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(SavingsAccountAPI.details(accountId: accountID))
             }
+            analytics.log(AnalyticsEvent.savingsAccountDetailViewed, params: [
+                AnalyticsParam.accountId: accountID
+            ])
         } catch is CancellationError {
             // cancelled — no action
         } catch {

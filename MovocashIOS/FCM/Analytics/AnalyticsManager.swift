@@ -32,18 +32,7 @@ protocol AnalyticsTracking {
     // KYC
     func trackKYCStarted()
     func trackKYCCompleted(step: KYCStep)
-    func trackKYCStepCompleted(step: KYCStep)
     func trackKYCAbandoned(step: KYCStep)
-
-    // Transactions
-    func trackTransactionInitiated(amount: Double, currency: String, type: String)
-    func trackTransactionSuccess(id: String, amount: Double, currency: String)
-    func trackTransactionFailed(errorCode: String, amount: Double)
-
-    // Payments
-    func trackPaymentInitiated(amount: Double, currency: String, method: PaymentMethod, flow: PaymentFlow)
-    func trackPaymentSuccess(id: String, amount: Double, method: PaymentMethod)
-    func trackPaymentFailed(errorCode: String, method: PaymentMethod)
 }
 
 extension AnalyticsTracking {
@@ -211,31 +200,6 @@ final class AnalyticsManager: AnalyticsTracking {
         log(AnalyticsEvent.sessionExpired, params: [AnalyticsParam.reason: "token_expired"])
     }
 
-    // MARK: - Transactions
-
-    func trackTransactionInitiated(amount: Double, currency: String, type: String) {
-        log(AnalyticsEvent.transactionInitiated, params: [
-            AnalyticsParam.amount: amount,
-            AnalyticsParam.currency: currency,
-            AnalyticsParam.type: type
-        ])
-    }
-
-    func trackTransactionSuccess(id: String, amount: Double, currency: String) {
-        log(AnalyticsEvent.transactionSuccess, params: [
-            AnalyticsParam.transactionId: id,
-            AnalyticsParam.amount: amount,
-            AnalyticsParam.currency: currency
-        ])
-    }
-
-    func trackTransactionFailed(errorCode: String, amount: Double) {
-        log(AnalyticsEvent.transactionFailed, params: [
-            AnalyticsParam.errorCode: errorCode,
-            AnalyticsParam.amount: amount
-        ])
-    }
-
     // MARK: - KYC
 
     func trackKYCStarted() {
@@ -246,54 +210,7 @@ final class AnalyticsManager: AnalyticsTracking {
         log(AnalyticsEvent.kycCompleted, params: [AnalyticsParam.kycStep: step.rawValue])
     }
 
-    func trackKYCStepCompleted(step: KYCStep) {
-        log(AnalyticsEvent.kycStepCompleted, params: [AnalyticsParam.step: step.rawValue])
-    }
-
     func trackKYCAbandoned(step: KYCStep) {
         log(AnalyticsEvent.kycAbandoned, params: [AnalyticsParam.step: step.rawValue])
-    }
-
-    // MARK: - Payments
-
-    func trackPaymentInitiated(amount: Double, currency: String, method: PaymentMethod, flow: PaymentFlow) {
-        log(AnalyticsEvent.paymentInitiated, params: [
-            AnalyticsParam.amount: amount,
-            AnalyticsParam.currency: currency,
-            AnalyticsParam.method: method.rawValue,
-            AnalyticsParam.type: flow.rawValue
-        ])
-    }
-
-    func trackPaymentSuccess(id: String, amount: Double, method: PaymentMethod) {
-        log(AnalyticsEvent.paymentSuccess, params: [
-            AnalyticsParam.transactionId: id,
-            AnalyticsParam.amount: amount,
-            AnalyticsParam.method: method.rawValue
-        ])
-    }
-
-    func trackPaymentFailed(errorCode: String, method: PaymentMethod) {
-        log(AnalyticsEvent.paymentFailed, params: [
-            AnalyticsParam.errorCode: errorCode,
-            AnalyticsParam.method: method.rawValue
-        ])
-    }
-
-    // MARK: - Investment / Loan
-
-    func trackInvestment(amount: Double, assetClass: String, currency: String) {
-        log(AnalyticsEvent.investmentMade, params: [
-            AnalyticsParam.amount: amount,
-            AnalyticsParam.assetClass: assetClass,
-            AnalyticsParam.currency: currency
-        ])
-    }
-
-    func trackLoanApplied(type: String, amount: Double) {
-        log(AnalyticsEvent.loanApplied, params: [
-            AnalyticsParam.loanType: type,
-            AnalyticsParam.amount: amount
-        ])
     }
 }
