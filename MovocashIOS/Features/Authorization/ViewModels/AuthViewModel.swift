@@ -43,7 +43,7 @@ final class AuthViewModel: ObservableObject {
         self.analytics = analytics
     }
     
-    //MARK: - Send OTP
+    // MARK: - Send OTP
     
     func sendOTP() async throws {
         guard state != .loading else { return }
@@ -61,7 +61,7 @@ final class AuthViewModel: ObservableObject {
         }
     }
     
-    //MARK: - Validate OTP
+    // MARK: - Validate OTP
     
     func validateOTP(code: String) async throws -> RefreshTokenResponse  {
         guard state != .loading else { throw ModelError.alreadyLoading }
@@ -80,7 +80,6 @@ final class AuthViewModel: ObservableObject {
         }
     }
     
-    
     // MARK: - Complete OTP Verification Flow
     
     func completeOTPVerification(code: String, appState: AppState, onNavigate: @escaping (AuthFlow) -> Void) async {
@@ -96,7 +95,6 @@ final class AuthViewModel: ObservableObject {
 
             analytics.trackLogin(method: .otp)
             await kycManager.configureSDK(officeId: AppConfig.officeId)
-
             let destination: AuthFlow = context == .login ? .home : .setupPasscode
             reset()
             onNavigate(destination)
@@ -157,8 +155,9 @@ final class AuthViewModel: ObservableObject {
     }
 }
 
+// MARK: - RSA Biometric Auth
 
-extension AuthViewModel { // TODO: - Testing checking
+extension AuthViewModel {
     
     // ── Entry point ───────────────────────────────────────────────────────────
     func enrollRSASilently(appState: AppState) async {
@@ -168,142 +167,38 @@ extension AuthViewModel { // TODO: - Testing checking
         }
         isEnrolling = true
         defer { isEnrolling = false }
-        
-        if RSAKeyManager.isRegistered() {
-            SecureLogger.info("Already enrolled — calling loginWithRSA", category: .auth)
-            await loginWithRSA(appState: appState, fromEnrollment: true)
-        } else {
-            SecureLogger.info("Not enrolled — starting enroll flow", category: .auth)
-            await runEnrollFlow(appState: appState)
-        }
+        await loginWithRSA(appState: appState)
     }
     
-    // ── Enroll flow ───────────────────────────────────────────────────────────
-    private func runEnrollFlow(appState: AppState) async {
-        
-        let keyResult = await Task.detached(priority: .background) {
-            await RSAKeyManager.generateKeyPair()
-        }.value
-        
-        switch keyResult {
-        case .failure(let error):
-            SecureLogger.error("generateKeyPair failed: \(error.errorDescription ?? "")", category: .auth)
-            return
-            
-        case .success(let publicKey):
-            let enrolled = await postEnrollWithRetry(
-                request: RSAEnrollRequest(publicKey: publicKey,
-                                          deviceId: await DeviceManager.shared.deviceID())
-            )
-            guard enrolled else {
-                SecureLogger.error("Enroll failed — aborting", category: .auth)
-                return
-            }
-            
-            SecureLogger.info("Enroll success — calling loginWithRSA", category: .auth)
-            await loginWithRSA(appState: appState, fromEnrollment: true)
-        }
-    }
-    
-    // ── POST /rsa with retry ──────────────────────────────────────────────────
-    @discardableResult
-    private func postEnrollWithRetry(request: RSAEnrollRequest) async -> Bool {
-        for attempt in 1...2 {
-            SecureLogger.info("POST /rsa attempt \(attempt)", category: .auth)
-            
-            let success = await postEnroll(request: request)
-            
-            if success {
-                SecureLogger.info("POST /rsa succeeded on attempt \(attempt)", category: .auth)
-                return true
-            }
-            
-            SecureLogger.error("POST /rsa attempt \(attempt) failed", category: .auth)
-            
-            if attempt < 2 {
-                SecureLogger.info("Retrying POST /rsa in 1s…", category: .auth)
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-            }
-        }
-        
-        RSAKeyManager.deleteKey()
-        SecureLogger.error("POST /rsa failed after 2 attempts — key deleted", category: .auth)
-        return false
-    }
-    
-    private func postEnroll(request: RSAEnrollRequest) async -> Bool {
-        do {
-            let _: SuccessResponse = try await network.request(
-                AuthAPI.enrollRSA(request: request)
-            )
-            return true // normal JSON success
-        } catch NetworkError.decodingError {
-            // 2xx passed in NetworkService — only decode failed (bare `true` body)
-            SecureLogger.info("POST /rsa decode failed on 2xx — treating bare `true` as success", category: .auth)
-            return true
-        } catch {
-            SecureLogger.error("POST /rsa error: \(error.localizedDescription)", category: .auth)
-            return false
-        }
-    }
-    
-    // ── POST /auth/token-rsa + start session ──────────────────────────────────
-    private func tokenRSAAndStartSession(signedMessage: String, appState: AppState) async {
+    // ── POST /rsa/nonce + POST /auth/token-rsa ────────────────────────────────
+    private func loginWithRSA(appState: AppState) async {
         let deviceId = await DeviceManager.shared.deviceID()
+        
         do {
+            let nonceResponse: RSANonceResponse = try await network.request(
+                AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId))
+            )
+            SecureLogger.info("nonce fetched successfully", category: .auth)
+            
             let response: RSATokenResponse = try await network.request(
                 AuthAPI.tokenRSA(request: RSATokenRequest(
-                    signedMessage: signedMessage,
+                    signedMessage: nonceResponse.nonce,
                     deviceId: deviceId
                 ))
             )
             try await sessionManager.startSession(
-                accessToken:  response.accessToken,
+                accessToken: response.accessToken,
                 refreshToken: response.refreshToken,
-                appState:     appState
+                appState: appState
             )
-            analytics.trackLogin(method: .biometric)
             SecureLogger.info("tokenRSA success — session started", category: .auth)
         } catch {
-            SecureLogger.error("tokenRSA failed: \(error.localizedDescription)", category: .auth)
-            //TODO: - alertManager.showError("Biometric login failed. Please log in with your phone number.")
-        }
-    }
-    
-    func loginWithRSA(appState: AppState, fromEnrollment: Bool = false) async {
-        guard !isEnrolling || fromEnrollment else {
-            SecureLogger.warning("loginWithRSA skipped — enrollment in progress", category: .auth)
-            return
-        }
-        
-        let deviceId  = await DeviceManager.shared.deviceID()
-        let challenge = RSAKeyManager.buildChallenge(deviceId: deviceId)
-
-        // Run sign on a background thread — SE signing blocks until Face ID / Touch ID completes.
-        let signResult = await Task.detached(priority: .userInitiated) {
-            await RSAKeyManager.sign(challenge: challenge, reason: "Authenticate to access MovoCash")
-        }.value
-
-        analytics.trackLoginAttempt(method: .biometric)
-
-        switch signResult {
-        case .failure(let error):
-            SecureLogger.error("sign failed: \(error)", category: .auth)
-            analytics.trackLoginFailed(method: .biometric, errorCode: error.localizedDescription)
-            if error == .keyNotFound && !fromEnrollment {
-                await runEnrollFlow(appState: appState)
-            }
-            return
-
-        case .success(let signedMessage):
-            SecureLogger.info("sign success — calling tokenRSA", category: .auth)
-            await tokenRSAAndStartSession(signedMessage: signedMessage, appState: appState)
+            SecureLogger.error("biometric login failed: \(error.localizedDescription)", category: .auth)
         }
     }
 }
 
-
-//MARK: - AuthState
+// MARK: - AuthState
 
 enum AuthState: Equatable {
     case idle

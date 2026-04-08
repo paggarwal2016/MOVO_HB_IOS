@@ -74,5 +74,9 @@ final class AppContainer: ObservableObject {
     func makeKYCViewModel() -> KYCViewModel {
         KYCViewModel(kycManager: kycManager, alertManager: alertManager, analytics: analytics)
     }
+    
+    func makeACHViewModel() -> ACHViewModel {
+        ACHViewModel(service: .shared)
+    }
 
 }

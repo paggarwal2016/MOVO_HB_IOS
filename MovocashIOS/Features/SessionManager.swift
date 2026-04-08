@@ -104,6 +104,7 @@ final class SessionManager: ObservableObject {
             }
 
             await authManager.updateAccessToken(accessToken)
+            try await kycManager.configureSDK(officeId: AppConfig.officeId)
             appState.isAuthenticated = true
             analytics.identifyUser(from: accessToken)
             return .restored

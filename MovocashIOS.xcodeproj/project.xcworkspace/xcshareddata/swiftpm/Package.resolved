@@ -1,5 +1,5 @@
 {
-  "originHash" : "d4b27ac6c6c6db632c726d1123a551d4a5ed55bcb219efa6b2bad160b4064f53",
+  "originHash" : "6d4f39d644b50b36f2e6fe5e059540054b0df67e23b8b4bde14704f94215cab1",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -114,7 +114,7 @@
       "kind" : "registry",
       "location" : "",
       "state" : {
-        "version" : "1.5.0"
+        "version" : "1.7.0"
       }
     },
     {
@@ -124,6 +124,15 @@
       "state" : {
         "revision" : "b7e1104502eca3a213b46303391ca4d3bc8ddec1",
         "version" : "2.30910.0"
+      }
+    },
+    {
+      "identity" : "plaid-link-ios-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/plaid/plaid-link-ios-spm.git",
+      "state" : {
+        "revision" : "1a4e2241f8968deebd3ecd9ebc128fa91ccc9f49",
+        "version" : "6.4.7"
       }
     },
     {

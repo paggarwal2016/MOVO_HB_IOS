@@ -11,7 +11,6 @@
 		142337BA2F5807890030B4E7 /* ChoiceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337B92F5807890030B4E7 /* ChoiceScreen.swift */; };
 		142337BC2F5807C70030B4E7 /* PhoneNumberScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */; };
 		142337BE2F5807FB0030B4E7 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BD2F5807FB0030B4E7 /* OTPScreen.swift */; };
-		142337C02F5808250030B4E7 /* KYCView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BF2F5808250030B4E7 /* KYCView.swift */; };
 		142D702B2F70F6B10012BEF7 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 142D702A2F70F6B10012BEF7 /* MobileBankingSDK */; };
 		1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791A2F6D430500EADEA2 /* ProfileImageView.swift */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
@@ -99,7 +98,6 @@
 		142337B92F5807890030B4E7 /* ChoiceScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceScreen.swift; sourceTree = "<group>"; };
 		142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberScreen.swift; sourceTree = "<group>"; };
 		142337BD2F5807FB0030B4E7 /* OTPScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPScreen.swift; sourceTree = "<group>"; };
-		142337BF2F5808250030B4E7 /* KYCView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCView.swift; sourceTree = "<group>"; };
 		1445791A2F6D430500EADEA2 /* ProfileImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageView.swift; sourceTree = "<group>"; };
 		1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinInputAlertPresenter.swift; sourceTree = "<group>"; };
 		1468194E2F4DE6CF00BED014 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
@@ -382,7 +380,6 @@
 		1468196F2F4DE6CF00BED014 /* KYC */ = {
 			isa = PBXGroup;
 			children = (
-				142337BF2F5808250030B4E7 /* KYCView.swift */,
 				146BBC712F71243A00B3593A /* KYCViewModel.swift */,
 				14DCE1382F595474008A8DC4 /* KYCEnum.swift */,
 				14B824E02F51898E003ACBD0 /* KYCManager.swift */,
@@ -657,7 +654,6 @@
 				146819812F4DE6CF00BED014 /* HTTPMethod.swift in Sources */,
 				146819822F4DE6CF00BED014 /* SSLPinning.swift in Sources */,
 				14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */,
-				142337C02F5808250030B4E7 /* KYCView.swift in Sources */,
 				146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */,
 				14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */,
 				14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */,

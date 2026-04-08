@@ -143,37 +143,30 @@ struct InternalTransferView: View {
                     ForEach(allAccounts) { account in
                         Button {
                             selectedFromAccount = account
-                            // Reset "To" if it's now the same as "From"
                             if selectedToAccount?.id == account.id {
                                 selectedToAccount = nil
                             }
                         } label: {
-                            VStack(alignment: .leading) {
-                                Text(account.nickname ?? account.clientName)
-                                Text(account.maskedAccountNumber)
-                            }
+                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
                         }
                     }
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack {
                         if let account = selectedFromAccount {
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(account.nickname ?? account.clientName)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(.primary)
-                                Text(account.maskedAccountNumber)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.primary)
                         } else {
                             Text("Select account")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
+                        Spacer()
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
+                    .animation(.none, value: selectedFromAccount?.id)
                 }
             }
         }
@@ -191,32 +184,26 @@ struct InternalTransferView: View {
                         Button {
                             selectedToAccount = account
                         } label: {
-                            VStack(alignment: .leading) {
-                                Text(account.nickname ?? account.clientName)
-                                Text(account.maskedAccountNumber)
-                            }
+                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
                         }
                     }
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack {
                         if let account = selectedToAccount {
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(account.nickname ?? account.clientName)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(.primary)
-                                Text(account.maskedAccountNumber)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.primary)
                         } else {
                             Text("Select account")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
+                        Spacer()
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
+                    .animation(.none, value: selectedToAccount?.id)
                 }
             }
         }
@@ -263,7 +250,8 @@ struct InternalTransferView: View {
             amount: amount,
             toAccountId: toAccount.id,
             toClientId: toClientId,
-            fromAccountId: from.id
+            fromAccountId: from.id,
+            phoneNumber: nil
         )
         guard await transVM.submitInternalTransfer(request: request) else { return }
         ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)

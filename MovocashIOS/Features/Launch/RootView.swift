@@ -21,6 +21,7 @@ struct RootView: View {
     /// Passed directly — NOT via environment — to avoid AppLockViewModel type
     /// collision with lockVM which would cause SwiftUI to serve the wrong instance.
     @ObservedObject var passcodeSetupVM: AppLockViewModel
+    @ObservedObject var kycVM: KYCViewModel
 
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
@@ -73,8 +74,22 @@ struct RootView: View {
                         }   // skipped  → home or kyc
                     )
 
+                case .pickDocument:
+                    PickDocumentView(
+                        onBack: {
+                            if lockManager.isBiometricAvailable {
+                                appState.flow = .enableBiometrics
+                            } else {
+                                appState.flow = .setupPasscode
+                            }
+                        },
+                        onContinue: {
+                            appState.flow = .kyc
+                        }
+                    )
+
                 case .kyc:
-                    KYCView(container: container)
+                    EmptyView()
 
                 case .home:
                     HomeTabBarView()
@@ -89,7 +104,7 @@ struct RootView: View {
             // ── Lock overlay (returning users / background lock) ───────────
             // Suppressed during new-user registration arrival to prevent
             // spurious lock overlays caused by KYC UIViewController teardown.
-            if lockManager.state == .locked && !appState.isNewRegistration {
+            if lockManager.state == .locked && !appState.isNewRegistration && !UserDefaults.standard.bool(forKey: "kycInProgress") {
                 AppLockView(vm: lockVM, autoTriggerBiometric: false)
                     .transition(.opacity)
                     .zIndex(10)
@@ -97,6 +112,18 @@ struct RootView: View {
             }
         }
         .onChangeCompat(of: scenePhase) { newPhase in lockManager.handleScenePhase(newPhase) }
+        .task(id: appState.flow) {
+            guard appState.flow == .kyc else { return }
+            UserDefaults.standard.set(true, forKey: "kycInProgress")
+            await kycVM.startVerification {
+                UserDefaults.standard.removeObject(forKey: "kycInProgress")
+                appState.isNewRegistration = true
+                appState.flow = .home
+            } onFailure: {
+                UserDefaults.standard.removeObject(forKey: "kycInProgress")
+                appState.flow = .pickDocument
+            }
+        }
         .onChangeCompat(of: appState.otpVerified) { verified in
             guard verified else { return }
             if lockManager.isPasscodeSet {
@@ -125,7 +152,7 @@ struct RootView: View {
     private func advanceAfterSecurity() {
         switch appState.context {
         case .getStarted:
-            appState.flow = .kyc
+            appState.flow = .pickDocument
         default:
             appState.flow = .home
         }

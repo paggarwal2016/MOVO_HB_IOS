@@ -24,6 +24,8 @@ struct DashboardView: View {
     // MARK: - Savings
 
     @StateObject private var savingVM: SavingsAccountViewModel
+    
+    @StateObject private var achVM: ACHViewModel
 
     private let container: AppContainer
 
@@ -31,6 +33,7 @@ struct DashboardView: View {
         self.container = container
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        _achVM = StateObject(wrappedValue: container.makeACHViewModel())
     }
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
@@ -198,11 +201,19 @@ struct DashboardView: View {
             .padding()
             .frame(height: 60)
             
-            ActionCard(title: "Quick transfers",
+            ActionCard(title: "Quick Transfers",
                        description: "Send money instantly to anyone in your contact list.",
                        buttonLabel: "Add people") {
                 showContactList = true
                 SecureLogger.debug("Quick transfer tapped", category: .general)
+            }
+            
+            ActionCard(title: "Link Bank Account",
+                       description: "To make inverstments, deposits, withdrawals and securely link your bank account.",
+                       buttonLabel: "Connect bank",
+                       isLoading: achVM.state == .loading) {
+                Task { await achVM.startPlaidLink() }
+                SecureLogger.debug("Link your bank tapped", category: .general)
             }
         } else if savingVM.state == .loading {
             CardSkeletonView()

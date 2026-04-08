@@ -485,15 +485,6 @@ final class AppLockManager: ObservableObject {
     }
 }
 
-// MARK: - RSA unlock bridge
-
-extension AppLockManager {
-
-    func unlockWithRSA(authVM: AuthViewModel, appState: AppState) async {
-        await authVM.loginWithRSA(appState: appState)
-    }
-}
-
 // MARK: - Errors
 
 enum AppLockError: LocalizedError {

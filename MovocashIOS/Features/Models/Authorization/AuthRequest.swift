@@ -32,3 +32,8 @@ struct RSATokenRequest: Encodable, Sendable {
     let signedMessage: String
     let deviceId: String
 }
+
+struct RSANonceRequest: Encodable, Sendable {
+    let deviceId: String
+}
+
