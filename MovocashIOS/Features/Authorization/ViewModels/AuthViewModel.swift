@@ -94,7 +94,7 @@ final class AuthViewModel: ObservableObject {
             )
 
             analytics.trackLogin(method: .otp)
-            await kycManager.configureSDK(officeId: AppConfig.officeId)
+            try await kycManager.configureSDK(officeId: AppConfig.officeId)
             let destination: AuthFlow = context == .login ? .home : .setupPasscode
             reset()
             onNavigate(destination)
