@@ -79,22 +79,24 @@ struct ContactView: View {
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
-            Button("Open Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
+            if viewModel.isPermissionError {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
                 }
+                .font(.system(size: 15, weight: .medium))
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .clipShape(Capsule())
+                Text("You may need to reopen the app after granting access.")
+                    .font(.system(size: 13))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
             }
-            .font(.system(size: 15, weight: .medium))
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(Color.blue)
-            .foregroundColor(.white)
-            .clipShape(Capsule())
-            Text("You may need to reopen the app after granting access.")
-                .font(.system(size: 13))
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
         }
     }
     

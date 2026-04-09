@@ -9,12 +9,20 @@ import Foundation
 import SwiftUI
 
 struct UserProfileView: View {
-    
+
     @EnvironmentObject var userVM: UserViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var lockManager: AppLockManager
-    
+
+    @StateObject private var achVM: ACHViewModel
+    @StateObject private var plaidVM: PlaidAchViewModel
+
+    init(container: AppContainer) {
+        _achVM = StateObject(wrappedValue: container.makeACHViewModel())
+        _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+    }
+
     var body: some View {
         
         Group {
@@ -26,6 +34,7 @@ struct UserProfileView: View {
                 emptyState
             }
         }
+        .task { await achVM.fetchAccounts() }
         .onAppear {
             if userVM.profile == nil {
                 Task { await userVM.fetchProfile() }
@@ -81,7 +90,8 @@ struct UserProfileView: View {
             addressSection(profile)
             idVerificationSection(profile)
             accountStatusSection(profile)
-            
+            linkedBankAccountsSection
+
             PrimaryButton(title: "Delete Account") {
                 AlertManager.shared.showConfirmation(
                     title: "Delete",
@@ -102,8 +112,98 @@ struct UserProfileView: View {
         .listStyle(.insetGrouped)
     }
     
+    // MARK: - Linked Bank Accounts
+
+    private var linkedBankAccountsSection: some View {
+        Section("Linked bank accounts") {
+            if achVM.state == .loading && achVM.accounts.isEmpty {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+            } else if achVM.accounts.isEmpty {
+                Text("No linked accounts")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+            } else {
+                ForEach(achVM.accounts, id: \.achAccountId) { account in
+                    HStack(spacing: 12) {
+                        if let uiImage = account.logoImage {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                        } else {
+                            Image(systemName: "building.columns")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color.softBlue)
+                                .frame(width: 32, height: 32)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(account.accountName)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Text(account.institutionName)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(account.accountNumber)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        Button {
+                            guard !account.isDefault else { return }
+                            Task { await achVM.updateAccount(id: account.achAccountId) }
+                        } label: {
+                            Image(systemName: account.isDefault ? "star.fill" : "star")
+                                .font(.system(size: 15))
+                                .foregroundStyle(account.isDefault ? Color.yellow : Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        Button {
+                            AlertManager.shared.showConfirmation(
+                                title: "Remove Account",
+                                message: "Are you sure you want to remove \(account.institutionName) - \(account.accountName)?",
+                                onConfirm: {
+                                    Task { await achVM.deleteAccount(id: account.achAccountId) }
+                                }
+                            )
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.red.opacity(0.8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
+            Button {
+                Task {
+                    await plaidVM.startPlaidLink()
+                    if plaidVM.linkedAccount != nil {
+                        await achVM.fetchAccounts()
+                    }
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(Color.softBlue)
+                    Text(plaidVM.state == .loading ? "Connecting..." : "Connect Bank Account")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.softBlue)
+                }
+            }
+            .disabled(plaidVM.state == .loading)
+        }
+    }
+
     // MARK: - Sections  (profile passed in, no more dangling reference)
-    
+
     private func avatarSection(_ profile: UserProfileResponse) -> some View {
         Section {
             VStack(spacing: 10) {

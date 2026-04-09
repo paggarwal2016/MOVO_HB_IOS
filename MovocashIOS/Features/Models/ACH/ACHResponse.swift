@@ -6,12 +6,13 @@
 //
 
 import Foundation
+import UIKit
 
-nonisolated struct ACHResponse: Decodable, Sendable {
+nonisolated struct ACHResponse: Codable, Sendable {
     let achAccounts: [ACHAccount]
 }
 
-nonisolated struct ACHAccount: Decodable, Sendable {
+nonisolated struct ACHAccount: Codable, Sendable, Equatable {
     let plaidAccountId: String
     let plaidAccountBalance: Double
     let isPlaidLoginRequired: Bool
@@ -21,4 +22,21 @@ nonisolated struct ACHAccount: Decodable, Sendable {
     let accountName: String
     let institutionName: String
     let achAccountId: Int
+
+    // MARK: - Display Helpers
+
+    var formattedBalance: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        return formatter.string(from: NSNumber(value: plaidAccountBalance)) ?? "$0.00"
+    }
+
+    var logoImage: UIImage? {
+        guard !institutionLogo.isEmpty,
+              let data = Data(base64Encoded: institutionLogo, options: .ignoreUnknownCharacters) else {
+            return nil
+        }
+        return UIImage(data: data)
+    }
 }

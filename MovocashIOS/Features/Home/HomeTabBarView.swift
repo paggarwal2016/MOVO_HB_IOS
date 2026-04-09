@@ -90,7 +90,7 @@ private extension HomeTabBarView {
         switch tab {
         case .home:     DashboardView(container: container)
         case .accounts: AccountsView()
-        case .profile:  UserProfileView()
+        case .profile:  UserProfileView(container: container)
         }
     }
 }

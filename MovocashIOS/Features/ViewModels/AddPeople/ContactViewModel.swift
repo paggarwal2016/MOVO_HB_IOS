@@ -57,7 +57,12 @@ final class ContactViewModel: BaseViewModel {
         favorites.contains(contact.id)
     }
 
+    var isPermissionError: Bool {
+        loadError == ContactsError.permissionDenied.localizedDescription
+    }
+
     func load() async {
+        guard state != .loading else { return }
         loadError = nil
         do {
             let result = try await perform { try await self.service.fetchContacts() }

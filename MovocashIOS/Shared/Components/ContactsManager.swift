@@ -28,8 +28,20 @@ struct AppContact: Identifiable, Hashable {
 
 final class ContactsService: ContactsServiceProtocol {
     func fetchContacts() async throws -> [AppContact] {
-        let granted = try await CNContactStore().requestAccess(for: .contacts)
-        guard granted else { throw ContactsError.permissionDenied }
+        let store = CNContactStore()
+        let status = CNContactStore.authorizationStatus(for: .contacts)
+
+        switch status {
+        case .notDetermined:
+            let granted = try await store.requestAccess(for: .contacts)
+            guard granted else { throw ContactsError.permissionDenied }
+        case .denied, .restricted:
+            throw ContactsError.permissionDenied
+        case .authorized, .limited:
+            break
+        @unknown default:
+            throw ContactsError.permissionDenied
+        }
 
         // Fast-fail if the task was already cancelled before we start work.
         try Task.checkCancellation()

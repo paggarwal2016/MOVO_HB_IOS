@@ -84,7 +84,7 @@ final class ACHViewModel: BaseViewModel {
         }
     }
 
-    // MARK: - Update ACH Account
+    // MARK: - Update ACH Account (set as default)
 
     @discardableResult
     func updateAccount(id: Int) async -> Bool {
@@ -92,6 +92,19 @@ final class ACHViewModel: BaseViewModel {
             let _: SuccessResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(AchAPI.updateAccount(id: id))
+            }
+            accounts = accounts.map { account in
+                ACHAccount(
+                    plaidAccountId: account.plaidAccountId,
+                    plaidAccountBalance: account.plaidAccountBalance,
+                    isPlaidLoginRequired: account.isPlaidLoginRequired,
+                    isDefault: account.achAccountId == id,
+                    institutionLogo: account.institutionLogo,
+                    accountNumber: account.accountNumber,
+                    accountName: account.accountName,
+                    institutionName: account.institutionName,
+                    achAccountId: account.achAccountId
+                )
             }
             return true
         } catch is CancellationError {

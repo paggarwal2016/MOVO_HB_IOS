@@ -79,4 +79,8 @@ final class AppContainer: ObservableObject {
         PlaidAchViewModel(service: .shared)
     }
 
+    func makeACHViewModel() -> ACHViewModel {
+        ACHViewModel(network: network, alertManager: alertManager)
+    }
+
 }
