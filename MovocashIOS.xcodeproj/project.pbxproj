@@ -37,14 +37,9 @@
 		1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468199E2F4EE8B000BED014 /* OTPViewModel.swift */; };
 		146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A02F4F0A2100BED014 /* AlertManager.swift */; };
 		146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A22F4F272500BED014 /* PhoneFormatter.swift */; };
-		146BBC722F71243A00B3593A /* KYCViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146BBC712F71243A00B3593A /* KYCViewModel.swift */; };
-		14716FFB2F86671600198064 /* PickDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FF82F86671600198064 /* PickDocumentView.swift */; };
-		14716FFC2F86671600198064 /* PlaidLinkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FF92F86671600198064 /* PlaidLinkManager.swift */; };
-		14716FFD2F86671600198064 /* ACHViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FF72F86671600198064 /* ACHViewModel.swift */; };
 		14716FFE2F86671600198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FFA2F86671600198064 /* PlaidService.swift */; };
 		147170012F8667AF00198064 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 147170002F8667AF00198064 /* LinkKit */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
-		14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B824E02F51898E003ACBD0 /* KYCManager.swift */; };
 		14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */; };
 		14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */; };
 		14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3E2F7BB64000607891 /* FirebaseMessaging */; };
@@ -128,13 +123,8 @@
 		1468199E2F4EE8B000BED014 /* OTPViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPViewModel.swift; sourceTree = "<group>"; };
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		146819A22F4F272500BED014 /* PhoneFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFormatter.swift; sourceTree = "<group>"; };
-		146BBC712F71243A00B3593A /* KYCViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCViewModel.swift; sourceTree = "<group>"; };
-		14716FF72F86671600198064 /* ACHViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACHViewModel.swift; sourceTree = "<group>"; };
-		14716FF82F86671600198064 /* PickDocumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickDocumentView.swift; sourceTree = "<group>"; };
-		14716FF92F86671600198064 /* PlaidLinkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidLinkManager.swift; sourceTree = "<group>"; };
 		14716FFA2F86671600198064 /* PlaidService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidService.swift; sourceTree = "<group>"; };
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
-		14B824E02F51898E003ACBD0 /* KYCManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCManager.swift; sourceTree = "<group>"; };
 		14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -224,6 +214,21 @@
 		14DCE2362F59BDA4008A8DC4 /* Reachability */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Reachability;
+			sourceTree = "<group>";
+		};
+		14DF5C592F8789C900D2641E /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		14DF5C5A2F8789FA00D2641E /* Components */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Components;
+			sourceTree = "<group>";
+		};
+		14DF5C5B2F878A3000D2641E /* View */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = View;
 			sourceTree = "<group>";
 		};
 		14FC32572F7BE4370063F6FD /* FCM */ = {
@@ -390,13 +395,11 @@
 		1468196F2F4DE6CF00BED014 /* KYC */ = {
 			isa = PBXGroup;
 			children = (
-				146BBC712F71243A00B3593A /* KYCViewModel.swift */,
-				14716FF72F86671600198064 /* ACHViewModel.swift */,
-				14716FF82F86671600198064 /* PickDocumentView.swift */,
-				14716FF92F86671600198064 /* PlaidLinkManager.swift */,
+				14DF5C5B2F878A3000D2641E /* View */,
+				14DF5C5A2F8789FA00D2641E /* Components */,
+				14DF5C592F8789C900D2641E /* ViewModels */,
 				14716FFA2F86671600198064 /* PlaidService.swift */,
 				14DCE1382F595474008A8DC4 /* KYCEnum.swift */,
-				14B824E02F51898E003ACBD0 /* KYCManager.swift */,
 			);
 			path = KYC;
 			sourceTree = "<group>";
@@ -522,6 +525,9 @@
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,
+				14DF5C592F8789C900D2641E /* ViewModels */,
+				14DF5C5A2F8789FA00D2641E /* Components */,
+				14DF5C5B2F878A3000D2641E /* View */,
 				14FC32572F7BE4370063F6FD /* FCM */,
 				14FC325D2F7BE8FF0063F6FD /* App */,
 			);
@@ -680,15 +686,10 @@
 				14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */,
 				14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
-				146BBC722F71243A00B3593A /* KYCViewModel.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,
-				14716FFB2F86671600198064 /* PickDocumentView.swift in Sources */,
-				14716FFC2F86671600198064 /* PlaidLinkManager.swift in Sources */,
-				14716FFD2F86671600198064 /* ACHViewModel.swift in Sources */,
 				14716FFE2F86671600198064 /* PlaidService.swift in Sources */,
-				14B824E12F51898E003ACBD0 /* KYCManager.swift in Sources */,
 				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
 				14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */,
 				14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */,

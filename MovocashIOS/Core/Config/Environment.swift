@@ -15,9 +15,9 @@ enum Environment {
         let urlString: String
         switch self {
         case .qa:
-            urlString = "https://api.mobile-banking-qa.herringbank.com"
+            urlString = "https://api-qa.herringbank.com"
         case .production:
-            urlString = "https://api.mobile-banking.herringbank.com"
+            urlString = "https://api.mobile-banking-qa.herringbank.com"
         }
         guard let url = URL(string: urlString) else {
             assertionFailure("Invalid baseURL configuration: \(urlString)")

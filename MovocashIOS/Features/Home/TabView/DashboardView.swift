@@ -25,7 +25,7 @@ struct DashboardView: View {
 
     @StateObject private var savingVM: SavingsAccountViewModel
     
-    @StateObject private var achVM: ACHViewModel
+    @StateObject private var achVM: PlaidAchViewModel
 
     private let container: AppContainer
 
@@ -33,7 +33,7 @@ struct DashboardView: View {
         self.container = container
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
-        _achVM = StateObject(wrappedValue: container.makeACHViewModel())
+        _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
