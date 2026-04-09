@@ -1,5 +1,5 @@
 //
-//  ACHViewModel.swift
+//  PlaidAchViewModel.swift
 //  MovocashIOS
 //
 //  Created by Movo Developer on 07/04/26.
@@ -11,7 +11,7 @@ import MobileBankingSDK
 import UIKit
 
 @MainActor
-final class ACHViewModel: ObservableObject {
+final class PlaidAchViewModel: ObservableObject {
 
     private let service: PlaidService
     private let plaidLinkManager = PlaidLinkManager()

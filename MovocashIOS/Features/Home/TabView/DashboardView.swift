@@ -25,7 +25,7 @@ struct DashboardView: View {
 
     @StateObject private var savingVM: SavingsAccountViewModel
     
-    @StateObject private var achVM: ACHViewModel
+    @StateObject private var achVM: PlaidAchViewModel
 
     private let container: AppContainer
 
@@ -33,7 +33,7 @@ struct DashboardView: View {
         self.container = container
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
-        _achVM = StateObject(wrappedValue: container.makeACHViewModel())
+        _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
@@ -43,7 +43,10 @@ struct DashboardView: View {
     
     @State private var showViewCard = false
     @State private var showFunds = false
-    
+
+    @State private var showMoveMoney = false
+    @State private var showFundAccount = false
+
     @State private var showContactList = false
     
     private var displayAccount: SavingsAccountDetailsResponse? {
@@ -130,6 +133,31 @@ struct DashboardView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showFundAccount) {
+            if let account = displayAccount {
+                FundAccountView(container: container, primaryAccount: account) {
+                    Task { await achVM.startPlaidLink() }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(isPresented: $showMoveMoney) {
+            MoveMoneyMenuView(
+                onFundAccount: {
+                    showMoveMoney = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        showFundAccount = true
+                    }
+                },
+                onTransferMoney: {
+                    showMoveMoney = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        showContactList = true
+                    }
+                }
+            )
+        }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
             await loadData()
@@ -196,11 +224,11 @@ struct DashboardView: View {
                 backgroundColor: .red.opacity(0.1),
                 textColor: .black
             ) {
-                showFunds = true
+                showMoveMoney = true
             }
             .padding()
             .frame(height: 60)
-            
+                        
             ActionCard(title: "Quick Transfers",
                        description: "Send money instantly to anyone in your contact list.",
                        buttonLabel: "Add people") {
@@ -235,7 +263,7 @@ struct DashboardView: View {
                 .padding(.horizontal, 15)
             }
         }
-        
+
     }
     
     // MARK: - Private Functions
