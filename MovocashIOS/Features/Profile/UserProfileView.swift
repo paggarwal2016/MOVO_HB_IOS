@@ -162,6 +162,7 @@ struct UserProfileView: View {
                                 .foregroundStyle(account.isDefault ? Color.yellow : Color.secondary)
                         }
                         .buttonStyle(.plain)
+                        .padding()
                         Button {
                             AlertManager.shared.showConfirmation(
                                 title: "Remove Account",
