@@ -2,7 +2,7 @@
 //  PlaidLinkManager.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 07/04/26.
+//  Created by Movo Developer on 07/04/26.
 //
 
 import Foundation
@@ -44,8 +44,13 @@ struct PlaidLinkResult {
 @MainActor
 final class PlaidLinkManager {
 
+    private let analytics: AnalyticsTracking
     private var handler: Handler?
     private var pendingContinuation: CheckedContinuation<PlaidLinkResult, Error>?
+
+    init(analytics: AnalyticsTracking? = nil) {
+        self.analytics = analytics ?? AnalyticsManager.shared
+    }
 
     /// Presents the Plaid Link UI and returns the parsed result on success.
     /// The caller is responsible for fetching the link token beforehand.
@@ -76,11 +81,15 @@ final class PlaidLinkManager {
         case .success(let h):
             plaidHandler = h
         case .failure(let error):
+            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
+                AnalyticsParam.errorCode: error.localizedDescription
+            ])
             throw PlaidLinkError.handlerCreationFailed(error.localizedDescription)
         }
 
         // Retain the handler so it stays alive while the Plaid UI is presented.
         self.handler = plaidHandler
+        analytics.log(AnalyticsEvent.plaidLinkStarted)
 
         // Present the Plaid Link UI, then suspend until a callback fires.
         return try await withCheckedThrowingContinuation { continuation in
@@ -98,8 +107,15 @@ final class PlaidLinkManager {
 
         do {
             let result = try Self.parseMetadata(from: linkSuccess)
+            analytics.log(AnalyticsEvent.plaidLinkSuccess, params: [
+                AnalyticsParam.institutionName: result.metadata.institution.name,
+                AnalyticsParam.count: result.metadata.accounts.count
+            ])
             continuation.resume(returning: result)
         } catch {
+            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
+                AnalyticsParam.errorCode: "metadata_parse_failed"
+            ])
             continuation.resume(throwing: PlaidLinkError.metadataParseFailed)
         }
     }
@@ -110,6 +126,9 @@ final class PlaidLinkManager {
         pendingContinuation = nil
 
         let message = linkExit.error?.localizedDescription
+        analytics.log(AnalyticsEvent.plaidLinkExited, params: [
+            AnalyticsParam.errorCode: message ?? "user_cancelled"
+        ])
         continuation.resume(throwing: PlaidLinkError.linkExited(message))
     }
 

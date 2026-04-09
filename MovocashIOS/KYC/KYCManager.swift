@@ -28,10 +28,12 @@ final class KYCManager: KYCManagerProtocol {
     static let shared = KYCManager(authManager: AuthManager.shared)
 
     private let authManager: AuthManagerProtocol
+    private let analytics: AnalyticsTracking
     private weak var presenter: UIViewController?
 
-    init(authManager: AuthManagerProtocol) {
+    init(authManager: AuthManagerProtocol, analytics: AnalyticsTracking? = nil) {
         self.authManager = authManager
+        self.analytics = analytics ?? AnalyticsManager.shared
     }
 
     // MARK: - Configure SDK
@@ -41,6 +43,7 @@ final class KYCManager: KYCManagerProtocol {
 
         guard let token = await authManager.getAccessToken() else {
             SecureLogger.error("Missing access token — aborting KYC configure", category: .kyc)
+            analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "missing_token"])
             throw KYCError.notConfigured
         }
 

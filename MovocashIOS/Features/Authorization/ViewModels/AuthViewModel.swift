@@ -23,14 +23,16 @@ final class AuthViewModel: ObservableObject {
     private let sessionManager: SessionManager
     private let kycManager: KYCManagerProtocol
     private let alertManager: AlertManagerProtocol
-    
+    private let analytics: AnalyticsTracking
+
     init(
         network: NetworkServiceProtocol,
         keychain: KeychainManagerProtocol,
         authManager: AuthManagerProtocol,
         sessionManager: SessionManager,
         kycManager: KYCManagerProtocol,
-        alertManager: AlertManagerProtocol
+        alertManager: AlertManagerProtocol,
+        analytics: AnalyticsTracking
     ) {
         self.network = network
         self.keychain = keychain
@@ -38,6 +40,7 @@ final class AuthViewModel: ObservableObject {
         self.sessionManager = sessionManager
         self.kycManager = kycManager
         self.alertManager = alertManager
+        self.analytics = analytics
     }
     
     // MARK: - Send OTP
@@ -80,6 +83,7 @@ final class AuthViewModel: ObservableObject {
     // MARK: - Complete OTP Verification Flow
     
     func completeOTPVerification(code: String, appState: AppState, onNavigate: @escaping (AuthFlow) -> Void) async {
+        analytics.trackLoginAttempt(method: .otp)
         do {
             let response = try await validateOTP(code: code)
 
@@ -89,12 +93,13 @@ final class AuthViewModel: ObservableObject {
                 appState: appState
             )
 
+            analytics.trackLogin(method: .otp)
             try await kycManager.configureSDK(officeId: AppConfig.officeId)
-
             let destination: AuthFlow = context == .login ? .home : .setupPasscode
             reset()
             onNavigate(destination)
         } catch {
+            analytics.trackLoginFailed(method: .otp, errorCode: error.localizedDescription)
             alertManager.showError(error.localizedDescription)
         }
     }
@@ -153,7 +158,7 @@ final class AuthViewModel: ObservableObject {
 // MARK: - RSA Biometric Auth
 
 extension AuthViewModel {
-
+    
     // ── Entry point ───────────────────────────────────────────────────────────
     func enrollRSASilently(appState: AppState) async {
         guard !isEnrolling else {
@@ -164,17 +169,17 @@ extension AuthViewModel {
         defer { isEnrolling = false }
         await loginWithRSA(appState: appState)
     }
-
+    
     // ── POST /rsa/nonce + POST /auth/token-rsa ────────────────────────────────
     private func loginWithRSA(appState: AppState) async {
         let deviceId = await DeviceManager.shared.deviceID()
-
+        
         do {
             let nonceResponse: RSANonceResponse = try await network.request(
                 AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId))
             )
             SecureLogger.info("nonce fetched successfully", category: .auth)
-
+            
             let response: RSATokenResponse = try await network.request(
                 AuthAPI.tokenRSA(request: RSATokenRequest(
                     signedMessage: nonceResponse.nonce,

@@ -17,6 +17,7 @@ final class AppContainer: ObservableObject {
     let kycManager: KYCManagerProtocol
     let sessionManager: SessionManager
     let lockManager: AppLockManager
+    let analytics: AnalyticsTracking
 
     init() {
         keychain = KeychainManager.shared
@@ -24,6 +25,7 @@ final class AppContainer: ObservableObject {
         alertManager = AlertManager.shared
         network = NetworkService.shared
         kycManager = KYCManager.shared
+        analytics = AnalyticsManager.shared
         lockManager = AppLockManager(
             passcodeManager: PasscodeManager(),
             biometricManager: BiometricManager()
@@ -32,7 +34,8 @@ final class AppContainer: ObservableObject {
             authManager: authManager,
             keychain: keychain,
             kycManager: kycManager,
-            alertManager: alertManager
+            alertManager: alertManager,
+            analytics: analytics
         )
     }
 
@@ -43,7 +46,8 @@ final class AppContainer: ObservableObject {
             authManager: authManager,
             sessionManager: sessionManager,
             kycManager: kycManager,
-            alertManager: alertManager
+            alertManager: alertManager,
+            analytics: analytics
         )
     }
 
@@ -64,11 +68,11 @@ final class AppContainer: ObservableObject {
     }
     
     func makeUserViewModel() -> UserViewModel {
-        UserViewModel(network: network, alertManager: alertManager)
+        UserViewModel(network: network, alertManager: alertManager, analytics: analytics)
     }
 
     func makeKYCViewModel() -> KYCViewModel {
-        KYCViewModel(kycManager: kycManager, alertManager: alertManager)
+        KYCViewModel(kycManager: kycManager, alertManager: alertManager, analytics: analytics)
     }
     
     func makeACHViewModel() -> ACHViewModel {
