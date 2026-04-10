@@ -16,6 +16,7 @@ struct DashboardView: View {
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var userVM: UserViewModel
+    @EnvironmentObject var authVM: AuthViewModel
 
     // MARK: - VCard
 
@@ -102,7 +103,7 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showAccountList) {
-            AccountListSheetView(savingsList: $savingVM.accountList, isPresented: $showAccountList, container: container)
+            AccountListSheetView(isPresented: $showAccountList, container: container)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -160,7 +161,7 @@ struct DashboardView: View {
         }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
-            await loadData()
+            await handleOnTask()
         }
         .onAppear {
             showCreateView = false
@@ -267,7 +268,12 @@ struct DashboardView: View {
     }
     
     // MARK: - Private Functions
-    
+
+    private func handleOnTask() async {
+        await loadData()
+        await userVM.fetchProfile()
+    }
+
     private func loadData() async {
         await savingVM.loadAccounts()
     }

@@ -64,14 +64,8 @@ struct RootView: View {
                 case .enableBiometrics:
                     BiometricEnrollView(
                         lockManager: lockManager,
-                        onEnable: { // TODO: - Testing checking
-                            Task { await authVM.enrollRSASilently(appState: appState) }
-                            advanceAfterSecurity()
-                        },  // enabled  → home or kyc
-                        onSkip:   {
-                            Task { await authVM.enrollRSASilently(appState: appState) }
-                            advanceAfterSecurity()
-                        }   // skipped  → home or kyc
+                        onEnable: { advanceAfterSecurity() },  // enabled  → home or kyc
+                        onSkip:   { advanceAfterSecurity() }   // skipped  → home or kyc
                     )
 
                 case .pickDocument:
