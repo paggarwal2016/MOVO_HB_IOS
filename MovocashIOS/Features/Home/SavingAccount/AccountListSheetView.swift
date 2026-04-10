@@ -8,13 +8,13 @@
 import SwiftUI
 
 struct AccountListSheetView: View {
-
+    
     @Binding var savingsList: SavingsAccountListResponse?
     @Binding var isPresented: Bool
     @StateObject private var savingVM: SavingsAccountViewModel
-
+    
     private let container: AppContainer
-
+    
     init(
         savingsList: Binding<SavingsAccountListResponse?>,
         isPresented: Binding<Bool>,
@@ -25,18 +25,18 @@ struct AccountListSheetView: View {
         self.container = container
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
-
+    
     @State private var accounts: [SavingsAccountDetailsResponse] = []
     @State private var primaryAccountId: Int?
     @State private var selectedDetailAccount: SavingsAccountDetailsResponse?
-
+    
     @State private var showCreateAccount = false
     @State private var showEditNickname = false
     @State private var accountToEdit: SavingsAccountDetailsResponse?
-
+    
     @State private var sortBy: SavingsSortBy = .id
     @State private var sortDirection: SavingsSortDirection = .asc
-
+    
     var body: some View {
         ZStack {
             NavigationStack {
@@ -63,7 +63,7 @@ struct AccountListSheetView: View {
                         }
                     }
             }
-
+            
             // Show SpinnerView only during add/update/delete (list already populated)
             if savingVM.state == .loading && !accounts.isEmpty {
                 SpinnerView()
@@ -98,9 +98,9 @@ struct AccountListSheetView: View {
         .onChange(of: sortBy) { _ in Task { await loadAccounts() } }
         .onChange(of: sortDirection) { _ in Task { await loadAccounts() } }
     }
-
+    
     // MARK: - Sort Direction Toggle
-
+    
     private var sortMenuButton: some View {
         Button {
             sortDirection = sortDirection == .asc ? .desc : .asc
@@ -110,9 +110,9 @@ struct AccountListSheetView: View {
                 .fontWeight(.semibold)
         }
     }
-
+    
     // MARK: - Account List
-
+    
     private var accountList: some View {
         List {
             if savingVM.state == .loading && accounts.isEmpty {
@@ -138,7 +138,7 @@ struct AccountListSheetView: View {
                                 Label("Delete", systemImage: "trash")
                             }
                             .tint(Color.primary)
-
+                            
                             Button {
                                 accountToEdit = account
                                 showEditNickname = true
@@ -153,9 +153,9 @@ struct AccountListSheetView: View {
         .listStyle(.plain)
         .background(Color(.systemGroupedBackground))
     }
-
+    
     // MARK: - Load
-
+    
     private func loadAccounts() async {
         do {
             let response = try await savingVM.getSavingAccountList(sortBy: sortBy, sortDirection: sortDirection)
@@ -167,14 +167,14 @@ struct AccountListSheetView: View {
             ToastManager.shared.show("Failed to load accounts.", style: .error, position: .bottom)
         }
     }
-
+    
     // Fires a silent background sync without blocking the caller
     private func backgroundSync() {
         Task { await loadAccounts() }
     }
-
+    
     // MARK: - Create
-
+    
     private func createAccount(name: String) async {
         do {
             let newAccount = try await savingVM.createSavingAccount(
@@ -187,9 +187,9 @@ struct AccountListSheetView: View {
             ToastManager.shared.show("Failed to create account.", style: .error, position: .bottom)
         }
     }
-
+    
     // MARK: - Update Nickname
-
+    
     private func updateNickname(name: String) async {
         guard let account = accountToEdit else { return }
         accountToEdit = nil
@@ -203,9 +203,9 @@ struct AccountListSheetView: View {
             ToastManager.shared.show("Failed to update nickname.", style: .error, position: .bottom)
         }
     }
-
+    
     // MARK: - Delete
-
+    
     private func confirmDelete(account: SavingsAccountDetailsResponse) {
         AlertManager.shared.showConfirmation(
             title: "Delete Account",
@@ -215,7 +215,7 @@ struct AccountListSheetView: View {
             }
         )
     }
-
+    
     private func deleteAccount(_ account: SavingsAccountDetailsResponse) async {
         guard let primaryId = primaryAccountId else {
             ToastManager.shared.show("Cannot delete account: primary account not loaded.", style: .error, position: .bottom)
@@ -241,39 +241,39 @@ struct AccountListSheetView: View {
 // MARK: - Account Row
 
 struct AccountRowView: View {
-
+    
     let account: SavingsAccountDetailsResponse
-
+    
     var body: some View {
         HStack(spacing: 12) {
-
+            
             // MARK: - Icon
-
+            
             Image(systemName: "banknote")
                 .font(.title2)
                 .foregroundStyle(Color.primary)
                 .frame(width: 44, height: 44)
                 .background(Color.primary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-
+            
             // MARK: - Info
-
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(account.nickname ?? "-----")
                     .font(.headline)
                     .foregroundStyle(.primary)
-
+                
                 Text(account.accountNumber)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-
+            
             Spacer()
-
+            
             // MARK: - Balance
-
+            
             let formatted = String(format: "%.2f", NSDecimalNumber(decimal: account.availableBalance).doubleValue)
-
+            
             Text(formatted)
                 .font(.headline)
                 .foregroundStyle(.secondary)

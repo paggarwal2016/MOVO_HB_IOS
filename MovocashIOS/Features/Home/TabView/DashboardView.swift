@@ -16,6 +16,7 @@ struct DashboardView: View {
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var userVM: UserViewModel
+    @EnvironmentObject var authVM: AuthViewModel
 
     // MARK: - VCard
 
@@ -48,6 +49,8 @@ struct DashboardView: View {
     @State private var showFundAccount = false
 
     @State private var showContactList = false
+    
+    @State private var showViewCardList = false
     
     private var displayAccount: SavingsAccountDetailsResponse? {
         savingVM.accountList?.accounts.first(where: { $0.isPrimary })
@@ -158,9 +161,14 @@ struct DashboardView: View {
                 }
             )
         }
+        .sheet(isPresented: $showViewCardList) {
+            ViewCardsListScreen(isPresented: $showViewCardList, container: container)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
-            await loadData()
+            await handleOnTask()
         }
         .onAppear {
             showCreateView = false
@@ -220,6 +228,16 @@ struct DashboardView: View {
             }
             
             PrimaryButton(
+                title: "View Cards",
+                backgroundColor: .orange.opacity(0.1),
+                textColor: .black
+            ) {
+                showViewCardList = true
+            }
+            .padding()
+            .frame(height: 60)
+            
+            PrimaryButton(
                 title: "Move Money",
                 backgroundColor: .red.opacity(0.1),
                 textColor: .black
@@ -267,7 +285,12 @@ struct DashboardView: View {
     }
     
     // MARK: - Private Functions
-    
+
+    private func handleOnTask() async {
+        await loadData()
+        await userVM.fetchProfile()
+    }
+
     private func loadData() async {
         await savingVM.loadAccounts()
     }

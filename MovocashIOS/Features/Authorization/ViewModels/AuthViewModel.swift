@@ -158,7 +158,7 @@ final class AuthViewModel: ObservableObject {
 // MARK: - RSA Biometric Auth
 
 extension AuthViewModel {
-    
+
     // ── Entry point ───────────────────────────────────────────────────────────
     func enrollRSASilently(appState: AppState) async {
         guard !isEnrolling else {
@@ -167,30 +167,64 @@ extension AuthViewModel {
         }
         isEnrolling = true
         defer { isEnrolling = false }
-        await loginWithRSA(appState: appState)
+        await performRSAEnrollAndLogin(appState: appState)
     }
-    
-    // ── POST /rsa/nonce + POST /auth/token-rsa ────────────────────────────────
-    private func loginWithRSA(appState: AppState) async {
+
+    private func performRSAEnrollAndLogin(appState: AppState) async {
         let deviceId = await DeviceManager.shared.deviceID()
-        
+
+        // Phase 1 — key generation and nonce fetch are independent: run concurrently
+        async let keyResultAsync = Task.detached(priority: .background) {
+            await RSAKeyManager.generateKeyPair()
+        }.value
+        async let nonceResultAsync: RSANonceResponse = network.request(
+            AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId))
+        )
+
+        let keyResult: Result<String, RSAKeyAuthError>
+        let nonceResponse: RSANonceResponse
         do {
-            let nonceResponse: RSANonceResponse = try await network.request(
-                AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId))
+            (keyResult, nonceResponse) = try await (keyResultAsync, nonceResultAsync)
+        } catch {
+            SecureLogger.error("biometric login failed: \(error.localizedDescription)", category: .auth)
+            return
+        }
+        SecureLogger.info("nonce fetched successfully", category: .auth)
+
+        let publicKey: String
+        switch keyResult {
+        case .failure(let error):
+            SecureLogger.error("RSA key generation failed: \(error.localizedDescription)", category: .auth)
+            return
+        case .success(let key):
+            publicKey = key
+        }
+
+        // Phase 2 — enroll key (server must have public key before it can verify tokenRSA)
+        do {
+            let _: Bool = try await network.request(
+                AuthAPI.enrollRSA(request: RSAEnrollRequest(publicKey: publicKey, deviceId: deviceId))
             )
-            SecureLogger.info("nonce fetched successfully", category: .auth)
-            
-            let response: RSATokenResponse = try await network.request(
+            SecureLogger.info("RSA key enrolled successfully", category: .auth)
+        } catch {
+            RSAKeyManager.deleteKey()   // keep local/server in sync on failure
+            SecureLogger.error("RSA enrollment failed: \(error.localizedDescription)", category: .auth)
+            return
+        }
+
+        // Phase 3 — sign nonce, get token, start session
+        do {
+            let _: RSATokenResponse = try await network.request(
                 AuthAPI.tokenRSA(request: RSATokenRequest(
                     signedMessage: nonceResponse.nonce,
                     deviceId: deviceId
                 ))
             )
-            try await sessionManager.startSession(
-                accessToken: response.accessToken,
-                refreshToken: response.refreshToken,
-                appState: appState
-            )
+//            try await sessionManager.startSession(
+//                accessToken: response.accessToken,
+//                refreshToken: response.refreshToken,
+//                appState: appState
+//            )
             SecureLogger.info("tokenRSA success — session started", category: .auth)
         } catch {
             SecureLogger.error("biometric login failed: \(error.localizedDescription)", category: .auth)

@@ -104,7 +104,7 @@ struct ViewCardScreen: View {
     }
     
     private func loadCard() async {
-        do { card = try await vm.getVCard() } catch {}
+        do { card = try await vm.getVCardPrimary() } catch {}
     }
     
     private func addCard(pin: String) async {

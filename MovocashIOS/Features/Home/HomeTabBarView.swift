@@ -107,8 +107,6 @@ private extension HomeTabBarView {
     }
     
     func handleOnTask() async {
-        await userVM.fetchProfile()
-        guard !RSAKeyManager.isRegistered() else { return }
         await authVM.enrollRSASilently(appState: appState)
     }
 }

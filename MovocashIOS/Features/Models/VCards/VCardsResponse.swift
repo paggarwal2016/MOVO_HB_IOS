@@ -26,3 +26,15 @@ nonisolated struct VCardsProvisionResponse: Decodable {
     let ephemeralPublicKey: String
     let activationData: String
 }
+
+nonisolated struct VCardListResponse: Codable, Sendable {
+    let savingsAccountId: Int?
+    let cvc2: String?
+    let lastName: String?
+    let middleName: String?
+    let firstName: String?
+    let name: String?
+    let lastFour: String?
+    let expiration: String?
+    let cardNumber: String?
+}
