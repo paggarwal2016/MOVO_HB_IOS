@@ -15,7 +15,7 @@ enum Environment {
         let urlString: String
         switch self {
         case .qa:
-            urlString = "https://api-qa.herringbank.com"
+            urlString = "https://api.qa.herringbank.com"
         case .production:
             urlString = "https://api.mobile-banking-qa.herringbank.com"
         }

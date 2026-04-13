@@ -181,7 +181,7 @@ extension AuthViewModel {
             AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId))
         )
 
-        let keyResult: Result<String, RSAKeyAuthError>
+        let keyResult: Result<String, RSAError>
         let nonceResponse: RSANonceResponse
         do {
             (keyResult, nonceResponse) = try await (keyResultAsync, nonceResultAsync)
@@ -213,18 +213,29 @@ extension AuthViewModel {
         }
 
         // Phase 3 — sign nonce, get token, start session
+        let challenge = RSAKeyManager.buildChallenge(deviceId: deviceId, nonce: nonceResponse.nonce)
+
+        let signedMessage: String
+        switch RSAKeyManager.sign(challenge: challenge) {
+        case .failure(let error):
+            SecureLogger.error("RSA signing failed: \(error.localizedDescription)", category: .auth)
+            return
+        case .success(let signature):
+            signedMessage = signature
+        }
+
         do {
-            let _: RSATokenResponse = try await network.request(
+            let response: RSATokenResponse = try await network.request(
                 AuthAPI.tokenRSA(request: RSATokenRequest(
-                    signedMessage: nonceResponse.nonce,
+                    signedMessage: signedMessage,
                     deviceId: deviceId
                 ))
             )
-//            try await sessionManager.startSession(
-//                accessToken: response.accessToken,
-//                refreshToken: response.refreshToken,
-//                appState: appState
-//            )
+            try await sessionManager.startSession(
+                accessToken: response.accessToken,
+                refreshToken: response.refreshToken,
+                appState: appState
+            )
             SecureLogger.info("tokenRSA success — session started", category: .auth)
         } catch {
             SecureLogger.error("biometric login failed: \(error.localizedDescription)", category: .auth)

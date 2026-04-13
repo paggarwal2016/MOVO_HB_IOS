@@ -5,280 +5,161 @@
 //  Created by Movo Developer on 11/03/26.
 //
 
-import CryptoKit
 import Foundation
-import LocalAuthentication
 import Security
 
 // MARK: - Errors
 
-enum RSAKeyAuthError: LocalizedError, Equatable {
-    case keyGenerationFailed(String)
-    case accessControlFailed
+enum RSAError: LocalizedError {
+    case keyGenerationFailed
     case keyNotFound
     case signingFailed
-    case keychainSaveFailed(OSStatus)
-    case keychainLoadFailed
+    case invalidKeyFormat
 
     var errorDescription: String? {
         switch self {
-        case .keyGenerationFailed(let msg): return "Key generation failed: \(msg)"
-        case .accessControlFailed:          return "Access control creation failed"
-        case .keyNotFound:                  return "Key not found. Please re-register."
-        case .signingFailed:                return "Signing failed"
-        case .keychainSaveFailed(let s):    return "Keychain save failed with status: \(s)"
-        case .keychainLoadFailed:           return "Keychain load failed"
-        }
-    }
-
-    var userMessage: String {
-        switch self {
-        case .keyNotFound:          return "Login not set up. Please re-register."
-        case .signingFailed:        return "Authentication failed. Please try again."
-        default:                    return "Something went wrong. Please try again."
+        case .keyGenerationFailed: return "RSA key generation failed"
+        case .keyNotFound: return "Private key not found"
+        case .signingFailed: return "Signing failed"
+        case .invalidKeyFormat: return "Invalid key format"
         }
     }
 }
 
-// MARK: - RSAKeyManager
-//
-// Real device (SE available):
-//   Private key lives entirely inside the Secure Enclave chip — never exported.
-//   Signing triggers Face ID / Touch ID when the device has biometric enrolled.
-//   Devices without biometric still benefit from SE hardware protection.
-//
-// Simulator / SE unavailable:
-//   Falls back to a software P256 key stored in the Keychain.
+// MARK: - RSA Manager
 
-final class RSAKeyManager: Sendable {
+final class RSAKeyManager {
 
-    // MARK: - Constants
+    private static let tag: Data = {
+        let bundleId = Bundle.main.bundleIdentifier ?? "com.movo.cash"
+        guard let data = "\(bundleId).rsa.privatekey".data(using: .utf8) else {
+            fatalError("Failed to create key tag")
+        }
+        return data
+    }()
 
-    private static let serviceKey  = AppInfo.bundleIdentifier
-    private static let storageKey  = "rsa.p256.privatekey"
+    // MARK: - 1. Generate RSA 2048 Key Pair
 
-    // SE availability is a hardware property — evaluate once at launch, not per call.
-    // SecureEnclave types compile on the simulator; isAvailable just returns false there.
-    private static let useSecureEnclave = SecureEnclave.isAvailable
+    static func generateKeyPair() -> Result<String, RSAError> {
 
-    // MARK: - Public API
+        // Delete existing key if any (clean setup)
+        deleteKey()
 
-    static func generateKeyPair() -> Result<String, RSAKeyAuthError> {
-        useSecureEnclave ? generateSEKeyPair() : generateSoftwareKeyPair()
+        var error: Unmanaged<CFError>?
+
+        let attributes: [String: Any] = [
+            kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
+            kSecAttrKeySizeInBits as String: 2048,
+            kSecPrivateKeyAttrs as String: [
+                kSecAttrIsPermanent as String: true,
+                kSecAttrApplicationTag as String: tag,
+                kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            ]
+        ]
+
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
+            return .failure(.keyGenerationFailed)
+        }
+
+        guard let publicKey = SecKeyCopyPublicKey(privateKey) else {
+            return .failure(.keyGenerationFailed)
+        }
+
+        var pubError: Unmanaged<CFError>?
+        guard let pubData = SecKeyCopyExternalRepresentation(publicKey, &pubError) as Data? else {
+            return .failure(.keyGenerationFailed)
+        }
+
+        return .success(pubData.base64EncodedString())
     }
 
-    /// Builds a time-bound challenge string and returns it as UTF-8 data.
-    ///
-    /// Format without nonce:  `login:{deviceId}:{unixTimestamp}`
-    /// Format with nonce:     `login:{deviceId}:{unixTimestamp}:{nonce}`
-    ///
-    /// The server rejects challenges older than ±30 s.
-    /// Providing a server-issued `nonce` eliminates the replay window entirely —
-    /// the server must enforce single-use nonce uniqueness for this to be effective.
+    // MARK: - 2. Build Challenge (WITH / WITHOUT NONCE)
+
     static func buildChallenge(deviceId: String, nonce: String? = nil) -> Data {
-        var message = "login:\(deviceId):\(Int(Date().timeIntervalSince1970))"
-        if let nonce {
-            message += ":\(nonce)"
+        let timestamp = Int(Date().timeIntervalSince1970)
+
+        let message: String
+        if let nonce = nonce {
+            message = "login:\(deviceId):\(timestamp):\(nonce)"
+        } else {
+            message = "login:\(deviceId):\(timestamp)"
         }
-        SecureLogger.info("Challenge built\(nonce != nil ? " (with server nonce)" : "")", category: .auth)
+
         return Data(message.utf8)
     }
 
-    /// Signs `challenge` with the stored private key.
-    /// On a device with SE + biometric, Face ID / Touch ID fires during this call.
-    /// Must be called from a background thread — blocks until biometric completes.
-    static func sign(
-        challenge: Data,
-        reason: String = "Authenticate to access MovoCash"
-    ) -> Result<String, RSAKeyAuthError> {
-        useSecureEnclave
-            ? signWithSEKey(challenge: challenge)
-            : signWithSoftwareKey(challenge: challenge)
+    // MARK: - 3. Sign Challenge (RSA PKCS1v1.5 + SHA256)
+
+    static func sign(challenge: Data) -> Result<String, RSAError> {
+
+        guard let privateKey = loadPrivateKey() else {
+            return .failure(.keyNotFound)
+        }
+
+        let algorithm = SecKeyAlgorithm.rsaSignatureMessagePKCS1v15SHA256
+
+        guard SecKeyIsAlgorithmSupported(privateKey, .sign, algorithm) else {
+            return .failure(.signingFailed)
+        }
+
+        var error: Unmanaged<CFError>?
+
+        guard let signature = SecKeyCreateSignature(
+            privateKey,
+            algorithm,
+            challenge as CFData,
+            &error
+        ) as Data? else {
+            return .failure(.signingFailed)
+        }
+
+        return .success(signature.base64EncodedString())
     }
 
-    static func isRegistered() -> Bool {
-        let registered = loadKeyFromKeychain() != nil
-        SecureLogger.info("isRegistered: \(registered)", category: .auth)
-        return registered
+    // MARK: - 4. Load Private Key
+
+    private static func loadPrivateKey() -> SecKey? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: tag,
+            kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
+            kSecReturnRef as String: true
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        guard status == errSecSuccess else {
+            return nil
+        }
+
+        let key: SecKey = item as! SecKey
+        return key
     }
+
+    // MARK: - 5. Delete Key
 
     static func deleteKey() {
         let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: serviceKey,
-            kSecAttrAccount as String: storageKey
-        ]
-        switch SecItemDelete(query as CFDictionary) {
-        case errSecSuccess:      SecureLogger.info("Private key deleted", category: .auth)
-        case errSecItemNotFound: SecureLogger.info("deleteKey — already absent", category: .auth)
-        case let s:              SecureLogger.warning("deleteKey unexpected status: \(s)", category: .auth)
-        }
-    }
-}
-
-// MARK: - Secure Enclave path
-
-private extension RSAKeyManager {
-
-    static func generateSEKeyPair() -> Result<String, RSAKeyAuthError> {
-        SecureLogger.info("generateKeyPair (Secure Enclave)", category: .auth)
-
-        var cfError: Unmanaged<CFError>?
-        guard let access = SecAccessControlCreateWithFlags(
-            kCFAllocatorDefault,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            seAccessFlags(),
-            &cfError
-        ) else {
-            SecureLogger.error("Access control creation failed", category: .auth)
-            return .failure(.accessControlFailed)
-        }
-
-        do {
-            let key = try SecureEnclave.P256.Signing.PrivateKey(accessControl: access)
-
-            if case .failure(let error) = saveKeyToKeychain(key.dataRepresentation) {
-                return .failure(error)
-            }
-
-            SecureLogger.info("generateKeyPair success (SE)", category: .auth)
-            return .success(key.publicKey.x963Representation.base64EncodedString())
-        } catch {
-            SecureLogger.error("SE key generation failed: \(error.localizedDescription)", category: .auth)
-            return .failure(.keyGenerationFailed(error.localizedDescription))
-        }
-    }
-
-    static func signWithSEKey(challenge: Data) -> Result<String, RSAKeyAuthError> {
-        SecureLogger.info("sign (Secure Enclave)", category: .auth)
-
-        guard let keyData = loadKeyFromKeychain() else {
-            SecureLogger.error("Private key not found in Keychain", category: .auth)
-            return .failure(.keyNotFound)
-        }
-
-        // Stage 1 — reconstruct SE key handle from stored opaque blob.
-        // No LAContext needed — key has no biometric access control requirement.
-        // Fails if the stored data is incompatible (e.g. a stale .biometryCurrentSet key).
-        let key: SecureEnclave.P256.Signing.PrivateKey
-        do {
-            key = try SecureEnclave.P256.Signing.PrivateKey(
-                dataRepresentation: keyData
-            )
-        } catch let cryptoError as CryptoKitError {
-            // Stale key format — delete so re-enrollment runs on the next login attempt.
-            SecureLogger.warning("SE key init failed (\(cryptoError)) — clearing for re-enroll", category: .auth)
-            deleteKey()
-            return .failure(.keyNotFound)
-        } catch {
-            // Transient error (device locked, SE temporarily unavailable) — keep key, let caller retry.
-            SecureLogger.error("SE key init transient error: \(error.localizedDescription)", category: .auth)
-            return .failure(.signingFailed)
-        }
-
-        // Stage 2 — sign. No biometric prompt — SE performs the operation using
-        // device-unlock protection only. Do NOT delete the key on failure here;
-        // a transient SE error should be retried, not treated as key corruption.
-        do {
-            let signature = try key.signature(for: challenge)
-            SecureLogger.info("sign success (SE)", category: .auth)
-            return .success(signature.derRepresentation.base64EncodedString())
-        } catch {
-            SecureLogger.error("SE sign failed: \(error.localizedDescription)", category: .auth)
-            return .failure(.signingFailed)
-        }
-    }
-
-    /// SE hardware protection only — private key is non-extractable from the chip
-    /// but no biometric prompt is required on each sign operation.
-    /// App-level biometric is handled separately by AppLockManager before the user
-    /// reaches any screen that triggers RSA login.
-    static func seAccessFlags() -> SecAccessControlCreateFlags {
-        [.privateKeyUsage]
-    }
-}
-
-// MARK: - Software key path (simulator / SE unavailable)
-
-private extension RSAKeyManager {
-
-    static func generateSoftwareKeyPair() -> Result<String, RSAKeyAuthError> {
-        SecureLogger.info("generateKeyPair (software — SE unavailable)", category: .auth)
-
-        let key = P256.Signing.PrivateKey()
-
-        if case .failure(let error) = saveKeyToKeychain(key.rawRepresentation) {
-            return .failure(error)
-        }
-
-        SecureLogger.info("generateKeyPair success (software)", category: .auth)
-        return .success(key.publicKey.x963Representation.base64EncodedString())
-    }
-
-    static func signWithSoftwareKey(challenge: Data) -> Result<String, RSAKeyAuthError> {
-        guard let keyData = loadKeyFromKeychain() else {
-            return .failure(.keyNotFound)
-        }
-        do {
-            let signature = try P256.Signing.PrivateKey(rawRepresentation: keyData)
-                .signature(for: challenge)
-            return .success(signature.derRepresentation.base64EncodedString())
-        } catch {
-            return .failure(.signingFailed)
-        }
-    }
-}
-
-// MARK: - Keychain
-
-private extension RSAKeyManager {
-
-    /// Upsert: attempts add first; if a duplicate exists, updates in place.
-    /// Avoids the delete-then-add pattern which creates a brief window where
-    /// the key is absent and requires two round-trips instead of one.
-    @discardableResult
-    static func saveKeyToKeychain(_ data: Data) -> Result<Void, RSAKeyAuthError> {
-        let addQuery: [String: Any] = [
-            kSecClass as String:          kSecClassGenericPassword,
-            kSecAttrService as String:    serviceKey,
-            kSecAttrAccount as String:    storageKey,
-            kSecValueData as String:      data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: tag,
+            kSecAttrKeyType as String: kSecAttrKeyTypeRSA
         ]
 
-        var status = SecItemAdd(addQuery as CFDictionary, nil)
-
-        if status == errSecDuplicateItem {
-            let searchQuery: [String: Any] = [
-                kSecClass as String:       kSecClassGenericPassword,
-                kSecAttrService as String: serviceKey,
-                kSecAttrAccount as String: storageKey
-            ]
-            status = SecItemUpdate(
-                searchQuery as CFDictionary,
-                [kSecValueData as String: data] as CFDictionary
-            )
-        }
-
-        guard status == errSecSuccess else {
-            SecureLogger.error("Key save failed with Keychain status: \(status)", category: .auth)
-            return .failure(.keychainSaveFailed(status))
-        }
-        SecureLogger.info("Key blob saved to Keychain", category: .auth)
-        return .success(())
+        SecItemDelete(query as CFDictionary)
     }
 
-    static func loadKeyFromKeychain() -> Data? {
+    // MARK: - 6. Check Key Exists
+
+    static func isRegistered() -> Bool {
         let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: serviceKey,
-            kSecAttrAccount as String: storageKey,
-            kSecReturnData as String:  true,
-            kSecMatchLimit as String:  kSecMatchLimitOne
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: tag,
+            kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
+            kSecReturnRef as String: false
         ]
-        var result: AnyObject?
-        return SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess
-            ? result as? Data
-            : nil
+
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
+        return status == errSecSuccess
     }
 }
