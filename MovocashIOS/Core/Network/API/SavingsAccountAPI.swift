@@ -15,8 +15,8 @@ enum SavingsAccountAPI: Endpoint {
     case delete(SavingsAccountRequest.DeleteAccount)
     case details(accountId: Int)
 
-    // MARK: - Environment Configure
-    var environment: Environment { AppConfig.environment }
+    // MARK: - API Version
+    var version: APIVersion { .v1 }
 
     // MARK: - URL Path
     var path: String {

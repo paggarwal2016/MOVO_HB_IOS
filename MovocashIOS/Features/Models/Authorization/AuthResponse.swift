@@ -14,6 +14,7 @@ nonisolated struct RefreshTokenResponse: Decodable {
 
 nonisolated struct SuccessResponse: Decodable {
     let success: Bool?
+    let message: String?
 }
 
 nonisolated struct APIErrorResponse: Decodable {
@@ -28,4 +29,10 @@ nonisolated struct RSATokenResponse: Decodable {
 
 nonisolated struct RSANonceResponse: Decodable {
     let nonce: String
+}
+
+nonisolated struct AuthTokenSMSResponse: Decodable {
+    let success: Bool
+    let sessionId: String
+    let message: String?
 }

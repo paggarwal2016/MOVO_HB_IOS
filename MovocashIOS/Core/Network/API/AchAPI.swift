@@ -14,10 +14,9 @@ enum AchAPI: Endpoint {
     case deleteAccount(id: Int)
     case updateAccount(id: Int)
     
-    // MARK: - Environment
-    
-    var environment: Environment { AppConfig.environment }
-    
+    // MARK: - API Version
+    var version: APIVersion { .v1 }
+
     // MARK: - Path
     
     var path: String {

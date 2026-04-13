@@ -15,9 +15,9 @@ enum VCardAPI: Endpoint {
     case postVCards(request: VCardsRequest)
     case vCardsProvision(request: VCardsProvisionRequest)
     
-    // MARK: - Environment Configure
-    var environment: Environment { AppConfig.environment }
-    
+    // MARK: - API Version
+    var version: APIVersion { .v1 }
+
     // MARK: - URL Path
     var path: String {
         switch self {

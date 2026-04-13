@@ -19,13 +19,13 @@ final class RequestBuilder: Sendable {
         
         // 1. Build URL
         guard var components = URLComponents(
-            url: endpoint.environment.baseURL,
+            url: AppConfig.baseURL,
             resolvingAgainstBaseURL: false
         ) else {
             throw NetworkError.invalidURL
         }
         
-        components.path += endpoint.path
+        components.path = "/\(endpoint.version.rawValue)" + endpoint.path
         components.queryItems = endpoint.queryItems
         
         guard let url = components.url else {

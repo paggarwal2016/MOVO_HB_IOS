@@ -10,7 +10,7 @@ import Foundation
 enum AppInfo {
     
     nonisolated static var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     }
     
     nonisolated static var buildNumber: String {
@@ -26,12 +26,14 @@ enum AppInfo {
     }
     
     static var platform: String {
-    #if os(iOS)
-            return "ios"
-    #elseif os(macOS)
-            return "macos"
-    #else
-            return "Unknown"
-    #endif
-        }
+        #if os(iOS)
+        return "ios"
+        #elseif os(macOS)
+        return "macos"
+        #else
+        return "unknown"
+        #endif
+    }
+
+    static let appName: String = "movo_ios"
 }

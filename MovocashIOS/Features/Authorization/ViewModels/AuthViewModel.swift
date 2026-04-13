@@ -50,11 +50,16 @@ final class AuthViewModel: ObservableObject {
         state = .loading
         
         do {
-            let _: SuccessResponse = try await network.request(
+            let response: SuccessResponse = try await network.request(
                 AuthAPI.messengerOTP(phoneNumber: phoneNumber, context: context?.rawValue ?? "")
             )
             state = .otpSent
             showOTP = true
+            ToastManager.shared.show(
+                response.message ?? "OTP sent successfully",
+                style: .success,
+                position: .bottom
+            )
         } catch {
             state = .idle
             throw error
@@ -63,12 +68,12 @@ final class AuthViewModel: ObservableObject {
     
     // MARK: - Validate OTP
     
-    func validateOTP(code: String) async throws -> RefreshTokenResponse  {
+    func validateOTP(code: String) async throws -> AuthTokenSMSResponse  {
         guard state != .loading else { throw ModelError.alreadyLoading }
         state = .loading
         
         do {
-            let response: RefreshTokenResponse = try await network.request(
+            let response: AuthTokenSMSResponse = try await network.request(
                 AuthAPI.tokenSMS(phoneNumber: phoneNumber, code: code)
             )
             self.state = .verified
@@ -85,13 +90,23 @@ final class AuthViewModel: ObservableObject {
     func completeOTPVerification(code: String, appState: AppState, onNavigate: @escaping (AuthFlow) -> Void) async {
         analytics.trackLoginAttempt(method: .otp)
         do {
-            let response = try await validateOTP(code: code)
+            // Step 1: Verify OTP → get sessionId
+            let otpResponse = try await validateOTP(code: code)
+            let sessionId = otpResponse.sessionId
 
-            try await sessionManager.startSession(
-                accessToken: response.accessToken,
-                refreshToken: response.refreshToken,
-                appState: appState
+            // Step 2: Persist sessionId to Keychain
+            try await keychain.save(sessionId, for: "auth_session_id", protection: .backgroundSafe)
+
+            // Step 3: Exchange sessionId for access + refresh tokens
+            let tokenResponse: RefreshTokenResponse = try await network.request(
+                AuthAPI.tokenAccess
             )
+
+//            try await sessionManager.startSession(
+//                accessToken: tokenResponse.accessToken,
+//                refreshToken: tokenResponse.refreshToken,
+//                appState: appState
+//            )
 
             analytics.trackLogin(method: .otp)
             try await kycManager.configureSDK(officeId: AppConfig.officeId)

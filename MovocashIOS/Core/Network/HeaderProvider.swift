@@ -11,6 +11,7 @@ import Foundation
 
 enum HeaderType: Sendable {
     case `default`
+    case movoAuthorized
     case authorized
     case authorizedWithOffice
 }
@@ -22,9 +23,12 @@ struct HeaderProvider {
         switch type {
         case .default:
             break
+        case .movoAuthorized:
+            if let sessionId = try? await KeychainManager.shared.get("auth_session_id", biometricPrompt: nil) {
+                headers["session-id"] = sessionId
+            }
         case .authorized:
             await addAuthorization(&headers, authManager: authManager)
-
         case .authorizedWithOffice:
             await addAuthorization(&headers, authManager: authManager)
             headers["office-id"] = AppConfig.officeId

@@ -13,9 +13,9 @@ enum RewardAPI: Endpoint {
     case postReward
     case enrollReward
     
-    // MARK: - Environment Configure
-    var environment: Environment { AppConfig.environment }
-    
+    // MARK: - API Version
+    var version: APIVersion { .v1 }
+
     // MARK: - URL Path
     var path: String {
         switch self {

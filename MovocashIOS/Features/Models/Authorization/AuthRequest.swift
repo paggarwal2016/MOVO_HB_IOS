@@ -7,14 +7,19 @@
 
 import Foundation
 
+// MARK: - Messenger OTP
+
 struct MessengerOTPRequest: Encodable, Sendable {
     let phoneNumber: String
     let context: String
+    let userAction: String
+    let deviceInfo: DeviceInfo
 }
 
 struct TokenSMSRequest: Encodable, Sendable {
     let phoneNumber: String
     let code: String
+    let userAction: String
 }
 
 struct RefreshTokenRequest: Encodable, Sendable {
@@ -35,5 +40,9 @@ struct RSATokenRequest: Encodable, Sendable {
 
 struct RSANonceRequest: Encodable, Sendable {
     let deviceId: String
+}
+
+struct UserActionRequest: Encodable, Sendable {
+    let userAction: String
 }
 

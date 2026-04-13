@@ -7,22 +7,37 @@
 
 import Foundation
 
-enum Environment {
-    case qa
-    case production
+// MARK: - Environment
+struct Environment {
+    private init() {}
     
-    var baseURL: URL {
-        let urlString: String
-        switch self {
-        case .qa:
-            urlString = "https://api.qa.herringbank.com"
-        case .production:
-            urlString = "https://api.mobile-banking-qa.herringbank.com"
-        }
-        guard let url = URL(string: urlString) else {
-            assertionFailure("Invalid baseURL configuration: \(urlString)")
+    static let baseURL: URL = makeURL("https://api-staging.movocash.com") // SP URL
+    static let sdkURL: String = "https://api.qa.herringbank.com"          // SDK URL
+    
+    private static func makeURL(_ string: String) -> URL {
+        guard let url = URL(string: string) else {
+            assertionFailure("Invalid URL configuration: \(string)")
             return URL(fileURLWithPath: "/")
         }
         return url
     }
 }
+
+// MARK: - API Version
+
+enum APIVersion: String {
+    case v1 = "v1"
+}
+
+
+
+// MARK: - AppConfig
+final class AppConfig {
+    private init() {}
+    
+    static let baseURL: URL    = Environment.baseURL
+    static let sdkURL: String  = Environment.sdkURL
+    static let officeId: String = "3"
+}
+
+

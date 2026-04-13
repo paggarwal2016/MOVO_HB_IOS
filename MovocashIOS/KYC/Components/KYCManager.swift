@@ -47,8 +47,6 @@ final class KYCManager: KYCManagerProtocol {
             throw KYCError.notConfigured
         }
 
-        let baseURL = AppConfig.baseURL.absoluteString
-
         #if DEBUG
         let verboseLogs = true
         #else
@@ -57,7 +55,7 @@ final class KYCManager: KYCManagerProtocol {
 
         MobileBankingSDK.configure(
             authToken: token,
-            baseUrl: baseURL,
+            baseUrl: AppConfig.sdkURL,
             officeId: officeId,
             theme: makeKYCTheme(),
             enableVerboseLogs: verboseLogs

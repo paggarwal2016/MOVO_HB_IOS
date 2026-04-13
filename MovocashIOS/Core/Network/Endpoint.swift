@@ -7,7 +7,7 @@
 import Foundation
 
 protocol Endpoint {
-    var environment: Environment { get }
+    var version: APIVersion { get }
     var path: String { get }
     var method: HTTPMethod { get }
     var headerType: HeaderType { get }
