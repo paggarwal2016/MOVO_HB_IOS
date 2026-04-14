@@ -37,3 +37,61 @@ struct DeviceInfo: Encodable, Sendable {
         return data.base64EncodedString()
     }
 }
+
+
+
+import Foundation
+import CryptoKit
+
+struct DeviceInfo1: Encodable, Sendable {
+    let uuid: String
+    let deviceId: String
+    let deviceType: String
+    let appVersion: String
+    let applicationName: String          // ← renamed from appName
+
+    private static let sessionUUID: String = UUID().uuidString
+
+    static var current: DeviceInfo1 {
+        DeviceInfo1(
+            uuid: sessionUUID,
+            deviceId: DeviceManager.shared.syncDeviceID,
+            deviceType: AppInfo.platform,
+            appVersion: AppInfo.version,
+            applicationName: AppInfo.appName   // ← updated label
+        )
+    }
+
+    // MARK: - JWT
+
+    func jwtEncoded(secret: String) -> String? {
+        // 1. Header
+        let header = #"{"alg":"HS256","typ":"JWT"}"#
+        let headerB64 = base64URLEncode(Data(header.utf8))
+
+        // 2. Payload
+        guard let payloadData = try? JSONEncoder().encode(self) else { return nil }
+        let payloadB64 = base64URLEncode(payloadData)
+
+        // 3. Signature — HMAC-SHA256
+        let signingInput = "\(headerB64).\(payloadB64)"
+        guard let keyData = secret.data(using: .utf8) else { return nil }
+        let key = SymmetricKey(data: keyData)
+        let signature = HMAC<SHA256>.authenticationCode(
+            for: Data(signingInput.utf8),
+            using: key
+        )
+        let signatureB64 = base64URLEncode(Data(signature))
+
+        return "\(signingInput).\(signatureB64)"
+    }
+
+    // MARK: - Helpers
+
+    private func base64URLEncode(_ data: Data) -> String {
+        data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")   // no padding in JWT
+    }
+}

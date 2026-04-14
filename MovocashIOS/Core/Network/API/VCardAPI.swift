@@ -9,7 +9,6 @@ import Foundation
 
 enum VCardAPI: Endpoint {
     
-    case getVCards
     case getVCardsPrimary
     case getVCardsList
     case postVCards(request: VCardsRequest)
@@ -21,7 +20,7 @@ enum VCardAPI: Endpoint {
     // MARK: - URL Path
     var path: String {
         switch self {
-        case .getVCards, .postVCards: return "/vcards"
+        case .postVCards: return "/vcards"
         case .getVCardsPrimary: return "/vcards/primary"
         case .getVCardsList: return "/vcards/all"
         case .vCardsProvision: return "/vcards/provision"
@@ -31,7 +30,7 @@ enum VCardAPI: Endpoint {
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .getVCards, .getVCardsPrimary, .getVCardsList:
+        case .getVCardsPrimary, .getVCardsList:
             return .GET
         case .postVCards, .vCardsProvision:
             return .POST
@@ -42,7 +41,7 @@ enum VCardAPI: Endpoint {
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .getVCards, .vCardsProvision, .getVCardsPrimary, .getVCardsList:
+        case .vCardsProvision, .getVCardsPrimary, .getVCardsList:
             return .authorized
         case .postVCards:
             return .authorizedWithOffice
@@ -61,12 +60,12 @@ enum VCardAPI: Endpoint {
     
     private func encodeBody() throws -> Data? {
         switch self {
-        case .getVCards, .getVCardsPrimary, .getVCardsList:
-            return nil
-            
+        case .getVCardsPrimary:
+            return try JSONEncoder().encode(UserActionRequest(userAction: "GET-PRIMARY-CARD"))
+        case .getVCardsList:
+            return try JSONEncoder().encode(UserActionRequest(userAction: "GET-PRIMARY-CARD"))
         case .postVCards(let request):
             return try JSONEncoder().encode(request)
-            
         case .vCardsProvision(let request):
             return try JSONEncoder().encode(request)
         }
