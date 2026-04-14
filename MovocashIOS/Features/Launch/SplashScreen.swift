@@ -38,7 +38,12 @@ struct SplashScreen: View {
 
             switch result {
             case .restored:
-                lockManager.evaluateOnLaunch()
+                // Only enforce the launch lock if the user hasn't already
+                // authenticated during the splash delay — prevents a double
+                // passcode prompt when the user unlocks before restoreSession returns.
+                if lockManager.state != .unlocked {
+                    lockManager.evaluateOnLaunch()
+                }
                 appState.flow = .home
                 if lockManager.state == .locked {
                     await lockManager.unlockWithBiometric()
