@@ -163,6 +163,16 @@ actor NetworkService: NetworkServiceProtocol {
         debugPrintRequest(request)
 #endif
 
+        // Duration tracking — logs on all exit paths (success, network error, decode error)
+        let start = Date()
+        defer {
+            let ms = Date().timeIntervalSince(start) * 1000
+            SecureLogger.info(
+                "[\(request.httpMethod ?? "?")] \(request.url?.path ?? "unknown") — Duraction: \(String(format: "%.0f", ms))ms",
+                category: .network
+            )
+        }
+        
         // Network call
         let (data, response): (Data, URLResponse)
         do {
