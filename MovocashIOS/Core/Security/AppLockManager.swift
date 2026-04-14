@@ -154,6 +154,10 @@ final class AppLockManager: ObservableObject {
 
     private var lockoutTask: Task<Void, Never>?
     private var backgroundedAt: Date?
+    /// Tracks whether the user was already authenticated when the app last went
+    /// to background. Used to prevent auto-unlock when the user backgrounded
+    /// while still on the lock screen (partial or no passcode entry).
+    private var wasUnlockedWhenBackgrounded: Bool = false
 
     // MARK: - Init (Production)
 
@@ -212,22 +216,26 @@ final class AppLockManager: ObservableObject {
         switch phase {
         case .background:
             backgroundedAt = clock.now()
+            wasUnlockedWhenBackgrounded = (state == .unlocked)
         case .active:
             guard let since = backgroundedAt else { return }
             backgroundedAt = nil
             let elapsed = clock.now().timeIntervalSince(since)
             guard isPasscodeSet else { return }
-            // Lock synchronously before SwiftUI re-renders. For short backgrounds
-            // (< timeout) we immediately unlock in the same synchronous block —
-            // SwiftUI batches both state changes into one render so the dashboard
-            // never flashes. For long backgrounds (>= timeout) we stay locked and
-            // optionally trigger biometric.
+            // Always lock on return from background so the dashboard never
+            // flashes before authentication is confirmed.
             state = .locked
-            if elapsed < config.backgroundTimeout {
+            if elapsed < config.backgroundTimeout && wasUnlockedWhenBackgrounded {
+                // Short background and the user was already authenticated —
+                // resume seamlessly without asking for the passcode again.
                 state = .unlocked
-            } else {
+            } else if elapsed >= config.backgroundTimeout {
+                // Long background — trigger biometric (falls back to passcode).
                 Task { await unlockWithBiometric() }
             }
+            // If the user was on the lock screen when they backgrounded
+            // (wasUnlockedWhenBackgrounded == false), we stay locked regardless
+            // of elapsed time — they must complete the full passcode entry.
         default:
             break
         }

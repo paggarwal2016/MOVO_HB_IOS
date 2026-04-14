@@ -67,6 +67,12 @@ final class OTPViewModel: ObservableObject {
     deinit {
         timerTask?.cancel()
     }
+    
+    // MARK: - Resend OTP
+    func resetForResend() {
+        otpText = ""
+        startTimer()
+    }
 
     // MARK: - Submit OTP
     func submitOTP(onVerify: @escaping (String) async -> Void) async {

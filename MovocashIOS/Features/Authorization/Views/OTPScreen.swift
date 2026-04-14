@@ -61,6 +61,26 @@ struct OTPScreen: View {
                     .frame(width: 1, height: 1)
                     .opacity(0.01)
                 
+                // Resend OTP
+                Group {
+                    switch otpVM.state {
+                    case .counting:
+                        Text("Resend OTP in 0:\(String(format: "%02d", otpVM.remainingSeconds))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    case .expired:
+                        Button("Resend OTP") {
+                            Task {
+                                otpVM.resetForResend()
+                                try? await authVM.sendOTP()
+                            }
+                        }
+                        .font(.subheadline.bold())
+                    case .idle:
+                        EmptyView()
+                    }
+                }
+                
                 Spacer()
                 
                 PrimaryButton(title: "Continue", isEnabled: otpVM.isValidOTP) {
