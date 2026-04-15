@@ -1,0 +1,6 @@
+projectKey=MovoCash-iOS-app
+serverUrl=http://localhost:9000
+serverVersion=26.4.0.121862
+dashboardUrl=http://localhost:9000/dashboard?id=MovoCash-iOS-app
+ceTaskId=542a9aac-a77b-4fc4-a37d-4bac82034c99
+ceTaskUrl=http://localhost:9000/api/ce/task?id=542a9aac-a77b-4fc4-a37d-4bac82034c99
