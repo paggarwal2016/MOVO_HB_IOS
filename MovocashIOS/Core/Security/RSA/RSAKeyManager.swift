@@ -6,160 +6,241 @@
 //
 
 import Foundation
+import LocalAuthentication
 import Security
 
 // MARK: - Errors
 
-enum RSAError: LocalizedError {
-    case keyGenerationFailed
+enum BiometricLoginError: LocalizedError {
+    case biometryUnavailable(String)
+    case accessControlCreationFailed(String)
+    case keyGenerationFailed(String)
+    case publicKeyEncodingFailed
+    case invalidPayload
     case keyNotFound
-    case signingFailed
-    case invalidKeyFormat
+    case userCanceled
+    case unsupportedAlgorithm
+    case signatureFailed(String)
 
     var errorDescription: String? {
         switch self {
-        case .keyGenerationFailed: return "RSA key generation failed"
-        case .keyNotFound: return "Private key not found"
-        case .signingFailed: return "Signing failed"
-        case .invalidKeyFormat: return "Invalid key format"
+        case .biometryUnavailable(let message):        return message
+        case .accessControlCreationFailed(let message): return message
+        case .keyGenerationFailed(let message):        return message
+        case .publicKeyEncodingFailed:                 return "Failed to encode public key."
+        case .invalidPayload:                          return "Invalid payload data."
+        case .keyNotFound:                             return "RSA private key not found in Keychain."
+        case .userCanceled:                            return "Biometric authentication was cancelled."
+        case .unsupportedAlgorithm:                    return "RSA signing algorithm not supported on this device."
+        case .signatureFailed(let message):            return message
         }
     }
 }
 
-// MARK: - RSA Manager
+// MARK: - RSAKeyManager
 
-final class RSAKeyManager {
+final class RSAKeyManager: Sendable {
 
-    private static let tag: Data = {
-        let bundleId = Bundle.main.bundleIdentifier ?? "com.movo.cash"
-        guard let data = "\(bundleId).rsa.privatekey".data(using: .utf8) else {
-            fatalError("Failed to create key tag")
+    static let shared = RSAKeyManager()
+
+    private init() {}
+
+    private var applicationTagData: Data {
+        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.movo.cash"
+        return "\(bundleIdentifier).rsa.privatekey".data(using: .utf8) ?? Data()
+    }
+
+    func createKeyPair() throws -> String {
+        try ensureBiometryIsAvailable()
+        deleteKeyPair()
+
+        var accessControlError: Unmanaged<CFError>?
+        guard let accessControl = SecAccessControlCreateWithFlags(
+            kCFAllocatorDefault,
+            kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+            .biometryAny,
+            &accessControlError
+        ) else {
+            let message = accessControlError?.takeRetainedValue().localizedDescription ?? "Unable to create biometric access control."
+            throw BiometricLoginError.accessControlCreationFailed(message)
         }
-        return data
-    }()
 
-    // MARK: - 1. Generate RSA 2048 Key Pair
-
-    static func generateKeyPair() -> Result<String, RSAError> {
-
-        // Delete existing key if any (clean setup)
-        deleteKey()
-
-        var error: Unmanaged<CFError>?
-
+        let creationContext = LAContext()
+        // interactionNotAllowed defaults to false, meaning UI prompts are allowed
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
             kSecAttrKeySizeInBits as String: 2048,
             kSecPrivateKeyAttrs as String: [
                 kSecAttrIsPermanent as String: true,
-                kSecAttrApplicationTag as String: tag,
-                kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                kSecUseAuthenticationContext as String: creationContext,
+                kSecAttrApplicationTag as String: applicationTagData,
+                kSecAttrAccessControl as String: accessControl
             ]
         ]
 
-        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
-            return .failure(.keyGenerationFailed)
+        var generationError: Unmanaged<CFError>?
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &generationError) else {
+            let message = generationError?.takeRetainedValue().localizedDescription ?? "Unable to generate biometric RSA key."
+            throw BiometricLoginError.keyGenerationFailed(message)
         }
 
-        guard let publicKey = SecKeyCopyPublicKey(privateKey) else {
-            return .failure(.keyGenerationFailed)
+        guard let publicKey = SecKeyCopyPublicKey(privateKey),
+              let publicKeyData = SecKeyCopyExternalRepresentation(publicKey, nil) as Data? else {
+            throw BiometricLoginError.publicKeyEncodingFailed
         }
 
-        var pubError: Unmanaged<CFError>?
-        guard let pubData = SecKeyCopyExternalRepresentation(publicKey, &pubError) as Data? else {
-            return .failure(.keyGenerationFailed)
-        }
-
-        return .success(pubData.base64EncodedString())
+        let pemBody = pemFormattedPublicKeyBody(from: addPublicKeyHeader(to: publicKeyData).base64EncodedString())
+        return """
+        -----BEGIN PUBLIC KEY-----
+        \(pemBody)
+        -----END PUBLIC KEY-----
+        """
     }
 
-    // MARK: - 2. Build Challenge (WITH / WITHOUT NONCE)
-
-    static func buildChallenge(deviceId: String, nonce: String? = nil) -> Data {
-        let timestamp = Int(Date().timeIntervalSince1970)
-
-        let message: String
-        if let nonce = nonce {
-            message = "login:\(deviceId):\(timestamp):\(nonce)"
-        } else {
-            message = "login:\(deviceId):\(timestamp)"
-        }
-
-        return Data(message.utf8)
-    }
-
-    // MARK: - 3. Sign Challenge (RSA PKCS1v1.5 + SHA256)
-
-    static func sign(challenge: Data) -> Result<String, RSAError> {
-
-        guard let privateKey = loadPrivateKey() else {
-            return .failure(.keyNotFound)
-        }
-
-        let algorithm = SecKeyAlgorithm.rsaSignatureMessagePKCS1v15SHA256
-
-        guard SecKeyIsAlgorithmSupported(privateKey, .sign, algorithm) else {
-            return .failure(.signingFailed)
-        }
-
-        var error: Unmanaged<CFError>?
-
-        guard let signature = SecKeyCreateSignature(
-            privateKey,
-            algorithm,
-            challenge as CFData,
-            &error
-        ) as Data? else {
-            return .failure(.signingFailed)
-        }
-
-        return .success(signature.base64EncodedString())
-    }
-
-    // MARK: - 4. Load Private Key
-
-    private static func loadPrivateKey() -> SecKey? {
+    func keysExist() -> Bool {
+        let silentContext = LAContext()
+        silentContext.interactionNotAllowed = true
         let query: [String: Any] = [
             kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tag,
+            kSecAttrApplicationTag as String: applicationTagData,
             kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
-            kSecReturnRef as String: true
+            kSecUseAuthenticationContext as String: silentContext
         ]
 
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-
-        guard status == errSecSuccess else {
-            return nil
-        }
-
-        let key: SecKey = item as! SecKey
-        return key
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
+        return status == errSecSuccess || status == errSecInteractionNotAllowed
     }
 
-    // MARK: - 5. Delete Key
-
-    static func deleteKey() {
+    func deleteKeyPair() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tag,
+            kSecAttrApplicationTag as String: applicationTagData,
             kSecAttrKeyType as String: kSecAttrKeyTypeRSA
         ]
 
         SecItemDelete(query as CFDictionary)
     }
 
-    // MARK: - 6. Check Key Exists
+    func createSignature(payload: String, promptMessage: String) throws -> String {
+        guard let payloadData = payload.data(using: .utf8) else {
+            throw BiometricLoginError.invalidPayload
+        }
 
-    static func isRegistered() -> Bool {
+        let signingContext = LAContext()
+        signingContext.localizedReason = promptMessage
         let query: [String: Any] = [
             kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tag,
+            kSecAttrApplicationTag as String: applicationTagData,
             kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
-            kSecReturnRef as String: false
+            kSecReturnRef as String: true,
+            kSecUseAuthenticationContext as String: signingContext
         ]
 
-        let status = SecItemCopyMatching(query as CFDictionary, nil)
-        return status == errSecSuccess
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        guard status == errSecSuccess, let privateKey = item else {
+            if status == errSecUserCanceled {
+                throw BiometricLoginError.userCanceled
+            }
+            throw BiometricLoginError.keyNotFound
+        }
+
+        let secKey = privateKey as! SecKey
+        let algorithm = SecKeyAlgorithm.rsaSignatureMessagePKCS1v15SHA256
+
+        guard SecKeyIsAlgorithmSupported(secKey, .sign, algorithm) else {
+            throw BiometricLoginError.unsupportedAlgorithm
+        }
+
+        var signatureError: Unmanaged<CFError>?
+        guard let signature = SecKeyCreateSignature(
+            secKey,
+            algorithm,
+            payloadData as CFData,
+            &signatureError
+        ) as Data? else {
+            let error = signatureError?.takeRetainedValue()
+            let nsError = error.map { $0 as Error as NSError }
+
+            if let code = nsError?.code,
+               code == errSecUserCanceled || code == LAError.userCancel.rawValue {
+                throw BiometricLoginError.userCanceled
+            }
+
+            let message = error?.localizedDescription ?? "Unable to create biometric signature."
+            throw BiometricLoginError.signatureFailed(message)
+        }
+
+        return signature.base64EncodedString()
+    }
+
+    // MARK: - Private Helpers
+
+    private func ensureBiometryIsAvailable() throws {
+        let context = LAContext()
+        var error: NSError?
+        let canEvaluate = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+
+        guard canEvaluate else {
+            let message = error?.localizedDescription ?? "Biometric authentication is not available."
+            throw BiometricLoginError.biometryUnavailable(message)
+        }
+    }
+
+    private func addPublicKeyHeader(to publicKeyData: Data) -> Data {
+        var builder = [UInt8](repeating: 0, count: 15)
+        let encodedRSAEncryptionOID: [UInt8] = [
+            0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48,
+            0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00
+        ]
+        let encodedKey = NSMutableData()
+
+        let bitstringLength: Int
+        if publicKeyData.count + 1 < 128 {
+            bitstringLength = 1
+        } else {
+            bitstringLength = ((publicKeyData.count + 1) / 256) + 2
+        }
+
+        builder[0] = 0x30
+        let totalLength = encodedRSAEncryptionOID.count + 2 + bitstringLength + publicKeyData.count
+        let sequenceLength = encodeLength(into: &builder, offset: 1, length: totalLength)
+        encodedKey.append(builder, length: sequenceLength + 1)
+        encodedKey.append(encodedRSAEncryptionOID, length: encodedRSAEncryptionOID.count)
+
+        builder[0] = 0x03
+        let bitstringEncodedLength = encodeLength(into: &builder, offset: 1, length: publicKeyData.count + 1)
+        builder[bitstringEncodedLength + 1] = 0x00
+        encodedKey.append(builder, length: bitstringEncodedLength + 2)
+        encodedKey.append(publicKeyData)
+
+        return encodedKey as Data
+    }
+
+    private func encodeLength(into buffer: inout [UInt8], offset: Int, length: Int) -> Int {
+        if length < 128 {
+            buffer[offset] = UInt8(length)
+            return 1
+        }
+
+        var value = length
+        let byteCount = (length / 256) + 1
+        buffer[offset] = UInt8(byteCount + 0x80)
+
+        for index in 0..<byteCount {
+            buffer[offset + byteCount - index] = UInt8(value & 0xFF)
+            value = value >> 8
+        }
+
+        return byteCount + 1
+    }
+
+    private func pemFormattedPublicKeyBody(from base64String: String) -> String {
+        stride(from: 0, to: base64String.count, by: 64).map { startIndex in
+            let start = base64String.index(base64String.startIndex, offsetBy: startIndex)
+            let end = base64String.index(start, offsetBy: min(64, base64String.distance(from: start, to: base64String.endIndex)))
+            return String(base64String[start..<end])
+        }.joined(separator: "\n")
     }
 }

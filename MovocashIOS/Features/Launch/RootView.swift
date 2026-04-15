@@ -144,6 +144,13 @@ struct RootView: View {
                 appState.flow = .loginPhone
             }
         }
+        .onAppear {
+            // APIs execute first (GET /rsa/nonce → sign → POST /auth/token-rsa).
+            // Returns true so submitBiometric unlocks silently after success.
+            lockVM.onBiometricSuccess = {
+                await authVM.loginWithBiometric(appState: appState)
+            }
+        }
     }
 
     // MARK: -

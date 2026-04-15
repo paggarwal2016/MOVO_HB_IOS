@@ -13,6 +13,8 @@ struct BiometricEnrollView: View {
     var onEnable: () -> Void     // user tapped "Enable"
     var onSkip: () -> Void       // user tapped "Not Now"
 
+    @EnvironmentObject var authVM: AuthViewModel
+
     @State private var isEnrolling = false
     @State private var errorMessage: String? = nil
 
@@ -116,10 +118,16 @@ struct BiometricEnrollView: View {
         // 2. Store Secure Enclave key
         do {
             try lockManager.enrollBiometrics()
-            onEnable()
         } catch {
             errorMessage = error.localizedDescription
+            isEnrolling = false
+            return
         }
+
+        // 3. Register RSA key pair with server (POST /rsa)
+        await authVM.enrollRSA()
+
+        onEnable()
 
         isEnrolling = false
     }

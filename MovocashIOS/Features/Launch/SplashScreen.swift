@@ -44,10 +44,21 @@ struct SplashScreen: View {
                 if lockManager.state != .unlocked {
                     lockManager.evaluateOnLaunch()
                 }
-                appState.flow = .home
+
                 if lockManager.state == .locked {
-                    await lockManager.unlockWithBiometric()
+                    // Step 1: GET /rsa/nonce → Step 2: Face ID signs → Step 3: POST /auth/token-rsa
+                    // APIs complete first. Home screen shows only after success.
+                    let rsaSuccess = await authVM.loginWithBiometric(appState: appState)
+                    if rsaSuccess {
+                        lockManager.unlockAfterRSAAuth()
+                    } else {
+                        // No RSA keys or server error — fall back to local biometric
+                        await lockManager.unlockWithBiometric()
+                    }
                 }
+
+                // Navigate to home only after auth (RSA or local) completes
+                appState.flow = .home
 
             case .keychainLocked:
                 // Tokens exist but keychain is locked — device rebooted and not yet
