@@ -207,6 +207,6 @@ final class SessionManager: ObservableObject {
         appState.otpVerified = false
         appState.isAuthenticated = false
         appState.flow = .choice
-        RSAKeyManager.deleteKey() // Ensures biometric re-enrollment on next login
+        RSAKeyManager.shared.deleteKeyPair() // Ensures biometric re-enrollment on next login
     }
 }
