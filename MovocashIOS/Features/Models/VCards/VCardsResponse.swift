@@ -9,7 +9,13 @@ import Foundation
 
 // MARK: - VCards
 
-nonisolated struct VCardsResponse: Decodable {
+nonisolated struct VCardsResponse: Decodable, Sendable {
+    let success: Bool
+    let message: String?
+    let data: [VCardsList]?
+}
+
+nonisolated struct VCardsList: Decodable, Sendable {
     let cardNumber: String
     let expiration: String
     let lastFour: String

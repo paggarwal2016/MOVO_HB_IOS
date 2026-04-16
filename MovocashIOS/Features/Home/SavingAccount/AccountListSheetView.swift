@@ -160,8 +160,8 @@ struct AccountListSheetView: View {
         do {
             let response = try await savingVM.getSavingAccountList(sortBy: sortBy, sortDirection: sortDirection)
             savingsList = response
-            accounts = response.accounts.filter { !$0.isPrimary }
-            primaryAccountId = response.accounts.first(where: { $0.isPrimary })?.id
+            accounts = response.data.accounts.filter { !$0.isPrimary }
+            primaryAccountId = response.data.accounts.first(where: { $0.isPrimary })?.id
             if accounts.count == 0 { isPresented = false }
         } catch {
             ToastManager.shared.show("Failed to load accounts.", style: .error, position: .bottom)

@@ -48,7 +48,6 @@ final class SessionManager: ObservableObject {
     // MARK: - Start Session
     func startSession(
         accessToken: String,
-        refreshToken: String,
         appState: AppState
     ) async throws {
 
@@ -57,8 +56,7 @@ final class SessionManager: ObservableObject {
 
         // Store securely
         try await storeTokens(
-            accessToken: accessToken,
-            refreshToken: refreshToken
+            accessToken: accessToken
         )
 
         // Update UI state
@@ -69,19 +67,12 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Store Tokens
     func storeTokens(
-        accessToken: String,
-        refreshToken: String
+        accessToken: String
     ) async throws {
 
         try await keychain.save(
             accessToken,
             for: "access_token",
-            protection: .backgroundSafe
-        )
-
-        try await keychain.save(
-            refreshToken,
-            for: "refresh_token",
             protection: .backgroundSafe
         )
     }
@@ -91,9 +82,8 @@ final class SessionManager: ObservableObject {
     func restoreSession(appState: AppState) async -> SessionRestoreResult {
         do {
             let accessToken  = try await keychain.get("access_token",  biometricPrompt: nil)
-            let refreshToken = try await keychain.get("refresh_token", biometricPrompt: nil)
 
-            guard !accessToken.isEmpty, !refreshToken.isEmpty else {
+            guard !accessToken.isEmpty else {
                 return .notLoggedIn
             }
 
@@ -181,7 +171,6 @@ final class SessionManager: ObservableObject {
 
         do {
             try await keychain.delete("access_token")
-            try await keychain.delete("refresh_token")
         } catch {
             SecureLogger.error("Failed to delete tokens on logout: \(error.localizedDescription)", category: .auth)
         }

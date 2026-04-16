@@ -9,7 +9,7 @@ import Foundation
 
 nonisolated struct RefreshTokenResponse: Decodable {
     let accessToken: String
-    let refreshToken: String
+    let message: String?
 }
 
 nonisolated struct SuccessResponse: Decodable {
@@ -23,8 +23,8 @@ nonisolated struct APIErrorResponse: Decodable {
 
 
 nonisolated struct RSATokenResponse: Decodable {
-    let accessToken: String
-    let refreshToken: String
+    let sessionToken: String
+    let message: String?
 }
 
 nonisolated struct RSANonceResponse: Decodable {

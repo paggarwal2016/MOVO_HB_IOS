@@ -121,7 +121,7 @@ actor NetworkService: NetworkServiceProtocol {
         defer { isRefreshing = false }
 
         do {
-            let token = try await keychain.get("refresh_token", biometricPrompt: nil)
+            let token = try await keychain.get("access_token", biometricPrompt: nil)
 
             // Empty token throws and falls through to the single catch below,
             // which is the only place resumeWaiters is called for error paths.
@@ -133,7 +133,6 @@ actor NetworkService: NetworkServiceProtocol {
 
             // Store refreshed tokens directly
             try await keychain.save(response.accessToken, for: "access_token", protection: .backgroundSafe)
-            try await keychain.save(response.refreshToken, for: "refresh_token", protection: .backgroundSafe)
             await authManager.updateAccessToken(response.accessToken)
             await AnalyticsManager.shared.reapplyIdentity()
 

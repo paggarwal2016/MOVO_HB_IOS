@@ -30,8 +30,10 @@ enum VCardAPI: Endpoint {
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .getVCardsPrimary, .getVCardsList:
+        case .getVCardsList:
             return .GET
+        case .getVCardsPrimary:
+            return .PUT
         case .postVCards, .vCardsProvision:
             return .POST
         }
@@ -41,10 +43,12 @@ enum VCardAPI: Endpoint {
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .vCardsProvision, .getVCardsPrimary, .getVCardsList:
-            return .authorized
+        case .vCardsProvision:
+            return .movoAuthorized
+        case .getVCardsList, .getVCardsPrimary:
+            return .movoAuthorizedAll
         case .postVCards:
-            return .authorizedWithOffice
+            return .movoAuthorized
         }
     }
     

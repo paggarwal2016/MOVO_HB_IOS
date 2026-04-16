@@ -26,24 +26,25 @@ final class VCardViewModel: BaseViewModel {
 
     // MARK: - Vcard get
 
-    func getVCardPrimary() async throws -> VCardsResponse {
+    func getVCardPrimary() async throws -> VCardsList {
         do {
             let response: VCardsResponse = try await perform { try await self.network.request(VCardAPI.getVCardsPrimary) }
+            guard let card = response.data?.first else { throw NetworkError.decodingError }
             analytics.log(AnalyticsEvent.vcardViewed)
-            return response
+            return card
         } catch {
             analytics.log(AnalyticsEvent.vcardFetchFailed)
             throw error
         }
     }
-    
+
     // MARK: - Vcard All
 
-    func getVCardsList() async throws -> [VCardListResponse] {
+    func getVCardsList() async throws -> [VCardsList] {
         do {
-            let response: [VCardListResponse] = try await perform { try await self.network.request(VCardAPI.getVCardsList) }
+            let response: VCardsResponse = try await perform { try await self.network.request(VCardAPI.getVCardsList) }
             analytics.log(AnalyticsEvent.vcardViewed)
-            return response
+            return response.data ?? []
         } catch {
             analytics.log(AnalyticsEvent.vcardFetchFailed)
             throw error
@@ -52,13 +53,14 @@ final class VCardViewModel: BaseViewModel {
 
     // MARK: - Vcard post
 
-    func postVCard(request: VCardsRequest) async throws -> VCardsResponse {
+    func postVCard(request: VCardsRequest) async throws -> VCardsList {
         do {
             let response: VCardsResponse = try await perform { try await self.network.request(VCardAPI.postVCards(request: request)) }
+            guard let card = response.data?.first else { throw NetworkError.decodingError }
             analytics.log(AnalyticsEvent.vcardCreated, params: [
                 AnalyticsParam.accountId: request.accountId
             ])
-            return response
+            return card
         } catch {
             analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
                 AnalyticsParam.accountId: request.accountId

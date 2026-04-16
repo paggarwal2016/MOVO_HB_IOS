@@ -21,9 +21,9 @@ struct ViewCardScreen: View {
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
     }
-    @State private var card: VCardsResponse?
+    @State private var card: VCardsList?
     @State private var showCardDetail = false
-    @State private var revealedCard: VCardsResponse?
+    @State private var revealedCard: VCardsList?
     @State private var showAddCard = false
     
     var body: some View {
@@ -109,7 +109,7 @@ struct ViewCardScreen: View {
     
     private func addCard(pin: String) async {
         do {
-            card = try await vm.postVCard(request: VCardsRequest(pin: pin, accountId: accountId))
+            card = try await vm.postVCard(request: VCardsRequest(pin: pin, accountId: accountId, userAction: "VCARD-CREATION"))
             ToastManager.shared.show("Success.", style: .success, position: .bottom)
         } catch {}
     }

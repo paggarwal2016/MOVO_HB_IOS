@@ -31,7 +31,7 @@ struct QuickTransferView: View {
     private var amount: Double { Double(amountText) ?? 0 }
     private var isValid: Bool { amount > 0 && selectedAccount != nil }
     private var accounts: [SavingsAccountDetailsResponse] {
-        savingVM.accountList?.accounts ?? []
+        savingVM.accountList?.data.accounts ?? []
     }
 
     var body: some View {
@@ -233,7 +233,7 @@ struct QuickTransferView: View {
     private func loadAccounts() async {
         await savingVM.loadAccounts()
         if selectedAccount == nil {
-            selectedAccount = savingVM.accountList?.accounts.first(where: { $0.isPrimary })
+            selectedAccount = savingVM.accountList?.data.accounts.first(where: { $0.isPrimary })
         }
     }
 

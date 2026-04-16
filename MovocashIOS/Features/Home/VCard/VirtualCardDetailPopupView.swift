@@ -9,7 +9,7 @@ import SwiftUI
 
 struct VirtualCardDetailPopupView: View {
     
-    let card: VCardsResponse
+    let card: VCardsList
     @Binding var isPresented: Bool
     @State private var copiedField: String?
     

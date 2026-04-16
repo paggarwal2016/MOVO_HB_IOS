@@ -39,11 +39,19 @@ enum AuthAPI: Endpoint {
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .messengerOTP,.tokenSMS:
+        case .messengerOTP:
             return .default
+        case .tokenSMS:
+            return .movoAuthorized
         case .tokenAccess:
             return .movoAuthorized
-        case .refreshToken, .enrollRSA, .tokenRSA, .nonceRSA:
+        case .enrollRSA:
+            return .movoAuthorized
+        case .nonceRSA:
+            return .movoAuthorized
+        case .tokenRSA:
+            return .movoAuthorized
+        case .refreshToken:
             return .authorized
         }
     }

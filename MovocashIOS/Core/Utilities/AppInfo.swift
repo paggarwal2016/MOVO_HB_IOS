@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 enum AppInfo {
     
@@ -25,6 +26,12 @@ enum AppInfo {
         Bundle.main.bundleIdentifier ?? "com.unknown.app"
     }
     
+    static var osVersion: String {
+        UIDevice.current.systemVersion
+    }
+    
+    static let applicationName: String = "movo-ios"
+    
     static var platform: String {
         #if os(iOS)
         return "ios"
@@ -33,7 +40,5 @@ enum AppInfo {
         #else
         return "unknown"
         #endif
-    }
-
-    static let appName: String = "movo_ios"
+    }    
 }

@@ -12,6 +12,7 @@ import Foundation
 struct VCardsRequest: Codable, Equatable, Sendable {
     let pin: String
     let accountId: Int
+    let userAction: String
 }
 
 // MARK: - VCards Provision

@@ -31,15 +31,18 @@ struct RefreshTokenRequest: Encodable, Sendable {
 struct RSAEnrollRequest: Encodable, Sendable {
     let publicKey: String
     let deviceId: String
+    let userAction: String
 }
 
 struct RSATokenRequest: Encodable, Sendable {
     let signedMessage: String
     let deviceId: String
+    let userAction: String
 }
 
 struct RSANonceRequest: Encodable, Sendable {
     let deviceId: String
+    let userAction: String
 }
 
 struct UserActionRequest: Encodable, Sendable {

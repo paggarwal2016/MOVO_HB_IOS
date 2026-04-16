@@ -53,11 +53,11 @@ struct DashboardView: View {
     @State private var showViewCardList = false
     
     private var displayAccount: SavingsAccountDetailsResponse? {
-        savingVM.accountList?.accounts.first(where: { $0.isPrimary })
+        savingVM.accountList?.data.accounts.first(where: { $0.isPrimary })
     }
-    
+
     private var isViewCashAccount: Bool {
-        savingVM.accountList?.accounts.contains(where: { !$0.isPrimary }) ?? false
+        savingVM.accountList?.data.accounts.contains(where: { !$0.isPrimary }) ?? false
     }
     
     // MARK: - Body
@@ -121,7 +121,7 @@ struct DashboardView: View {
                 InternalTransferView(
                     toClientId: account.clientId,
                     fromAccount: account,
-                    nonPrimaryAccounts: savingVM.accountList?.accounts.filter({ !$0.isPrimary }) ?? [],
+                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter({ !$0.isPrimary }) ?? [],
                     container: container,
                     onDismiss: {
                         Task { await loadData() }

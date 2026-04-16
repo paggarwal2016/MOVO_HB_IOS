@@ -17,8 +17,8 @@ struct ViewCardsListScreen: View {
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
     }
     
-    @State private var vcards: [VCardListResponse] = []
-    @State private var selectedCard: VCardListResponse?
+    @State private var vcards: [VCardsList] = []
+    @State private var selectedCard: VCardsList?
     
     // Derived binding — popup dismisses by setting selectedCard to nil
     private var isShowingDetail: Binding<Bool> {
@@ -59,7 +59,7 @@ struct ViewCardsListScreen: View {
         if let card = selectedCard {
             dimmedOverlay { selectedCard = nil } content: {
                 VirtualCardDetailPopupView(
-                    card: card.asVCardsResponse(),
+                    card: card,
                     isPresented: isShowingDetail
                 )
                 .padding(.horizontal, 15)
@@ -112,51 +112,35 @@ private extension View {
     }
 }
 
-// MARK: - VCardListResponse → VCardsResponse
-
-private extension VCardListResponse {
-    func asVCardsResponse() -> VCardsResponse {
-        VCardsResponse(
-            cardNumber: cardNumber ?? "—",
-            expiration: expiration ?? "—",
-            lastFour: lastFour ?? "—",
-            name: name ?? "—",
-            cvc2: cvc2 ?? "—",
-            firstName: firstName ?? "—",
-            lastName: lastName ?? "—"
-        )
-    }
-}
-
 // MARK: - VCard Row
 
 struct VCardRowView: View {
-    
-    let card: VCardListResponse
-    
+
+    let card: VCardsList
+
     var body: some View {
         HStack(spacing: 12) {
-            
+
             Image(systemName: "creditcard")
                 .font(.title2)
                 .foregroundStyle(Color.primary)
                 .frame(width: 44, height: 44)
                 .background(Color.primary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-            
+
             VStack(alignment: .leading, spacing: 4) {
-                Text(card.name ?? "—")
+                Text(card.name)
                     .font(.headline)
                     .foregroundStyle(.primary)
-                
-                Text(card.cardNumber?.maskedCardNumber() ?? "—")
+
+                Text(card.cardNumber.maskedCardNumber())
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            
+
             Spacer()
-            
-            Text("Exp: \(card.expiration ?? "—")")
+
+            Text("Exp: \(card.expiration)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -12,17 +12,17 @@ import SwiftUI
 struct CustomCardView: View {
     
     let title: String
-    let card: VCardsResponse
+    let card: VCardsList
     @StateObject private var vm: VCardViewModel
     @Binding var showCardDetail: Bool
-    @Binding var revealedCard: VCardsResponse?
+    @Binding var revealedCard: VCardsList?
     @State private var isRevealing = false
-    
+
     init(title: String,
-         card: VCardsResponse,
+         card: VCardsList,
          vm: VCardViewModel,
          showCardDetail: Binding<Bool>,
-         revealedCard: Binding<VCardsResponse?>) {
+         revealedCard: Binding<VCardsList?>) {
         self.title = title
         self.card  = card
         _vm              = StateObject(wrappedValue: vm)

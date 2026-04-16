@@ -121,13 +121,31 @@ final class RSAKeyManager: Sendable {
         SecItemDelete(query as CFDictionary)
     }
 
-    func createSignature(payload: String, promptMessage: String) throws -> String {
+    func createSignature(payload: String, promptMessage: String) async throws -> String {
         guard let payloadData = payload.data(using: .utf8) else {
             throw BiometricLoginError.invalidPayload
         }
 
+        // Step 1 — Explicitly evaluate biometric policy via async callback.
+        // This guarantees Face ID fully completes before any key access is attempted.
         let signingContext = LAContext()
-        signingContext.localizedReason = promptMessage
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            signingContext.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics,
+                localizedReason: promptMessage
+            ) { success, error in
+                if success {
+                    continuation.resume()
+                } else if let laError = error as? LAError, laError.code == .userCancel {
+                    continuation.resume(throwing: BiometricLoginError.userCanceled)
+                } else {
+                    continuation.resume(throwing: error ?? BiometricLoginError.signatureFailed("Biometric evaluation failed"))
+                }
+            }
+        }
+
+        // Step 2 — Retrieve key using the already-evaluated context (no further UI prompt).
+        signingContext.interactionNotAllowed = true
         let query: [String: Any] = [
             kSecClass as String: kSecClassKey,
             kSecAttrApplicationTag as String: applicationTagData,

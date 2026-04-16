@@ -10,9 +10,28 @@ import Foundation
 // MARK: - Savings List
 
 nonisolated struct SavingsAccountListResponse: Decodable, Sendable {
+    let success: Bool
+    let message: String?
+    let data: SavingsAccountData
+}
+
+nonisolated struct SavingsAccountData: Decodable, Sendable {
     let accounts: [SavingsAccountDetailsResponse]
     let totalAccountBalance: Decimal
     let totalAvailableBalance: Decimal
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accounts              = try container.decodeIfPresent([SavingsAccountDetailsResponse].self, forKey: .accounts) ?? []
+        let totalAccStr       = try container.decodeIfPresent(String.self, forKey: .totalAccountBalance) ?? "0"
+        let totalAvailStr     = try container.decodeIfPresent(String.self, forKey: .totalAvailableBalance) ?? "0"
+        totalAccountBalance   = Decimal(string: totalAccStr) ?? 0
+        totalAvailableBalance = Decimal(string: totalAvailStr) ?? 0
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case accounts, totalAccountBalance, totalAvailableBalance
+    }
 }
 
 // MARK: - Savings Details
@@ -52,8 +71,10 @@ nonisolated struct SavingsAccountDetailsResponse: Decodable, Sendable, Identifia
         accountNumber = try container.decode(String.self, forKey: .accountNumber)
         clientName = try container.decode(String.self, forKey: .clientName)
         status = try container.decode(AccountStatus.self, forKey: .status)
-        accountBalance = try container.decode(Decimal.self, forKey: .accountBalance)
-        availableBalance = try container.decode(Decimal.self, forKey: .availableBalance)
+        let accBalStr    = try container.decodeIfPresent(String.self, forKey: .accountBalance) ?? "0"
+        let availBalStr  = try container.decodeIfPresent(String.self, forKey: .availableBalance) ?? "0"
+        accountBalance   = Decimal(string: accBalStr) ?? 0
+        availableBalance = Decimal(string: availBalStr) ?? 0
         clientId = try container.decode(Int.self, forKey: .clientId)
         
         nickname = try container.decodeIfPresent(String.self, forKey: .nickname)

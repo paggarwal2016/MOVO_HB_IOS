@@ -102,11 +102,10 @@ final class AuthViewModel: ObservableObject {
                 AuthAPI.tokenAccess
             )
 
-//            try await sessionManager.startSession(
-//                accessToken: tokenResponse.accessToken,
-//                refreshToken: tokenResponse.refreshToken,
-//                appState: appState
-//            )
+            try await sessionManager.startSession(
+                accessToken: tokenResponse.accessToken,
+                appState: appState
+            )
 
             analytics.trackLogin(method: .otp)
             try await kycManager.configureSDK(officeId: AppConfig.officeId)
@@ -194,8 +193,8 @@ extension AuthViewModel {
             let publicKey: String = try await keyTask.value
 
             // POST /rsa — register public key with the server
-            let _: Bool = try await network.request(
-                AuthAPI.enrollRSA(request: RSAEnrollRequest(publicKey: publicKey, deviceId: deviceId))
+            let _: SuccessResponse = try await network.request(
+                AuthAPI.enrollRSA(request: RSAEnrollRequest(publicKey: publicKey, deviceId: deviceId, userAction: "RSA Creation"))
             )
             SecureLogger.info("RSA key enrolled successfully", category: .auth)
         } catch {
@@ -208,22 +207,18 @@ extension AuthViewModel {
     // Returns true on success. Caller unlocks the app silently after success.
     @discardableResult
     func loginWithBiometric(appState: AppState) async -> Bool {
-        guard RSAKeyManager.shared.keysExist() else {
-            SecureLogger.info("RSA keys not enrolled — skipping biometric server login", category: .auth)
-            return false
-        }
 
         let deviceId = await DeviceManager.shared.deviceID()
 
         do {
             // Step 1 — GET /rsa/nonce
             let nonceResponse: RSANonceResponse = try await network.request(
-                AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId))
+                AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId, userAction: "RSA nonce"))
             )
             SecureLogger.info("nonce fetched successfully", category: .auth)
 
-            // Step 2 — sign nonce (triggers Face ID prompt via biometric-protected key)
-            let signedMessage = try RSAKeyManager.shared.createSignature(
+            // Step 2 — sign nonce (evaluatePolicy guarantees Face ID fully completes before signing)
+            let signedMessage = try await RSAKeyManager.shared.createSignature(
                 payload: nonceResponse.nonce,
                 promptMessage: "Sign in with Face ID"
             )
@@ -232,19 +227,18 @@ extension AuthViewModel {
             let response: RSATokenResponse = try await network.request(
                 AuthAPI.tokenRSA(request: RSATokenRequest(
                     signedMessage: signedMessage,
-                    deviceId: deviceId
+                    deviceId: deviceId,
+                    userAction: "RSA-LOGIN"
                 ))
             )
 
-            try await sessionManager.startSession(
-                accessToken: response.accessToken,
-                refreshToken: response.refreshToken,
-                appState: appState
-            )
+            try await keychain.save(response.sessionToken, for: "auth_session_id", protection: .backgroundSafe)
+            
             SecureLogger.info("tokenRSA success — session started", category: .auth)
             return true
         } catch {
-            SecureLogger.error("biometric login failed: \(error.localizedDescription)", category: .auth)
+            SecureLogger.error("biometric login failed: \(error)", category: .auth)
+            state = .error(error.localizedDescription)
             return false
         }
     }
