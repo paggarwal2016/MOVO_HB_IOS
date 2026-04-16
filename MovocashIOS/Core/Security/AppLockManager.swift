@@ -320,6 +320,16 @@ final class AppLockManager: ObservableObject {
         }
     }
 
+    // MARK: - Silent Unlock (after RSA server auth)
+
+    /// Unlocks the app after a successful RSA biometric server authentication.
+    /// The biometric was already verified via RSA key signing — no second prompt needed.
+    func unlockAfterRSAAuth() {
+        guard state == .locked else { return }
+        resetFailures()
+        transitionToUnlocked()
+    }
+
     // MARK: - Passcode Setup
 
     func setupPasscode(_ pin: String) async throws {

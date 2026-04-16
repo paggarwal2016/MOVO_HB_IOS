@@ -10,7 +10,8 @@ import SwiftUI
 
 struct ChoiceScreen: View {
     @EnvironmentObject var appState: AppState
-    
+    @EnvironmentObject var authVM: AuthViewModel
+
     var body: some View {
         VStack(spacing: 40) {
             Text("Welcome to MovoCash")
@@ -23,11 +24,22 @@ struct ChoiceScreen: View {
             PrimaryButton(title: "Get Started") {
                 appState.flow = .getStartedPhone
             }
-            
+
             PrimaryButton(title: "Login",
                           backgroundColor: Color.secondary,
                           textColor: .black) {
                 appState.flow = .loginPhone
+            }
+
+            // Show biometric login only when RSA keys are already enrolled
+            if RSAKeyManager.shared.keysExist() {
+                Button {
+                    Task { await authVM.loginWithBiometric(appState: appState) }
+                } label: {
+                    Label("Sign in with Face ID", systemImage: "faceid")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.primary)
+                }
             }
         }
         .padding()
