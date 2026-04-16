@@ -105,7 +105,14 @@ struct RootView: View {
                     .ignoresSafeArea()
             }
         }
-        .onChangeCompat(of: scenePhase) { newPhase in lockManager.handleScenePhase(newPhase) }
+        .onChangeCompat(of: scenePhase) { newPhase in
+            lockManager.handleScenePhase(newPhase)
+            // If the app returns to foreground while still locked, discard any
+            // partially entered digits so the user starts fresh.
+            if newPhase == .active, lockManager.state == .locked {
+                lockVM.clearInput()
+            }
+        }
         .task(id: appState.flow) {
             guard appState.flow == .kyc else { return }
             UserDefaults.standard.set(true, forKey: "kycInProgress")
@@ -135,6 +142,13 @@ struct RootView: View {
                 await sessionManager.logout(appState: appState)
                 lockManager.logout()
                 appState.flow = .loginPhone
+            }
+        }
+        .onAppear {
+            // APIs execute first (GET /rsa/nonce → sign → POST /auth/token-rsa).
+            // Returns true so submitBiometric unlocks silently after success.
+            lockVM.onBiometricSuccess = {
+                await authVM.loginWithBiometric(appState: appState)
             }
         }
     }

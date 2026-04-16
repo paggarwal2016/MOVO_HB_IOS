@@ -65,7 +65,6 @@ struct HomeTabBarView: View {
         }
         .tint(Color.primary)
         .onAppear(perform: handleOnAppear)
-        .task { await handleOnTask() }
     }
 }
 
@@ -104,9 +103,5 @@ private extension HomeTabBarView {
         guard appState.isNewRegistration else { return }
         lockManager.resetToUnlocked()
         appState.isNewRegistration = false
-    }
-    
-    func handleOnTask() async {
-        await authVM.enrollRSASilently(appState: appState)
     }
 }

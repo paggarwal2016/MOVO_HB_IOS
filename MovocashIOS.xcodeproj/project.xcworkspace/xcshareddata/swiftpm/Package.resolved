@@ -1,5 +1,5 @@
 {
-  "originHash" : "6d4f39d644b50b36f2e6fe5e059540054b0df67e23b8b4bde14704f94215cab1",
+  "originHash" : "115d275cb9c2c2c71fcbb5941fa318826f17d7ea0bbcc9c96f8955c85e0f27b0",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/BlinkID/blinkid-ios.git",
       "state" : {
-        "revision" : "17a80de7d39eecefb9f8e7b22acbf7ed140ff344",
-        "version" : "7.6.1"
+        "revision" : "549cdaf6f170ed08cc1d173879c740fbb93901fe",
+        "version" : "7.6.2"
       }
     },
     {
@@ -114,7 +114,7 @@
       "kind" : "registry",
       "location" : "",
       "state" : {
-        "version" : "1.7.0"
+        "version" : "1.11.0"
       }
     },
     {
@@ -142,6 +142,15 @@
       "state" : {
         "revision" : "540318ecedd63d883069ae7f1ed811a2df00b6ac",
         "version" : "2.4.0"
+      }
+    },
+    {
+      "identity" : "swift-sodium",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jedisct1/swift-sodium.git",
+      "state" : {
+        "revision" : "e7e799cd1eaa4d0f6d3eab56832e7f4b377f4a4f",
+        "version" : "0.10.0"
       }
     }
   ],

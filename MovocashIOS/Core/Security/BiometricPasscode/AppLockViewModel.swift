@@ -102,6 +102,9 @@ final class AppLockViewModel: ObservableObject {
 
     // MARK: - Unlock submit
 
+    /// Set by RootView. Returns true if RSA server auth succeeded (caller unlocks silently).
+    var onBiometricSuccess: (() async -> Bool)?
+
     func submitPIN() async {
         let pin = isAlphanumeric ? alphanumericInput : pinInput
         guard !pin.isEmpty else { return }
@@ -115,6 +118,17 @@ final class AppLockViewModel: ObservableObject {
     }
 
     func submitBiometric() async {
+        // 1. RSA server auth: GET /rsa/nonce → Face ID signs → POST /auth/token-rsa
+        //    APIs complete first; home screen shown only after success.
+        if let rsaAuth = onBiometricSuccess {
+            let success = await rsaAuth()
+            if success {
+                // RSA biometric verified — unlock silently, no second Face ID prompt
+                lockManager.unlockAfterRSAAuth()
+                return
+            }
+        }
+        // 2. Fallback: no RSA keys or server auth failed — local biometric unlock
         await lockManager.unlockWithBiometric()
     }
 
