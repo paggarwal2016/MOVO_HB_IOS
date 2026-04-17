@@ -70,7 +70,7 @@ struct SavingAccountDetailView: View {
     // MARK: - Detail Content
 
     @ViewBuilder
-    private func detailContent(_ detail: SavingsAccountDetailsResponse) -> some View {
+    private func detailContent(_ detail: SavingsAccountInfo) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
                 accountCard(detail)
@@ -83,7 +83,7 @@ struct SavingAccountDetailView: View {
 
     // MARK: - Account Card
 
-    private func accountCard(_ detail: SavingsAccountDetailsResponse) -> some View {
+    private func accountCard(_ detail: SavingsAccountInfo) -> some View {
         ZStack(alignment: .bottomLeading) {
             RoundedRectangle(cornerRadius: 20)
                 .fill(LinearGradient(

@@ -42,7 +42,7 @@ enum UserAPI: Endpoint {
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .getProfile, .profileTOS, .profileVirtualCardTOS: return .authorized
+        case .getProfile, .profileTOS, .profileVirtualCardTOS: return .movoAuthorized
         case .deleteProfile: return .authorizedWithOffice
         }
     }

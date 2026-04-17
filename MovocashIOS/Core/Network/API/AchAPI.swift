@@ -33,7 +33,7 @@ enum AchAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .initiateTransfer:  return .POST
-        case .getAccounts:       return .GET
+        case .getAccounts:       return .PUT
         case .deleteAccount:     return .DELETE
         case .updateAccount:     return .PATCH
         }
@@ -44,8 +44,10 @@ enum AchAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .initiateTransfer:
-            return .authorizedWithOffice
-        case .getAccounts, .deleteAccount, .updateAccount:
+            return .movoAuthorized
+        case .getAccounts:
+            return .movoAuthorized
+        case .deleteAccount, .updateAccount:
             return .authorized
         }
     }
@@ -61,6 +63,8 @@ enum AchAPI: Endpoint {
             switch self {
             case .initiateTransfer(let request):
                 return try JSONEncoder().encode(request)
+            case .getAccounts:
+                return try JSONEncoder().encode(UserActionRequest(userAction: "GET_ACH_ACCOUNTS"))
             default:
                 return nil
             }

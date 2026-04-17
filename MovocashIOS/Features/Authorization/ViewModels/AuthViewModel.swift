@@ -19,7 +19,6 @@ final class AuthViewModel: ObservableObject {
     
     private let network: NetworkServiceProtocol
     private let keychain: KeychainManagerProtocol
-    private let authManager: AuthManagerProtocol
     private let sessionManager: SessionManager
     private let kycManager: KYCManagerProtocol
     private let alertManager: AlertManagerProtocol
@@ -28,7 +27,6 @@ final class AuthViewModel: ObservableObject {
     init(
         network: NetworkServiceProtocol,
         keychain: KeychainManagerProtocol,
-        authManager: AuthManagerProtocol,
         sessionManager: SessionManager,
         kycManager: KYCManagerProtocol,
         alertManager: AlertManagerProtocol,
@@ -36,7 +34,6 @@ final class AuthViewModel: ObservableObject {
     ) {
         self.network = network
         self.keychain = keychain
-        self.authManager = authManager
         self.sessionManager = sessionManager
         self.kycManager = kycManager
         self.alertManager = alertManager
@@ -51,7 +48,11 @@ final class AuthViewModel: ObservableObject {
         
         do {
             let response: SuccessResponse = try await network.request(
-                AuthAPI.messengerOTP(phoneNumber: phoneNumber, context: context?.rawValue ?? "")
+                AuthAPI.messengerOTP(request:
+                                        MessengerOTPRequest(phoneNumber: phoneNumber,
+                                                            context: context?.rawValue ?? "",
+                                                            userAction: "SEND_OTP",
+                                                            deviceInfo: .current))
             )
             state = .otpSent
             showOTP = true
@@ -68,16 +69,19 @@ final class AuthViewModel: ObservableObject {
     
     // MARK: - Validate OTP
     
-    func validateOTP(code: String) async throws -> AuthTokenSMSResponse  {
+    func validateOTP(code: String) async throws -> AuthTokenSMSResponse {
         guard state != .loading else { throw ModelError.alreadyLoading }
         state = .loading
-        
+
         do {
             let response: AuthTokenSMSResponse = try await network.request(
-                AuthAPI.tokenSMS(phoneNumber: phoneNumber, code: code)
+                AuthAPI.tokenSMS(request: TokenSMSRequest(
+                    phoneNumber: phoneNumber,
+                    code: code,
+                    userAction: "VERIFY_OTP"
+                ))
             )
-            self.state = .verified
-            reset()
+            state = .verified
             return response
         } catch {
             state = .idle
@@ -194,7 +198,7 @@ extension AuthViewModel {
 
             // POST /rsa — register public key with the server
             let _: SuccessResponse = try await network.request(
-                AuthAPI.enrollRSA(request: RSAEnrollRequest(publicKey: publicKey, deviceId: deviceId, userAction: "RSA Creation"))
+                AuthAPI.enrollRSA(request: RSAEnrollRequest(publicKey: publicKey, deviceId: deviceId, userAction: "RSA_CREATION"))
             )
             SecureLogger.info("RSA key enrolled successfully", category: .auth)
         } catch {
@@ -213,7 +217,7 @@ extension AuthViewModel {
         do {
             // Step 1 — GET /rsa/nonce
             let nonceResponse: RSANonceResponse = try await network.request(
-                AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId, userAction: "RSA nonce"))
+                AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId, userAction: "RSA_NONCE"))
             )
             SecureLogger.info("nonce fetched successfully", category: .auth)
 
@@ -228,7 +232,7 @@ extension AuthViewModel {
                 AuthAPI.tokenRSA(request: RSATokenRequest(
                     signedMessage: signedMessage,
                     deviceId: deviceId,
-                    userAction: "RSA-LOGIN"
+                    userAction: "RSA_LOGIN"
                 ))
             )
 

@@ -17,7 +17,7 @@ struct QuickTransferView: View {
 
     @State private var amountText = ""
     @State private var descriptionText = ""
-    @State private var selectedAccount: SavingsAccountDetailsResponse?
+    @State private var selectedAccount: SavingsAccountInfo?
 
     init(
         contact: AppContact,
@@ -30,7 +30,7 @@ struct QuickTransferView: View {
 
     private var amount: Double { Double(amountText) ?? 0 }
     private var isValid: Bool { amount > 0 && selectedAccount != nil }
-    private var accounts: [SavingsAccountDetailsResponse] {
+    private var accounts: [SavingsAccountInfo] {
         savingVM.accountList?.data.accounts ?? []
     }
 

@@ -23,36 +23,41 @@ protocol KYCManagerProtocol {
 // MARK: - KYCManager
 
 @MainActor
-final class KYCManager: KYCManagerProtocol {
+final class KYCManager: KYCManagerProtocol, TokenRefreshable {
+    
+    static let shared = KYCManager(
+        network: NetworkService.shared,
+        keychain: KeychainManager.shared
+    )
 
-    static let shared = KYCManager(authManager: AuthManager.shared)
-
-    private let authManager: AuthManagerProtocol
+    let network: NetworkServiceProtocol
+    let keychain: KeychainManagerProtocol
     private let analytics: AnalyticsTracking
     private weak var presenter: UIViewController?
 
-    init(authManager: AuthManagerProtocol, analytics: AnalyticsTracking? = nil) {
-        self.authManager = authManager
+    init(
+        network: NetworkServiceProtocol,
+        keychain: KeychainManagerProtocol,
+        analytics: AnalyticsTracking? = nil
+    ) {
+        self.network = network
+        self.keychain = keychain
         self.analytics = analytics ?? AnalyticsManager.shared
     }
-
+    
     // MARK: - Configure SDK
     func configureSDK(officeId: String) async throws {
-
+        
         SecureLogger.info("Starting KYC configuration", category: .kyc)
-
-        guard let token = await authManager.getAccessToken() else {
-            SecureLogger.error("Missing access token — aborting KYC configure", category: .kyc)
-            analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "missing_token"])
-            throw KYCError.notConfigured
-        }
-
-        #if DEBUG
+        
+        let token = try await freshAccessToken()
+        
+#if DEBUG
         let verboseLogs = true
-        #else
+#else
         let verboseLogs = false
-        #endif
-
+#endif
+        
         MobileBankingSDK.configure(
             authToken: token,
             baseUrl: AppConfig.sdkURL,
@@ -60,7 +65,7 @@ final class KYCManager: KYCManagerProtocol {
             theme: makeKYCTheme(),
             enableVerboseLogs: verboseLogs
         )
-
+        
         SecureLogger.info("KYC SDK configured", category: .kyc)
     }
     
@@ -79,26 +84,32 @@ final class KYCManager: KYCManagerProtocol {
     // MARK: - Start KYC Flow
     
     func start() async throws -> User {
-
+        
+        // configureSDK is called at login / session-restore — the user may
+        // reach this screen minutes or hours later. Re-validate here so the
+        // SDK never starts with a stale token.
+        let validToken = try await freshAccessToken()
+        updateToken(validToken)
+        
         guard let topVC = UIApplication.topViewController() else {
             throw KYCError.noPresenter
         }
-
+        
         presenter = topVC
-
+        
         return try await withCheckedThrowingContinuation { continuation in
-
+            
             var resumed = false
             var successToken: NSObjectProtocol?
             var errorToken: NSObjectProtocol?
             var cancelToken: NSObjectProtocol?
-
+            
             func resumeOnce(_ result: Result<User, Error>, needsDismiss: Bool) {
                 guard !resumed else { return }
                 resumed = true
-
+                
                 cleanup(dismiss: needsDismiss)
-
+                
                 switch result {
                 case .success(let user):
                     continuation.resume(returning: user)
@@ -106,21 +117,21 @@ final class KYCManager: KYCManagerProtocol {
                     continuation.resume(throwing: error)
                 }
             }
-
+            
             func cleanup(dismiss: Bool) {
                 if let t = successToken { NotificationCenter.default.removeObserver(t) }
                 if let t = errorToken   { NotificationCenter.default.removeObserver(t) }
                 if let t = cancelToken  { NotificationCenter.default.removeObserver(t) }
                 if dismiss { dismissPresenter() }
             }
-
+            
             func dismissPresenter() {
                 Task { @MainActor in
                     self.presenter?.dismiss(animated: true)
                     self.presenter = nil
                 }
             }
-
+            
             // SUCCESS — SDK dismisses its own UI, no manual dismiss needed
             successToken = NotificationCenter.default.addObserver(
                 forName: .verificationCompleted,
@@ -133,7 +144,7 @@ final class KYCManager: KYCManagerProtocol {
                 }
                 resumeOnce(.success(user), needsDismiss: false)
             }
-
+            
             // ERROR — SDK may not dismiss, force dismiss
             errorToken = NotificationCenter.default.addObserver(
                 forName: .scannerError,
@@ -146,7 +157,7 @@ final class KYCManager: KYCManagerProtocol {
                     resumeOnce(.failure(KYCError.unknown), needsDismiss: true)
                 }
             }
-
+            
             // CANCELLED — user tapped cancel on failed-verification screen
             cancelToken = NotificationCenter.default.addObserver(
                 forName: .verificationCanceled,
@@ -155,13 +166,69 @@ final class KYCManager: KYCManagerProtocol {
             ) { _ in
                 resumeOnce(.failure(KYCError.cancelled), needsDismiss: true)
             }
-
+            
             MobileBankingSDK.startKyc(presentingViewController: topVC)
         }
     }
     
     
-    // MARK: - // Theme Configure
+    // MARK: - Token Management
+    
+    /// Returns a valid access token for the KYC SDK.
+    ///
+    /// Flow:
+    /// - Reads current token from Keychain.
+    /// - Decodes the JWT `exp` claim locally — no network call on the happy path.
+    /// - Token valid → returns it immediately.
+    /// - Token expired or within 60-second buffer → delegates to `TokenRefreshable.performTokenRefresh()`.
+    private func freshAccessToken() async throws -> String {
+        guard let current = try? await keychain.get("access_token", biometricPrompt: nil),
+              !current.isEmpty else {
+            analytics.log(AnalyticsEvent.kycStepFailed, params: [
+                AnalyticsParam.kycStep: KYCStep.idVerified.rawValue,
+                AnalyticsParam.errorCode: "missing_token"
+            ])
+            SecureLogger.error("No access token in keychain — aborting KYC", category: .kyc)
+            throw KYCError.notConfigured
+        }
+        
+        guard needsTokenRefresh(current) else {
+            return current
+        }
+        
+        SecureLogger.info("Token near expiry — refreshing before KYC", category: .kyc)
+        
+        do {
+            let fresh = try await performTokenRefresh()
+            analytics.log(AnalyticsEvent.tokenRefreshed, params: [
+                AnalyticsParam.reason: "kyc_proactive_refresh"
+            ])
+            SecureLogger.info("Token refreshed successfully for KYC", category: .kyc)
+            return fresh
+        } catch {
+            analytics.log(AnalyticsEvent.kycStepFailed, params: [
+                AnalyticsParam.kycStep: KYCStep.idVerified.rawValue,
+                AnalyticsParam.errorCode: "token_refresh_failed"
+            ])
+            SecureLogger.error("Token refresh failed before KYC: \(error.localizedDescription)", category: .kyc)
+            throw KYCError.notConfigured
+        }
+    }
+    
+    // MARK: - Theme
+    // backgroundGradient    : Back theme
+    // accentColor           : Try again, icon Disclaimer
+    // labelProps
+    // primaryTextColor      : look correct, first, last, let's confirm
+    // secondaryTextColor    : first, last, title color
+    // buttonProps
+    // color                 : Looks good!, Next button, Get Started
+    // textColor             : action button color
+    // inputProps
+    // backgroundColor       : input field background color
+    // textColor             : input field text color
+    // placeholderColor      : SSN placeholder color
+    // borderColor           : corner border color
     
     private func makeKYCTheme() -> Theme {
         
@@ -169,30 +236,26 @@ final class KYCManager: KYCManagerProtocol {
             backgroundGradient: [
                 Color.background,
                 Color.background
-            ], // Back theme
-            
-            accentColor: .white, // Try againing and icon Disclaimer
-            
+            ],
+            accentColor: .white,
             labelProps: LabelProps(
-                primaryTextColor: Color.primaryText, // look correct, first , last , let's confirm
-                secondaryTextColor: Color.secondaryText,// first, last, title color
+                primaryTextColor: Color.primaryText,
+                secondaryTextColor: Color.secondaryText,
                 titleFont: .monospacedSystemFont(ofSize: 28, weight: .bold),
                 bodyFont:  .monospacedSystemFont(ofSize: 17, weight: .regular),
                 inputLabelFont: .monospacedSystemFont(ofSize: 14, weight: .medium)
             ),
-            
             buttonProps: ButtonProps(
-                color: Color.accent1,// Looks good! and Next button and get Started
-                textColor: .white, // action button color
+                color: Color.accent1,
+                textColor: .white,
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 18, weight: .bold)
             ),
-            
             inputProps: InputProps(
-                backgroundColor: Color.inputBackground, // input field background color
-                textColor: Color.inputText, // input field text color
-                placeholderColor: Color.inputPlaceholder, // SSN placeholder color
-                borderColor: .white, // corner border color
+                backgroundColor: Color.inputBackground,
+                textColor: Color.inputText,
+                placeholderColor: Color.inputPlaceholder,
+                borderColor: .white,
                 borderWidth: 1.5,
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 16, weight: .regular)

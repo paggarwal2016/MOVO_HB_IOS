@@ -13,11 +13,11 @@ struct FundAccountView: View {
     @StateObject private var vm: ACHViewModel
     @StateObject private var achVM: PlaidAchViewModel
     
-    let primaryAccount: SavingsAccountDetailsResponse
+    let primaryAccount: SavingsAccountInfo
     /// Called when the user taps "Connect Bank Account" on the empty state.
     let onConnectBank: () -> Void
     
-    init(container: AppContainer, primaryAccount: SavingsAccountDetailsResponse, onConnectBank: @escaping () -> Void) {
+    init(container: AppContainer, primaryAccount: SavingsAccountInfo, onConnectBank: @escaping () -> Void) {
         _vm = StateObject(wrappedValue: container.makeACHViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         self.primaryAccount = primaryAccount
@@ -29,7 +29,7 @@ struct FundAccountView: View {
     @State private var isAccountPickerExpanded: Bool = false
     @State private var showConfirmSheet: Bool = false
     
-    private var enteredAmount: Double { Double(amount) ?? 0 }
+    private var enteredAmount: Decimal { Decimal(string: amount) ?? 0 }
 
     private var amountExceedsBalance: Bool {
         guard let account = selectedAccount else { return false }
@@ -380,7 +380,8 @@ struct FundAccountView: View {
                     Task {
                         let request = ACHRequest(
                             amount: Int(amount) ?? 0,
-                            achAccountId: account.achAccountId
+                            achAccountId: account.achAccountId,
+                            userAction: "SUBMITS_ACH_DEPOSIT"
                         )
                         let success = await vm.initiateTransfer(request: request)
                         if success {

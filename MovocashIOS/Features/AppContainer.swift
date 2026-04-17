@@ -12,7 +12,6 @@ final class AppContainer: ObservableObject {
 
     let network: NetworkServiceProtocol
     let keychain: KeychainManagerProtocol
-    let authManager: AuthManagerProtocol
     let alertManager: AlertManagerProtocol
     let kycManager: KYCManagerProtocol
     let sessionManager: SessionManager
@@ -21,7 +20,6 @@ final class AppContainer: ObservableObject {
 
     init() {
         keychain = KeychainManager.shared
-        authManager = AuthManager.shared
         alertManager = AlertManager.shared
         network = NetworkService.shared
         kycManager = KYCManager.shared
@@ -31,7 +29,6 @@ final class AppContainer: ObservableObject {
             biometricManager: BiometricManager()
         )
         sessionManager = SessionManager(
-            authManager: authManager,
             keychain: keychain,
             kycManager: kycManager,
             alertManager: alertManager,
@@ -43,7 +40,6 @@ final class AppContainer: ObservableObject {
         AuthViewModel(
             network: network,
             keychain: keychain,
-            authManager: authManager,
             sessionManager: sessionManager,
             kycManager: kycManager,
             alertManager: alertManager,
@@ -76,7 +72,10 @@ final class AppContainer: ObservableObject {
     }
     
     func makePlaidACHViewModel() -> PlaidAchViewModel {
-        PlaidAchViewModel(service: .shared)
+        PlaidAchViewModel(
+            service: .shared,
+            plaidLinkManager: PlaidLinkManager(network: network, keychain: keychain)
+        )
     }
 
     func makeACHViewModel() -> ACHViewModel {

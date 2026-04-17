@@ -14,17 +14,17 @@ struct InternalTransferView: View {
 
     // Pre-loaded from DashboardView
     private let toClientId: Int
-    private let allAccounts: [SavingsAccountDetailsResponse]
+    private let allAccounts: [SavingsAccountInfo]
 
     // Editable
     @State private var amountText = ""
     @State private var descriptionText = ""
-    @State private var selectedFromAccount: SavingsAccountDetailsResponse?
-    @State private var selectedToAccount: SavingsAccountDetailsResponse?
+    @State private var selectedFromAccount: SavingsAccountInfo?
+    @State private var selectedToAccount: SavingsAccountInfo?
     
     var onDismiss:() -> Void
     
-    private var availableToAccounts: [SavingsAccountDetailsResponse] {
+    private var availableToAccounts: [SavingsAccountInfo] {
         allAccounts.filter { $0.id != selectedFromAccount?.id }
     }
 
@@ -35,8 +35,8 @@ struct InternalTransferView: View {
 
     init(
         toClientId: Int,
-        fromAccount: SavingsAccountDetailsResponse?,
-        nonPrimaryAccounts: [SavingsAccountDetailsResponse],
+        fromAccount: SavingsAccountInfo?,
+        nonPrimaryAccounts: [SavingsAccountInfo],
         container: AppContainer,
         onDismiss: @escaping () -> Void,
     ) {

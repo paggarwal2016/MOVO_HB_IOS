@@ -15,10 +15,12 @@ nonisolated struct TransactionResponse: Decodable {
     let balance: Decimal
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        transactions    = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
-        settledBalance  = try container.decodeIfPresent(Decimal.self, forKey: .settledBalance) ?? 0
-        balance         = try container.decodeIfPresent(Decimal.self, forKey: .balance) ?? 0
+        let container       = try decoder.container(keyedBy: CodingKeys.self)
+        transactions        = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
+        let settledBalStr   = try container.decodeIfPresent(String.self, forKey: .settledBalance) ?? "0"
+        let balanceStr      = try container.decodeIfPresent(String.self, forKey: .balance) ?? "0"
+        settledBalance      = Decimal(string: settledBalStr) ?? 0
+        balance             = Decimal(string: balanceStr) ?? 0
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -39,15 +41,16 @@ struct Transaction: Decodable, Identifiable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id          = try container.decode(Int.self, forKey: .id)
-        status      = try container.decodeIfPresent(String.self, forKey: .status) ?? ""
-        location    = try container.decodeIfPresent(String.self, forKey: .location)
-        description = try container.decodeIfPresent(String.self, forKey: .description)
-        amount      = try container.decodeIfPresent(Decimal.self, forKey: .amount) ?? 0
-        to          = try container.decodeIfPresent(String.self, forKey: .to)
-        from        = try container.decodeIfPresent(String.self, forKey: .from)
-        type        = try container.decodeIfPresent(TransactionType.self, forKey: .type) ?? .unknown
-        date        = try container.decodeIfPresent(String.self, forKey: .date) ?? ""
+        id              = try container.decode(Int.self, forKey: .id)
+        status          = try container.decodeIfPresent(String.self, forKey: .status) ?? ""
+        location        = try container.decodeIfPresent(String.self, forKey: .location)
+        description     = try container.decodeIfPresent(String.self, forKey: .description)
+        let amountStr   = try container.decodeIfPresent(String.self, forKey: .amount) ?? "0"
+        amount          = Decimal(string: amountStr) ?? 0
+        to              = try container.decodeIfPresent(String.self, forKey: .to)
+        from            = try container.decodeIfPresent(String.self, forKey: .from)
+        type            = try container.decodeIfPresent(TransactionType.self, forKey: .type) ?? .unknown
+        date            = try container.decodeIfPresent(String.self, forKey: .date) ?? ""
     }
 
     private enum CodingKeys: String, CodingKey {

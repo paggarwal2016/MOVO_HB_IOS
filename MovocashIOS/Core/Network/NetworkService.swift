@@ -10,13 +10,11 @@ import Foundation
 actor NetworkService: NetworkServiceProtocol {
 
     static let shared = NetworkService(
-        keychain: KeychainManager.shared,
-        authManager: AuthManager.shared
+        keychain: KeychainManager.shared
     )
 
     private let builder: RequestBuilder
     private let keychain: KeychainManagerProtocol
-    private let authManager: AuthManagerProtocol
 
     // Actor-protected state
     private var isRefreshing = false
@@ -29,11 +27,9 @@ actor NetworkService: NetworkServiceProtocol {
     private let session: URLSession
 
     init(
-        keychain: KeychainManagerProtocol,
-        authManager: AuthManagerProtocol
+        keychain: KeychainManagerProtocol
     ) {
         self.keychain = keychain
-        self.authManager = authManager
 
         let config = URLSessionConfiguration.default
 
@@ -51,7 +47,7 @@ actor NetworkService: NetworkServiceProtocol {
             delegate: SecureSessionDelegate(enabled: false), // TODO: - configure the cert and set true
             delegateQueue: nil
         )
-        self.builder = RequestBuilder(authManager: authManager)
+        self.builder = RequestBuilder()
     }
     
     // MARK: - Public Request
@@ -85,21 +81,18 @@ actor NetworkService: NetworkServiceProtocol {
             } catch let error as NetworkError {
                 lastError = error
 
-                // Only retry on specific recoverable errors
+                // Only retry on specific recoverable server errors.
+                // All other errors throw immediately — no retry.
                 switch error {
-                case .unauthorized:
-                    // Refresh the token exactly once (on first failure only).
-                    // If the retry also returns 401, throw immediately.
-                    guard attempt == 0 else { throw error }
-                    try await refreshToken()
-
                 case .rateLimited, .serverError:
-                    guard attempt < maxAttempts - 1 else { break }
+                    // 429 / 5xx — retry with exponential backoff
+                    guard attempt < maxAttempts - 1 else { throw error }
                     let backoff = UInt64(200_000_000) * UInt64(attempt + 1) // 200ms, 400ms
-                    let jitter = UInt64.random(in: 0..<50_000_000) // up to 50ms
+                    let jitter  = UInt64.random(in: 0..<50_000_000)         // up to 50ms
                     try await Task.sleep(nanoseconds: backoff + jitter)
 
                 default:
+                    // 401, 404, any other client/network error — throw immediately, no retry
                     throw error
                 }
             }
@@ -109,39 +102,38 @@ actor NetworkService: NetworkServiceProtocol {
     }
     
     // MARK: - Refresh Token
-    private func refreshToken() async throws {
-        if isRefreshing {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                refreshWaiters.append(continuation)
-            }
-            return
-        }
-
-        isRefreshing = true
-        defer { isRefreshing = false }
-
-        do {
-            let token = try await keychain.get("access_token", biometricPrompt: nil)
-
-            // Empty token throws and falls through to the single catch below,
-            // which is the only place resumeWaiters is called for error paths.
-            guard !token.isEmpty else { throw NetworkError.unauthorized }
-
-            let endpoint = AuthAPI.refreshToken(refreshToken: token)
-            let request = try await builder.build(from: endpoint)
-            let response: RefreshTokenResponse = try await performRequest(request)
-
-            // Store refreshed tokens directly
-            try await keychain.save(response.accessToken, for: "access_token", protection: .backgroundSafe)
-            await authManager.updateAccessToken(response.accessToken)
-            await AnalyticsManager.shared.reapplyIdentity()
-
-            resumeWaiters(throwing: nil)       // success — single resume point
-        } catch {
-            resumeWaiters(throwing: error)     // all failures — single resume point
-            throw error
-        }
-    }
+//    private func refreshToken() async throws { // TODO: Vinu
+//        if isRefreshing {
+//            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+//                refreshWaiters.append(continuation)
+//            }
+//            return
+//        }
+//
+//        isRefreshing = true
+//        defer { isRefreshing = false }
+//
+//        do {
+//            let token = try await keychain.get("access_token", biometricPrompt: nil)
+//
+//            // Empty token throws and falls through to the single catch below,
+//            // which is the only place resumeWaiters is called for error paths.
+//            guard !token.isEmpty else { throw NetworkError.unauthorized }
+//
+//            let endpoint = AuthAPI.refreshToken(refreshToken: token)
+//            let request = try await builder.build(from: endpoint)
+//            let response: RefreshTokenResponse = try await performRequest(request)
+//
+//            // Store refreshed token — Keychain is the single source of truth
+//            try await keychain.save(response.accessToken, for: "access_token", protection: .backgroundSafe)
+//            await AnalyticsManager.shared.reapplyIdentity()
+//
+//            resumeWaiters(throwing: nil)       // success — single resume point
+//        } catch {
+//            resumeWaiters(throwing: error)     // all failures — single resume point
+//            throw error
+//        }
+//    }
 
     private func resumeWaiters(throwing error: Error?) {
         let waiters = refreshWaiters
@@ -166,8 +158,11 @@ actor NetworkService: NetworkServiceProtocol {
         let start = Date()
         defer {
             let ms = Date().timeIntervalSince(start) * 1000
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd hh:mm:ss.SSS"
+            let timestamp = formatter.string(from: start)
             SecureLogger.info(
-                "[\(request.httpMethod ?? "?")] \(request.url?.path ?? "unknown") — Duraction: \(String(format: "%.0f", ms))ms",
+                "[\(timestamp)] [\(request.httpMethod ?? "?")] \(request.url?.path ?? "unknown") — Duration: \(String(format: "%.0f", ms))ms",
                 category: .network
             )
         }

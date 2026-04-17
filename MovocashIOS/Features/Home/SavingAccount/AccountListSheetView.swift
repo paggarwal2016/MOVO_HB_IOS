@@ -26,13 +26,13 @@ struct AccountListSheetView: View {
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
     
-    @State private var accounts: [SavingsAccountDetailsResponse] = []
+    @State private var accounts: [SavingsAccountInfo] = []
     @State private var primaryAccountId: Int?
-    @State private var selectedDetailAccount: SavingsAccountDetailsResponse?
+    @State private var selectedDetailAccount: SavingsAccountInfo?
     
     @State private var showCreateAccount = false
     @State private var showEditNickname = false
-    @State private var accountToEdit: SavingsAccountDetailsResponse?
+    @State private var accountToEdit: SavingsAccountInfo?
     
     @State private var sortBy: SavingsSortBy = .id
     @State private var sortDirection: SavingsSortDirection = .asc
@@ -206,7 +206,7 @@ struct AccountListSheetView: View {
     
     // MARK: - Delete
     
-    private func confirmDelete(account: SavingsAccountDetailsResponse) {
+    private func confirmDelete(account: SavingsAccountInfo) {
         AlertManager.shared.showConfirmation(
             title: "Delete Account",
             message: "Are you sure you want to delete \"\(account.nickname ?? account.maskedAccountNumber) Account\"?",
@@ -216,7 +216,7 @@ struct AccountListSheetView: View {
         )
     }
     
-    private func deleteAccount(_ account: SavingsAccountDetailsResponse) async {
+    private func deleteAccount(_ account: SavingsAccountInfo) async {
         guard let primaryId = primaryAccountId else {
             ToastManager.shared.show("Cannot delete account: primary account not loaded.", style: .error, position: .bottom)
             return
@@ -242,7 +242,7 @@ struct AccountListSheetView: View {
 
 struct AccountRowView: View {
     
-    let account: SavingsAccountDetailsResponse
+    let account: SavingsAccountInfo
     
     var body: some View {
         HStack(spacing: 12) {

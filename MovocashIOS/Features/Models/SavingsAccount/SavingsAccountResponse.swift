@@ -16,13 +16,13 @@ nonisolated struct SavingsAccountListResponse: Decodable, Sendable {
 }
 
 nonisolated struct SavingsAccountData: Decodable, Sendable {
-    let accounts: [SavingsAccountDetailsResponse]
+    let accounts: [SavingsAccountInfo]
     let totalAccountBalance: Decimal
     let totalAvailableBalance: Decimal
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        accounts              = try container.decodeIfPresent([SavingsAccountDetailsResponse].self, forKey: .accounts) ?? []
+        accounts              = try container.decodeIfPresent([SavingsAccountInfo].self, forKey: .accounts) ?? []
         let totalAccStr       = try container.decodeIfPresent(String.self, forKey: .totalAccountBalance) ?? "0"
         let totalAvailStr     = try container.decodeIfPresent(String.self, forKey: .totalAvailableBalance) ?? "0"
         totalAccountBalance   = Decimal(string: totalAccStr) ?? 0
@@ -34,9 +34,17 @@ nonisolated struct SavingsAccountData: Decodable, Sendable {
     }
 }
 
+// MARK: - Savings Detail Wrapper
+
+nonisolated struct SavingsAccountDetailResponse: Decodable, Sendable {
+    let success: Bool
+    let message: String?
+    let data: SavingsAccountInfo
+}
+
 // MARK: - Savings Details
 
-nonisolated struct SavingsAccountDetailsResponse: Decodable, Sendable, Identifiable {
+nonisolated struct SavingsAccountInfo: Decodable, Sendable, Identifiable {
     
     let id: Int
     let accountNumber: String

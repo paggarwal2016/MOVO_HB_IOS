@@ -10,45 +10,31 @@ import LinkKit
 import MobileBankingSDK
 import UIKit
 
-// MARK: - PlaidLinkError
+// MARK: - PlaidLinkManagerProtocol
 
-enum PlaidLinkError: LocalizedError {
-    case noPresenter
-    case handlerCreationFailed(String)
-    case linkExited(String?)
-    case metadataParseFailed
-
-    var errorDescription: String? {
-        switch self {
-        case .noPresenter:
-            return "Unable to present bank linking flow."
-        case .handlerCreationFailed(let reason):
-            return "Failed to initialize bank link: \(reason)"
-        case .linkExited(let message):
-            return message ?? "Bank linking was cancelled."
-        case .metadataParseFailed:
-            return "Failed to process bank account data."
-        }
-    }
-}
-
-// MARK: - PlaidLinkResult
-
-struct PlaidLinkResult {
-    let publicToken: String
-    let metadata: LinkPlaidLinkMetadata
+@MainActor
+protocol PlaidLinkManagerProtocol {
+    func openLink(token: String, presenter: UIViewController) async throws -> PlaidLinkResult
 }
 
 // MARK: - PlaidLinkManager
 
 @MainActor
-final class PlaidLinkManager {
+final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
 
+    let network: NetworkServiceProtocol
+    let keychain: KeychainManagerProtocol
     private let analytics: AnalyticsTracking
     private var handler: Handler?
     private var pendingContinuation: CheckedContinuation<PlaidLinkResult, Error>?
 
-    init(analytics: AnalyticsTracking? = nil) {
+    init(
+        network: NetworkServiceProtocol,
+        keychain: KeychainManagerProtocol,
+        analytics: AnalyticsTracking? = nil
+    ) {
+        self.network = network
+        self.keychain = keychain
         self.analytics = analytics ?? AnalyticsManager.shared
     }
 
@@ -58,6 +44,12 @@ final class PlaidLinkManager {
         token: String,
         presenter: UIViewController
     ) async throws -> PlaidLinkResult {
+
+        // Ensure the SDK has a fresh auth token before presenting the Plaid UI.
+        // The link token may have been fetched seconds ago, but the auth token
+        // could have expired in the background.
+        let freshToken = try await freshAccessToken()
+        MobileBankingSDK.updateAuthToken(freshToken)
 
         // Configure LinkKit callbacks on the main actor (before entering continuation).
         var config = LinkTokenConfiguration(
@@ -137,6 +129,47 @@ final class PlaidLinkManager {
         pendingContinuation = nil
     }
 
+    // MARK: - Token Management
+
+    /// Returns a valid access token for the MobileBankingSDK before the Plaid flow starts.
+    ///
+    /// Flow:
+    /// - Reads current token from Keychain.
+    /// - Decodes the JWT `exp` claim locally — no network call on the happy path.
+    /// - Token valid → returns it immediately.
+    /// - Token expired or within 60-second buffer → delegates to `TokenRefreshable.performTokenRefresh()`.
+    private func freshAccessToken() async throws -> String {
+        guard let current = try? await keychain.get("access_token", biometricPrompt: nil),
+              !current.isEmpty else {
+            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
+                AnalyticsParam.errorCode: "missing_token"
+            ])
+            SecureLogger.error("No access token in keychain — aborting Plaid Link", category: .payment)
+            throw PlaidLinkError.tokenUnavailable
+        }
+
+        guard needsTokenRefresh(current) else {
+            return current
+        }
+
+        SecureLogger.info("Token near expiry — refreshing before Plaid Link", category: .payment)
+
+        do {
+            let fresh = try await performTokenRefresh()
+            analytics.log(AnalyticsEvent.tokenRefreshed, params: [
+                AnalyticsParam.reason: "plaid_proactive_refresh"
+            ])
+            SecureLogger.info("Token refreshed successfully for Plaid Link", category: .payment)
+            return fresh
+        } catch {
+            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
+                AnalyticsParam.errorCode: "token_refresh_failed"
+            ])
+            SecureLogger.error("Token refresh failed before Plaid Link: \(error.localizedDescription)", category: .payment)
+            throw PlaidLinkError.tokenUnavailable
+        }
+    }
+
     // MARK: - Metadata Parsing
 
     private static func parseMetadata(from success: LinkSuccess) throws -> PlaidLinkResult {
@@ -196,84 +229,3 @@ final class PlaidLinkManager {
     }
 }
 
-// MARK: - Private Metadata JSON Models
-
-private struct PlaidMetadataJSON: Decodable {
-    let institution: PlaidInstitutionJSON?
-    let accounts: [PlaidAccountJSON]
-    let link_session_id: String?
-
-    enum CodingKeys: String, CodingKey {
-        case institution
-        case accounts
-        case link_session_id
-        case linkSessionID
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        institution = try container.decodeIfPresent(PlaidInstitutionJSON.self, forKey: .institution)
-        accounts = try container.decodeIfPresent([PlaidAccountJSON].self, forKey: .accounts) ?? []
-        link_session_id =
-            try container.decodeIfPresent(String.self, forKey: .link_session_id)
-            ?? container.decodeIfPresent(String.self, forKey: .linkSessionID)
-    }
-}
-
-private struct PlaidInstitutionJSON: Decodable {
-    let institution_id: String
-    let name: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case institution_id
-        case institutionID
-        case name
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        institution_id =
-            try container.decodeIfPresent(String.self, forKey: .institution_id)
-            ?? container.decodeIfPresent(String.self, forKey: .institutionID)
-            ?? container.decode(String.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
-    }
-}
-
-private struct PlaidAccountJSON: Decodable {
-    let id: String
-    let name: String?
-    let mask: String?
-    let type: String?
-    let subtype: String?
-    let verification_status: String?
-    let class_type: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case mask
-        case type
-        case subtype
-        case verification_status
-        case verificationStatus
-        case class_type
-        case classType
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
-        name = try container.decodeIfPresent(String.self, forKey: .name)
-        mask = try container.decodeIfPresent(String.self, forKey: .mask)
-        type = try container.decodeIfPresent(String.self, forKey: .type)
-        subtype = try container.decodeIfPresent(String.self, forKey: .subtype)
-        verification_status =
-            try container.decodeIfPresent(String.self, forKey: .verification_status)
-            ?? container.decodeIfPresent(String.self, forKey: .verificationStatus)
-        class_type =
-            try container.decodeIfPresent(String.self, forKey: .class_type)
-            ?? container.decodeIfPresent(String.self, forKey: .classType)
-    }
-}

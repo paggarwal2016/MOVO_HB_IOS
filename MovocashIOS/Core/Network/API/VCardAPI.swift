@@ -31,7 +31,7 @@ enum VCardAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .getVCardsList:
-            return .GET
+            return .PUT
         case .getVCardsPrimary:
             return .PUT
         case .postVCards, .vCardsProvision:
@@ -65,9 +65,9 @@ enum VCardAPI: Endpoint {
     private func encodeBody() throws -> Data? {
         switch self {
         case .getVCardsPrimary:
-            return try JSONEncoder().encode(UserActionRequest(userAction: "GET-PRIMARY-CARD"))
+            return try JSONEncoder().encode(UserActionRequest(userAction: "GET_PRIMARY_CARD"))
         case .getVCardsList:
-            return try JSONEncoder().encode(UserActionRequest(userAction: "GET-PRIMARY-CARD"))
+            return try JSONEncoder().encode(UserActionRequest(userAction: "GET_PRIMARY_LIST"))
         case .postVCards(let request):
             return try JSONEncoder().encode(request)
         case .vCardsProvision(let request):

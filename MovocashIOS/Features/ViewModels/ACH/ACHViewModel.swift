@@ -93,17 +93,17 @@ final class ACHViewModel: BaseViewModel {
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(AchAPI.updateAccount(id: id))
             }
-            accounts = accounts.map { account in
+            accounts = accounts.map {
                 ACHAccount(
-                    plaidAccountId: account.plaidAccountId,
-                    plaidAccountBalance: account.plaidAccountBalance,
-                    isPlaidLoginRequired: account.isPlaidLoginRequired,
-                    isDefault: account.achAccountId == id,
-                    institutionLogo: account.institutionLogo,
-                    accountNumber: account.accountNumber,
-                    accountName: account.accountName,
-                    institutionName: account.institutionName,
-                    achAccountId: account.achAccountId
+                    plaidAccountId: $0.plaidAccountId,
+                    plaidAccountBalance: $0.plaidAccountBalance,
+                    isPlaidLoginRequired: $0.isPlaidLoginRequired,
+                    isDefault: $0.achAccountId == id,
+                    institutionLogo: $0.institutionLogo,
+                    accountNumber: $0.accountNumber,
+                    accountName: $0.accountName,
+                    institutionName: $0.institutionName,
+                    achAccountId: $0.achAccountId
                 )
             }
             return true

@@ -52,7 +52,7 @@ struct DashboardView: View {
     
     @State private var showViewCardList = false
     
-    private var displayAccount: SavingsAccountDetailsResponse? {
+    private var displayAccount: SavingsAccountInfo? {
         savingVM.accountList?.data.accounts.first(where: { $0.isPrimary })
     }
 

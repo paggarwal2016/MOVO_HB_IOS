@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SavingActDetailPopupView: View {
 
-    let account: SavingsAccountDetailsResponse
+    let account: SavingsAccountInfo
     @Binding var isPresented: Bool
     @Binding var showEditNickname: Bool
 

@@ -12,7 +12,7 @@ struct BalanceCardView: View {
     
     // MARK: - Properties
     
-    let account: SavingsAccountDetailsResponse
+    let account: SavingsAccountInfo
     var onCardTap: () -> Void
     var onPrimaryTap: () -> Void
     var onViewCardTap: () -> Void

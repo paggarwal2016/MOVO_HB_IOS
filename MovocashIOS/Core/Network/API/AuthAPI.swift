@@ -9,10 +9,9 @@ import Foundation
 
 enum AuthAPI: Endpoint {
     
-    case messengerOTP(phoneNumber: String, context: String)
-    case tokenSMS(phoneNumber: String, code: String)
+    case messengerOTP(request: MessengerOTPRequest)
+    case tokenSMS(request: TokenSMSRequest)
     case tokenAccess
-    case refreshToken(refreshToken: String)
     case enrollRSA(request: RSAEnrollRequest)
     case tokenRSA(request: RSATokenRequest)
     case nonceRSA(request: RSANonceRequest)
@@ -24,25 +23,30 @@ enum AuthAPI: Endpoint {
     var path: String {
         switch self {
         case .messengerOTP: return "/auth/messenger/otp"
-        case .tokenSMS: return "/auth/token-sms/"
-        case .tokenAccess: return "/auth/token-access"
-        case .refreshToken: return "/auth/refreshToken"
-        case .enrollRSA: return "/rsa"
-        case .tokenRSA: return "/auth/token-rsa"
-        case .nonceRSA: return "/rsa/nonce"
+        case .tokenSMS:     return "/auth/token-sms/"
+        case .tokenAccess:  return "/auth/token-access"
+        case .enrollRSA:    return "/rsa"
+        case .tokenRSA:     return "/auth/token-rsa"
+        case .nonceRSA:     return "/rsa/nonce"
         }
     }
-    
+
     // MARK: - HTTP Method
-    var method: HTTPMethod { .POST } // feature use switch case
-    
+    var method: HTTPMethod {
+        switch self {
+        case .messengerOTP, .tokenSMS, .tokenAccess,
+             .enrollRSA, .tokenRSA, .nonceRSA:
+            return .POST
+        }
+    }
+
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
         case .messengerOTP:
             return .default
         case .tokenSMS:
-            return .movoAuthorized
+            return .movoInfos
         case .tokenAccess:
             return .movoAuthorized
         case .enrollRSA:
@@ -51,8 +55,6 @@ enum AuthAPI: Endpoint {
             return .movoAuthorized
         case .tokenRSA:
             return .movoAuthorized
-        case .refreshToken:
-            return .authorized
         }
     }
     
@@ -68,29 +70,15 @@ enum AuthAPI: Endpoint {
     
     private func encodeBody() throws -> Data {
         switch self {
-        case .messengerOTP(let phoneNumber, let context):
-            let request = MessengerOTPRequest(
-                phoneNumber: phoneNumber,
-                context: context,
-                userAction: "SEND_OTP",
-                deviceInfo: .current
-            )
+        case .messengerOTP(let request):
             return try JSONEncoder().encode(request)
             
-        case .tokenSMS(let phoneNumber, let code):
-            let request = TokenSMSRequest(
-                phoneNumber: phoneNumber,
-                code: code,
-                userAction: "VERIFY_OTP")
+        case .tokenSMS(let request):
             return try JSONEncoder().encode(request)
             
         case .tokenAccess:
             let request = UserActionRequest(
-                userAction: "GET-ACCESS-TOKEN")
-            return try JSONEncoder().encode(request)
-            
-        case .refreshToken(let refreshToken):
-            let request = RefreshTokenRequest(refreshToken: refreshToken)
+                userAction: "GET_ACCESS_TOKEN")
             return try JSONEncoder().encode(request)
             
         case .enrollRSA(let request):

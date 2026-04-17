@@ -25,20 +25,17 @@ enum SessionRestoreResult {
 final class SessionManager: ObservableObject {
 
     private var logoutTask: Task<Void, Never>?
-    private let authManager: AuthManagerProtocol
     private let keychain: KeychainManagerProtocol
     private let kycManager: KYCManagerProtocol
     private let alertManager: AlertManagerProtocol
     private let analytics: AnalyticsTracking
 
     init(
-        authManager: AuthManagerProtocol,
         keychain: KeychainManagerProtocol,
         kycManager: KYCManagerProtocol,
         alertManager: AlertManagerProtocol,
         analytics: AnalyticsTracking
     ) {
-        self.authManager = authManager
         self.keychain = keychain
         self.kycManager = kycManager
         self.alertManager = alertManager
@@ -51,10 +48,7 @@ final class SessionManager: ObservableObject {
         appState: AppState
     ) async throws {
 
-        // Update memory token
-        await authManager.updateAccessToken(accessToken)
-
-        // Store securely
+        // Store securely — Keychain is the single source of truth
         try await storeTokens(
             accessToken: accessToken
         )
@@ -93,7 +87,6 @@ final class SessionManager: ObservableObject {
                 SecureLogger.warning("Access token expired on restore — refresh will occur on first request", category: .auth)
             }
 
-            await authManager.updateAccessToken(accessToken)
             try await kycManager.configureSDK(officeId: AppConfig.officeId)
             appState.isAuthenticated = true
             analytics.identifyUser(from: accessToken)
@@ -166,7 +159,6 @@ final class SessionManager: ObservableObject {
     func logout(appState: AppState) async {
         analytics.trackLogout()
         analytics.clearIdentity()
-        await authManager.clearSession()
         await PushManager.shared.deleteTokenOnLogout()
 
         do {

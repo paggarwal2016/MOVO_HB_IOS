@@ -7,39 +7,88 @@
 
 import Foundation
 
-// MARK: - Enum - HeaderType
+// MARK: - HeaderType
 
-enum HeaderType: Sendable {
-    case `default`
-    case movoAuthorized
-    case movoAuthorizedWithOffice
-    case movoAuthorizedAll
-    case authorized
-    case authorizedWithOffice
+/// Composable header flags. Combine with array literal syntax:
+///
+///     return [.session, .movoInfo, .officeId]
+///
+struct HeaderType: OptionSet, Sendable {
+    let rawValue: Int
+
+    // MARK: - Individual Flags
+
+    /// Adds `movo-info` JWT header.
+    static let movoInfo  = HeaderType(rawValue: 1 << 0)
+
+    /// Adds `session-id` header from Keychain.
+    static let session   = HeaderType(rawValue: 1 << 1)
+
+    /// Adds `office-id` header from AppConfig.
+    static let officeId  = HeaderType(rawValue: 1 << 2)
+
+    /// Adds `Authorization: Bearer <access_token>` header from Keychain.
+    static let bearer    = HeaderType(rawValue: 1 << 3)
+
+    /// Adds `x-encrypt-response: true` header.
+    static let encrypted = HeaderType(rawValue: 1 << 4)
+
+    // MARK: - Named Combinations
+
+    /// Base headers only (Content-Type, Accept).
+    static let `default`: HeaderType = []
+    
+    /// movo-info
+    static let movoInfos: HeaderType = [.movoInfo]
+
+    /// session-id + movo-info
+    static let movoAuthorized: HeaderType = [.session, .movoInfo]
+
+    /// session-id + movo-info + office-id
+    static let movoAuthorizedWithOffice: HeaderType = [.session, .movoInfo, .officeId]
+
+    /// session-id + movo-info + office-id + x-encrypt-response
+    static let movoAuthorizedAll: HeaderType = [.session, .movoInfo, .officeId, .encrypted]
+
+    /// Authorization: Bearer
+    static let authorized: HeaderType = [.bearer]
+
+    /// Authorization: Bearer + office-id
+    static let authorizedWithOffice: HeaderType = [.bearer, .officeId]
 }
+
+// MARK: - HeaderProvider
 
 struct HeaderProvider {
 
-    static func headers(for type: HeaderType, authManager: AuthManagerProtocol) async -> [String: String] {
-        var headers: [String: String] = await baseHeaders()
-        switch type {
-        case .default:
-            break
-        case .movoAuthorized:
-            await addMovoAuthorization(&headers)
-        case .movoAuthorizedWithOffice:
-            await addMovoAuthorization(&headers)
-            headers["office-id"] = AppConfig.officeId
-        case .movoAuthorizedAll:
-            await addMovoAuthorization(&headers)
-            headers["office-id"] = AppConfig.officeId
-            headers["x-encrypt-response"] = "true"
-        case .authorized:
-            await addAuthorization(&headers, authManager: authManager)
-        case .authorizedWithOffice:
-            await addAuthorization(&headers, authManager: authManager)
+    static func headers(for type: HeaderType) async -> [String: String] {
+        var headers = await baseHeaders()
+
+        if type.contains(.movoInfo) {
+            headers["movo-info"] = movoInfoToken
+        }
+
+        if type.contains(.session) {
+            if let sessionId = try? await KeychainManager.shared.get("auth_session_id", biometricPrompt: nil) {
+                headers["session-id"] = sessionId
+            }
+        }
+
+        if type.contains(.officeId) {
             headers["office-id"] = AppConfig.officeId
         }
+
+        if type.contains(.bearer) {
+            if let token = try? await KeychainManager.shared.get("access_token", biometricPrompt: nil),
+               !token.isEmpty {
+                headers["Authorization"] = "Bearer \(token)"
+            }
+        }
+
+        if type.contains(.encrypted) {
+            headers["x-encrypt-response"] = "true"
+        }
+
         return headers
     }
 }
@@ -52,18 +101,5 @@ private extension HeaderProvider {
 
     static func baseHeaders() async -> [String: String] {
         ["Content-Type": "application/json", "Accept": "application/json"]
-    }
-
-    static func addMovoAuthorization(_ headers: inout [String: String]) async {
-        if let sessionId = try? await KeychainManager.shared.get("auth_session_id", biometricPrompt: nil) {
-            headers["session-id"] = sessionId
-        }
-        headers["movo-info"] = movoInfoToken
-    }
-
-    static func addAuthorization(_ headers: inout [String: String], authManager: AuthManagerProtocol) async {
-        if let token = await authManager.getAccessToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        }
     }
 }

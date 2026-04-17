@@ -14,7 +14,7 @@ import UIKit
 final class PlaidAchViewModel: ObservableObject {
 
     private let service: PlaidService
-    private let plaidLinkManager = PlaidLinkManager()
+    private let plaidLinkManager: PlaidLinkManagerProtocol
 
     // MARK: - Published State
 
@@ -40,8 +40,15 @@ final class PlaidAchViewModel: ObservableObject {
     @Published var provisionedPass: AppleWalletProvisionedPass?
     @Published var canAddToWallet: Bool = false
 
-    init(service: PlaidService = .shared) {
+    init(
+        service: PlaidService = .shared,
+        plaidLinkManager: PlaidLinkManagerProtocol? = nil
+    ) {
         self.service = service
+        self.plaidLinkManager = plaidLinkManager ?? PlaidLinkManager(
+            network: NetworkService.shared,
+            keychain: KeychainManager.shared
+        )
     }
 
     // MARK: - Auth

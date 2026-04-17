@@ -109,7 +109,7 @@ struct ViewCardScreen: View {
     
     private func addCard(pin: String) async {
         do {
-            card = try await vm.postVCard(request: VCardsRequest(pin: pin, accountId: accountId, userAction: "VCARD-CREATION"))
+            card = try await vm.postVCard(request: VCardsRequest(pin: pin, accountId: accountId, userAction: "VCARD_CREATION"))
             ToastManager.shared.show("Success.", style: .success, position: .bottom)
         } catch {}
     }

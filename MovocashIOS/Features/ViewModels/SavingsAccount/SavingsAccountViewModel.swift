@@ -14,7 +14,7 @@ final class SavingsAccountViewModel: BaseViewModel {
     // MARK: - Published State
 
     @Published var accountList: SavingsAccountListResponse?
-    @Published var accountDetail: SavingsAccountDetailsResponse?
+    @Published var accountDetail: SavingsAccountInfo?
 
     // MARK: - Dependencies
 
@@ -81,7 +81,7 @@ final class SavingsAccountViewModel: BaseViewModel {
             return
         }
         do {
-            let _: SavingsAccountDetailsResponse = try await perform { [weak self] in
+            let _: SavingsAccountDetailResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(
                     SavingsAccountAPI.create(SavingsAccountRequest.CreateAccount(nickname: trimmed))
@@ -116,11 +116,12 @@ final class SavingsAccountViewModel: BaseViewModel {
 
     // MARK: - Create Account
     
-    func createSavingAccount(request: SavingsAccountRequest.CreateAccount) async throws -> SavingsAccountDetailsResponse {
-        try await perform { [weak self] in
+    func createSavingAccount(request: SavingsAccountRequest.CreateAccount) async throws -> SavingsAccountInfo {
+        let response: SavingsAccountDetailResponse = try await perform { [weak self] in
             guard let self else { throw ModelError.deallocated }
             return try await network.request(SavingsAccountAPI.create(request))
         }
+        return response.data
     }
     
     // MARK: - Update Account
@@ -147,19 +148,21 @@ final class SavingsAccountViewModel: BaseViewModel {
         
     // MARK: - Account Details
 
-    func getSavingAccountDetails(accountID: Int) async throws -> SavingsAccountDetailsResponse {
-        try await perform { [weak self] in
+    func getSavingAccountDetails(accountID: Int) async throws -> SavingsAccountInfo {
+        let response: SavingsAccountDetailResponse = try await perform { [weak self] in
             guard let self else { throw ModelError.deallocated }
             return try await network.request(SavingsAccountAPI.details(accountId: accountID))
         }
+        return response.data
     }
 
     func loadAccountDetail(accountID: Int) async {
         do {
-            accountDetail = try await perform { [weak self] in
+            let response: SavingsAccountDetailResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(SavingsAccountAPI.details(accountId: accountID))
             }
+            accountDetail = response.data
             analytics.log(AnalyticsEvent.savingsAccountDetailViewed, params: [
                 AnalyticsParam.accountId: accountID
             ])

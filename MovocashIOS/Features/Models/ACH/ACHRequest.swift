@@ -10,4 +10,5 @@ import Foundation
 struct ACHRequest: Encodable, Sendable {
     let amount: Int
     let achAccountId: Int
+    let userAction: String
 }
