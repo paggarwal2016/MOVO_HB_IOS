@@ -51,6 +51,7 @@ struct DashboardView: View {
     @State private var showContactList = false
     
     @State private var showViewCardList = false
+    @State private var hasLoadedData = false
     
     private var displayAccount: SavingsAccountInfo? {
         savingVM.accountList?.data.accounts.first(where: { $0.isPrimary })
@@ -168,6 +169,8 @@ struct DashboardView: View {
         }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
+            guard !hasLoadedData else { return }
+            hasLoadedData = true
             await handleOnTask()
         }
         .onAppear {
