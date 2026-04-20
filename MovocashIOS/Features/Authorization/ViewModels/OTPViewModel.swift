@@ -22,10 +22,15 @@ final class OTPViewModel: ObservableObject {
     @Published var remainingSeconds: Int = 30
     @Published var state: OTPViewState = .idle
 
-    let maxLength: Int = 6
+    let maxLength: Int
     private var timerTask: Task<Void, Never>?
 
     var isValidOTP: Bool { otpText.count == maxLength }
+    @Published private(set) var isSubmitting: Bool = false
+
+    init(maxLength: Int = 6) {
+        self.maxLength = maxLength
+    }
 
     // MARK: - OTP Input
     func updateOTP(_ value: String) {
@@ -75,8 +80,10 @@ final class OTPViewModel: ObservableObject {
     }
 
     // MARK: - Submit OTP
-    func submitOTP(onVerify: @escaping (String) async -> Void) async {
-        guard isValidOTP else { return }
+    func submitOTP(onVerify: @escaping @MainActor (String) async -> Void) async {
+        guard isValidOTP, !isSubmitting else { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
         await onVerify(otpText)
     }
 }

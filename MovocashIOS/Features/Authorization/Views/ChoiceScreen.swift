@@ -43,15 +43,15 @@ struct ChoiceScreen: View {
                 appState.flow = .loginPhone
             }
 
-            if RSAKeyManager.shared.keysExist() {
-                Button {
-                    Task { await authVM.loginWithBiometric(appState: appState) }
-                } label: {
-                    Label("Sign in with Face ID", systemImage: "faceid")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
-                }
-            }
+//            if RSAKeyManager.shared.keysExist() {
+//                Button {
+//                    Task { await authVM.loginWithBiometric(appState: appState) }
+//                } label: {
+//                    Label("Sign in with Face ID", systemImage: "faceid")
+//                        .font(.subheadline.bold())
+//                        .foregroundStyle(.primary)
+//                }
+//            }
         }
         .padding()
     }

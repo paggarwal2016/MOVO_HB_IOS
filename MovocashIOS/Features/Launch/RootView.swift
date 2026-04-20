@@ -44,7 +44,59 @@ struct RootView: View {
                     PhoneNumberScreen(flowType: .getStarted)
 
                 case .otp:
-                    OTPScreen(authVM: authVM)
+                    OTPScreen(
+                        title: "Enter 6-digit code",
+                        subtitle: "We sent a verification code to your mobile \(authVM.phoneNumber.suffix(4))",
+                        maxLength: 6,
+                        isLoading: authVM.state == .loading,
+                        onVerify: { code in
+                            await authVM.completeOTPVerification(code: code, appState: appState) { destination in
+                                appState.otpVerified = true
+                                appState.flow = destination
+                            }
+                        },
+                        onResend: {
+                            try await authVM.sendOTP()
+                        },
+                        onBack: {
+                            UIApplication.shared.dismissKeyboard()
+                            appState.flow = appState.context == .login ? .loginPhone : .getStartedPhone
+                        }
+                    )
+
+                case .signupDetails:
+                    SignUpScreen(
+                        onBack: { appState.flow = .choice },
+                        onContinue: { appState.flow = .emailOTP },
+                        onSignIn: { appState.flow = .loginPhone }
+                    )
+
+                case .emailOTP:
+                    OTPScreen(
+                        title: "Verify email",
+                        subtitle: "A 4-digit verification code was sent to your email",
+                        maxLength: 4,
+                        isLoading: false,
+                        onVerify: { _ in
+                            appState.flow = .getStartedInfo
+                        },
+                        onResend: { /* dummy — no API yet */ },
+                        onBack: { appState.flow = .signupDetails }
+                    )
+
+                case .getStartedInfo:
+                    GetStartedInfoScreen(
+                        onReady: {
+                            appState.flow = .pickDocument
+                        },
+                        onNotNow: {
+                            Task {
+                                await sessionManager.logout(appState: appState)
+                                appState.flow = .choice
+                            }
+                        },
+                        onBack: { appState.flow = .emailOTP }
+                    )
 
                     // ── Step 1: set + confirm passcode ─────────────────────────
                 case .setupPasscode:
@@ -71,14 +123,11 @@ struct RootView: View {
                 case .pickDocument:
                     PickDocumentView(
                         onBack: {
-                            if lockManager.isBiometricAvailable {
-                                appState.flow = .enableBiometrics
-                            } else {
-                                appState.flow = .setupPasscode
-                            }
+                            appState.flow = .getStartedInfo
                         },
                         onContinue: {
-                            appState.flow = .kyc
+                            appState.flow = .setupPasscode
+                            Task { await pushManager.requestPermission() }
                         }
                     )
 
@@ -98,7 +147,7 @@ struct RootView: View {
             // ── Lock overlay (returning users / background lock) ───────────
             // Suppressed during new-user registration arrival to prevent
             // spurious lock overlays caused by KYC UIViewController teardown.
-            if lockManager.state == .locked && !appState.isNewRegistration && !UserDefaults.standard.bool(forKey: "kycInProgress") {
+            if lockManager.state == .locked && appState.flow != .splash && !appState.isNewRegistration && !UserDefaults.standard.bool(forKey: "kycInProgress") {
                 AppLockView(vm: lockVM, autoTriggerBiometric: false)
                     .transition(.opacity)
                     .zIndex(10)
@@ -118,6 +167,7 @@ struct RootView: View {
             UserDefaults.standard.set(true, forKey: "kycInProgress")
             await kycVM.startVerification {
                 UserDefaults.standard.removeObject(forKey: "kycInProgress")
+                UserDefaults.standard.set(true, forKey: "kycCompleted")
                 appState.isNewRegistration = true
                 appState.flow = .home
             } onFailure: {
@@ -128,13 +178,17 @@ struct RootView: View {
         .onChangeCompat(of: appState.otpVerified) { verified in
             guard verified else { return }
             if lockManager.isPasscodeSet {
-                // Returning user — passcode already set, lock overlay handles unlock
+                // Returning user — KYC already completed, restore the flag cleared on logout
+                UserDefaults.standard.set(true, forKey: "kycCompleted")
                 appState.flow = .home
+                Task { await pushManager.requestPermission() }
+            } else if appState.context == .getStarted {
+                // New registration — collect email/password before security setup
+                appState.flow = .signupDetails
             } else {
-                // New user or first login — go through security setup
                 appState.flow = .setupPasscode
+                Task { await pushManager.requestPermission() }
             }
-            Task { await pushManager.requestPermission() }
         }
         .onChangeCompat(of: lockManager.requiresPhoneLogin) { required in
             guard required else { return }
@@ -160,8 +214,10 @@ struct RootView: View {
     private func advanceAfterSecurity() {
         switch appState.context {
         case .getStarted:
-            appState.flow = .pickDocument
+            appState.flow = .kyc
         default:
+            // Login user re-establishing passcode after logout — KYC already done.
+            UserDefaults.standard.set(true, forKey: "kycCompleted")
             appState.flow = .home
         }
     }
