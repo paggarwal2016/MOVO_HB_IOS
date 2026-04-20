@@ -76,4 +76,8 @@ extension Color {
     
     // MARK: - Accent
     static let accentPurple = Color(red: 102/255, green: 51/255, blue: 153/255)
+    
+    static let preTcolor = Color(#colorLiteral(red: 0.04898288101, green: 0.04898288101, blue: 0.04898288101, alpha: 1))
+    
+    static let secTcolor = Color(#colorLiteral(red: 0.501960814, green: 0.501960814, blue: 0.501960814, alpha: 1))
 }

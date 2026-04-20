@@ -98,3 +98,13 @@ extension View {
         .ignoresSafeArea()
     }
 }
+
+
+extension View {
+    func titleStyle() -> some View {
+        modifier(TitleStyle())
+    }
+    func subtitleStyle() -> some View {
+        modifier(SubtitleStyle())
+    }
+}

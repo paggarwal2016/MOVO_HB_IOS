@@ -34,50 +34,57 @@ struct OTPScreen: View {
                     Spacer()
                 }
                 
-                Text("Enter 6-digit code")
-                    .font(.largeTitle.bold())
-                
-                Text("We Sent a verfication code to your mobile \(authVM.phoneNumber.suffix(4))")
-                    .font(.headline.bold())
-                
-                // OTP Boxes
-                HStack(spacing: 12) {
-                    ForEach(0..<otpVM.maxLength, id: \.self) { index in
-                        OTPDigitBox(
-                            digit: digit(at: index),
-                            isActive: otpVM.otpText.count == index && isFocused,
-                            isFilled: index < otpVM.otpText.count
-                        )
-                    }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Enter 6-digit code")
+                        .titleStyle()
+                    
+                    Text("We Sent a verfication code to your mobile \(authVM.phoneNumber.suffix(4))")
+                        .subtitleStyle()
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { isFocused = true }
                 
-                // Hidden TextField (real input engine)
-                TextField("", text: otpBinding)
-                    .keyboardType(.numberPad)
-                    .textContentType(.oneTimeCode)
-                    .focused($isFocused)
-                    .frame(width: 1, height: 1)
-                    .opacity(0.01)
-                
-                // Resend OTP
-                Group {
-                    switch otpVM.state {
-                    case .counting:
-                        Text("Resend OTP in 0:\(String(format: "%02d", otpVM.remainingSeconds))")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    case .expired:
-                        Button("Resend OTP") {
-                            Task {
-                                otpVM.resetForResend()
-                                try? await authVM.sendOTP()
-                            }
+                VStack(spacing: 12) {
+                    // OTP Boxes
+                    HStack(spacing: 12) {
+                        ForEach(0..<otpVM.maxLength, id: \.self) { index in
+                            OTPDigitBox(
+                                digit: digit(at: index),
+                                isActive: otpVM.otpText.count == index && isFocused,
+                                isFilled: index < otpVM.otpText.count
+                            )
                         }
-                        .font(.subheadline.bold())
-                    case .idle:
-                        EmptyView()
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { isFocused = true }
+
+                    // Hidden TextField (real input engine)
+                    TextField("", text: otpBinding)
+                        .keyboardType(.numberPad)
+                        .textContentType(.oneTimeCode)
+                        .focused($isFocused)
+                        .frame(width: 1, height: 1)
+                        .opacity(0.01)
+
+                    // Resend OTP
+                    Group {
+                        switch otpVM.state {
+                        case .counting:
+                            Text("Resend OTP in 0:\(String(format: "%02d", otpVM.remainingSeconds))")
+                                .font(.subheadline)
+                                .foregroundColor(Color(.systemGray))
+                                .frame(maxWidth: .infinity, alignment: .center)
+
+                        case .expired:
+                            Button("Resend OTP") {
+                                Task {
+                                    otpVM.resetForResend()
+                                    try? await authVM.sendOTP()
+                                }
+                            }
+                            .font(.subheadline.bold())
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        case .idle:
+                            EmptyView()
+                        }
                     }
                 }
                 
