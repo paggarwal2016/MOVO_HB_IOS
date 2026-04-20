@@ -34,7 +34,7 @@ struct BalanceCardView: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
                             .padding(7)
-                            .background(.clear)
+                            .background(Color(#colorLiteral(red: 0.8661081791, green: 0.8661081791, blue: 0.8661081791, alpha: 1)))
                             .clipShape(RoundedRectangle(cornerRadius: 7))
                     }
                     .buttonStyle(.plain)
