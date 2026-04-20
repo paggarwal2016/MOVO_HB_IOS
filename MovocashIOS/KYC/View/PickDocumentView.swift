@@ -33,27 +33,28 @@ struct PickDocumentView: View {
                     BackButton { onBack() }
                     Spacer()
                 }
+                .padding(.horizontal)
+                .padding(.top)
+
                 Spacer()
 
-                // ── Icon ───────────────────────────────────────────────────
-                Image(systemName: "person.text.rectangle")
-                    .font(.system(size: 72, weight: .ultraLight))
-                    .foregroundStyle(Color.primary)
-                    .padding(.bottom, 32)
+                // ── Header ─────────────────────────────────────────────────
+                VStack(spacing: 16) {
+                    Image(systemName: "person.text.rectangle")
+                        .font(.system(size: 64, weight: .ultraLight))
+                        .foregroundStyle(Color.primary)
 
-                // ── Title ──────────────────────────────────────────────────
-                Text("Verify Your Identity")
-                    .font(.title2.bold())
-                    .padding(.bottom, 12)
+                    Text("Verify Your Identity")
+                        .font(.title2.bold())
 
-                // ── Subtitle ───────────────────────────────────────────────
-                Text("Pick a document to verify your identity. Make sure it's valid and clearly readable.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                    Text("Pick a document to verify your identity.\nMake sure it's valid and clearly readable.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
 
-                Spacer().frame(height: 40)
+                Spacer()
 
                 // ── Document options ───────────────────────────────────────
                 VStack(spacing: 12) {
@@ -67,16 +68,40 @@ struct PickDocumentView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal)
 
                 Spacer()
 
+                // ── Info card ──────────────────────────────────────────────
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 18))
+                        .foregroundColor(.primary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("You'll need photo ID")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.preTcolor)
+                        Text("Please have your passport, driver's license, or state ID handy.")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secTcolor)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                .padding(.horizontal)
+
+                Spacer()
+
+                // ── Continue ───────────────────────────────────────────────
                 PrimaryButton(title: "Continue", isEnabled: selectedDocument != nil) {
                     onContinue()
                 }
                 .disabled(selectedDocument == nil)
+                .padding(.horizontal)
+                .padding(.bottom)
             }
-            .padding()
         }
     }
 }

@@ -21,9 +21,9 @@ struct GetStartedInfoScreen: View {
     ]
 
     private let legalItems: [(icon: String, title: String)] = [
-        ("lock.shield",          "Privacy Policy"),
-        ("creditcard",           "Fee Information"),
-        ("checkmark.shield",     "FDIC Protection")
+        ("doc.plaintext",        "Privacy Policy"),
+        ("doc.plaintext",        "Terms of Use Agreement"),
+        ("signature",            "Electronic Consent")
     ]
 
     var body: some View {
@@ -34,13 +34,10 @@ struct GetStartedInfoScreen: View {
                 HStack {
                     BackButton { onBack() }
                     Spacer()
-                    Button("Help") {}
-                        .font(.subheadline.bold())
-                        .foregroundColor(.primary)
                 }
 
                 // Title
-                Text("Let's get started")
+                Text("Accept Terms to continue")
                     .titleStyle()
 
                 // Requirements
@@ -98,41 +95,13 @@ struct GetStartedInfoScreen: View {
                     }
                 }
 
-                // Photo ID info card
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 18))
-                        .foregroundColor(.primary)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("You'll need photo ID")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.preTcolor)
-                        Text("Please have your passport, driver's license, or state ID handy.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secTcolor)
-                    }
-                }
-                .padding(14)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
+                Spacer().frame(height: 28)
 
                 // Buttons
                 VStack(spacing: 12) {
-                    PrimaryButton(title: "I'm ready") {
+                    PrimaryButton(title: "Accept & Continue") {
                         onReady()
                     }
-
-                    Button("Not now") {
-                        onNotNow()
-                    }
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.primary, lineWidth: 1.5)
-                    )
                 }
             }
             .padding()

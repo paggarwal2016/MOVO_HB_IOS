@@ -39,6 +39,7 @@ struct DashboardView: View {
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
     @State private var showAccountDetail = false
+    @State private var showTransactions = false
     @State private var showCreateView = false
     @State private var showEditNickname = false
     
@@ -99,7 +100,14 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
-                SavingAccountDetailView(accountId: account.id, container: container)
+                SavingAccountDetailView(accountId: account.id, showAccountCard: true, container: container)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(isPresented: $showTransactions) {
+            if let account = displayAccount {
+                SavingAccountDetailView(accountId: account.id, showAccountCard: false, container: container)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
@@ -200,11 +208,22 @@ struct DashboardView: View {
         if let account = displayAccount {
             BalanceCardView(
                 account: account,
-                onCardTap: { showAccountDetail = true },
-                onPrimaryTap: { showPrimaryAccountDetails = true },
+                onCardTap: { showPrimaryAccountDetails = true },
+                onPrimaryTap: { showEditNickname = true },
                 onViewCardTap: { showViewCard = true }
             )
-            
+
+            // ── Quick actions ──────────────────────────────────────────────
+            HStack(spacing: 12) {
+                quickActionButton(icon: "list.bullet.rectangle", title: "Transactions") {
+                    showTransactions = true
+                }
+                quickActionButton(icon: "person.text.rectangle", title: "Account details") {
+                    showAccountDetail = true
+                }
+            }
+            .padding(.horizontal, 15)
+
             PrimaryButton(
                 title: "Create Cash Card",
                 backgroundColor: Color.softBlue.opacity(0.1),
@@ -227,15 +246,15 @@ struct DashboardView: View {
                 .frame(height: 60)
             }
             
-            PrimaryButton(
-                title: "View Cards",
-                backgroundColor: .orange.opacity(0.1),
-                textColor: .black
-            ) {
-                showViewCardList = true
-            }
-            .padding()
-            .frame(height: 60)
+//            PrimaryButton(
+//                title: "View Cards",
+//                backgroundColor: .orange.opacity(0.1),
+//                textColor: .black
+//            ) {
+//                showViewCardList = true
+//            }
+//            .padding()
+//            .frame(height: 60)
             
             PrimaryButton(
                 title: "Move Money",
@@ -293,5 +312,32 @@ struct DashboardView: View {
 
     private func loadData() async {
         await savingVM.loadAccounts()
+    }
+
+    @ViewBuilder
+    private func quickActionButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.black)
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.black)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
