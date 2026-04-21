@@ -261,7 +261,7 @@ struct DashboardView: View {
                         
             ActionCard(title: "Pay Anyone",
                        description: "Send money instantly to anyone in your contact list.",
-                       buttonLabel: "Add people") {
+                       buttonLabel: "Send Money") {
                 showContactList = true
                 SecureLogger.debug("Quick transfer tapped", category: .general)
             }
