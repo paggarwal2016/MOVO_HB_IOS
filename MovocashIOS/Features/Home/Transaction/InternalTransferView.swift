@@ -63,7 +63,7 @@ struct InternalTransferView: View {
                     .padding(.vertical, 12)
                 }
             }
-            .navigationTitle("Money Transfer")
+            .navigationTitle("Transfer Money")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -114,11 +114,11 @@ struct InternalTransferView: View {
 
     private var fieldsCard: some View {
         VStack(spacing: 0) {
-            FieldRow(label: "From account") {
+            FieldRow(label: "From") {
                 fromAccountPicker
             }
             Divider()
-            FieldRow(label: "To account") {
+            FieldRow(label: "To") {
                 toAccountPicker
             }
             Divider()
