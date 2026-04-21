@@ -6,12 +6,11 @@
 //
 
 import Foundation
-import MobileBankingSDK
 
 // MARK: - KYC Result
 
 enum KYCResult {
-    case success(User)
+    case success
     case failed(Error)
 }
 

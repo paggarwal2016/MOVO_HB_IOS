@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 enum AuthFlow {
-    case splash, choice, loginPhone, getStartedPhone, otp, setupPasscode, enableBiometrics, pickDocument, kyc, home
+    case splash, choice, loginPhone, getStartedPhone, otp, signupDetails, emailOTP, getStartedInfo, setupPasscode, enableBiometrics, pickDocument, kyc, home
 }
 
 enum PhoneFlowType: String {

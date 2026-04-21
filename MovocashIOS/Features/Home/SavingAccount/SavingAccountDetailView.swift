@@ -12,13 +12,15 @@ import SwiftUI
 struct SavingAccountDetailView: View {
 
     let accountId: Int
+    var showAccountCard: Bool = true
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var transVM: TransactionViewModel
 
-    init(accountId: Int, container: AppContainer) {
+    init(accountId: Int, showAccountCard: Bool = true, container: AppContainer) {
         self.accountId = accountId
+        self.showAccountCard = showAccountCard
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
     }
@@ -36,7 +38,7 @@ struct SavingAccountDetailView: View {
                     Color(.systemGroupedBackground).ignoresSafeArea()
                 }
             }
-            .navigationTitle(savingVM.accountDetail?.nickname ?? "Account Details")
+            .navigationTitle(showAccountCard ? (savingVM.accountDetail?.nickname ?? "Account Details") : "Transactions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -73,7 +75,9 @@ struct SavingAccountDetailView: View {
     private func detailContent(_ detail: SavingsAccountInfo) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
-                accountCard(detail)
+                if showAccountCard {
+                    accountCard(detail)
+                }
                 transactionSection
             }
             .padding(.vertical, 10)
@@ -179,44 +183,31 @@ struct SavingAccountDetailView: View {
 
     private var transactionSection: some View {
         VStack(spacing: 0) {
+            
+            if !showAccountCard {
+                // MARK: List
+                let items = transVM.transactions
 
-            // MARK: Header
-            HStack {
-                Text("Transactions")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                Spacer()
-                Text("\(transVM.transactions.count)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider().padding(.horizontal, 16)
-
-            // MARK: List
-            let items = transVM.transactions
-
-            if items.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "tray")
-                        .font(.system(size: 32))
-                        .foregroundStyle(.secondary)
-                    Text("No transactions yet")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(items) { item in
-                        TransactionRow(item: item)
+                if items.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "tray")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.secondary)
+                        Text("No transactions yet")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(items) { item in
+                            TransactionRow(item: item)
+                        }
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 5)
                 }
-                .padding(.horizontal, 5)
-                .padding(.vertical, 5)
             }
         }
         .background(Color(.systemBackground))

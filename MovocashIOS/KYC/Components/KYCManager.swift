@@ -10,12 +10,12 @@ import MobileBankingSDK
 import UIKit
 import SwiftUI
 
-// MARK: - KYCManager Protocol
+// MARK: - Protocol
 
 @MainActor
 protocol KYCManagerProtocol {
     func configureSDK(officeId: String) async throws
-    func start() async throws -> User
+    func start() async throws
     func clearSession()
     func updateToken(_ token: String)
 }
@@ -23,36 +23,41 @@ protocol KYCManagerProtocol {
 // MARK: - KYCManager
 
 @MainActor
-final class KYCManager: KYCManagerProtocol, TokenRefreshable {
-    
-    static let shared = KYCManager(
-        network: NetworkService.shared,
-        keychain: KeychainManager.shared
-    )
+final class KYCManager: KYCManagerProtocol {
 
-    let network: NetworkServiceProtocol
-    let keychain: KeychainManagerProtocol
+    // MARK: Shared
+    static let shared = KYCManager(authManager: AuthManager.shared)
+
+    // MARK: Properties
+    private let authManager: AuthManagerProtocol
     private let analytics: AnalyticsTracking
-    private weak var presenter: UIViewController?
 
-    init(
-        network: NetworkServiceProtocol,
-        keychain: KeychainManagerProtocol,
-        analytics: AnalyticsTracking? = nil
-    ) {
-        self.network = network
-        self.keychain = keychain
-        self.analytics = analytics ?? AnalyticsManager.shared
+    /// Dedicated window that hosts the entire KYC flow.
+    /// Isolates the SDK from the SwiftUI UIHostingController so the SDK's
+    /// internal alerts never conflict with the main app window hierarchy.
+    private var kycWindow: UIWindow?
+
+    // MARK: Init
+    init(authManager: AuthManagerProtocol, analytics: AnalyticsTracking? = nil) {
+        self.authManager = authManager
+        self.analytics   = analytics ?? AnalyticsManager.shared
     }
-    
-    // MARK: - Configure SDK
+}
+
+// MARK: - KYCManager: SDK Lifecycle
+
+extension KYCManager {
+
     func configureSDK(officeId: String) async throws {
-        
-        SecureLogger.info("Starting KYC configuration", category: .kyc)
-        
-        let token = try await freshAccessToken()
-        
-#if DEBUG
+        SecureLogger.info("Configuring KYC SDK", category: .kyc)
+
+        guard let token = await authManager.getAccessToken() else {
+            SecureLogger.error("Missing access token — aborting KYC configure", category: .kyc)
+            analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "missing_token"])
+            throw KYCError.notConfigured
+        }
+
+        #if DEBUG
         let verboseLogs = true
 #else
         let verboseLogs = false
@@ -65,182 +70,93 @@ final class KYCManager: KYCManagerProtocol, TokenRefreshable {
             theme: makeKYCTheme(),
             enableVerboseLogs: verboseLogs
         )
-        
-        SecureLogger.info("KYC SDK configured", category: .kyc)
+
+        SecureLogger.info("KYC SDK configured successfully", category: .kyc)
     }
-    
-    // MARK: - Update Token (If Refreshed)
+
     func updateToken(_ token: String) {
         MobileBankingSDK.updateAuthToken(token)
-        SecureLogger.info("KYC token updated", category: .kyc)
+        SecureLogger.info("KYC auth token refreshed", category: .kyc)
     }
-    
-    // MARK: - Clear Session
+
     func clearSession() {
         MobileBankingSDK.clearSession()
         SecureLogger.info("KYC session cleared", category: .kyc)
     }
-    
-    // MARK: - Start KYC Flow
-    
-    func start() async throws -> User {
-        
-        // configureSDK is called at login / session-restore — the user may
-        // reach this screen minutes or hours later. Re-validate here so the
-        // SDK never starts with a stale token.
-        let validToken = try await freshAccessToken()
-        updateToken(validToken)
-        
-        guard let topVC = UIApplication.topViewController() else {
+}
+
+// MARK: - KYCManager: KYC Flow
+
+extension KYCManager {
+
+    func start() async throws {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }) else {
             throw KYCError.noPresenter
         }
-        
-        presenter = topVC
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             var resumed = false
-            var successToken: NSObjectProtocol?
-            var errorToken: NSObjectProtocol?
-            var cancelToken: NSObjectProtocol?
-            
-            func resumeOnce(_ result: Result<User, Error>, needsDismiss: Bool) {
+
+            func resumeOnce(_ result: Result<Void, Error>) {
                 guard !resumed else { return }
                 resumed = true
                 
                 cleanup(dismiss: needsDismiss)
                 
                 switch result {
-                case .success(let user):
-                    continuation.resume(returning: user)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
+                case .success:        continuation.resume()
+                case .failure(let e): continuation.resume(throwing: e)
                 }
             }
-            
-            func cleanup(dismiss: Bool) {
-                if let t = successToken { NotificationCenter.default.removeObserver(t) }
-                if let t = errorToken   { NotificationCenter.default.removeObserver(t) }
-                if let t = cancelToken  { NotificationCenter.default.removeObserver(t) }
-                if dismiss { dismissPresenter() }
+
+            // Dedicated window — the SDK and all its internal alert presentations
+            // are completely isolated from the SwiftUI UIHostingController window,
+            // preventing "already presenting" conflicts on cancel/error paths.
+            let window = UIWindow(windowScene: scene)
+            window.windowLevel = .normal + 1
+            self.kycWindow = window
+
+            let wrapper = KYCViewControllerWrapper()
+            window.rootViewController = wrapper
+            window.makeKeyAndVisible()
+
+            // [weak self] prevents the closure from keeping KYCManager alive
+            // after the flow ends; tearDownKYCWindow cleans up the window.
+            wrapper.onSuccess = { [weak self] in
+                self?.tearDownKYCWindow()
+                resumeOnce(.success(()))
             }
-            
-            func dismissPresenter() {
-                Task { @MainActor in
-                    self.presenter?.dismiss(animated: true)
-                    self.presenter = nil
-                }
+            wrapper.onFailure = { [weak self] error in
+                self?.tearDownKYCWindow()
+                resumeOnce(.failure(error))
             }
-            
-            // SUCCESS — SDK dismisses its own UI, no manual dismiss needed
-            successToken = NotificationCenter.default.addObserver(
-                forName: .verificationCompleted,
-                object: nil,
-                queue: .main
-            ) { notification in
-                guard let user = notification.object as? User else {
-                    resumeOnce(.failure(KYCError.unknown), needsDismiss: false)
-                    return
-                }
-                resumeOnce(.success(user), needsDismiss: false)
-            }
-            
-            // ERROR — SDK may not dismiss, force dismiss
-            errorToken = NotificationCenter.default.addObserver(
-                forName: .scannerError,
-                object: nil,
-                queue: .main
-            ) { notification in
-                if let error = notification.object as? Error {
-                    resumeOnce(.failure(KYCError.sdkError(error.localizedDescription)), needsDismiss: true)
-                } else {
-                    resumeOnce(.failure(KYCError.unknown), needsDismiss: true)
-                }
-            }
-            
-            // CANCELLED — user tapped cancel on failed-verification screen
-            cancelToken = NotificationCenter.default.addObserver(
-                forName: .verificationCanceled,
-                object: nil,
-                queue: .main
-            ) { _ in
-                resumeOnce(.failure(KYCError.cancelled), needsDismiss: true)
-            }
-            
-            MobileBankingSDK.startKyc(presentingViewController: topVC)
         }
     }
-    
-    
-    // MARK: - Token Management
-    
-    /// Returns a valid access token for the KYC SDK.
-    ///
-    /// Flow:
-    /// - Reads current token from Keychain.
-    /// - Decodes the JWT `exp` claim locally — no network call on the happy path.
-    /// - Token valid → returns it immediately.
-    /// - Token expired or within 60-second buffer → delegates to `TokenRefreshable.performTokenRefresh()`.
-    private func freshAccessToken() async throws -> String {
-        guard let current = try? await keychain.get("access_token", biometricPrompt: nil),
-              !current.isEmpty else {
-            analytics.log(AnalyticsEvent.kycStepFailed, params: [
-                AnalyticsParam.kycStep: KYCStep.idVerified.rawValue,
-                AnalyticsParam.errorCode: "missing_token"
-            ])
-            SecureLogger.error("No access token in keychain — aborting KYC", category: .kyc)
-            throw KYCError.notConfigured
-        }
-        
-        guard needsTokenRefresh(current) else {
-            return current
-        }
-        
-        SecureLogger.info("Token near expiry — refreshing before KYC", category: .kyc)
-        
-        do {
-            let fresh = try await performTokenRefresh()
-            analytics.log(AnalyticsEvent.tokenRefreshed, params: [
-                AnalyticsParam.reason: "kyc_proactive_refresh"
-            ])
-            SecureLogger.info("Token refreshed successfully for KYC", category: .kyc)
-            return fresh
-        } catch {
-            analytics.log(AnalyticsEvent.kycStepFailed, params: [
-                AnalyticsParam.kycStep: KYCStep.idVerified.rawValue,
-                AnalyticsParam.errorCode: "token_refresh_failed"
-            ])
-            SecureLogger.error("Token refresh failed before KYC: \(error.localizedDescription)", category: .kyc)
-            throw KYCError.notConfigured
-        }
+
+    private func tearDownKYCWindow() {
+        kycWindow?.isHidden = true
+        kycWindow = nil
     }
-    
-    // MARK: - Theme
-    // backgroundGradient    : Back theme
-    // accentColor           : Try again, icon Disclaimer
-    // labelProps
-    // primaryTextColor      : look correct, first, last, let's confirm
-    // secondaryTextColor    : first, last, title color
-    // buttonProps
-    // color                 : Looks good!, Next button, Get Started
-    // textColor             : action button color
-    // inputProps
-    // backgroundColor       : input field background color
-    // textColor             : input field text color
-    // placeholderColor      : SSN placeholder color
-    // borderColor           : corner border color
-    
-    private func makeKYCTheme() -> Theme {
-        
-        return Theme(
-            backgroundGradient: [
-                Color.background,
-                Color.background
-            ],
-            accentColor: .white,
+}
+
+// MARK: - KYCManager: Theme
+
+
+
+private extension KYCManager {
+
+    func makeKYCTheme() -> Theme {
+        Theme(
+            backgroundGradient: [UIColor(.appBackground),
+                                 UIColor(.appBackground)], // Back theme
+            
+            accentColor: .black, // Try againing and icon Disclaimer
+            
             labelProps: LabelProps(
-                primaryTextColor: Color.primaryText,
-                secondaryTextColor: Color.secondaryText,
+                primaryTextColor: .black, // look correct, first , last , let's confirm
+                secondaryTextColor: Color.secondaryText,// first, last, title color
                 titleFont: .monospacedSystemFont(ofSize: 28, weight: .bold),
                 bodyFont:  .monospacedSystemFont(ofSize: 17, weight: .regular),
                 inputLabelFont: .monospacedSystemFont(ofSize: 14, weight: .medium)
@@ -252,10 +168,10 @@ final class KYCManager: KYCManagerProtocol, TokenRefreshable {
                 font: .monospacedSystemFont(ofSize: 18, weight: .bold)
             ),
             inputProps: InputProps(
-                backgroundColor: Color.inputBackground,
-                textColor: Color.inputText,
-                placeholderColor: Color.inputPlaceholder,
-                borderColor: .white,
+                backgroundColor: UIColor(.inputBackground), // input field background color
+                textColor: .black, // input field text color
+                placeholderColor: Color.inputPlaceholder, // SSN placeholder color
+                borderColor: .black, // corner border color
                 borderWidth: 1.5,
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 16, weight: .regular)
@@ -264,4 +180,81 @@ final class KYCManager: KYCManagerProtocol, TokenRefreshable {
     }
 }
 
+// MARK: - KYCViewControllerWrapper
 
+/// Transparent root VC of the dedicated KYC UIWindow.
+/// Presents the MobileBankingSDK KYC flow and owns all four SDK notifications.
+/// Because it is the root of its own window, the SDK's internal alert
+/// presentations always land here — never on the SwiftUI UIHostingController.
+private final class KYCViewControllerWrapper: UIViewController {
+
+    // MARK: Callbacks
+    var onSuccess: (() -> Void)?
+    var onFailure: ((Error) -> Void)?
+
+    // MARK: State
+    private var hasLaunchedKyc = false
+
+    // MARK: Lifecycle
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .black
+
+        let nc = NotificationCenter.default
+        nc.addObserver(self, selector: #selector(handleCompleted(_:)),    name: .verificationCompleted, object: nil)
+        nc.addObserver(self, selector: #selector(handleCanceled(_:)),     name: .verificationCanceled,  object: nil)
+        nc.addObserver(self, selector: #selector(handleFailed(_:)),       name: .verificationFailed,    object: nil)
+        nc.addObserver(self, selector: #selector(handleScannerError(_:)), name: .scannerError,          object: nil)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard !hasLaunchedKyc else { return }
+        hasLaunchedKyc = true
+        MobileBankingSDK.startKyc(presentingViewController: self)
+    }
+
+    // deinit must be in the class body — Swift forbids deinit in extensions
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: Notification Handlers
+
+    @objc private func handleCompleted(_ notification: Notification) {
+        SecureLogger.info("KYC verificationCompleted", category: .kyc)
+        dismissSDKThen { [weak self] in self?.onSuccess?() }
+    }
+
+    @objc private func handleCanceled(_ notification: Notification) {
+        SecureLogger.info("KYC verificationCanceled", category: .kyc)
+        dismissSDKThen { [weak self] in self?.onFailure?(KYCError.cancelled) }
+    }
+
+    @objc private func handleFailed(_ notification: Notification) {
+        let message = (notification.object as? Error)?.localizedDescription
+            ?? "Identity verification failed."
+        SecureLogger.error("KYC verificationFailed: \(message)", category: .kyc)
+        dismissSDKThen { [weak self] in self?.onFailure?(KYCError.sdkError(message)) }
+    }
+
+    @objc private func handleScannerError(_ notification: Notification) {
+        let message = (notification.object as? NSError)?.localizedDescription
+            ?? "Scanner error occurred."
+        SecureLogger.error("KYC scannerError: \(message)", category: .kyc)
+        dismissSDKThen { [weak self] in self?.onFailure?(KYCError.sdkError(message)) }
+    }
+
+    // MARK: Helpers
+
+    /// Dismisses the SDK's presented VC (animated), then fires the callback.
+    /// Falls through immediately if no SDK VC is currently presented.
+    private func dismissSDKThen(_ completion: @escaping () -> Void) {
+        if let sdkVC = presentedViewController {
+            sdkVC.dismiss(animated: true, completion: completion)
+        } else {
+            completion()
+        }
+    }
+}

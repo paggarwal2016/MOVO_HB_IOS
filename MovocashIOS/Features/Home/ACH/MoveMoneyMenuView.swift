@@ -18,6 +18,7 @@ struct MoveMoneyMenuView: View {
 
     let onFundAccount: () -> Void
     let onTransferMoney: () -> Void
+    let onInternalTransfer: () -> Void
 
     @State private var detentHeight: CGFloat = 160
 
@@ -34,9 +35,18 @@ struct MoveMoneyMenuView: View {
 
             optionRow(
                 icon: "person.2",
-                title: "Transfer Money",
+                title: "Pay Anyone",
                 subtitle: "Send money to a contact",
-                action: onTransferMoney,
+                action: onTransferMoney
+            )
+
+            Divider().padding(.horizontal, 24)
+
+            optionRow(
+                icon: "arrow.left.arrow.right",
+                title: "Transfer Money",
+                subtitle: "Move money between your accounts",
+                action: onInternalTransfer,
                 bottomPadding: 8
             )
         }

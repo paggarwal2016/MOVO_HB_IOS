@@ -26,11 +26,11 @@ struct PasscodeSetupView: View {
                 // Back button — only on enterNew step
                 if vm.setupStep == .enterNew {
                     HStack {
-                        BackButton { //TODO: Future Implementation will check below code logic
+                        BackButton {
                             lockManager.logout()
                             Task {
                                 await sessionManager.logout(appState: appState)
-                                appState.flow = .loginPhone
+                                appState.flow = .choice
                             }
                         }
                         Spacer()

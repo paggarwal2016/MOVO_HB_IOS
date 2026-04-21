@@ -12,9 +12,10 @@ struct AccountListSheetView: View {
     @Binding var savingsList: SavingsAccountListResponse?
     @Binding var isPresented: Bool
     @StateObject private var savingVM: SavingsAccountViewModel
-    
+    @StateObject private var vcardVM: VCardViewModel
+
     private let container: AppContainer
-    
+
     init(
         savingsList: Binding<SavingsAccountListResponse?>,
         isPresented: Binding<Bool>,
@@ -24,13 +25,14 @@ struct AccountListSheetView: View {
         _isPresented = isPresented
         self.container = container
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
-    
-    @State private var accounts: [SavingsAccountInfo] = []
+
+    @State private var accounts: [SavingsAccountDetailsResponse] = []
     @State private var primaryAccountId: Int?
-    @State private var selectedDetailAccount: SavingsAccountInfo?
-    
-    @State private var showCreateAccount = false
+    @State private var selectedDetailAccount: SavingsAccountDetailsResponse?
+
+    @State private var showCreateCashCard = false
     @State private var showEditNickname = false
     @State private var accountToEdit: SavingsAccountInfo?
     
@@ -46,7 +48,7 @@ struct AccountListSheetView: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {
                             Button {
-                                showCreateAccount = true
+                                showCreateCashCard = true
                             } label: {
                                 Image(systemName: "plus")
                                     .fontWeight(.semibold)
@@ -64,20 +66,20 @@ struct AccountListSheetView: View {
                     }
             }
             
-            // Show SpinnerView only during add/update/delete (list already populated)
-            if savingVM.state == .loading && !accounts.isEmpty {
+            if savingVM.state == .loading && !accounts.isEmpty && !showCreateCashCard {
                 SpinnerView()
             }
         }
-        .textInputAlert(
-            isPresented: $showCreateAccount,
-            title: "Create Cash Card",
-            message: "Enter a name for your new cash card account.",
-            placeholder: "Type here...",
-            onCreate: { name in
-                Task { await createAccount(name: name) }
-            }
-        )
+        .sheet(isPresented: $showCreateCashCard) {
+            CreateCashCardView(
+                onCancel: { showCreateCashCard = false },
+                onCreate: { nickname, pin in
+                    await createCashCard(nickname: nickname, pin: pin)
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .textInputAlert(
             isPresented: $showEditNickname,
             title: "Edit Nickname",
@@ -174,17 +176,21 @@ struct AccountListSheetView: View {
     }
     
     // MARK: - Create
-    
-    private func createAccount(name: String) async {
+
+    private func createCashCard(nickname: String, pin: String) async {
         do {
             let newAccount = try await savingVM.createSavingAccount(
-                request: SavingsAccountRequest.CreateAccount(nickname: name)
+                request: SavingsAccountRequest.CreateAccount(nickname: nickname)
             )
-            accounts.append(newAccount)                         // instant UI update
-            ToastManager.shared.show("\"\(name)\" account created!", style: .success, position: .bottom)
-            backgroundSync()                                   // silent server sync
+            _ = try await vcardVM.postVCard(
+                request: VCardsRequest(pin: pin, accountId: newAccount.id)
+            )
+            accounts.append(newAccount)
+            showCreateCashCard = false
+            ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
+            backgroundSync()
         } catch {
-            ToastManager.shared.show("Failed to create account.", style: .error, position: .bottom)
+            ToastManager.shared.show("Failed to create cash card. Please try again.", style: .error, position: .bottom)
         }
     }
     
