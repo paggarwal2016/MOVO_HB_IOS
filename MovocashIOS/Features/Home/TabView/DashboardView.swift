@@ -161,7 +161,7 @@ struct DashboardView: View {
                 InternalTransferView(
                     toClientId: account.clientId,
                     fromAccount: account,
-                    nonPrimaryAccounts: savingVM.accountList?.accounts.filter({ !$0.isPrimary }) ?? [],
+                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter({ !$0.isPrimary }) ?? [],
                     container: container,
                     onDismiss: {
                         Task { await loadData() }
@@ -380,12 +380,7 @@ struct DashboardView: View {
 
     private func createCashCard(nickname: String, pin: String) async {
         do {
-            let account = try await savingVM.createSavingAccount(
-                request: SavingsAccountRequest.CreateAccount(nickname: nickname)
-            )
-            _ = try await vm.postVCard(
-                request: VCardsRequest(pin: pin, accountId: account.id)
-            )
+            _ = try await vm.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
             showCreateCashCard = false
             await savingVM.loadAccounts()
             ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)

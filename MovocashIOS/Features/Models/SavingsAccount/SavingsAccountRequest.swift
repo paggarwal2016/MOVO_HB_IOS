@@ -12,19 +12,22 @@ enum SavingsAccountRequest {
     // POST /savings/account
     struct CreateAccount: Codable, Equatable, Sendable {
         let nickname: String
+        let userAction: String
     }
 
     // PATCH /savings/account
     struct UpdateAccount: Codable, Equatable, Sendable {
         let nickname: String
         let accountId: Int
+        let userAction: String
     }
 
     // DELETE /savings/account
     struct DeleteAccount: Codable, Equatable, Sendable {
         let targetAccountId: Int
         let accountId: Int
-    }
+        let userAction: String
+    } 
 }
 
 

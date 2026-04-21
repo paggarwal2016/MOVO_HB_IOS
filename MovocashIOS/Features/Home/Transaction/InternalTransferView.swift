@@ -11,26 +11,22 @@ struct InternalTransferView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var transVM: TransactionViewModel
+    @StateObject private var vcardVM: VCardViewModel
 
-    // Pre-loaded from DashboardView
     private let toClientId: Int
-    private let allAccounts: [SavingsAccountInfo]
 
-    // Editable
     @State private var amountText = ""
     @State private var descriptionText = ""
     @State private var selectedFromAccount: SavingsAccountInfo?
-    @State private var selectedToAccount: SavingsAccountInfo?
-    
-    var onDismiss:() -> Void
-    
-    private var availableToAccounts: [SavingsAccountInfo] {
-        allAccounts.filter { $0.id != selectedFromAccount?.id }
-    }
+    @State private var selectedToCard: VCardListResponse?
+    @State private var primaryCard: VCardsList?
+    @State private var cardsList: [VCardListResponse] = []
+
+    var onDismiss: () -> Void
 
     private var amount: Double { Double(amountText) ?? 0 }
     private var isValid: Bool {
-        amount > 0 && selectedFromAccount != nil && selectedToAccount != nil
+        amount > 0 && selectedFromAccount != nil && selectedToCard?.savingsAccountId != nil
     }
 
     init(
@@ -41,10 +37,9 @@ struct InternalTransferView: View {
         onDismiss: @escaping () -> Void,
     ) {
         self.toClientId = toClientId
-        let primary = fromAccount.map { [$0] } ?? []
-        self.allAccounts = primary + nonPrimaryAccounts
         _selectedFromAccount = State(initialValue: fromAccount)
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
+        _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
         self.onDismiss = onDismiss
     }
 
@@ -81,6 +76,12 @@ struct InternalTransferView: View {
                 if transVM.state == .loading {
                     SpinnerView()
                 }
+            }
+            .task {
+                async let primary = vcardVM.getVCardPrimary()
+                async let all = vcardVM.getVCardsAll()
+                primaryCard = try? await primary
+                cardsList = (try? await all) ?? []
             }
         }
     }
@@ -133,68 +134,52 @@ struct InternalTransferView: View {
     }
 
     private var fromAccountPicker: some View {
-        Group {
-            if allAccounts.isEmpty {
-                Text("No accounts")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-            } else {
-                Menu {
-                    ForEach(allAccounts) { account in
-                        Button {
-                            selectedFromAccount = account
-                            if selectedToAccount?.id == account.id {
-                                selectedToAccount = nil
-                            }
-                        } label: {
-                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
-                        }
-                    }
-                } label: {
-                    HStack {
-                        if let account = selectedFromAccount {
-                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.primary)
-                        } else {
-                            Text("Select account")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    .animation(.none, value: selectedFromAccount?.id)
+        HStack {
+            if let card = primaryCard {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(card.name)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.primary)
+                    Text("•••• \(card.lastFour)")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 }
+            } else {
+                Text("Loading...")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
             }
         }
     }
 
     private var toAccountPicker: some View {
         Group {
-            if availableToAccounts.isEmpty {
-                Text("No accounts")
+            if cardsList.isEmpty {
+                Text("No cards available")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             } else {
                 Menu {
-                    ForEach(availableToAccounts) { account in
+                    ForEach(cardsList, id: \.cardNumber) { card in
                         Button {
-                            selectedToAccount = account
+                            selectedToCard = card
                         } label: {
-                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
+                            Text("\(card.name ?? "")  •••• \(card.lastFour ?? "")")
                         }
                     }
                 } label: {
                     HStack {
-                        if let account = selectedToAccount {
-                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.primary)
+                        if let card = selectedToCard {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(card.name ?? "")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.primary)
+                                Text("•••• \(card.lastFour ?? "")")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                            }
                         } else {
-                            Text("Select account")
+                            Text("Select card")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
@@ -203,7 +188,7 @@ struct InternalTransferView: View {
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
-                    .animation(.none, value: selectedToAccount?.id)
+                    .animation(.none, value: selectedToCard?.cardNumber)
                 }
             }
         }
@@ -244,11 +229,13 @@ struct InternalTransferView: View {
     // MARK: - Submit
 
     private func submitTransfer() async {
-        guard let toAccount = selectedToAccount, let from = selectedFromAccount else { return }
+        guard let from = selectedFromAccount,
+              let toCard = selectedToCard,
+              let toAccountId = toCard.savingsAccountId else { return }
         let request = TransactionRequest.Internal(
             description: descriptionText,
             amount: amount,
-            toAccountId: toAccount.id,
+            toAccountId: toAccountId,
             toClientId: toClientId,
             fromAccountId: from.id,
             phoneNumber: nil

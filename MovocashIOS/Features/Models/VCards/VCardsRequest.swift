@@ -23,3 +23,9 @@ struct VCardsProvisionRequest: Codable, Equatable, Sendable {
     let nonceSignature: String
     let certificateChain: [String]
 }
+
+struct CreateVCardRequest: Codable, Equatable, Sendable {
+    let nickname: String
+    let pin: String
+    let userAction: String
+}

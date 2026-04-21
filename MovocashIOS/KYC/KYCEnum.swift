@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import MobileBankingSDK
 
 // MARK: - KYC Result
 

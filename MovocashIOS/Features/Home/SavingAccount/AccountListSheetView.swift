@@ -28,9 +28,9 @@ struct AccountListSheetView: View {
         _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
 
-    @State private var accounts: [SavingsAccountDetailsResponse] = []
+    @State private var accounts: [SavingsAccountInfo] = []
     @State private var primaryAccountId: Int?
-    @State private var selectedDetailAccount: SavingsAccountDetailsResponse?
+    @State private var selectedDetailAccount: SavingsAccountInfo?
 
     @State private var showCreateCashCard = false
     @State private var showEditNickname = false
@@ -179,13 +179,8 @@ struct AccountListSheetView: View {
 
     private func createCashCard(nickname: String, pin: String) async {
         do {
-            let newAccount = try await savingVM.createSavingAccount(
-                request: SavingsAccountRequest.CreateAccount(nickname: nickname)
-            )
-            _ = try await vcardVM.postVCard(
-                request: VCardsRequest(pin: pin, accountId: newAccount.id)
-            )
-            accounts.append(newAccount)
+            _ = try await vcardVM.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
+            //accounts.append(newAccount)
             showCreateCashCard = false
             ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
             backgroundSync()
@@ -201,7 +196,7 @@ struct AccountListSheetView: View {
         accountToEdit = nil
         do {
             _ = try await savingVM.updateSavingAccount(
-                request: SavingsAccountRequest.UpdateAccount(nickname: name, accountId: account.id)
+                request: SavingsAccountRequest.UpdateAccount(nickname: name, accountId: account.id, userAction: "")
             )
             ToastManager.shared.show("Nickname updated!", style: .success, position: .bottom)
             backgroundSync()                                   // silent server sync
@@ -231,7 +226,7 @@ struct AccountListSheetView: View {
             _ = try await savingVM.deleteSavingAccount(
                 request: SavingsAccountRequest.DeleteAccount(
                     targetAccountId: primaryId,
-                    accountId: account.id
+                    accountId: account.id, userAction: ""
                 )
             )
             accounts.removeAll { $0.id == account.id }         // instant UI update

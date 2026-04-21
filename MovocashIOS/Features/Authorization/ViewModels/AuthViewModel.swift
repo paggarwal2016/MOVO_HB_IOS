@@ -69,15 +69,17 @@ final class AuthViewModel: ObservableObject {
     
     // MARK: - Validate OTP
     
-    func validateOTP(code: String) async throws -> RefreshTokenResponse {
+    func validateOTP(code: String) async throws -> AuthTokenSMSResponse {
         guard state == .idle || state == .otpSent else { throw ModelError.alreadyLoading }
         state = .loading
 
-        let phone = phoneNumber  // capture before suspend point
-
         do {
-            let response: RefreshTokenResponse = try await network.request(
-                AuthAPI.tokenSMS(phoneNumber: phone, code: code)
+            let response: AuthTokenSMSResponse = try await network.request(
+                AuthAPI.tokenSMS(request: TokenSMSRequest(
+                    phoneNumber: phoneNumber,
+                    code: code,
+                    userAction: "VERIFY_OTP"
+                ))
             )
             await MainActor.run { self.state = .verified }
             return response

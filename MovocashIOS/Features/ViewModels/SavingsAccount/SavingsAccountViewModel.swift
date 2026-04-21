@@ -56,7 +56,7 @@ final class SavingsAccountViewModel: BaseViewModel {
             let _: SuccessResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(
-                    SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId))
+                    SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId, userAction: ""))
                 )
             }
             analytics.log(AnalyticsEvent.savingsNicknameUpdated, params: [
@@ -84,7 +84,7 @@ final class SavingsAccountViewModel: BaseViewModel {
             let _: SavingsAccountDetailResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(
-                    SavingsAccountAPI.create(SavingsAccountRequest.CreateAccount(nickname: trimmed))
+                    SavingsAccountAPI.create(SavingsAccountRequest.CreateAccount(nickname: trimmed, userAction: ""))
                 )
             }
             analytics.log(AnalyticsEvent.savingsAccountCreated, params: [

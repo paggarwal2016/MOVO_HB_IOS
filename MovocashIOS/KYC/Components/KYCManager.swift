@@ -26,10 +26,13 @@ protocol KYCManagerProtocol {
 final class KYCManager: KYCManagerProtocol {
 
     // MARK: Shared
-    static let shared = KYCManager(authManager: AuthManager.shared)
+    static let shared = KYCManager(
+        network: NetworkService.shared,
+        keychain: KeychainManager.shared
+    )
 
-    // MARK: Properties
-    private let authManager: AuthManagerProtocol
+    let network: NetworkServiceProtocol
+    let keychain: KeychainManagerProtocol
     private let analytics: AnalyticsTracking
 
     /// Dedicated window that hosts the entire KYC flow.
@@ -38,9 +41,10 @@ final class KYCManager: KYCManagerProtocol {
     private var kycWindow: UIWindow?
 
     // MARK: Init
-    init(authManager: AuthManagerProtocol, analytics: AnalyticsTracking? = nil) {
-        self.authManager = authManager
-        self.analytics   = analytics ?? AnalyticsManager.shared
+    init(network: NetworkServiceProtocol, keychain: KeychainManagerProtocol, analytics: AnalyticsTracking? = nil) {
+        self.network   = network
+        self.keychain  = keychain
+        self.analytics = analytics ?? AnalyticsManager.shared
     }
 }
 
@@ -51,7 +55,10 @@ extension KYCManager {
     func configureSDK(officeId: String) async throws {
         SecureLogger.info("Configuring KYC SDK", category: .kyc)
 
-        guard let token = await authManager.getAccessToken() else {
+        let token: String
+        do {
+            token = try await keychain.get("access_token", biometricPrompt: nil)
+        } catch {
             SecureLogger.error("Missing access token — aborting KYC configure", category: .kyc)
             analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "missing_token"])
             throw KYCError.notConfigured
@@ -102,8 +109,6 @@ extension KYCManager {
             func resumeOnce(_ result: Result<Void, Error>) {
                 guard !resumed else { return }
                 resumed = true
-                
-                cleanup(dismiss: needsDismiss)
                 
                 switch result {
                 case .success:        continuation.resume()

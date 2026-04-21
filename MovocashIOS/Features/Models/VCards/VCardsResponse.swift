@@ -44,3 +44,9 @@ nonisolated struct VCardListResponse: Codable, Sendable {
     let expiration: String?
     let cardNumber: String?
 }
+
+nonisolated struct VCardListAllResponse: Decodable, Sendable {
+    let success: Bool
+    let message: String?
+    let data: [VCardListResponse]?
+}

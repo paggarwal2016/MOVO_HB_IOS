@@ -10,7 +10,7 @@ import SwiftUI
 
 struct BalanceCardView: View {
 
-    let account: SavingsAccountDetailsResponse
+    let account: SavingsAccountInfo
     var backgroundColor: Color = Color(#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1))
     var onCardTap: () -> Void
     var onPrimaryTap: () -> Void

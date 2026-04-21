@@ -8,13 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */; };
-		1420296B2F9616C800A72366 /* SignUpScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296A2F9616C800A72366 /* SignUpScreen.swift */; };
 		1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296C2F9616D600A72366 /* SignUpViewModel.swift */; };
 		142029722F96256900A72366 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029712F96256800A72366 /* OTPScreen.swift */; };
 		142029732F96256900A72366 /* GetStartedInfoScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029702F96256800A72366 /* GetStartedInfoScreen.swift */; };
 		142337BA2F5807890030B4E7 /* ChoiceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337B92F5807890030B4E7 /* ChoiceScreen.swift */; };
 		142337BC2F5807C70030B4E7 /* PhoneNumberScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */; };
-		142337BE2F5807FB0030B4E7 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BD2F5807FB0030B4E7 /* OTPScreen.swift */; };
 		142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142864562F92251B006F8C39 /* TokenRefreshable.swift */; };
 		1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791A2F6D430500EADEA2 /* ProfileImageView.swift */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
@@ -49,6 +47,7 @@
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
 		14CDC8142F976A1800BF1BDF /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14CDC8132F976A1800BF1BDF /* MobileBankingSDK */; };
+		14CDCDAF2F97A33A00BF1BDF /* SignUpScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
 		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
 		14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D8165E2F73C30300B7D1EF /* ActionCard.swift */; };
@@ -63,7 +62,6 @@
 		14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */; };
 		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
 		14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */; };
-		14EAD8032F8D21B9001380EF /* JWTGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EAD8022F8D21B9001380EF /* JWTGenerator.swift */; };
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
 /* End PBXBuildFile section */
 
@@ -99,13 +97,11 @@
 
 /* Begin PBXFileReference section */
 		140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		1420296A2F9616C800A72366 /* SignUpScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpScreen.swift; sourceTree = "<group>"; };
 		1420296C2F9616D600A72366 /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewModel.swift; sourceTree = "<group>"; };
 		142029702F96256800A72366 /* GetStartedInfoScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedInfoScreen.swift; sourceTree = "<group>"; };
 		142029712F96256800A72366 /* OTPScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPScreen.swift; sourceTree = "<group>"; };
 		142337B92F5807890030B4E7 /* ChoiceScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceScreen.swift; sourceTree = "<group>"; };
 		142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberScreen.swift; sourceTree = "<group>"; };
-		142337BD2F5807FB0030B4E7 /* OTPScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPScreen.swift; sourceTree = "<group>"; };
 		142864562F92251B006F8C39 /* TokenRefreshable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefreshable.swift; sourceTree = "<group>"; };
 		1445791A2F6D430500EADEA2 /* ProfileImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageView.swift; sourceTree = "<group>"; };
 		1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinInputAlertPresenter.swift; sourceTree = "<group>"; };
@@ -138,6 +134,7 @@
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14C623DE2F6AC39100D0B719 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		14C623E02F6AC7AC00D0B719 /* StatusRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusRow.swift; sourceTree = "<group>"; };
+		14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpScreen.swift; sourceTree = "<group>"; };
 		14D36C582F7AAF150024760F /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
 		14D36C592F7AAF150024760F /* SkeletonViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonViews.swift; sourceTree = "<group>"; };
 		14D8165E2F73C30300B7D1EF /* ActionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionCard.swift; sourceTree = "<group>"; };
@@ -152,7 +149,6 @@
 		14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderProvider.swift; sourceTree = "<group>"; };
 		14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
 		14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberValidator.swift; sourceTree = "<group>"; };
-		14EAD8022F8D21B9001380EF /* JWTGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTGenerator.swift; sourceTree = "<group>"; };
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
@@ -326,7 +322,6 @@
 				14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */,
 				1468195E2F4DE6CF00BED014 /* AppInfo.swift */,
 				14DBC5912F50204D000D84FD /* SecureLogger.swift */,
-				14EAD8022F8D21B9001380EF /* JWTGenerator.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -367,8 +362,8 @@
 		1468196B2F4DE6CF00BED014 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				1420296A2F9616C800A72366 /* SignUpScreen.swift */,
 				142029702F96256800A72366 /* GetStartedInfoScreen.swift */,
+				14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */,
 				142029712F96256800A72366 /* OTPScreen.swift */,
 				142337B92F5807890030B4E7 /* ChoiceScreen.swift */,
 				142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */,
@@ -696,11 +691,11 @@
 				14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */,
 				14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */,
 				14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */,
+				14CDCDAF2F97A33A00BF1BDF /* SignUpScreen.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,
-				14EAD8032F8D21B9001380EF /* JWTGenerator.swift in Sources */,
 				14716FFE2F86671600198064 /* PlaidService.swift in Sources */,
 				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
 				14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */,

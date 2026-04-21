@@ -51,6 +51,17 @@ final class VCardViewModel: BaseViewModel {
         }
     }
 
+    func getVCardsAll() async throws -> [VCardListResponse] {
+        do {
+            let response: VCardListAllResponse = try await perform { try await self.network.request(VCardAPI.getVCardsList) }
+            analytics.log(AnalyticsEvent.vcardViewed)
+            return response.data ?? []
+        } catch {
+            analytics.log(AnalyticsEvent.vcardFetchFailed)
+            throw error
+        }
+    }
+
     // MARK: - Vcard post
 
     func postVCard(request: VCardsRequest) async throws -> VCardsList {
@@ -65,6 +76,22 @@ final class VCardViewModel: BaseViewModel {
             analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
                 AnalyticsParam.accountId: request.accountId
             ])
+            throw error
+        }
+    }
+    
+    func createVCard(request: CreateVCardRequest) async throws -> VCardsList {
+        do {
+            let response: VCardsResponse = try await perform { try await self.network.request(VCardAPI.createVCard(request: request)) }
+            guard let card = response.data?.first else { throw NetworkError.decodingError }
+//            analytics.log(AnalyticsEvent.vcardCreated, params: [
+//                AnalyticsParam.accountId: request.accountId
+//            ])
+            return card
+        } catch {
+//            analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
+//                AnalyticsParam.accountId: request.accountId
+//            ])
             throw error
         }
     }
