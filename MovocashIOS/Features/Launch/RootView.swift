@@ -74,11 +74,11 @@ struct RootView: View {
                 case .emailOTP:
                     OTPScreen(
                         title: "Verify email",
-                        subtitle: "A 4-digit verification code was sent to your email",
-                        maxLength: 4,
+                        subtitle: "A 6-digit verification code was sent to your email",
+                        maxLength: 6,
                         isLoading: false,
                         onVerify: { _ in
-                            appState.flow = .getStartedInfo
+                            appState.flow = .setupPasscode
                         },
                         onResend: { /* dummy — no API yet */ },
                         onBack: { appState.flow = .signupDetails }
@@ -95,7 +95,13 @@ struct RootView: View {
                                 appState.flow = .choice
                             }
                         },
-                        onBack: { appState.flow = .emailOTP }
+                        onBack: {
+                            Task {
+                                await sessionManager.logout(appState: appState)
+                                lockManager.logout()
+                                appState.flow = .choice
+                            }
+                        }
                     )
 
                     // ── Step 1: set + confirm passcode ─────────────────────────
@@ -126,8 +132,7 @@ struct RootView: View {
                             appState.flow = .getStartedInfo
                         },
                         onContinue: {
-                            appState.flow = .setupPasscode
-                            Task { await pushManager.requestPermission() }
+                            appState.flow = .kyc
                         }
                     )
 
@@ -214,7 +219,8 @@ struct RootView: View {
     private func advanceAfterSecurity() {
         switch appState.context {
         case .getStarted:
-            appState.flow = .kyc
+            Task { await pushManager.requestPermission() }
+            appState.flow = .getStartedInfo
         default:
             // Login user re-establishing passcode after logout — KYC already done.
             UserDefaults.standard.set(true, forKey: "kycCompleted")

@@ -38,7 +38,7 @@ extension Color {
     static let secondaryTextSwiftUI = Color(.gray)
     
     // MARK: - Input
-    static let inputBackground = UIColor(white: 0.12, alpha: 1)
+    static let inputBackground = Color(#colorLiteral(red: 0.9463850856, green: 0.9463850856, blue: 0.9463850856, alpha: 1))
     static let inputText = UIColor.white
     static let inputPlaceholder = UIColor.gray
     
@@ -63,7 +63,6 @@ extension Color {
     static let lightGreen = Color(red: 102/255, green: 255/255, blue: 178/255)
     
     // MARK: - Background
-    static let appBackground = Color(red: 245/255, green: 247/255, blue: 250/255)
     static let cardBackground = Color.white
     static let softBackground = Color(red: 230/255, green: 235/255, blue: 240/255)
     
@@ -80,4 +79,6 @@ extension Color {
     static let preTcolor = Color(#colorLiteral(red: 0.04898288101, green: 0.04898288101, blue: 0.04898288101, alpha: 1))
     
     static let secTcolor = Color(#colorLiteral(red: 0.501960814, green: 0.501960814, blue: 0.501960814, alpha: 1))
+    
+    static let appBackground = Color(#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1))
 }

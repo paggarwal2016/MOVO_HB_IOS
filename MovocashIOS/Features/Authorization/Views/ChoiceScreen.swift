@@ -26,7 +26,7 @@ struct ChoiceScreen: View {
                 Text("Welcome to MovoCash")
                     .titleStyle()
                 
-                Text("Send to spend")
+                Text("Send to Spend")
                     .subtitleStyle()
                 
             }

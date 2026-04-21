@@ -11,7 +11,7 @@ import SwiftUI
 struct BalanceCardView: View {
 
     let account: SavingsAccountDetailsResponse
-    var backgroundColor: Color = Color(#colorLiteral(red: 0.8984523416, green: 0.8984523416, blue: 0.8984523416, alpha: 1))
+    var backgroundColor: Color = Color(#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1))
     var onCardTap: () -> Void
     var onPrimaryTap: () -> Void
     var onViewCardTap: () -> Void
@@ -34,7 +34,7 @@ struct BalanceCardView: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
                             .padding(7)
-                            .background(Color(#colorLiteral(red: 0.8661081791, green: 0.8661081791, blue: 0.8661081791, alpha: 1)))
+                            .background(Color(#colorLiteral(red: 0.9471818805, green: 0.9471818805, blue: 0.9471818805, alpha: 1)))
                             .clipShape(RoundedRectangle(cornerRadius: 7))
                     }
                     .buttonStyle(.plain)
