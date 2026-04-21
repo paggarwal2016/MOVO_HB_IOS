@@ -63,19 +63,20 @@ final class AuthViewModel: ObservableObject {
     
     // MARK: - Validate OTP
     
-    func validateOTP(code: String) async throws -> RefreshTokenResponse  {
-        guard state != .loading else { throw ModelError.alreadyLoading }
+    func validateOTP(code: String) async throws -> RefreshTokenResponse {
+        guard state == .idle || state == .otpSent else { throw ModelError.alreadyLoading }
         state = .loading
-        
+
+        let phone = phoneNumber  // capture before suspend point
+
         do {
             let response: RefreshTokenResponse = try await network.request(
-                AuthAPI.tokenSMS(phoneNumber: phoneNumber, code: code)
+                AuthAPI.tokenSMS(phoneNumber: phone, code: code)
             )
-            self.state = .verified
-            reset()
+            await MainActor.run { self.state = .verified }
             return response
         } catch {
-            state = .idle
+            await MainActor.run { self.state = .idle }
             throw error
         }
     }
@@ -95,7 +96,7 @@ final class AuthViewModel: ObservableObject {
 
             analytics.trackLogin(method: .otp)
             try await kycManager.configureSDK(officeId: AppConfig.officeId)
-            let destination: AuthFlow = context == .login ? .home : .setupPasscode
+            let destination: AuthFlow = context == .login ? .home : .signupDetails
             reset()
             onNavigate(destination)
         } catch {

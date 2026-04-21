@@ -6,70 +6,102 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct PickDocumentView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
-    
+
     var onBack: () -> Void
     var onContinue: () -> Void
-    
+
+    @State private var selectedDocument: String? = nil
+
+    private let options: [(icon: String, title: String)] = [
+        ("car",        "Driver's License"),
+        ("globe",      "Passport"),
+        ("creditcard", "National ID")
+    ]
+
     var body: some View {
         ZStack {
-            Color(uiColor: .systemBackground).ignoresSafeArea()
-            
+            Color(.systemBackground).ignoresSafeArea()
+
             VStack(spacing: 0) {
                 // ── Top bar ────────────────────────────────────────────────
                 HStack {
-                    BackButton {
-                        //TODO: Future Implementation will check below code logic
-                        Task {
-                            lockManager.logout()
-                            await sessionManager.logout(appState: appState)
-                            appState.flow = .getStartedPhone
-                        }
-                    }
+                    BackButton { onBack() }
                     Spacer()
                 }
+                .padding(.horizontal)
+                .padding(.top)
+
                 Spacer()
-                
-                // ── Icon ───────────────────────────────────────────────────
-                Image(systemName: "person.text.rectangle")
-                    .font(.system(size: 72, weight: .ultraLight))
-                    .foregroundStyle(Color.primary)
-                    .padding(.bottom, 32)
-                
-                // ── Title ──────────────────────────────────────────────────
-                Text("Verify Your Identity")
-                    .font(.title2.bold())
-                    .padding(.bottom, 12)
-                
-                // ── Subtitle ───────────────────────────────────────────────
-                Text("Pick a document to verify your identity. Make sure it's valid and clearly readable.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                
-                Spacer().frame(height: 40)
-                
+
+                // ── Header ─────────────────────────────────────────────────
+                VStack(spacing: 16) {
+                    Image(systemName: "person.text.rectangle")
+                        .font(.system(size: 64, weight: .ultraLight))
+                        .foregroundStyle(Color.primary)
+
+                    Text("Verify Your Identity")
+                        .font(.title2.bold())
+
+                    Text("Pick a document to verify your identity.\nMake sure it's valid and clearly readable.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+
+                Spacer()
+
                 // ── Document options ───────────────────────────────────────
                 VStack(spacing: 12) {
-                    DocumentOptionRow(icon: "car", title: "Driver's License")
-                    DocumentOptionRow(icon: "globe", title: "Passport")
-                    DocumentOptionRow(icon: "creditcard", title: "National ID")
+                    ForEach(options, id: \.title) { option in
+                        DocumentOptionRow(
+                            icon: option.icon,
+                            title: option.title,
+                            isSelected: selectedDocument == option.title
+                        ) {
+                            selectedDocument = option.title
+                        }
+                    }
                 }
-                .padding(.horizontal, 24)
-                
+                .padding(.horizontal)
+
                 Spacer()
-                
-                PrimaryButton(title: "Continue") {
+
+                // ── Info card ──────────────────────────────────────────────
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 18))
+                        .foregroundColor(.primary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("You'll need photo ID")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.preTcolor)
+                        Text("Please have your passport, driver's license, or state ID handy.")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secTcolor)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                .padding(.horizontal)
+
+                Spacer()
+
+                // ── Continue ───────────────────────────────────────────────
+                PrimaryButton(title: "Continue", isEnabled: selectedDocument != nil) {
                     onContinue()
                 }
+                .disabled(selectedDocument == nil)
+                .padding(.horizontal)
+                .padding(.bottom)
             }
-            .padding()
         }
     }
 }
@@ -79,27 +111,42 @@ struct PickDocumentView: View {
 private struct DocumentOptionRow: View {
     let icon: String
     let title: String
-    
+    let isSelected: Bool
+    let onTap: () -> Void
+
     var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .light))
-                .foregroundStyle(Color.primary)
-                .frame(width: 32)
-            
-            Text(title)
-                .font(.body)
-                .foregroundStyle(Color.primary)
-            
-            Spacer()
-            
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 20))
-                .foregroundStyle(Color.primary.opacity(0.3))
+        Button(action: onTap) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .light))
+                    .foregroundStyle(Color.primary)
+                    .frame(width: 32)
+
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(Color.primary)
+
+                Spacer()
+
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.25))
+                    .animation(.easeInOut(duration: 0.15), value: isSelected)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(
+                isSelected
+                    ? Color.primary.opacity(0.06)
+                    : Color(.secondarySystemBackground)
+            )
+            .clipShape(RoundedCorner(radius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.primary : Color.clear, lineWidth: 1.5)
+            )
+            .animation(.easeInOut(duration: 0.15), value: isSelected)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedCorner(radius: 12))
+        .buttonStyle(.plain)
     }
 }

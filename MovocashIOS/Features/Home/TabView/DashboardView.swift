@@ -39,7 +39,8 @@ struct DashboardView: View {
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
     @State private var showAccountDetail = false
-    @State private var showCreateView = false
+    @State private var showTransactions = false
+    @State private var showCreateCashCard = false
     @State private var showEditNickname = false
     
     @State private var showViewCard = false
@@ -49,6 +50,7 @@ struct DashboardView: View {
     @State private var showFundAccount = false
 
     @State private var showContactList = false
+    @State private var showInternalTransfer = false
     
     @State private var showViewCardList = false
     
@@ -72,15 +74,16 @@ struct DashboardView: View {
             }
         }
         .overlay { overlayContent }
-        .textInputAlert(
-            isPresented: $showCreateView,
-            title: "Create Cash Card",
-            message: "Enter a name for your new cash card account.",
-            placeholder: "Type here...",
-            onCreate: { name in
-                Task { await savingVM.createAccount(name: name) }
-            }
-        )
+        .sheet(isPresented: $showCreateCashCard) {
+            CreateCashCardView(
+                onCancel: { showCreateCashCard = false },
+                onCreate: { nickname, pin in
+                    await createCashCard(nickname: nickname, pin: pin)
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .textInputAlert(
             isPresented: $showEditNickname,
             title: "Edit Nickname",
@@ -93,13 +96,20 @@ struct DashboardView: View {
             }
         )
         .overlay {
-            if savingVM.state == .loading {
+            if savingVM.state == .loading && !showCreateCashCard {
                 SpinnerView()
             }
         }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
-                SavingAccountDetailView(accountId: account.id, container: container)
+                SavingAccountDetailView(accountId: account.id, showAccountCard: true, container: container)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(isPresented: $showTransactions) {
+            if let account = displayAccount {
+                SavingAccountDetailView(accountId: account.id, showAccountCard: false, container: container)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
@@ -145,6 +155,21 @@ struct DashboardView: View {
                 .presentationDragIndicator(.visible)
             }
         }
+        .sheet(isPresented: $showInternalTransfer) {
+            if let account = displayAccount {
+                InternalTransferView(
+                    toClientId: account.clientId,
+                    fromAccount: account,
+                    nonPrimaryAccounts: savingVM.accountList?.accounts.filter({ !$0.isPrimary }) ?? [],
+                    container: container,
+                    onDismiss: {
+                        Task { await loadData() }
+                    }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
         .sheet(isPresented: $showMoveMoney) {
             MoveMoneyMenuView(
                 onFundAccount: {
@@ -157,6 +182,12 @@ struct DashboardView: View {
                     showMoveMoney = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                         showContactList = true
+                    }
+                },
+                onInternalTransfer: {
+                    showMoveMoney = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        showInternalTransfer = true
                     }
                 }
             )
@@ -171,7 +202,7 @@ struct DashboardView: View {
             await handleOnTask()
         }
         .onAppear {
-            showCreateView = false
+            showCreateCashCard = false
         }
     }
     
@@ -200,56 +231,37 @@ struct DashboardView: View {
         if let account = displayAccount {
             BalanceCardView(
                 account: account,
-                onCardTap: { showAccountDetail = true },
-                onPrimaryTap: { showPrimaryAccountDetails = true },
+                onCardTap: { showPrimaryAccountDetails = true },
+                onPrimaryTap: { showEditNickname = true },
                 onViewCardTap: { showViewCard = true }
             )
-            
-            PrimaryButton(
-                title: "Create Cash Card",
-                backgroundColor: Color.softBlue.opacity(0.1),
-                textColor: .black
-            ) {
-                showCreateView = true
-            }
-            .padding()
-            .frame(height: 60)
-            
-            if isViewCashAccount {
-                PrimaryButton(
-                    title: "View Cash Cards",
-                    backgroundColor: .gray.opacity(0.1),
-                    textColor: .black
-                ) {
-                    showAccountList = true
+
+            // ── Quick actions ──────────────────────────────────────────────
+            HStack(spacing: 12) {
+                quickActionButton(icon: "list.bullet.rectangle", title: "Transactions") {
+                    showTransactions = true
                 }
-                .padding()
-                .frame(height: 60)
+                quickActionButton(icon: "person.text.rectangle", title: "Move Money") {
+                    showMoveMoney = true
+                }
             }
-            
-            PrimaryButton(
-                title: "View Cards",
-                backgroundColor: .orange.opacity(0.1),
-                textColor: .black
-            ) {
-                showViewCardList = true
-            }
-            .padding()
-            .frame(height: 60)
-            
-            PrimaryButton(
-                title: "Move Money",
-                backgroundColor: .red.opacity(0.1),
-                textColor: .black
-            ) {
-                showMoveMoney = true
-            }
-            .padding()
-            .frame(height: 60)
+            .padding(.horizontal, 15)
+
+            cashCardPromoCard
+//            
+//            PrimaryButton(
+//                title: "View Cards",
+//                backgroundColor: .orange.opacity(0.1),
+//                textColor: .black
+//            ) {
+//                showViewCardList = true
+//            }
+//            .padding()
+//            .frame(height: 60)
                         
-            ActionCard(title: "Quick Transfers",
+            ActionCard(title: "Pay Anyone",
                        description: "Send money instantly to anyone in your contact list.",
-                       buttonLabel: "Add people") {
+                       buttonLabel: "Send Money") {
                 showContactList = true
                 SecureLogger.debug("Quick transfer tapped", category: .general)
             }
@@ -267,6 +279,74 @@ struct DashboardView: View {
     }
     
     
+    // MARK: - Cash Card Promo Card
+
+    private var cashCardPromoCard: some View {
+        VStack(spacing: 0) {
+
+            // Top — image + title/description
+            Button {
+                showCreateCashCard = true
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "creditcard.fill")
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundStyle(Color(.systemGray2))
+                        .padding(.top, 2)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Create Card")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.primary)
+                        Text("Create a new virtual cash card for instant payments.")
+                            .font(.system(size: 13))
+                            .foregroundColor(.gray)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer()
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isViewCashAccount {
+                Divider()
+                    .padding(.horizontal, 16)
+
+                // Bottom — view cash cards (full-width tap area)
+                Button {
+                    //showAccountList = true
+                    showViewCardList = true
+                } label: {
+                    HStack {
+                        Text("View Cash Cards")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
+        .padding(.horizontal, 15)
+    }
+
     // MARK: - Overlay
     
     @ViewBuilder
@@ -293,5 +373,49 @@ struct DashboardView: View {
 
     private func loadData() async {
         await savingVM.loadAccounts()
+    }
+
+    private func createCashCard(nickname: String, pin: String) async {
+        do {
+            let account = try await savingVM.createSavingAccount(
+                request: SavingsAccountRequest.CreateAccount(nickname: nickname)
+            )
+            _ = try await vm.postVCard(
+                request: VCardsRequest(pin: pin, accountId: account.id)
+            )
+            showCreateCashCard = false
+            await savingVM.loadAccounts()
+            ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
+        } catch {
+            ToastManager.shared.show("Failed to create cash card. Please try again.", style: .error, position: .bottom)
+        }
+    }
+
+    @ViewBuilder
+    private func quickActionButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.black)
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.black)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(.systemGray5), lineWidth: 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }

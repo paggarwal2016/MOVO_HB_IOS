@@ -13,14 +13,26 @@ struct ChoiceScreen: View {
     @EnvironmentObject var authVM: AuthViewModel
 
     var body: some View {
-        VStack(spacing: 40) {
-            Text("Welcome to MovoCash")
-                .font(.title)
-                .bold()
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-
+        VStack(spacing: 25) {
+                        
+            Image("logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 150, height: 150)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .offset(y: -10)
+            
+            VStack(alignment: .center, spacing: 10) {
+                Text("Welcome to MovoCash")
+                    .titleStyle()
+                
+                Text("Send to Spend")
+                    .subtitleStyle()
+                
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal)
+            
             PrimaryButton(title: "Get Started") {
                 appState.flow = .getStartedPhone
             }
@@ -31,16 +43,15 @@ struct ChoiceScreen: View {
                 appState.flow = .loginPhone
             }
 
-            // Show biometric login only when RSA keys are already enrolled
-            if RSAKeyManager.shared.keysExist() {
-                Button {
-                    Task { await authVM.loginWithBiometric(appState: appState) }
-                } label: {
-                    Label("Sign in with Face ID", systemImage: "faceid")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
-                }
-            }
+//            if RSAKeyManager.shared.keysExist() {
+//                Button {
+//                    Task { await authVM.loginWithBiometric(appState: appState) }
+//                } label: {
+//                    Label("Sign in with Face ID", systemImage: "faceid")
+//                        .font(.subheadline.bold())
+//                        .foregroundStyle(.primary)
+//                }
+//            }
         }
         .padding()
     }

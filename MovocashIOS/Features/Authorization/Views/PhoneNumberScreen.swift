@@ -27,12 +27,14 @@ struct PhoneNumberScreen: View {
                     }
                     Spacer()
                 }
-
-                Text("Tell us your mobile number")
-                    .font(.largeTitle.bold())
-
-                Text("We'll text you a code so we can confirm that it's you.")
-                    .font(.headline.bold())
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Tell us your mobile number")
+                        .titleStyle()
+                    
+                    Text("We'll text you a code so we can confirm that it's you.")
+                        .subtitleStyle()
+                }
 
                 HStack {
                     Text("+1")

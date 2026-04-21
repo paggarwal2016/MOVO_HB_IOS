@@ -30,7 +30,7 @@ final class KYCViewModel: ObservableObject {
     func startVerification(onSuccess: @escaping () -> Void, onFailure: @escaping () -> Void) async {
         analytics.trackKYCStarted()
         do {
-            _ = try await kycManager.start()
+            try await kycManager.start()
             analytics.trackKYCCompleted(step: .idVerified)
             onSuccess()
         } catch _ as KYCError {
