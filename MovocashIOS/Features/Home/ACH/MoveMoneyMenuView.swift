@@ -35,7 +35,7 @@ struct MoveMoneyMenuView: View {
 
             optionRow(
                 icon: "person.2",
-                title: "Transfer Money",
+                title: "Pay Anyone",
                 subtitle: "Send money to a contact",
                 action: onTransferMoney
             )
@@ -44,7 +44,7 @@ struct MoveMoneyMenuView: View {
 
             optionRow(
                 icon: "arrow.left.arrow.right",
-                title: "Internal Transfer",
+                title: "Transfer Money",
                 subtitle: "Move money between your accounts",
                 action: onInternalTransfer,
                 bottomPadding: 8

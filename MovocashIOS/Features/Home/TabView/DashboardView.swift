@@ -248,7 +248,7 @@ struct DashboardView: View {
             .padding(.horizontal, 15)
 
             cashCardPromoCard
-            
+//            
 //            PrimaryButton(
 //                title: "View Cards",
 //                backgroundColor: .orange.opacity(0.1),
@@ -317,7 +317,8 @@ struct DashboardView: View {
 
                 // Bottom — view cash cards (full-width tap area)
                 Button {
-                    showAccountList = true
+                    //showAccountList = true
+                    showViewCardList = true
                 } label: {
                     HStack {
                         Text("View Cash Cards")
