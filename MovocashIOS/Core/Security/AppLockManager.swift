@@ -205,10 +205,14 @@ final class AppLockManager: ObservableObject {
 
     // MARK: - Convenience
 
-    var isPasscodeSet: Bool        { passcodeManager.isPasscodeSet }
-    var isBiometricAvailable: Bool { biometricManager.isAvailable }
-    var biometricType: BiometricType { biometricManager.biometricType }
-    var isBiometricEnabled: Bool   { passcodeManager.isBiometricKeyEnrolled }
+    var isPasscodeSet: Bool              { passcodeManager.isPasscodeSet }
+    var isBiometricAvailable: Bool       { biometricManager.isAvailable }
+    var isBiometricHardwarePresent: Bool { biometricManager.isHardwarePresent }
+    var biometricType: BiometricType     { biometricManager.biometricType }
+    var hardwareBiometricType: BiometricType { biometricManager.hardwareBiometricType }
+    var isBiometricEnabled: Bool         { passcodeManager.isBiometricKeyEnrolled }
+    var isBiometricPermissionDenied: Bool { biometricManager.isAppPermissionDenied }
+    var maxPasscodeAttempts: Int         { config.maxAttempts }
 
     // MARK: - App Lifecycle
 
@@ -544,3 +548,4 @@ enum AppLockError: LocalizedError {
     case wrongPasscode
     var errorDescription: String? { "Incorrect passcode" }
 }
+

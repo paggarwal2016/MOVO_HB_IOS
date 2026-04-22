@@ -69,6 +69,13 @@ enum BiometricError: LocalizedError {
 protocol BiometricManaging {
     var biometricType: BiometricType { get }
     var isAvailable: Bool { get }
+    /// True if the device has biometric hardware even when not enrolled in iOS Settings
+    var isHardwarePresent: Bool { get }
+    /// Biometric type reported by hardware, even when not enrolled in iOS Settings
+    var hardwareBiometricType: BiometricType { get }
+    /// True when the user has explicitly denied biometric permission for this app
+    /// in iOS Settings → Privacy → Face ID (or Touch ID).
+    var isAppPermissionDenied: Bool { get }
     func evaluate(reason: String) async throws
 }
 
@@ -101,6 +108,56 @@ final class BiometricManager: BiometricManaging, Sendable {
         let ctx = LAContext()
         var error: NSError?
         return ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+    }
+
+    var isHardwarePresent: Bool {
+        let ctx = LAContext()
+        var error: NSError?
+        let canEvaluate = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        if canEvaluate { return true }
+        guard let laError = error as? LAError else { return false }
+        switch laError.code {
+        case .biometryNotEnrolled:
+            // Hardware present but the user has not enrolled Face ID / Touch ID
+            // in device Settings (Face ID & Passcode).
+            return true
+        case .biometryNotAvailable:
+            // Two sub-cases share this code:
+            //   (a) no biometric hardware on device  → biometryType == .none
+            //   (b) app permission revoked in iOS Settings → biometryType == .faceID/.touchID
+            // biometryType reflects physical hardware regardless of permission or enrollment.
+            return ctx.biometryType != .none
+        default:
+            return false
+        }
+    }
+
+    var hardwareBiometricType: BiometricType {
+        let ctx = LAContext()
+        var error: NSError?
+        ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        switch ctx.biometryType {
+        case .faceID:  return .faceID
+        case .touchID: return .touchID
+        default:
+            if #available(iOS 17.0, *), ctx.biometryType == .opticID { return .faceID }
+            return .none
+        }
+    }
+
+    var isAppPermissionDenied: Bool {
+        let ctx = LAContext()
+        var error: NSError?
+        let canEvaluate = ctx.canEvaluatePolicy(
+            .deviceOwnerAuthenticationWithBiometrics, error: &error
+        )
+        if canEvaluate { return false }
+        guard let laError = error as? LAError else { return false }
+        // Permission revoked in iOS Settings → Privacy → Face ID surfaces as
+        // biometryNotAvailable (not biometryNotEnrolled). biometryType remains
+        // non-none because the hardware and device-level enrollment still exist —
+        // only this app's access has been removed.
+        return laError.code == .biometryNotAvailable && ctx.biometryType != .none
     }
 
     // MARK: - Evaluate
@@ -142,3 +199,4 @@ final class BiometricManager: BiometricManaging, Sendable {
         }
     }
 }
+

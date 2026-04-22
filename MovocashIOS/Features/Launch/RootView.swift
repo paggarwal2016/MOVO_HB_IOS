@@ -109,8 +109,10 @@ struct RootView: View {
                     PasscodeSetupView(
                         vm: passcodeSetupVM,
                         onSuccess: {
-                            // Passcode confirmed — move to biometric opt-in
-                            if lockManager.isBiometricAvailable {
+                            // Show biometric enrollment whenever hardware is present or available.
+                            // BiometricEnrollView handles the permission-denied case internally
+                            // by redirecting the user to iOS Settings instead of triggering a prompt.
+                            if lockManager.isBiometricAvailable || lockManager.isBiometricHardwarePresent {
                                 appState.flow = .enableBiometrics
                             } else {
                                 advanceAfterSecurity()
@@ -150,9 +152,18 @@ struct RootView: View {
             .animation(.easeInOut, value: appState.flow)
 
             // ── Lock overlay (returning users / background lock) ───────────
-            // Suppressed during new-user registration arrival to prevent
-            // spurious lock overlays caused by KYC UIViewController teardown.
-            if lockManager.state == .locked && appState.flow != .splash && !appState.isNewRegistration && !UserDefaults.standard.bool(forKey: "kycInProgress") {
+            // Suppressed during:
+            //  • splash screen
+            //  • first-time setup flows — user set a passcode moments ago and
+            //    has not yet reached home, so locking mid-enrollment is wrong
+            //  • new-user KYC arrival (prevents spurious lock from UIViewController teardown)
+            //  • active KYC scan
+            let isInSetupFlow = appState.flow == .setupPasscode || appState.flow == .enableBiometrics
+            if lockManager.state == .locked
+                && appState.flow != .splash
+                && !isInSetupFlow
+                && !appState.isNewRegistration
+                && !UserDefaults.standard.bool(forKey: "kycInProgress") {
                 AppLockView(vm: lockVM, autoTriggerBiometric: false)
                     .transition(.opacity)
                     .zIndex(10)
@@ -228,3 +239,4 @@ struct RootView: View {
         }
     }
 }
+

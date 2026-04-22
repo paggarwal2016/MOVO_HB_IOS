@@ -129,9 +129,16 @@ struct SecuritySettingsView: View {
 
     // MARK: - Biometric section
 
+    private var effectiveBiometricType: BiometricType {
+        lockManager.isBiometricAvailable
+            ? lockManager.biometricType
+            : lockManager.hardwareBiometricType
+    }
+
     @ViewBuilder
     private var biometricSection: some View {
-        if lockManager.isBiometricAvailable {
+        let bioType = effectiveBiometricType
+        if lockManager.isBiometricAvailable || lockManager.isBiometricHardwarePresent {
             Section {
                 if lockManager.isBiometricEnabled {
                     // Toggle off
@@ -139,11 +146,39 @@ struct SecuritySettingsView: View {
                         showDisableBiometricAlert = true
                     } label: {
                         settingsRow(
-                            icon: lockManager.biometricType.systemImageName,
+                            icon: bioType.systemImageName,
                             iconColor: .orange,
-                            title: "Disable \(lockManager.biometricType.displayName)"
+                            title: "Disable \(bioType.displayName)"
                         )
                         .foregroundStyle(.orange)
+                    }
+                } else if lockManager.isBiometricPermissionDenied {
+                    // App permission revoked in iOS Settings → Privacy → Face ID / Touch ID
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        settingsRow(
+                            icon: bioType.systemImageName,
+                            iconColor: .gray,
+                            title: "Enable \(bioType.displayName) Access"
+                        )
+                    }
+                } else if !lockManager.isBiometricAvailable && lockManager.isBiometricHardwarePresent {
+                    // Hardware present but not configured in iOS Settings
+                    Button {
+                        guard lockManager.isPasscodeSet else {
+                            lockManager.showTemporaryError("Set a passcode first to enable biometrics.")
+                            return
+                        }
+                        route = .enrollBiometric
+                    } label: {
+                        settingsRow(
+                            icon: bioType.systemImageName,
+                            iconColor: .blue,
+                            title: "Set Up \(bioType.displayName)"
+                        )
                     }
                 } else {
                     // Toggle on
@@ -155,18 +190,24 @@ struct SecuritySettingsView: View {
                         route = .enrollBiometric
                     } label: {
                         settingsRow(
-                            icon: lockManager.biometricType.systemImageName,
+                            icon: bioType.systemImageName,
                             iconColor: .blue,
-                            title: "Enable \(lockManager.biometricType.displayName)"
+                            title: "Enable \(bioType.displayName)"
                         )
                     }
                 }
             } header: {
                 Text("Biometrics")
             } footer: {
-                Text(lockManager.isBiometricEnabled
-                     ? "\(lockManager.biometricType.displayName) is active for quick unlock."
-                     : "Use \(lockManager.biometricType.displayName) instead of typing your passcode each time.")
+                if lockManager.isBiometricEnabled {
+                    Text("\(bioType.displayName) is active for quick unlock.")
+                } else if lockManager.isBiometricPermissionDenied {
+                    Text("MovoCash doesn't have permission to use \(bioType.displayName). Tap above to enable it in iOS Settings.")
+                } else if !lockManager.isBiometricAvailable && lockManager.isBiometricHardwarePresent {
+                    Text("\(bioType.displayName) isn't configured in iOS Settings. Tap above to set it up.")
+                } else {
+                    Text("Use \(bioType.displayName) instead of typing your passcode each time.")
+                }
             }
         }
     }
@@ -185,7 +226,7 @@ struct SecuritySettingsView: View {
                 icon: "exclamationmark.shield",
                 iconColor: .gray,
                 title: "Failed Attempts",
-                detail: "\(lockManager.failedAttempts) / 5"
+                detail: "\(lockManager.failedAttempts) / \(lockManager.maxPasscodeAttempts)"
             )
         } header: {
             Text("Activity")
@@ -331,3 +372,4 @@ struct RemovePasscodeConfirmView: View {
         isLoading = false
     }
 }
+
