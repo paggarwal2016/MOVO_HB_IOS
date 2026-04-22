@@ -92,22 +92,22 @@ struct UserProfileView: View {
             accountStatusSection(profile)
             linkedBankAccountsSection
 
-            PrimaryButton(title: "Delete Account") {
-                AlertManager.shared.showConfirmation(
-                    title: "Delete",
-                    message: "Are you sure you want to permanently delete your account?",
-                    onConfirm: {
-                        Task {
-                            let success = await userVM.deleteAccount()
-                            if success {
-                                lockManager.logout()
-                                await sessionManager.logout(appState: appState)
-                                ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
-                            }
-                        }
-                    }
-                )
-            }
+//            PrimaryButton(title: "Delete Account") {
+//                AlertManager.shared.showConfirmation(
+//                    title: "Delete",
+//                    message: "Are you sure you want to permanently delete your account?",
+//                    onConfirm: {
+//                        Task {
+//                            let success = await userVM.deleteAccount()
+//                            if success {
+//                                lockManager.logout()
+//                                await sessionManager.logout(appState: appState)
+//                                ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
+//                            }
+//                        }
+//                    }
+//                )
+//            }
         }
         .listStyle(.insetGrouped)
     }
