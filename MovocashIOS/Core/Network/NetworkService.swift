@@ -238,7 +238,13 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.apiError(http.statusCode)
         }
         
-        // Decode successful response — treat 204 / empty body as `{}`
+        // 204 No Content — the resource genuinely does not exist yet.
+        // Callers that expect an optional result catch NetworkError.noContent.
+        if http.statusCode == 204 {
+            throw NetworkError.noContent
+        }
+
+        // Decode successful response — treat empty body on other 2xx as `{}`
         let decodableData = data.isEmpty ? Data("{}".utf8) : data
         do {
             return try JSONDecoder().decode(T.self, from: decodableData)

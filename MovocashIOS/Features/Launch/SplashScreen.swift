@@ -31,27 +31,22 @@ struct SplashScreen: View {
 
             switch result {
             case .restored:
-                let kycCompleted = UserDefaults.standard.bool(forKey: "kycCompleted")
-
-                guard kycCompleted else {
-                    // KYC not finished — log out silently and restart from the beginning.
-                    lockManager.logout()
+                // Keychain-backed passcode is the authoritative "setup complete" indicator.
+                // UserDefaults (kycCompleted) is cleared on reinstall but the Keychain persists,
+                // so we trust the passcode presence over the UserDefaults flag.
+                guard lockManager.isPasscodeSet else {
+                    // Tokens exist but no passcode — security setup was never finished.
+                    // Clear the session and send the user back to the start.
                     await sessionManager.logout(appState: appState)
                     appState.flow = .choice
                     return
                 }
 
-                if lockManager.state != .unlocked {
-                    lockManager.evaluateOnLaunch()
-                }
-                if lockManager.state == .locked {
-                    let rsaSuccess = await authVM.loginWithBiometric(appState: appState)
-                    if rsaSuccess {
-                        lockManager.unlockAfterRSAAuth()
-                    } else {
-                        await lockManager.unlockWithBiometric()
-                    }
-                }
+                // Passcode confirmed — sync UserDefaults in case it was wiped by a reinstall.
+                UserDefaults.standard.set(true, forKey: "kycCompleted")
+                // Ensure the lock is active — AppLockView will auto-trigger
+                // biometric (RSA → local fallback) once it appears.
+                lockManager.evaluateOnLaunch()
                 appState.flow = .home
 
             case .keychainLocked:
