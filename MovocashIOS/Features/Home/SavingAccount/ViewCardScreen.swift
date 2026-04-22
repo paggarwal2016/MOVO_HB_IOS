@@ -22,6 +22,7 @@ struct ViewCardScreen: View {
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
     }
     @State private var card: VCardsResponse?
+    @State private var isLoaded = false
     @State private var showCardDetail = false
     @State private var revealedCard: VCardsResponse?
     @State private var showAddCard = false
@@ -30,15 +31,6 @@ struct ViewCardScreen: View {
         ZStack {
             NavigationStack {
                 vcardSection
-                
-                if card != nil {
-                    PrimaryButton(title: "Activate your card") {
-                        showAddCard = true
-                    }
-                    .padding()
-                    .padding(.top, 40)
-                }
-                                
                 Spacer()
                     .navigationTitle("View Card")
                     .navigationBarTitleDisplayMode(.inline)
@@ -88,8 +80,28 @@ struct ViewCardScreen: View {
                     showCardDetail: $showCardDetail,
                     revealedCard: $revealedCard
                 )
+                
+                PrimaryButton(title: "Activate your card") {
+                    showAddCard = true
+                }
+                .padding()
+                .padding(.top, 40)
+            } else if isLoaded {
+                emptyCardState
             }
         }
+    }
+
+    private var emptyCardState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "creditcard")
+                .font(.system(size: 52, weight: .light))
+                .foregroundStyle(.secondary)
+            Text("No Card Yet")
+                .font(.title3.bold())
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
     }
     
     @ViewBuilder
@@ -105,6 +117,7 @@ struct ViewCardScreen: View {
     
     private func loadCard() async {
         do { card = try await vm.getVCardPrimary() } catch {}
+        isLoaded = true
     }
     
     private func addCard(pin: String) async {

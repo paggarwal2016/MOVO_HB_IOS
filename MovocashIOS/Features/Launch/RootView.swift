@@ -160,11 +160,11 @@ struct RootView: View {
             //  • active KYC scan
             let isInSetupFlow = appState.flow == .setupPasscode || appState.flow == .enableBiometrics
             if lockManager.state == .locked
-                && appState.flow != .splash
+                && appState.isAuthenticated
                 && !isInSetupFlow
                 && !appState.isNewRegistration
                 && !UserDefaults.standard.bool(forKey: "kycInProgress") {
-                AppLockView(vm: lockVM, autoTriggerBiometric: false)
+                AppLockView(vm: lockVM, autoTriggerBiometric: true)
                     .transition(.opacity)
                     .zIndex(10)
                     .ignoresSafeArea()

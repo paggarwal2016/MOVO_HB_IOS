@@ -26,15 +26,18 @@ final class VCardViewModel: BaseViewModel {
 
     // MARK: - Vcard get
 
-    func getVCardPrimary() async throws -> VCardsResponse {
-        do {
-            let response: VCardsResponse = try await perform { try await self.network.request(VCardAPI.getVCardsPrimary) }
-            analytics.log(AnalyticsEvent.vcardViewed)
-            return response
-        } catch {
-            analytics.log(AnalyticsEvent.vcardFetchFailed)
-            throw error
+    func getVCardPrimary() async throws -> VCardsResponse? {
+        var result: VCardsResponse?
+        try await perform {
+            do {
+                result = try await self.network.request(VCardAPI.getVCardsPrimary)
+                self.analytics.log(AnalyticsEvent.vcardViewed)
+            } catch NetworkError.noContent {
+                // 204 — user has no primary card yet; treat as success with no data
+            }
+            // Any other error propagates to perform {}, which shows a toast
         }
+        return result
     }
     
     // MARK: - Vcard All

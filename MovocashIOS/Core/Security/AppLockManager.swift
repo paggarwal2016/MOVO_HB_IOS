@@ -233,10 +233,10 @@ final class AppLockManager: ObservableObject {
                 // Short background and the user was already authenticated —
                 // resume seamlessly without asking for the passcode again.
                 state = .unlocked
-            } else if elapsed >= config.backgroundTimeout {
-                // Long background — trigger biometric (falls back to passcode).
-                Task { await unlockWithBiometric() }
             }
+            // For long background: state stays locked. AppLockView's
+            // autoTriggerBiometric will fire submitBiometric() (RSA → local
+            // fallback) when the overlay appears — no second prompt needed here.
             // If the user was on the lock screen when they backgrounded
             // (wasUnlockedWhenBackgrounded == false), we stay locked regardless
             // of elapsed time — they must complete the full passcode entry.
