@@ -200,7 +200,16 @@ struct BiometricEnrollView: View {
         // If keys are absent, roll back the local Secure Enclave key so both
         // sides stay in sync — the user will need to retry enrollment.
         if !RSAKeyManager.shared.keysExist() {
-            try? lockManager.revokeBiometrics()
+            do {
+                try lockManager.revokeBiometrics()
+            } catch {
+                // Secure Enclave key deletion failed — local state is now
+                // inconsistent (biometric enrolled locally, no RSA key on server).
+                // Force the user to log out and re-enroll so both sides resync.
+                errorMessage = "Enrollment failed and could not be fully rolled back. Please log out and try again."
+                isEnrolling = false
+                return
+            }
             errorMessage = "Enrollment incomplete. Check your connection and try again."
             isEnrolling = false
             return
