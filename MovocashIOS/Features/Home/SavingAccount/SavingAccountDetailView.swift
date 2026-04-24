@@ -12,33 +12,32 @@ import SwiftUI
 struct SavingAccountDetailView: View {
 
     let accountId: Int
-    var showAccountCard: Bool = true
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var transVM: TransactionViewModel
 
     init(accountId: Int, showAccountCard: Bool = true, container: AppContainer) {
         self.accountId = accountId
-        self.showAccountCard = showAccountCard
-        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
     }
-
-    @State private var copiedField: String?
 
     var body: some View {
         NavigationStack {
             Group {
-                if savingVM.state == .loading || transVM.state == .loading {
+                if transVM.state == .loading {
                     skeletonContent
-                } else if let detail = savingVM.accountDetail {
-                    detailContent(detail)
+                } else if transVM.transactions.isEmpty {
+                    EmptyStateView(
+                        image: "list.bullet.rectangle.portrait",
+                        title: "No Transactions",
+                        description: "Transaction history is not available."
+                    )
+                    .background(Color(.systemGroupedBackground).ignoresSafeArea())
                 } else {
-                    Color(.systemGroupedBackground).ignoresSafeArea()
+                    transactionList
                 }
             }
-            .navigationTitle(showAccountCard ? (savingVM.accountDetail?.nickname ?? "Account Details") : "Transactions")
+            .navigationTitle("Transactions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -55,172 +54,36 @@ struct SavingAccountDetailView: View {
 
     private var skeletonContent: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 12) {
-                AccountCardSkeleton()
-                VStack(spacing: 8) {
-                    ForEach(0..<4, id: \.self) { _ in
-                        TransactionRowSkeleton()
-                    }
+            VStack(spacing: 8) {
+                ForEach(0..<4, id: \.self) { _ in
+                    TransactionRowSkeleton()
                 }
-                .padding(.horizontal, 10)
             }
+            .padding(.horizontal, 10)
             .padding(.vertical, 10)
         }
         .background(Color(.systemGroupedBackground))
     }
 
-    // MARK: - Detail Content
+    // MARK: - Transaction List
 
-    @ViewBuilder
-    private func detailContent(_ detail: SavingsAccountInfo) -> some View {
+    private var transactionList: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 12) {
-                if showAccountCard {
-                    accountCard(detail)
+            VStack(spacing: 8) {
+                ForEach(transVM.transactions) { item in
+                    TransactionRow(item: item)
                 }
-                transactionSection
             }
+            .padding(.horizontal, 10)
             .padding(.vertical, 10)
         }
         .background(Color(.systemGroupedBackground))
-    }
-
-    // MARK: - Account Card
-
-    private func accountCard(_ detail: SavingsAccountInfo) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(LinearGradient(
-                    colors: [Color.primary, Color.primary.opacity(0.7)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .frame(height: 180)
-
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 140, height: 140)
-                .offset(x: -30, y: 30)
-
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 100, height: 100)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .offset(x: 20, y: -20)
-
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 6) {
-                    Text(detail.clientName)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white.opacity(0.9))
-
-                    if detail.isPrimary {
-                        Text("Primary")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(.white.opacity(0.2))
-                            .clipShape(Capsule())
-                    }
-
-                    Spacer()
-
-                    Text(detail.status.displayTitle)
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(.green.opacity(0.35))
-                        .clipShape(Capsule())
-                }
-
-                Spacer()
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("AVAILABLE BALANCE")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .tracking(1.2)
-                    Text(detail.formattedBalance)
-                        .font(.system(size: 25, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("ACCOUNT NO.")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .tracking(1.0)
-                        Text(detail.accountNumber)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.9))
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("ACCOUNT BALANCE")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .tracking(1.0)
-                        Text(detail.formattedAccountBalance)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.9))
-                    }
-                }
-            }
-            .padding(20)
-        }
-        .padding(.horizontal, 10)
-    }
-
-    // MARK: - Transaction Section
-
-    private var transactionSection: some View {
-        VStack(spacing: 0) {
-            
-            if !showAccountCard {
-                // MARK: List
-                let items = transVM.transactions
-
-                if items.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "tray")
-                            .font(.system(size: 32))
-                            .foregroundStyle(.secondary)
-                        Text("No transactions yet")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 32)
-                } else {
-                    VStack(spacing: 8) {
-                        ForEach(items) { item in
-                            TransactionRow(item: item)
-                        }
-                    }
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 5)
-                }
-            }
-        }
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 10)
     }
 
     // MARK: - Load
 
     private func loadDetail() async {
-        async let accountDetail: Void = savingVM.loadAccountDetail(accountID: accountId)
-        async let transactions: Void = transVM.loadTransactions(max: 50, accountId: accountId)
-        _ = await (accountDetail, transactions)
+        await transVM.loadTransactions(max: 100, accountId: accountId)
     }
 }
 

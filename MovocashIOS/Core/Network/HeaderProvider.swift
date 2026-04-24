@@ -32,6 +32,9 @@ struct HeaderType: OptionSet, Sendable {
 
     /// Adds `x-encrypt-response: true` header.
     static let encrypted = HeaderType(rawValue: 1 << 4)
+    
+    /// Adds `x-encrypt-response: true` header.
+    static let Idempotency = HeaderType(rawValue: 1 << 5)
 
     // MARK: - Named Combinations
 
@@ -49,6 +52,9 @@ struct HeaderType: OptionSet, Sendable {
 
     /// session-id + movo-info + office-id + x-encrypt-response
     static let movoAuthorizedAll: HeaderType = [.session, .movoInfo, .officeId, .encrypted]
+    
+    /// session-id + movo-info + office-id + x-encrypt-response
+    static let movoAuthorizedAllWithIdempotency: HeaderType = [.session, .movoInfo, .officeId, .encrypted, .Idempotency]
 
     /// Authorization: Bearer
     static let authorized: HeaderType = [.bearer]
@@ -87,6 +93,10 @@ struct HeaderProvider {
 
         if type.contains(.encrypted) {
             headers["x-encrypt-response"] = "true"
+        }
+        
+        if type.contains(.Idempotency) {
+            headers["X-Idempotency-Key"] = UUID().uuidString
         }
 
         return headers

@@ -213,6 +213,15 @@ actor NetworkService: NetworkServiceProtocol {
         SecureLogger.info("API Success.", category: .network)
         
         if http.statusCode == 401 {
+            let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data))?.message
+                ?? "Session expired. Please login again."
+            Task { @MainActor in
+                NotificationCenter.default.post(
+                    name: .sessionExpired,
+                    object: nil,
+                    userInfo: ["message": message]
+                )
+            }
             throw NetworkError.unauthorized
         }
         

@@ -56,7 +56,7 @@ final class SavingsAccountViewModel: BaseViewModel {
             let _: SuccessResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(
-                    SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId, userAction: ""))
+                    SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId, userAction: "UPDATE-ACCOUNT-NICKNAME"))
                 )
             }
             analytics.log(AnalyticsEvent.savingsNicknameUpdated, params: [

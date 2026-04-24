@@ -47,10 +47,12 @@ enum VCardAPI: Endpoint {
         switch self {
         case .vCardsProvision:
             return .movoAuthorized
-        case .getVCardsList, .getVCardsPrimary, .createVCard:
+        case .getVCardsList, .getVCardsPrimary:
             return .movoAuthorizedAll
         case .postVCards:
             return .movoAuthorized
+        case .createVCard:
+            return .movoAuthorizedAllWithIdempotency
         }
     }
     

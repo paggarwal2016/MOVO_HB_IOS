@@ -34,10 +34,11 @@ final class UserViewModel: BaseViewModel {
 
     func fetchProfile() async {
         do {
-            profile = try await perform { [weak self] in
+            let response: UserProfileAPIResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(UserAPI.getProfile)
             }
+            profile = response.data
             if let profile {
                 analytics.log(AnalyticsEvent.accountViewed)
                 analytics.setUserProperty(

@@ -7,6 +7,11 @@
 
 import Foundation
 
+nonisolated struct UserProfileAPIResponse: Decodable, Sendable {
+    let success: Bool
+    let data: UserProfileResponse
+}
+
 nonisolated struct UserProfileResponse: Decodable, Sendable {
 
     // MARK: - Always present

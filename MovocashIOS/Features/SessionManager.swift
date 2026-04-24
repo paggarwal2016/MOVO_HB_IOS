@@ -29,17 +29,20 @@ final class SessionManager: ObservableObject {
     private let kycManager: KYCManagerProtocol
     private let alertManager: AlertManagerProtocol
     private let analytics: AnalyticsTracking
+    private let network: NetworkServiceProtocol
 
     init(
         keychain: KeychainManagerProtocol,
         kycManager: KYCManagerProtocol,
         alertManager: AlertManagerProtocol,
-        analytics: AnalyticsTracking
+        analytics: AnalyticsTracking,
+        network: NetworkServiceProtocol
     ) {
         self.keychain = keychain
         self.kycManager = kycManager
         self.alertManager = alertManager
         self.analytics = analytics
+        self.network = network
     }
 
     // MARK: - Start Session
@@ -157,6 +160,7 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Logout
     func logout(appState: AppState) async {
+        _ = try? await network.request(AuthAPI.logout) as SuccessResponse
         analytics.trackLogout()
         analytics.clearIdentity()
         await PushManager.shared.deleteTokenOnLogout()

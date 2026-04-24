@@ -48,7 +48,7 @@ enum AchAPI: Endpoint {
         case .getAccounts:
             return .movoAuthorized
         case .deleteAccount, .updateAccount:
-            return .authorized
+            return .movoAuthorized
         }
     }
     
@@ -64,9 +64,11 @@ enum AchAPI: Endpoint {
             case .initiateTransfer(let request):
                 return try JSONEncoder().encode(request)
             case .getAccounts:
-                return try JSONEncoder().encode(UserActionRequest(userAction: "GET_ACH_ACCOUNTS"))
-            default:
-                return nil
+                return try JSONEncoder().encode(UserActionRequest(userAction: "GET-ACH-ACCOUNTS"))
+            case .deleteAccount:
+                return try JSONEncoder().encode(UserActionRequest(userAction: "DELETE-ACH-ACCOUNTS"))
+            case .updateAccount:
+                return try JSONEncoder().encode(UserActionRequest(userAction: "SET-DEFAULT-ACCOUNT"))
             }
         }
     }

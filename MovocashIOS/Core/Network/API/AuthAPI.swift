@@ -15,6 +15,7 @@ enum AuthAPI: Endpoint {
     case enrollRSA(request: RSAEnrollRequest)
     case tokenRSA(request: RSATokenRequest)
     case nonceRSA(request: RSANonceRequest)
+    case logout
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -23,11 +24,12 @@ enum AuthAPI: Endpoint {
     var path: String {
         switch self {
         case .messengerOTP: return "/auth/messenger/otp"
-        case .tokenSMS:     return "/auth/token-sms/"
+        case .tokenSMS:     return "/auth/token-sms"
         case .tokenAccess:  return "/auth/token-access"
         case .enrollRSA:    return "/rsa"
         case .tokenRSA:     return "/auth/token-rsa"
         case .nonceRSA:     return "/rsa/nonce"
+        case .logout:       return "/auth/logout"
         }
     }
 
@@ -35,7 +37,7 @@ enum AuthAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .messengerOTP, .tokenSMS, .tokenAccess,
-             .enrollRSA, .tokenRSA, .nonceRSA:
+                .enrollRSA, .tokenRSA, .nonceRSA, .logout:
             return .POST
         }
     }
@@ -52,8 +54,10 @@ enum AuthAPI: Endpoint {
         case .enrollRSA:
             return .movoAuthorized
         case .nonceRSA:
-            return .movoAuthorized
+            return .movoInfos
         case .tokenRSA:
+            return .movoInfos
+        case .logout:
             return .movoAuthorized
         }
     }
@@ -88,6 +92,10 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
             
         case .nonceRSA(let request):
+            return try JSONEncoder().encode(request)
+        case .logout:
+            let request = UserActionRequest(
+                userAction: "LOGOUT")
             return try JSONEncoder().encode(request)
         }
     }

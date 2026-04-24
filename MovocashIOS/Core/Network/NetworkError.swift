@@ -7,6 +7,10 @@
 
 import Foundation
 
+extension Notification.Name {
+    static let sessionExpired = Notification.Name("sessionExpired")
+}
+
 enum NetworkError: LocalizedError, Sendable {
 
     case invalidResponse

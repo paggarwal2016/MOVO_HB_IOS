@@ -125,10 +125,12 @@ final class AppLockViewModel: ObservableObject {
             if success {
                 // RSA biometric verified — unlock silently, no second Face ID prompt
                 lockManager.unlockAfterRSAAuth()
-                return
             }
+            // RSA was attempted — do NOT fall back to local biometric regardless of result.
+            // On failure, the user must use their passcode.
+            return
         }
-        // 2. Fallback: no RSA keys or server auth failed — local biometric unlock
+        // 2. No RSA keys enrolled — fall back to local biometric unlock
         await lockManager.unlockWithBiometric()
     }
 

@@ -32,7 +32,8 @@ final class AppContainer: ObservableObject {
             keychain: keychain,
             kycManager: kycManager,
             alertManager: alertManager,
-            analytics: analytics
+            analytics: analytics,
+            network: network
         )
     }
 

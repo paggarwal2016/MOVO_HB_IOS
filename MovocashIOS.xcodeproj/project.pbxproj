@@ -50,6 +50,7 @@
 		14CDCDAF2F97A33A00BF1BDF /* SignUpScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
 		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
+		14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D52CBC2F9B908500CB648B /* EmptyStateView.swift */; };
 		14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D8165E2F73C30300B7D1EF /* ActionCard.swift */; };
 		14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D816602F73D3B100B7D1EF /* ContactsManager.swift */; };
 		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
@@ -137,6 +138,7 @@
 		14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpScreen.swift; sourceTree = "<group>"; };
 		14D36C582F7AAF150024760F /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
 		14D36C592F7AAF150024760F /* SkeletonViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonViews.swift; sourceTree = "<group>"; };
+		14D52CBC2F9B908500CB648B /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		14D8165E2F73C30300B7D1EF /* ActionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionCard.swift; sourceTree = "<group>"; };
 		14D816602F73D3B100B7D1EF /* ContactsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsManager.swift; sourceTree = "<group>"; };
 		14DBC5912F50204D000D84FD /* SecureLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureLogger.swift; sourceTree = "<group>"; };
@@ -414,6 +416,7 @@
 			isa = PBXGroup;
 			children = (
 				14D36C582F7AAF150024760F /* ShimmerModifier.swift */,
+				14D52CBC2F9B908500CB648B /* EmptyStateView.swift */,
 				14D36C592F7AAF150024760F /* SkeletonViews.swift */,
 				1489F26B2F67E0C20046FAD4 /* TextInputAlert */,
 				146819702F4DE6CF00BED014 /* SpinnerView.swift */,
@@ -691,6 +694,7 @@
 				14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */,
 				14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */,
 				14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */,
+				14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */,
 				14CDCDAF2F97A33A00BF1BDF /* SignUpScreen.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,

@@ -214,6 +214,12 @@ struct RootView: View {
                 appState.flow = .loginPhone
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
+            let message = notification.userInfo?["message"] as? String
+                ?? "Session expired. Please login again."
+            ToastManager.shared.show(message, style: .error, position: .bottom)
+            Task { await sessionManager.forceLogout(appState: appState) }
+        }
         .onAppear {
             // APIs execute first (GET /rsa/nonce → sign → POST /auth/token-rsa).
             // Returns true so submitBiometric unlocks silently after success.

@@ -16,7 +16,7 @@ enum UserAPI: Endpoint {
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
-
+    
     // MARK: - URL Path
     var path: String {
         switch self {
@@ -31,7 +31,7 @@ enum UserAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .getProfile:
-            return .GET
+            return .PUT
         case .deleteProfile:
             return .DELETE
         case .profileTOS, .profileVirtualCardTOS:
@@ -52,6 +52,17 @@ enum UserAPI: Endpoint {
     
     // MARK: - Body
     var body: Data? {
-        nil
+        get throws {
+            try encodeBody()
+        }
+    }
+    
+    private func encodeBody() throws -> Data? {
+        switch self {
+        case .getProfile:
+            return try JSONEncoder().encode(UserActionRequest(userAction: "GET-USER-DATA"))
+        case .deleteProfile, .profileTOS, .profileVirtualCardTOS:
+            return nil
+        }
     }
 }
