@@ -188,7 +188,9 @@ final class SessionManager: ObservableObject {
         appState.otpVerified = false
         appState.isAuthenticated = false
         appState.flow = .choice
-        RSAKeyManager.shared.deleteKeyPair()
+        // RSA keys are intentionally kept across logout so the biometric login
+        // button re-appears on ChoiceScreen. Keys are only cleared when the user
+        // explicitly disables biometrics in Settings or the server rejects the key.
         UserDefaults.standard.removeObject(forKey: "kycCompleted")
     }
 }

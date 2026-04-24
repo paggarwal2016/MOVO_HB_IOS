@@ -15,7 +15,7 @@ import SwiftUI
 @MainActor
 protocol KYCManagerProtocol {
     func configureSDK(officeId: String) async throws
-    func start() async throws
+    func start() async throws -> User
     func clearSession()
     func updateToken(_ token: String)
 }
@@ -96,23 +96,23 @@ extension KYCManager {
 
 extension KYCManager {
 
-    func start() async throws {
+    func start() async throws -> User {
         guard let scene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive }) else {
             throw KYCError.noPresenter
         }
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<User, Error>) in
             var resumed = false
 
-            func resumeOnce(_ result: Result<Void, Error>) {
+            func resumeOnce(_ result: Result<User, Error>) {
                 guard !resumed else { return }
                 resumed = true
                 
                 switch result {
-                case .success:        continuation.resume()
-                case .failure(let e): continuation.resume(throwing: e)
+                case .success(let user): continuation.resume(returning: user)
+                case .failure(let e):    continuation.resume(throwing: e)
                 }
             }
 
@@ -129,9 +129,9 @@ extension KYCManager {
 
             // [weak self] prevents the closure from keeping KYCManager alive
             // after the flow ends; tearDownKYCWindow cleans up the window.
-            wrapper.onSuccess = { [weak self] in
+            wrapper.onSuccess = { [weak self] user in
                 self?.tearDownKYCWindow()
-                resumeOnce(.success(()))
+                resumeOnce(.success(user))
             }
             wrapper.onFailure = { [weak self] error in
                 self?.tearDownKYCWindow()
@@ -194,7 +194,7 @@ private extension KYCManager {
 private final class KYCViewControllerWrapper: UIViewController {
 
     // MARK: Callbacks
-    var onSuccess: (() -> Void)?
+    var onSuccess: ((User) -> Void)?
     var onFailure: ((Error) -> Void)?
 
     // MARK: State
@@ -217,7 +217,7 @@ private final class KYCViewControllerWrapper: UIViewController {
         super.viewDidAppear(animated)
         guard !hasLaunchedKyc else { return }
         hasLaunchedKyc = true
-        MobileBankingSDK.startKyc(presentingViewController: self)
+        MobileBankingSDK.startKyc(presentingViewController: self, useSdkSuccessUI: false) //true Get started UI is appear
     }
 
     // deinit must be in the class body — Swift forbids deinit in extensions
@@ -228,8 +228,10 @@ private final class KYCViewControllerWrapper: UIViewController {
     // MARK: Notification Handlers
 
     @objc private func handleCompleted(_ notification: Notification) {
+        guard let user = notification.object as? User else { return }
+        print("user Response", user)
         SecureLogger.info("KYC verificationCompleted", category: .kyc)
-        dismissSDKThen { [weak self] in self?.onSuccess?() }
+        dismissSDKThen { [weak self] in self?.onSuccess?(user) }
     }
 
     @objc private func handleCanceled(_ notification: Notification) {

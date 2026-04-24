@@ -239,6 +239,10 @@ extension AuthViewModel {
             try await keychain.save(response.sessionToken, for: "auth_session_id", protection: .backgroundSafe)
             
             SecureLogger.info("tokenRSA success — session started", category: .auth)
+            // Biometric login is only available to returning users who completed KYC.
+            // Restore the flag cleared on logout and navigate to the dashboard.
+            UserDefaults.standard.set(true, forKey: "kycCompleted")
+            appState.flow = .home
             return true
         } catch {
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
