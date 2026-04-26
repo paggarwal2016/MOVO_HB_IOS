@@ -12,6 +12,7 @@ import LocalAuthentication
 struct ChoiceScreen: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject private var lockManager: AppLockManager
 
     @State private var isBiometricLoading = false
     @State private var showBiometricError = false
@@ -76,7 +77,11 @@ struct ChoiceScreen: View {
                     Task {
                         let success = await authVM.loginWithBiometric(appState: appState)
                         isBiometricLoading = false
-                        if !success {
+                        if success {
+                            // Biometric server auth succeeded — unlock locally so the
+                            // AppLock overlay does not immediately re-prompt Face ID.
+                            lockManager.unlockAfterRSAAuth()
+                        } else {
                             showBiometricError = true
                         }
                     }
@@ -105,7 +110,11 @@ struct ChoiceScreen: View {
                 Task {
                     let success = await authVM.loginWithBiometric(appState: appState)
                     isBiometricLoading = false
-                    if !success { showBiometricError = true }
+                    if success {
+                        lockManager.unlockAfterRSAAuth()
+                    } else {
+                        showBiometricError = true
+                    }
                 }
             }
         } message: {

@@ -54,10 +54,21 @@ final class RSAKeyManager: Sendable {
         try ensureBiometryIsAvailable()
         deleteKeyPair()
 
+        // On a real device the key is tied to the device passcode so it is wiped
+        // when the passcode is removed — the strongest protection available.
+        // On the Simulator there is typically no device passcode, so
+        // kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly causes key creation to
+        // fail silently; use the weaker (but still device-scoped) protection instead.
+        #if targetEnvironment(simulator)
+        let keyProtection = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        #else
+        let keyProtection = kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly
+        #endif
+
         var accessControlError: Unmanaged<CFError>?
         guard let accessControl = SecAccessControlCreateWithFlags(
             kCFAllocatorDefault,
-            kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+            keyProtection,
             .biometryAny,
             &accessControlError
         ) else {
@@ -128,6 +139,10 @@ final class RSAKeyManager: Sendable {
 
         let signingContext = LAContext()
         signingContext.localizedReason = promptMessage
+        // Empty string hides the "Enter iPhone Passcode" fallback button.
+        // When Face ID fails the user sees only Cancel, which throws userCanceled
+        // and lets the app show its own PIN screen instead of the system dialog.
+        signingContext.localizedFallbackTitle = ""
         let query: [String: Any] = [
             kSecClass as String: kSecClassKey,
             kSecAttrApplicationTag as String: applicationTagData,

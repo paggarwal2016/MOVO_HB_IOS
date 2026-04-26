@@ -364,6 +364,7 @@ final class AppLockManager: ObservableObject {
 
     func revokeBiometrics() throws {
         try passcodeManager.clearBiometricKey()
+        RSAKeyManager.shared.deleteKeyPair()
         analytics.log(AnalyticsEvent.biometricRevoked)
     }
 

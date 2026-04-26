@@ -162,17 +162,22 @@ final class PasscodeManager: PasscodeManaging, Sendable {
         }
     }
 
-    // MARK: - Biometric Secure Enclave key
+    // MARK: - Biometric enrollment sentinel
 
-    /// Creates a Secure Enclave private key that requires biometric auth on every use.
-    /// We only need the key to exist — its presence is the "biometric enrolled" signal.
+    /// Real device: creates a Secure Enclave EC key bound to .biometryCurrentSet.
+    /// The key is invalidated automatically when the user changes biometry (new face/fingerprint).
+    /// Simulator: kSecAttrTokenIDSecureEnclave is unsupported (LAError -1020), so a plain
+    /// Keychain entry is used as the sentinel — same "enrolled / not enrolled" signal.
     func enrollBiometricKey() throws {
         try lock.withLock {
+            try? clearBiometricKey()
+
+            #if targetEnvironment(simulator)
+            try keychainWrite(key: Keys.bioKey, data: Data([0x01]))
+            #else
             guard SecureEnclave.isAvailable else {
                 throw PasscodeError.secureEnclaveUnavailable
             }
-            // Remove any stale key first
-            try? clearBiometricKey()
 
             var error: Unmanaged<CFError>?
             let access = SecAccessControlCreateWithFlags(
@@ -199,11 +204,15 @@ final class PasscodeManager: PasscodeManaging, Sendable {
             guard SecKeyCreateRandomKey(attributes as CFDictionary, &error) != nil else {
                 throw PasscodeError.keyGenerationFailed(error?.takeRetainedValue())
             }
+            #endif
         }
     }
 
     func clearBiometricKey() throws {
         try lock.withLock {
+            #if targetEnvironment(simulator)
+            try keychainDelete(key: Keys.bioKey)
+            #else
             let query: [String: Any] = [
                 kSecClass as String:              kSecClassKey,
                 kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
@@ -213,6 +222,7 @@ final class PasscodeManager: PasscodeManaging, Sendable {
             guard status == errSecSuccess || status == errSecItemNotFound else {
                 throw PasscodeError.keychainDelete(status)
             }
+            #endif
         }
     }
 
@@ -265,6 +275,9 @@ final class PasscodeManager: PasscodeManaging, Sendable {
     }
 
     private func secureEnclaveKeyExists() -> Bool {
+        #if targetEnvironment(simulator)
+        return (try? keychainRead(key: Keys.bioKey)) != nil
+        #else
         let query: [String: Any] = [
             kSecClass as String:              kSecClassKey,
             kSecAttrApplicationTag as String: Data(Keys.bioKey.utf8),
@@ -273,6 +286,7 @@ final class PasscodeManager: PasscodeManaging, Sendable {
         ]
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         return status == errSecSuccess
+        #endif
     }
 
     // MARK: - Keychain CRUD

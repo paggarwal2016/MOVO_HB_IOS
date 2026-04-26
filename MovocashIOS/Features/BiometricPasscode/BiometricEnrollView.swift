@@ -20,6 +20,7 @@ struct BiometricEnrollView: View {
     @State private var enrollmentSucceeded = false
     @State private var errorMessage: String? = nil
     @State private var showSettingsAlert = false
+    @State private var wentToSettings = false
 
     // Use hardware type so the icon/name is correct even when not yet OS-enrolled
     private var displayBiometricType: BiometricType {
@@ -110,13 +111,22 @@ struct BiometricEnrollView: View {
                 Spacer()
             }
         }
-        // Alert shown when hardware exists but user hasn't configured it in iOS Settings
-        // OR when app permission has been revoked in iOS Settings → Privacy → Face ID
+        // Two distinct alert cases:
+        // 1. Permission denied — Face ID is set up on the device but the app's
+        //    access was revoked in Settings → Privacy → Face ID.
+        //    "Open Settings" lands on the MovoCash settings page where the toggle is visible.
+        // 2. Not enrolled in iOS — the device has Face ID hardware but the user has
+        //    never configured Face ID in Settings → Face ID & Passcode.
+        //    "Open Settings" lands on the app settings page; the user must navigate
+        //    to Face ID & Passcode manually (iOS does not allow a deeper link).
         .alert(
-            "\(displayBiometricType.displayName) Not Set Up",
+            lockManager.isBiometricPermissionDenied
+                ? "\(displayBiometricType.displayName) Permission Required"
+                : "\(displayBiometricType.displayName) Not Set Up",
             isPresented: $showSettingsAlert
         ) {
             Button("Open Settings") {
+                wentToSettings = true
                 if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(settingsURL)
                 }
@@ -124,14 +134,17 @@ struct BiometricEnrollView: View {
             Button("Not Now", role: .cancel) { }
         } message: {
             if lockManager.isBiometricPermissionDenied {
-                Text("MovoCash doesn't have permission to use \(displayBiometricType.displayName).\n\nTo enable it:\n1. Tap 'Open Settings'\n2. Scroll to MovoCash\n3. Enable \(displayBiometricType.displayName)\n4. Return to MovoCash")
+                Text("MovoCash doesn't have permission to use \(displayBiometricType.displayName).\n\nTo enable it:\n1. Tap 'Open Settings'\n2. Enable \(displayBiometricType.displayName)\n3. Return to MovoCash")
             } else {
-                Text("\(displayBiometricType.displayName) isn't configured on this device.\n\nTo set it up:\n1. Tap 'Open Settings'\n2. Tap '\(displayBiometricType.displayName) & Passcode'\n3. Set up \(displayBiometricType.displayName)\n4. Return to MovoCash")
+                Text("\(displayBiometricType.displayName) isn't configured on this device.\n\nTo set it up:\n1. Tap 'Open Settings'\n2. Go to '\(displayBiometricType.displayName) & Passcode'\n3. Set up \(displayBiometricType.displayName)\n4. Return to MovoCash")
             }
         }
-        // When user returns from Settings, auto-retry enrollment if biometrics are now available
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            guard lockManager.isBiometricAvailable else { return }
+        // When user returns from Settings, auto-retry enrollment.
+        // didBecomeActiveNotification fires after the app is fully active so LAContext
+        // reflects the permission/enrollment change the user just made in Settings.
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            guard !enrollmentSucceeded, wentToSettings else { return }
+            wentToSettings = false
             Task { await enroll() }
         }
     }
@@ -139,8 +152,8 @@ struct BiometricEnrollView: View {
     // MARK: - Enroll
 
     private func enroll() async {
-        // Prevent double-execution: willEnterForegroundNotification can fire
-        // during the 1.5 s success window and re-enter this function.
+        // Prevent double-execution during the 1.5 s success window or while a
+        // previous attempt is in progress.
         guard !enrollmentSucceeded, !isEnrolling else { return }
 
         // Guard: app permission was revoked in iOS Settings → Privacy → Face ID
@@ -223,4 +236,3 @@ struct BiometricEnrollView: View {
         onEnable()
     }
 }
-
