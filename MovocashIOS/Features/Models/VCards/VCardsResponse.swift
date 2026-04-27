@@ -33,6 +33,18 @@ nonisolated struct VCardPrimaryResponse: Decodable, Sendable {
     let data: VCardsList?
 }
 
+// MARK: - Create VCard (encrypted response)
+
+nonisolated struct CreateVCardEncryptedData: Decodable, Sendable {
+    let encryptedData: String
+}
+
+nonisolated struct CreateVCardEncryptedResponse: Decodable, Sendable {
+    let success: Bool
+    let message: String?
+    let data: CreateVCardEncryptedData?
+}
+
 // MARK: - VCards Provision
 
 nonisolated struct VCardsProvisionResponse: Decodable {

@@ -92,7 +92,7 @@ struct HeaderProvider {
         }
 
         if type.contains(.encrypted) {
-            headers["x-encrypt-response"] = "false"
+            headers["x-encrypt-response"] = "true"
         }
         
         if type.contains(.Idempotency) {

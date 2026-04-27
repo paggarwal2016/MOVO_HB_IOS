@@ -323,7 +323,7 @@ struct DashboardView: View {
             }
             .buttonStyle(.plain)
 
-            if isViewCashAccount {
+           //if isViewCashAccount {
                 Divider()
                     .padding(.horizontal, 16)
 
@@ -347,7 +347,7 @@ struct DashboardView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-            }
+            //}
         }
         .background(
             RoundedRectangle(cornerRadius: 16)

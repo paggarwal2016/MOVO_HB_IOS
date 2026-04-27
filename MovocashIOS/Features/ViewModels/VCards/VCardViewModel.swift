@@ -82,19 +82,30 @@ final class VCardViewModel: BaseViewModel {
         }
     }
     
-    func createVCard(request: CreateVCardRequest) async throws -> VCardsList {
-        do {
-            let response: VCardsResponse = try await perform { try await self.network.request(VCardAPI.createVCard(request: request)) }
+    /// Creates a virtual card.
+    ///
+    /// - Parameters:
+    ///   - request:   Card creation payload.
+    ///   - encrypted: Pass `true` (default) when the server returns an encrypted response
+    ///                (`x-encrypt-response: true` header). Pass `false` for plain `VCardsResponse`.
+    func createVCard(request: CreateVCardRequest, encrypted: Bool = true) async throws -> VCardsList {
+        if encrypted {
+            // Server returns: { "success": true, "data": { "encryptedData": "<base64>" } }
+            let response: CreateVCardEncryptedResponse = try await perform {
+                try await self.network.request(VCardAPI.createVCard(request: request))
+            }
+            guard let encryptedBase64 = response.data?.encryptedData else {
+                throw NetworkError.decodingError
+            }
+            let plainData = try SealedCryptoService.decrypt(encryptedBase64: encryptedBase64)
+            return try JSONDecoder().decode(VCardsList.self, from: plainData)
+        } else {
+            // Server returns: { "success": true, "data": [{ "cardNumber": ..., ... }] }
+            let response: VCardsResponse = try await perform {
+                try await self.network.request(VCardAPI.createVCard(request: request))
+            }
             guard let card = response.data?.first else { throw NetworkError.decodingError }
-//            analytics.log(AnalyticsEvent.vcardCreated, params: [
-//                AnalyticsParam.accountId: request.accountId
-//            ])
             return card
-        } catch {
-//            analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
-//                AnalyticsParam.accountId: request.accountId
-//            ])
-            throw error
         }
     }
 }
