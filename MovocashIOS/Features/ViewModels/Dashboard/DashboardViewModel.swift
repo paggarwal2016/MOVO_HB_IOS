@@ -32,15 +32,7 @@ final class DashboardViewModel: BaseViewModel {
     // MARK: - Fetch Dashboard
 
     func fetchDashboard() async {
-        do {
-            dashboard = try await perform { [weak self] in
-                guard let self else { throw ModelError.deallocated }
-                return try await network.request(DashboardAPI.dashboard)
-            }
-        } catch is CancellationError {
-            // Task was cancelled — no action needed
-        } catch {
-            // error surfaced via BaseViewModel toast
-        }
+        guard !Task.isCancelled else { return }
+        dashboard = try? await network.request(DashboardAPI.dashboard)
     }
 }

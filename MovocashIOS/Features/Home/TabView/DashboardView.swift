@@ -25,8 +25,10 @@ struct DashboardView: View {
     // MARK: - Savings
 
     @StateObject private var savingVM: SavingsAccountViewModel
-    
+
     @StateObject private var achVM: PlaidAchViewModel
+
+    @StateObject private var dashboardVM: DashboardViewModel
 
     private let container: AppContainer
 
@@ -35,6 +37,7 @@ struct DashboardView: View {
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+        _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
     }
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
@@ -372,6 +375,7 @@ struct DashboardView: View {
     private func handleOnTask() async {
         await loadData()
         await userVM.fetchProfile()
+        await dashboardVM.fetchDashboard()
     }
 
     private func loadData() async {

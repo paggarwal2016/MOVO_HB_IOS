@@ -22,13 +22,13 @@ enum DashboardAPI: Endpoint {
     }
     
     // MARK: - HTTP Method
-    var method: HTTPMethod { .POST } // feature use switch case
+    var method: HTTPMethod { .PUT } // feature use switch case
     
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
         case .dashboard:
-            return .default
+            return .movoAuthorized
         }
     }
     

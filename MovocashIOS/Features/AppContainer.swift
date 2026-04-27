@@ -83,4 +83,8 @@ final class AppContainer: ObservableObject {
         ACHViewModel(network: network, alertManager: alertManager)
     }
 
+    func makeDashboardViewModel() -> DashboardViewModel {
+        DashboardViewModel(network: network, alertManager: alertManager)
+    }
+
 }
