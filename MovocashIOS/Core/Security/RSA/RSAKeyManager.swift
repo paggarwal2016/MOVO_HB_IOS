@@ -54,10 +54,21 @@ final class RSAKeyManager: Sendable {
         try ensureBiometryIsAvailable()
         deleteKeyPair()
 
+        // On a real device the key is tied to the device passcode so it is wiped
+        // when the passcode is removed — the strongest protection available.
+        // On the Simulator there is typically no device passcode, so
+        // kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly causes key creation to
+        // fail silently; use the weaker (but still device-scoped) protection instead.
+        #if targetEnvironment(simulator)
+        let keyProtection = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        #else
+        let keyProtection = kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly
+        #endif
+
         var accessControlError: Unmanaged<CFError>?
         guard let accessControl = SecAccessControlCreateWithFlags(
             kCFAllocatorDefault,
-            kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+            keyProtection,
             .biometryAny,
             &accessControlError
         ) else {
@@ -129,23 +140,11 @@ final class RSAKeyManager: Sendable {
         // Step 1 — Explicitly evaluate biometric policy via async callback.
         // This guarantees Face ID fully completes before any key access is attempted.
         let signingContext = LAContext()
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            signingContext.evaluatePolicy(
-                .deviceOwnerAuthenticationWithBiometrics,
-                localizedReason: promptMessage
-            ) { success, error in
-                if success {
-                    continuation.resume()
-                } else if let laError = error as? LAError, laError.code == .userCancel {
-                    continuation.resume(throwing: BiometricLoginError.userCanceled)
-                } else {
-                    continuation.resume(throwing: error ?? BiometricLoginError.signatureFailed("Biometric evaluation failed"))
-                }
-            }
-        }
-
-        // Step 2 — Retrieve key using the already-evaluated context (no further UI prompt).
-        signingContext.interactionNotAllowed = true
+        signingContext.localizedReason = promptMessage
+        // Empty string hides the "Enter iPhone Passcode" fallback button.
+        // When Face ID fails the user sees only Cancel, which throws userCanceled
+        // and lets the app show its own PIN screen instead of the system dialog.
+        signingContext.localizedFallbackTitle = ""
         let query: [String: Any] = [
             kSecClass as String: kSecClassKey,
             kSecAttrApplicationTag as String: applicationTagData,

@@ -118,19 +118,22 @@ final class AppLockViewModel: ObservableObject {
     }
 
     func submitBiometric() async {
-        // 1. RSA server auth: GET /rsa/nonce → Face ID signs → POST /auth/token-rsa
-        //    APIs complete first; home screen shown only after success.
         if let rsaAuth = onBiometricSuccess {
+            // Snapshot key presence BEFORE the async call so we know whether
+            // Face ID was actually shown to the user during the RSA signing step.
+            let rsaKeysPresent = RSAKeyManager.shared.keysExist()
             let success = await rsaAuth()
             if success {
-                // RSA biometric verified — unlock silently, no second Face ID prompt
                 lockManager.unlockAfterRSAAuth()
             }
-            // RSA was attempted — do NOT fall back to local biometric regardless of result.
-            // On failure, the user must use their passcode.
-            return
+            if rsaKeysPresent {
+                // Face ID was already shown for RSA signing — do not prompt again
+                // via the local path. PIN pad is the correct fallback.
+                return
+            }
         }
-        // 2. No RSA keys enrolled — fall back to local biometric unlock
+        // RSA keys were absent (loginWithBiometric returned immediately without
+        // showing Face ID) — fall back to local biometric unlock.
         await lockManager.unlockWithBiometric()
     }
 
@@ -211,7 +214,11 @@ final class AppLockViewModel: ObservableObject {
 
     var biometricLabel: String { lockManager.biometricType.displayName }
     var biometricIcon: String  { lockManager.biometricType.systemImageName }
-    var showBiometric: Bool    { lockManager.isBiometricAvailable && lockManager.isPasscodeSet }
+    var showBiometric: Bool {
+        lockManager.isBiometricAvailable
+            && lockManager.isPasscodeSet
+            && (lockManager.isBiometricEnabled || RSAKeyManager.shared.keysExist())
+    }
 }
 
 
