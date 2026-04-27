@@ -31,6 +31,42 @@ struct SplashScreen: View {
 
             switch result {
             case .restored:
+                // ── Mid-onboarding guard ───────────────────────────────────────
+                // kycCompleted is the authoritative signal that the user has
+                // reached the dashboard at least once. If absent, the session was
+                // killed during registration. Apply the fintech inactivity gate:
+                // > 10 min idle → full logout; within window → restore last screen.
+                guard UserDefaults.standard.bool(forKey: "kycCompleted") else {
+                    let bgAt = UserDefaults.standard.double(forKey: "onboardingBackgroundedAt")
+                    let elapsed: TimeInterval = bgAt > 0
+                        ? Date().timeIntervalSince1970 - bgAt
+                        : 0
+                    UserDefaults.standard.removeObject(forKey: "onboardingBackgroundedAt")
+
+                    if elapsed >= AppState.onboardingInactivityTimeout {
+                        await sessionManager.logout(appState: appState)
+                        return
+                    }
+
+                    if let raw = UserDefaults.standard.string(forKey: "onboardingLastScreen"),
+                       let savedFlow = AuthFlow(rawValue: raw) {
+                        if let ctxRaw = UserDefaults.standard.string(forKey: "onboardingContext") {
+                            appState.context = PhoneFlowType(rawValue: ctxRaw)
+                        }
+                        // AppLockManager.init() sets state = .locked whenever isPasscodeSet,
+                        // regardless of onboarding state. Clear it here — valid JWT tokens are
+                        // proof of identity. Without this, the lock overlay fires the moment
+                        // kycCompleted becomes true after KYC completes.
+                        lockManager.resetToUnlocked()
+                        appState.flow = savedFlow
+                    } else {
+                        // No restorable screen — ambiguous state, force re-auth.
+                        await sessionManager.logout(appState: appState)
+                    }
+                    return
+                }
+
+                // ── Post-dashboard returning user ──────────────────────────────
                 // Passcode confirmed — sync UserDefaults in case it was wiped by a reinstall.
                 UserDefaults.standard.set(true, forKey: "kycCompleted")
 

@@ -173,7 +173,8 @@ struct RootView: View {
                 && appState.isAuthenticated
                 && !isInSetupFlow
                 && !appState.isNewRegistration
-                && !UserDefaults.standard.bool(forKey: "kycInProgress") {
+                && !UserDefaults.standard.bool(forKey: "kycInProgress")
+                && UserDefaults.standard.bool(forKey: "kycCompleted") {
                 AppLockView(vm: lockVM, autoTriggerBiometric: true)
                     .transition(.opacity)
                     .zIndex(10)
@@ -182,10 +183,29 @@ struct RootView: View {
         }
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
-            // If the app returns to foreground while still locked, discard any
-            // partially entered digits so the user starts fresh.
             if newPhase == .active, lockManager.state == .locked {
                 lockVM.clearInput()
+            }
+            // Onboarding inactivity tracking — only active before the dashboard is reached.
+            // Post-dashboard users are governed by AppLockManager's background timeout.
+            guard !UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
+            switch newPhase {
+            case .background:
+                UserDefaults.standard.set(
+                    Date().timeIntervalSince1970,
+                    forKey: "onboardingBackgroundedAt"
+                )
+            case .active:
+                let bgAt = UserDefaults.standard.double(forKey: "onboardingBackgroundedAt")
+                guard bgAt > 0 else { return }
+                let elapsed = Date().timeIntervalSince1970 - bgAt
+                UserDefaults.standard.removeObject(forKey: "onboardingBackgroundedAt")
+                if elapsed >= AppState.onboardingInactivityTimeout {
+                    // Fintech rule: idle > 10 min during onboarding → full logout, start fresh.
+                    Task { await sessionManager.logout(appState: appState) }
+                }
+            default:
+                break
             }
         }
         .task(id: appState.flow) {
@@ -226,6 +246,22 @@ struct RootView: View {
                 await sessionManager.logout(appState: appState)
                 lockManager.logout()
                 appState.flow = .loginPhone
+            }
+        }
+        .onChangeCompat(of: appState.flow) { newFlow in
+            if UserDefaults.standard.bool(forKey: "kycCompleted") {
+                // Post-dashboard — clear any stale onboarding persistence keys.
+                UserDefaults.standard.removeObject(forKey: "onboardingLastScreen")
+                UserDefaults.standard.removeObject(forKey: "onboardingContext")
+                return
+            }
+            // Mid-onboarding — persist the safe restoration target so that a
+            // kill→relaunch within the 10-minute window resumes the correct screen.
+            if let target = newFlow.restorationTarget {
+                UserDefaults.standard.set(target.rawValue, forKey: "onboardingLastScreen")
+                if let ctx = appState.context?.rawValue {
+                    UserDefaults.standard.set(ctx, forKey: "onboardingContext")
+                }
             }
         }
         .onAppear {

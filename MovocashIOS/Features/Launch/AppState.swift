@@ -8,8 +8,23 @@
 import SwiftUI
 import Combine
 
-enum AuthFlow {
+enum AuthFlow: String {
     case splash, choice, loginPhone, getStartedPhone, otp, signupDetails, emailOTP, getStartedInfo, setupPasscode, enableBiometrics, pickDocument, kyc, appLock, home
+
+    /// The screen to persist for kill→relaunch restoration during onboarding.
+    /// Returns nil for screens that must not be restored (OTPs expire, home/lock are post-dashboard).
+    var restorationTarget: AuthFlow? {
+        switch self {
+        case .signupDetails:    return .signupDetails
+        case .emailOTP:         return .signupDetails   // email OTP expires — back to form
+        case .setupPasscode:    return .setupPasscode
+        case .enableBiometrics: return .enableBiometrics
+        case .getStartedInfo:   return .getStartedInfo
+        case .pickDocument:     return .pickDocument
+        case .kyc:              return .pickDocument    // always restart the scan
+        default:                return nil
+        }
+    }
 }
 
 enum PhoneFlowType: String {
@@ -32,4 +47,8 @@ final class AppState: ObservableObject {
     /// Set to true when a new user completes KYC and is arriving at home for the
     /// first time. Cleared by HomeTabBarView.onAppear once the home screen is live.
     @Published var isNewRegistration: Bool = false
+
+    /// Fintech-standard inactivity window for the pre-dashboard onboarding flow.
+    /// Exceeding this triggers a full logout so no partial session can be resumed.
+    static let onboardingInactivityTimeout: TimeInterval = 600 // 10 minutes
 }
