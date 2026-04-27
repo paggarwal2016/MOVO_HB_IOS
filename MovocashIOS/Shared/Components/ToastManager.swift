@@ -60,6 +60,8 @@ struct ToastConfig {
     var style: ToastStyle = .success
     var position: ToastPosition = .bottom
     var duration: Double = 2.5
+    /// When set the toast becomes tappable and shows a trailing chevron.
+    var onTap: (() -> Void)? = nil
 }
 
 // MARK: - ToastManager
@@ -109,7 +111,9 @@ final class ToastManager: ObservableObject {
         let window = PassthroughWindow(windowScene: scene)
         window.windowLevel = .statusBar + 1
         window.backgroundColor = .clear
-        window.isUserInteractionEnabled = false
+        // Enable interaction only for tappable toasts — PassthroughWindow's hitTest
+        // ensures taps outside the toast capsule still fall through to the app below.
+        window.isUserInteractionEnabled = config.onTap != nil
 
         let hostingController = UIHostingController(
             rootView: ToastOverlayView(config: config)
@@ -181,12 +185,20 @@ struct ToastView: View {
                 .fontWeight(.medium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.leading)
+            if config.onTap != nil {
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white.opacity(0.6))
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(config.style.background)
         .clipShape(Capsule())
         .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+        .contentShape(Capsule())
+        .onTapGesture { config.onTap?() }
     }
 }
 

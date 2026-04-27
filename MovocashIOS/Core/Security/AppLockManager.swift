@@ -226,6 +226,11 @@ final class AppLockManager: ObservableObject {
             backgroundedAt = nil
             let elapsed = clock.now().timeIntervalSince(since)
             guard isPasscodeSet else { return }
+            // Only enforce app lock for users who have reached the dashboard.
+            // Mid-onboarding users are governed by the 10-minute inactivity
+            // timeout in RootView — triggering app lock here would show the
+            // passcode screen over registration screens incorrectly.
+            guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
             // Always lock on return from background so the dashboard never
             // flashes before authentication is confirmed.
             state = .locked
@@ -364,6 +369,7 @@ final class AppLockManager: ObservableObject {
 
     func revokeBiometrics() throws {
         try passcodeManager.clearBiometricKey()
+        RSAKeyManager.shared.deleteKeyPair()
         analytics.log(AnalyticsEvent.biometricRevoked)
     }
 

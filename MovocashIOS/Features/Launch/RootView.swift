@@ -109,10 +109,14 @@ struct RootView: View {
                     PasscodeSetupView(
                         vm: passcodeSetupVM,
                         onSuccess: {
-                            // Show biometric enrollment whenever hardware is present or available.
-                            // BiometricEnrollView handles the permission-denied case internally
-                            // by redirecting the user to iOS Settings instead of triggering a prompt.
-                            if lockManager.isBiometricAvailable || lockManager.isBiometricHardwarePresent {
+                            // Show enrollment when the device has biometric hardware and the
+                            // user has not yet enrolled. isBiometricHardwarePresent (not
+                            // isBiometricAvailable) is used so the screen appears even when
+                            // app permission is currently off — BiometricEnrollView handles
+                            // the permission-denied path internally via the Settings redirect.
+                            if lockManager.isBiometricHardwarePresent
+                                && !lockManager.isBiometricEnabled
+                                && !RSAKeyManager.shared.keysExist() {
                                 appState.flow = .enableBiometrics
                             } else {
                                 advanceAfterSecurity()
@@ -138,6 +142,9 @@ struct RootView: View {
                         }
                     )
 
+                case .appLock:
+                    AppLockView(vm: lockVM, autoTriggerBiometric: false)
+
                 case .kyc:
                     EmptyView()
 
@@ -158,12 +165,16 @@ struct RootView: View {
             //    has not yet reached home, so locking mid-enrollment is wrong
             //  • new-user KYC arrival (prevents spurious lock from UIViewController teardown)
             //  • active KYC scan
-            let isInSetupFlow = appState.flow == .setupPasscode || appState.flow == .enableBiometrics
+            let isInSetupFlow = appState.flow == .splash
+                || appState.flow == .setupPasscode
+                || appState.flow == .enableBiometrics
+                || appState.flow == .appLock
             if lockManager.state == .locked
                 && appState.isAuthenticated
                 && !isInSetupFlow
                 && !appState.isNewRegistration
-                && !UserDefaults.standard.bool(forKey: "kycInProgress") {
+                && !UserDefaults.standard.bool(forKey: "kycInProgress")
+                && UserDefaults.standard.bool(forKey: "kycCompleted") {
                 AppLockView(vm: lockVM, autoTriggerBiometric: true)
                     .transition(.opacity)
                     .zIndex(10)
@@ -172,10 +183,29 @@ struct RootView: View {
         }
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
-            // If the app returns to foreground while still locked, discard any
-            // partially entered digits so the user starts fresh.
             if newPhase == .active, lockManager.state == .locked {
                 lockVM.clearInput()
+            }
+            // Onboarding inactivity tracking — only active before the dashboard is reached.
+            // Post-dashboard users are governed by AppLockManager's background timeout.
+            guard !UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
+            switch newPhase {
+            case .background:
+                UserDefaults.standard.set(
+                    Date().timeIntervalSince1970,
+                    forKey: "onboardingBackgroundedAt"
+                )
+            case .active:
+                let bgAt = UserDefaults.standard.double(forKey: "onboardingBackgroundedAt")
+                guard bgAt > 0 else { return }
+                let elapsed = Date().timeIntervalSince1970 - bgAt
+                UserDefaults.standard.removeObject(forKey: "onboardingBackgroundedAt")
+                if elapsed >= AppState.onboardingInactivityTimeout {
+                    // Fintech rule: idle > 10 min during onboarding → full logout, start fresh.
+                    Task { await sessionManager.logout(appState: appState) }
+                }
+            default:
+                break
             }
         }
         .task(id: appState.flow) {
@@ -206,12 +236,32 @@ struct RootView: View {
                 Task { await pushManager.requestPermission() }
             }
         }
+        .onChangeCompat(of: lockManager.state) { newState in
+            guard newState == .unlocked, appState.flow == .appLock else { return }
+            appState.flow = .home
+        }
         .onChangeCompat(of: lockManager.requiresPhoneLogin) { required in
             guard required else { return }
             Task {
                 await sessionManager.logout(appState: appState)
                 lockManager.logout()
                 appState.flow = .loginPhone
+            }
+        }
+        .onChangeCompat(of: appState.flow) { newFlow in
+            if UserDefaults.standard.bool(forKey: "kycCompleted") {
+                // Post-dashboard — clear any stale onboarding persistence keys.
+                UserDefaults.standard.removeObject(forKey: "onboardingLastScreen")
+                UserDefaults.standard.removeObject(forKey: "onboardingContext")
+                return
+            }
+            // Mid-onboarding — persist the safe restoration target so that a
+            // kill→relaunch within the 10-minute window resumes the correct screen.
+            if let target = newFlow.restorationTarget {
+                UserDefaults.standard.set(target.rawValue, forKey: "onboardingLastScreen")
+                if let ctx = appState.context?.rawValue {
+                    UserDefaults.standard.set(ctx, forKey: "onboardingContext")
+                }
             }
         }
         .onAppear {
@@ -228,6 +278,11 @@ struct RootView: View {
     /// After biometric step:
     /// registration → KYC  |  login (KYC already done) → Home
     private func advanceAfterSecurity() {
+        // User just completed passcode/biometric setup. If they backgrounded the app
+        // during setup (e.g. went to Settings to enable Face ID), handleScenePhase
+        // may have set state = .locked. Clear it now — identity was proven during
+        // setup — so the lock overlay does not interrupt the next screen.
+        lockManager.resetToUnlocked()
         switch appState.context {
         case .getStarted:
             Task { await pushManager.requestPermission() }
