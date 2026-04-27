@@ -92,7 +92,7 @@ struct HeaderProvider {
         }
 
         if type.contains(.encrypted) {
-            headers["x-encrypt-response"] = "true"
+            headers["x-encrypt-response"] = "false"
         }
         
         if type.contains(.Idempotency) {
@@ -107,7 +107,7 @@ struct HeaderProvider {
 
 private extension HeaderProvider {
 
-    static let movoInfoToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1dWlkIjoiRTlBMDYzMkYtOUM3OS00NTUzLUE5Q0MtMjE3Q0I0RDE4REQ5IiwiZGV2aWNlSWQiOiIwQUI3NzdBNC1DNkY0LTQyRTItOTA5Ny0yMTk3RDQ2MTc4NjIiLCJkZXZpY2VUeXBlIjoiaW9zIiwib3NWZXJzaW9uIjoiMTguNSIsImFwcFZlcnNpb24iOiIxLjAuMCIsImFwcGxpY2F0aW9uTmFtZSI6Im1vdm8taW9zIn0.1epl_aXcG04uAL7RRQMDCemhB9NTGYzOxXjs7ebgOYM"
+    static let movoInfoToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1dWlkIjoiOTZhOGNmOGUtMWM4NS00MGU3LWJmN2QtZTYzN2QxYmVmODk1IiwiZGV2aWNlSWQiOiI5NmE4Y2Y4ZS0xYzg1LTQwZTctYmY3ZC1lNjM3ZDFiZWY4OTYiLCJkZXZpY2VUeXBlIjoiaW9zIiwiYXBwVmVyc2lvbiI6IjEuMC4wIiwiYXBwTmFtZSI6Im1vdm8taW9zIiwib3NWZXJzaW9uIjoiMTAuMC4yMjYzMSIsImRldmljZU5hbWUiOiJpUGhvbmUgMTQgUHJvIiwiZGV2aWNlTW9kZWwiOiJQeWl5YW5rYSBpUGhvbmUifQ.9vhAnS6tWbE5cS6N3tRPG15_DIoSf_3xz2gO_BfiLB4"
 
     static func baseHeaders() async -> [String: String] {
         ["Content-Type": "application/json", "Accept": "application/json"]

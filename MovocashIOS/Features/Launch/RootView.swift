@@ -149,7 +149,7 @@ struct RootView: View {
                     EmptyView()
 
                 case .home:
-                    HomeTabBarView()
+                    HomeTabBarView(container: container)
                 }
             }
             .environmentObject(authVM)

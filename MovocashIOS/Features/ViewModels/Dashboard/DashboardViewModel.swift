@@ -29,10 +29,98 @@ final class DashboardViewModel: BaseViewModel {
         super.init(alertManager: alertManager)
     }
 
-    // MARK: - Fetch Dashboard
+    // MARK: - Fetch Dashboard (initial load — uses perform() for loading state)
 
     func fetchDashboard() async {
         guard !Task.isCancelled else { return }
-        dashboard = try? await network.request(DashboardAPI.dashboard)
+        do {
+            dashboard = try await perform { try await network.request(DashboardAPI.dashboard) }
+        } catch {
+            // Error is already presented via ToastManager in perform(_:)
+        }
+    }
+
+    // Pull-to-refresh — does NOT call perform() so state stays idle,
+    // preventing HomeTabBarView from re-rendering and cancelling the refreshable task.
+    func refresh() async {
+        do {
+            let result: DashboardResponse = try await network.request(DashboardAPI.dashboard)
+            dashboard = result
+        } catch is CancellationError {
+            // User dismissed the pull gesture — keep existing data silently
+        } catch {
+            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
+        }
+    }
+
+    // MARK: - Section Accessors
+
+    var userDetails: DashboardUserDetails? {
+        dashboard?.data.compactMap { section -> DashboardUserDetails? in
+            guard case .userDetails(let d) = section else { return nil }
+            return d
+        }.first
+    }
+
+    var primaryAccount: SavingsAccountInfo? {
+        guard let account = dashboard?.data.compactMap({ section -> DashboardAccount? in
+            guard case .primaryAccount(let a) = section else { return nil }
+            return a
+        }).first else { return nil }
+        return SavingsAccountInfo(dashboardAccount: account)
+    }
+
+    var payAnyone: DashboardPayAnyone? {
+        dashboard?.data.compactMap { section -> DashboardPayAnyone? in
+            guard case .payAnyone(let p) = section else { return nil }
+            return p
+        }.first
+    }
+
+    var rewards: DashboardRewards? {
+        dashboard?.data.compactMap { section -> DashboardRewards? in
+            guard case .rewards(let r) = section else { return nil }
+            return r
+        }.first
+    }
+
+    var linkedAccounts: DashboardLinkedAccounts? {
+        dashboard?.data.compactMap { section -> DashboardLinkedAccounts? in
+            guard case .linkedAccounts(let l) = section else { return nil }
+            return l
+        }.first
+    }
+
+    func optimisticallyUpdateNickname(_ nickname: String) {
+        guard var current = dashboard else { return }
+        current.data = current.data.map { section in
+            guard case .primaryAccount(var account) = section else { return section }
+            account.nickname = nickname.isEmpty ? nil : nickname
+            return .primaryAccount(account)
+        }
+        dashboard = current
+    }
+
+    var menuItems: [DashboardMenuItem] {
+        dashboard?.data.compactMap { section -> [DashboardMenuItem]? in
+            guard case .menu(let items) = section else { return nil }
+            return items
+        }.first ?? []
+    }
+}
+
+// MARK: - SavingsAccountInfo Mapping
+
+private extension SavingsAccountInfo {
+    init(dashboardAccount a: DashboardAccount) {
+        id = a.id
+        accountNumber = a.accountNumber
+        clientName = a.clientName
+        status = AccountStatus(rawValue: a.status) ?? .unknown
+        accountBalance = Decimal(a.accountBalance)
+        availableBalance = Decimal(a.availableBalance)
+        clientId = a.clientId
+        nickname = a.nickname.flatMap { $0.isEmpty ? nil : $0 }
+        isPrimary = a.isPrimary
     }
 }

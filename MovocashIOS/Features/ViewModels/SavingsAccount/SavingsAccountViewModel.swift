@@ -63,7 +63,7 @@ final class SavingsAccountViewModel: BaseViewModel {
                 AnalyticsParam.accountId: accountId,
                 AnalyticsParam.accountName: name
             ])
-            await loadAccounts()
+            //await loadAccounts()
             ToastManager.shared.show("Nickname updated!", style: .success, position: .bottom)
         } catch is CancellationError {
             // cancelled — no action

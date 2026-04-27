@@ -14,6 +14,7 @@ enum VCardAPI: Endpoint {
     case postVCards(request: VCardsRequest)
     case vCardsProvision(request: VCardsProvisionRequest)
     case createVCard(request: CreateVCardRequest)
+    // /vcards/537 - i need to call
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -50,7 +51,7 @@ enum VCardAPI: Endpoint {
         case .getVCardsList, .getVCardsPrimary:
             return .movoAuthorizedAll
         case .postVCards:
-            return .movoAuthorized
+            return .movoAuthorizedAllWithIdempotency
         case .createVCard:
             return .movoAuthorizedAllWithIdempotency
         }

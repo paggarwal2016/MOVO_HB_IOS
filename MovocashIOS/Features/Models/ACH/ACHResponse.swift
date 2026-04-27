@@ -39,6 +39,20 @@ nonisolated struct ACHAccount: Codable, Sendable, Equatable {
         plaidAccountBalance  = Decimal(string: balStr) ?? 0
     }
 
+    // MARK: - Dashboard Pre-population Init
+
+    init(from linked: DashboardLinkedAccount) {
+        plaidAccountId       = linked.plaidAccountId
+        plaidAccountBalance  = Decimal(string: linked.plaidAccountBalance) ?? 0
+        isPlaidLoginRequired = linked.isPlaidLoginRequired
+        isDefault            = linked.isDefault
+        institutionLogo      = linked.institutionLogo
+        accountNumber        = linked.accountNumber
+        accountName          = linked.accountName
+        institutionName      = linked.institutionName
+        achAccountId         = linked.achAccountId
+    }
+
     // MARK: - Memberwise Init (used in ACHViewModel.updateAccount)
 
     init(

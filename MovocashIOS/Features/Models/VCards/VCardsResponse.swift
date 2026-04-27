@@ -25,6 +25,14 @@ nonisolated struct VCardsList: Decodable, Sendable {
     let lastName: String
 }
 
+// MARK: - VCards Primary (single object response)
+
+nonisolated struct VCardPrimaryResponse: Decodable, Sendable {
+    let success: Bool
+    let message: String?
+    let data: VCardsList?
+}
+
 // MARK: - VCards Provision
 
 nonisolated struct VCardsProvisionResponse: Decodable {

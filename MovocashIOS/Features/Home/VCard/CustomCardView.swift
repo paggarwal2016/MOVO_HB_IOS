@@ -106,7 +106,7 @@ struct CustomCardView: View {
         isRevealing = true
         defer { isRevealing = false }
         do {
-            revealedCard = try await vm.getVCardPrimary()?.data?.first
+            revealedCard = try await vm.getVCardPrimary()?.data
             showCardDetail = true
         } catch {
             ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)

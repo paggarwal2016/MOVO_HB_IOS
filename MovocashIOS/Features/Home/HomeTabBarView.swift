@@ -14,7 +14,7 @@ enum Tab: Hashable {
     case home
     case accounts
     case profile
-    
+
     var label: String {
         switch self {
         case .home:     return "Home"
@@ -22,12 +22,22 @@ enum Tab: Hashable {
         case .profile:  return "Settings"
         }
     }
-    
+
     var icon: String {
         switch self {
         case .home:     return "house.fill"
         case .accounts: return "creditcard.fill"
         case .profile:  return "gearshape.fill"
+        }
+    }
+
+    // Maps the action string from the MENU section of the dashboard API
+    init?(action: String) {
+        switch action {
+        case "Home":      self = .home
+        case "SendMoney": self = .accounts
+        case "Settings":  self = .profile
+        default:          return nil
         }
     }
 }
@@ -54,25 +64,126 @@ struct HomeTabBarView: View {
     @EnvironmentObject var userVM: UserViewModel
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
-    
+
+    @StateObject private var dashboardVM: DashboardViewModel
+
     @State private var selectedTab: Tab = .home
-    
+
+    init(container: AppContainer) {
+        _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
+    }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
-            tabContent(for: .home)
-            tabContent(for: .accounts)
-            tabContent(for: .profile)
+        Group {
+            if dashboardVM.dashboard == nil {
+                skeletonScreen
+            } else {
+                realTabView
+            }
         }
-        .tint(Color.primary)
+        .task {
+            await dashboardVM.fetchDashboard()
+        }
         .onAppear(perform: handleOnAppear)
     }
 }
 
 
-// MARK: - Tab Content Builder
+// MARK: - Skeleton Screen
 
 private extension HomeTabBarView {
-    
+
+    var skeletonScreen: some View {
+        VStack(spacing: 0) {
+            skeletonHeader
+            skeletonContent
+            Spacer()
+            skeletonTabBar
+        }
+        .ignoresSafeArea(edges: .bottom)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    var skeletonHeader: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 38, height: 38)
+                .shimmer()
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 120, height: 14)
+                .shimmer()
+            Spacer()
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 60, height: 14)
+                .shimmer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color(.systemBackground))
+    }
+
+    var skeletonContent: some View {
+        VStack(spacing: 16) {
+            CardSkeletonView()
+                .padding(.top, 16)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.gray.opacity(0.2))
+                .frame(height: 52)
+                .shimmer()
+                .padding(.horizontal, 15)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.gray.opacity(0.2))
+                .frame(height: 90)
+                .shimmer()
+                .padding(.horizontal, 15)
+        }
+    }
+
+    var skeletonTabBar: some View {
+        HStack {
+            ForEach(0..<3, id: \.self) { _ in
+                Spacer()
+                VStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 24, height: 24)
+                        .shimmer()
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 44, height: 10)
+                        .shimmer()
+                }
+                Spacer()
+            }
+        }
+        .padding(.vertical, 10)
+        .background(Color(.systemBackground))
+        .overlay(Divider(), alignment: .top)
+    }
+}
+
+
+// MARK: - Real Tab View
+
+private extension HomeTabBarView {
+
+    var resolvedTabs: [Tab] {
+        let mapped = dashboardVM.menuItems.compactMap { Tab(action: $0.action) }
+        return mapped.isEmpty ? [.home, .accounts, .profile] : mapped
+    }
+
+    var realTabView: some View {
+        TabView(selection: $selectedTab) {
+            ForEach(resolvedTabs, id: \.self) { tab in
+                tabContent(for: tab)
+            }
+        }
+        .tint(Color.primary)
+    }
+
     @ViewBuilder
     func tabContent(for tab: Tab) -> some View {
         NavigationStack {
@@ -83,13 +194,13 @@ private extension HomeTabBarView {
         }
         .tag(tab)
     }
-    
+
     @ViewBuilder
     func destination(for tab: Tab) -> some View {
         switch tab {
-        case .home:     DashboardView(container: container)
+        case .home:     DashboardView(container: container, dashboardVM: dashboardVM)
         case .accounts: AccountsView()
-        case .profile:  UserProfileView(container: container)
+        case .profile:  UserProfileView(container: container, dashboardVM: dashboardVM)
         }
     }
 }
@@ -98,7 +209,7 @@ private extension HomeTabBarView {
 // MARK: - Side Effects
 
 private extension HomeTabBarView {
-    
+
     func handleOnAppear() {
         guard appState.isNewRegistration else { return }
         lockManager.resetToUnlocked()

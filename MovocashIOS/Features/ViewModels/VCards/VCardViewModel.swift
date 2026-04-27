@@ -26,8 +26,8 @@ final class VCardViewModel: BaseViewModel {
 
     // MARK: - Vcard get
 
-    func getVCardPrimary() async throws -> VCardsResponse? {
-        var result: VCardsResponse?
+    func getVCardPrimary() async throws -> VCardPrimaryResponse? {
+        var result: VCardPrimaryResponse?
         try await perform {
             do {
                 result = try await self.network.request(VCardAPI.getVCardsPrimary)

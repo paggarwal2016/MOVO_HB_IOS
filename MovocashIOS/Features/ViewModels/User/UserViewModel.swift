@@ -30,7 +30,7 @@ final class UserViewModel: BaseViewModel {
         super.init(alertManager: alertManager)
     }
 
-    // MARK: - Fetch Profile
+    // MARK: - Fetch Profile (initial load — uses perform() for loading state)
 
     func fetchProfile() async {
         do {
@@ -54,6 +54,19 @@ final class UserViewModel: BaseViewModel {
             // Task was cancelled — no action needed
         } catch {
             analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+        }
+    }
+
+    // Pull-to-refresh — bypasses perform() so state stays idle,
+    // preventing view re-renders that cancel the refreshable task.
+    func refresh() async {
+        do {
+            let response: UserProfileAPIResponse = try await network.request(UserAPI.getProfile)
+            profile = response.data
+        } catch is CancellationError {
+            // User dismissed the pull gesture — keep existing data silently
+        } catch {
+            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
         }
     }
 

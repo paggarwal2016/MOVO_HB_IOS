@@ -28,16 +28,16 @@ struct DashboardView: View {
 
     @StateObject private var achVM: PlaidAchViewModel
 
-    @StateObject private var dashboardVM: DashboardViewModel
+    @ObservedObject var dashboardVM: DashboardViewModel
 
     private let container: AppContainer
 
-    init(container: AppContainer) {
+    init(container: AppContainer, dashboardVM: DashboardViewModel) {
         self.container = container
+        self.dashboardVM = dashboardVM
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
-        _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
     }
     @State private var showAccountList = false
     @State private var showPrimaryAccountDetails = false
@@ -59,7 +59,7 @@ struct DashboardView: View {
     @State private var hasLoadedData = false
     
     private var displayAccount: SavingsAccountInfo? {
-        savingVM.accountList?.data.accounts.first(where: { $0.isPrimary })
+        dashboardVM.primaryAccount
     }
 
     private var isViewCashAccount: Bool {
@@ -96,11 +96,15 @@ struct DashboardView: View {
             config: TextInputAlertConfig(primaryLabel: "Save"),
             onCreate: { name in
                 guard let accountId = displayAccount?.id else { return }
-                Task { await savingVM.updateNickname(name: name, accountId: accountId) }
+                Task {
+                    await savingVM.updateNickname(name: name, accountId: accountId)
+                    dashboardVM.optimisticallyUpdateNickname(name)
+                    await dashboardVM.refresh()
+                }
             }
         )
         .overlay {
-            if savingVM.state == .loading && !showCreateCashCard {
+            if dashboardVM.state == .loading && !showCreateCashCard && dashboardVM.primaryAccount == nil {
                 SpinnerView()
             }
         }
@@ -138,7 +142,7 @@ struct DashboardView: View {
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter({ !$0.isPrimary }) ?? [],
                     container: container,
                     onDismiss: {
-                        Task { await loadData() }
+                        Task { await dashboardVM.refresh() }
                     }
                 )
                 .presentationDetents([.large])
@@ -167,7 +171,7 @@ struct DashboardView: View {
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter({ !$0.isPrimary }) ?? [],
                     container: container,
                     onDismiss: {
-                        Task { await loadData() }
+                        Task { await dashboardVM.refresh() }
                     }
                 )
                 .presentationDetents([.large])
@@ -205,7 +209,6 @@ struct DashboardView: View {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
             guard !hasLoadedData else { return }
             hasLoadedData = true
-            await handleOnTask()
         }
         .onAppear {
             showCreateCashCard = false
@@ -215,7 +218,7 @@ struct DashboardView: View {
     // MARK: - Subviews
     
     private var headerView: some View {
-        CustomHeaderView(userName: userVM.profile?.initials ?? "", userImage: userVM.profile?.profilePicture ?? "") {
+        CustomHeaderView(userName: dashboardVM.userDetails?.initials ?? "", userImage: dashboardVM.userDetails?.profilePicture ?? "") {
             sessionManager.logoutWithConfirmation(appState: appState) {
                 lockManager.logout()
             }
@@ -229,6 +232,9 @@ struct DashboardView: View {
                 Spacer()
             }
             .padding(.top, 16)
+        }
+        .refreshable {
+            await dashboardVM.refresh()
         }
     }
     
@@ -279,7 +285,7 @@ struct DashboardView: View {
                 Task { await achVM.startPlaidLink() }
                 SecureLogger.debug("Link your bank tapped", category: .general)
             }
-        } else if savingVM.state == .loading {
+        } else if dashboardVM.state == .loading && dashboardVM.primaryAccount == nil {
             CardSkeletonView()
         }
     }
@@ -372,21 +378,10 @@ struct DashboardView: View {
     
     // MARK: - Private Functions
 
-    private func handleOnTask() async {
-        await loadData()
-        await userVM.fetchProfile()
-        await dashboardVM.fetchDashboard()
-    }
-
-    private func loadData() async {
-        await savingVM.loadAccounts()
-    }
-
     private func createCashCard(nickname: String, pin: String) async {
         do {
             _ = try await vm.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
             showCreateCashCard = false
-            await savingVM.loadAccounts()
             ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
         } catch {
             ToastManager.shared.show("Failed to create cash card. Please try again.", style: .error, position: .bottom)

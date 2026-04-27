@@ -19,6 +19,7 @@ struct MovocashIOSApp: App {
     @StateObject private var passcodeSetupVM: AppLockViewModel
     @StateObject private var kycVM: KYCViewModel
     @StateObject private var pushManager: PushManager
+    @State private var isHandlingSessionExpiry = false
 
     init() {
         let c = AppContainer()
@@ -51,6 +52,14 @@ struct MovocashIOSApp: App {
                 .networkMonitor(state: appState)
                 .globalToast()
                 .globalAlert()
+                .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+                    guard !isHandlingSessionExpiry else { return }
+                    isHandlingSessionExpiry = true
+                    Task { @MainActor in
+                        await container.sessionManager.forceLogout(appState: appState)
+                        isHandlingSessionExpiry = false
+                    }
+                }
         }
     }
 }

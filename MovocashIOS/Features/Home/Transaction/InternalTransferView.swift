@@ -80,7 +80,7 @@ struct InternalTransferView: View {
             .task {
                 async let primary = vcardVM.getVCardPrimary()
                 async let all = vcardVM.getVCardsAll()
-                primaryCard = try? await primary?.data?.first
+                primaryCard = try? await primary?.data
                 cardsList = (try? await all) ?? []
             }
         }

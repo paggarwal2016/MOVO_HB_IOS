@@ -9,41 +9,50 @@ import Foundation
 import SwiftUI
 
 struct UserProfileView: View {
-
+    
     @EnvironmentObject var userVM: UserViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var lockManager: AppLockManager
-
+    
+    @ObservedObject var dashboardVM: DashboardViewModel
+    
     @StateObject private var achVM: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
-
-    init(container: AppContainer) {
+    
+    init(container: AppContainer, dashboardVM: DashboardViewModel) {
+        self.dashboardVM = dashboardVM
         _achVM = StateObject(wrappedValue: container.makeACHViewModel())
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
-
+    
+    // Prefers the fully-fetched profile; falls back to dashboard data while the
+    // separate profile fetch is in-flight so the tab shows content immediately.
+    private var effectiveProfile: UserProfileResponse? {
+        userVM.profile ?? dashboardVM.userDetails.map { UserProfileResponse(from: $0) }
+    }
+    
+    // Prefers live ACH accounts after fetch; falls back to dashboard linked accounts
+    // on first load so the section populates without waiting for the separate fetch.
+    private var effectiveAccounts: [ACHAccount] {
+        if !achVM.accounts.isEmpty { return achVM.accounts }
+        return dashboardVM.linkedAccounts?.linkedAccounts.map { ACHAccount(from: $0) } ?? []
+    }
+    
     var body: some View {
-        
         Group {
-            if userVM.state == .loading {
-                profileSkeleton
-            } else if let profile = userVM.profile {
+            if let profile = effectiveProfile {
                 profileList(profile)
+            } else if userVM.state == .loading {
+                profileSkeleton
             } else {
                 emptyState
-            }
-        }
-        .task { await achVM.fetchAccounts() }
-        .onAppear {
-            if userVM.profile == nil {
-                Task { await userVM.fetchProfile() }
             }
         }
     }
     
     // MARK: - Profile Skeleton
-
+    
     private var profileSkeleton: some View {
         List {
             Section {
@@ -62,7 +71,7 @@ struct UserProfileView: View {
         .listStyle(.insetGrouped)
         .allowsHitTesting(false)
     }
-
+    
     // MARK: - Empty / Error State
     
     private var emptyState: some View {
@@ -91,43 +100,46 @@ struct UserProfileView: View {
             idVerificationSection(profile)
             accountStatusSection(profile)
             linkedBankAccountsSection
-
-//            PrimaryButton(title: "Delete Account") {
-//                AlertManager.shared.showConfirmation(
-//                    title: "Delete",
-//                    message: "Are you sure you want to permanently delete your account?",
-//                    onConfirm: {
-//                        Task {
-//                            let success = await userVM.deleteAccount()
-//                            if success {
-//                                lockManager.logout()
-//                                await sessionManager.logout(appState: appState)
-//                                ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
-//                            }
-//                        }
-//                    }
-//                )
-//            }
+            
+            //            PrimaryButton(title: "Delete Account") {
+            //                AlertManager.shared.showConfirmation(
+            //                    title: "Delete",
+            //                    message: "Are you sure you want to permanently delete your account?",
+            //                    onConfirm: {
+            //                        Task {
+            //                            let success = await userVM.deleteAccount()
+            //                            if success {
+            //                                lockManager.logout()
+            //                                await sessionManager.logout(appState: appState)
+            //                                ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
+            //                            }
+            //                        }
+            //                    }
+            //                )
+            //            }
         }
         .listStyle(.insetGrouped)
+        .refreshable {
+            await userVM.refresh()
+        }
     }
     
     // MARK: - Linked Bank Accounts
-
+    
     private var linkedBankAccountsSection: some View {
         Section("Linked bank accounts") {
-            if achVM.state == .loading && achVM.accounts.isEmpty {
+            if achVM.state == .loading && effectiveAccounts.isEmpty {
                 HStack {
                     Spacer()
                     ProgressView()
                     Spacer()
                 }
-            } else if achVM.accounts.isEmpty {
+            } else if effectiveAccounts.isEmpty {
                 Text("No linked accounts")
                     .foregroundStyle(.secondary)
                     .font(.subheadline)
             } else {
-                ForEach(achVM.accounts, id: \.achAccountId) { account in
+                ForEach(effectiveAccounts, id: \.achAccountId) { account in
                     HStack(spacing: 12) {
                         if let uiImage = account.logoImage {
                             Image(uiImage: uiImage)
@@ -181,7 +193,7 @@ struct UserProfileView: View {
                     .padding(.vertical, 4)
                 }
             }
-
+            
             Button {
                 Task {
                     await plaidVM.startPlaidLink()
@@ -202,9 +214,9 @@ struct UserProfileView: View {
             .disabled(plaidVM.state == .loading)
         }
     }
-
+    
     // MARK: - Sections  (profile passed in, no more dangling reference)
-
+    
     private func avatarSection(_ profile: UserProfileResponse) -> some View {
         Section {
             VStack(spacing: 10) {

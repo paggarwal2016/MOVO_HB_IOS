@@ -12,6 +12,44 @@ nonisolated struct UserProfileAPIResponse: Decodable, Sendable {
     let data: UserProfileResponse
 }
 
+// MARK: - Dashboard Pre-population
+
+extension UserProfileResponse {
+    init(from details: DashboardUserDetails) {
+        customerId                  = details.customerId
+        username                    = details.username
+        firstName                   = details.firstName
+        lastName                    = details.lastName
+        dob                         = nil
+        email                       = details.email
+        phone                       = details.phone
+        profilePicture              = details.profilePicture
+        addressLine1                = details.addressLine1
+        addressLine2                = details.addressLine2
+        city                        = details.city
+        state                       = details.state
+        zip                         = details.zip
+        driversLicenseNumber        = details.driversLicenseNumber
+        driversLicenseState         = details.driversLicenseState
+        driversLicenseExpiration    = nil
+        isTwoFactorEnabled          = details.isTwoFactorEnabled
+        emailVerified               = details.emailVerified
+        emailVerifiedDate           = nil
+        smsVerified                 = details.smsVerified
+        smsVerifiedDate             = details.smsVerifiedDate
+        isDeactivated               = details.isDeactivated
+        isAdditionalKycRequired     = details.isAdditionalKycRequired
+        isPlaidAuthRequired         = details.isPlaidAuthRequired
+        cipRequired                 = details.cipRequired
+        cipAllowed                  = details.cipAllowed
+        tosAcceptedDate             = nil
+        eDeliveryAcceptedDate       = nil
+        virtualCardTosAcceptedDate  = nil
+        verificationToken           = nil
+        verificationTokenExpiration = nil
+    }
+}
+
 nonisolated struct UserProfileResponse: Decodable, Sendable {
 
     // MARK: - Always present

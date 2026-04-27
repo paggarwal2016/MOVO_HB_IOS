@@ -71,8 +71,7 @@ struct AccountListSheetView: View {
             }
         }
         .sheet(isPresented: $showCreateCashCard) {
-            CreateCashCardView(
-                onCancel: { showCreateCashCard = false },
+            CreateCashCardView(onCancel: { showCreateCashCard = false },
                 onCreate: { nickname, pin in
                     await createCashCard(nickname: nickname, pin: pin)
                 }
