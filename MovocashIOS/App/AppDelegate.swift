@@ -18,7 +18,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-
+        
         // 0. Wipe auth state on fresh install — keychain survives uninstall, UserDefaults does not
         clearOnFreshInstall()
 
@@ -58,7 +58,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         UserDefaults.standard.set(true, forKey: flagKey)
     }
-
+    
     // Pass APNs token → Firebase
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken token: Data) {

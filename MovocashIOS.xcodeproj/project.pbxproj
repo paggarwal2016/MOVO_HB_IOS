@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		140D44BC2F9FA36B007C3C0E /* SealedCryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D44BA2F9FA36B007C3C0E /* SealedCryptoService.swift */; };
+		140D471C2FA0970F007C3C0E /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 140D471B2FA0970F007C3C0E /* MobileBankingSDK */; };
 		140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */; };
 		1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296C2F9616D600A72366 /* SignUpViewModel.swift */; };
 		142029722F96256900A72366 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029712F96256800A72366 /* OTPScreen.swift */; };
@@ -256,7 +256,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14CDC8142F976A1800BF1BDF /* MobileBankingSDK in Frameworks */,
+				140D471C2FA0970F007C3C0E /* MobileBankingSDK in Frameworks */,
 				14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */,
 				14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */,
 				14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */,
@@ -557,7 +557,7 @@
 				14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */,
 				14BA4E3E2F7BB64000607891 /* FirebaseMessaging */,
 				147170002F8667AF00198064 /* LinkKit */,
-				14CDC8132F976A1800BF1BDF /* MobileBankingSDK */,
+				140D471B2FA0970F007C3C0E /* MobileBankingSDK */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -638,7 +638,7 @@
 			packageReferences = (
 				14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				14716FFF2F8667AF00198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
-				14CDC8122F976A1800BF1BDF /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				140D471A2FA0970F007C3C0E /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -1091,6 +1091,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		140D471A2FA0970F007C3C0E /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.13.0;
+			};
+		};
 		14716FFF2F8667AF00198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/plaid/plaid-link-ios-spm.git";
@@ -1107,17 +1115,14 @@
 				minimumVersion = 12.11.0;
 			};
 		};
-		14CDC8122F976A1800BF1BDF /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.12.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		140D471B2FA0970F007C3C0E /* MobileBankingSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 140D471A2FA0970F007C3C0E /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			productName = MobileBankingSDK;
+		};
 		147170002F8667AF00198064 /* LinkKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 14716FFF2F8667AF00198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
@@ -1137,11 +1142,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
-		};
-		14CDC8132F976A1800BF1BDF /* MobileBankingSDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 14CDC8122F976A1800BF1BDF /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
-			productName = MobileBankingSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
