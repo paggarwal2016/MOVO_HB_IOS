@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		140D471C2FA0970F007C3C0E /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 140D471B2FA0970F007C3C0E /* MobileBankingSDK */; };
+		140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */; };
 		140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */; };
 		1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296C2F9616D600A72366 /* SignUpViewModel.swift */; };
 		142029722F96256900A72366 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029712F96256800A72366 /* OTPScreen.swift */; };
@@ -47,7 +48,6 @@
 		14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */; };
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
-		14CDC8142F976A1800BF1BDF /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14CDC8132F976A1800BF1BDF /* MobileBankingSDK */; };
 		14CDCDAF2F97A33A00BF1BDF /* SignUpScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
 		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
@@ -98,7 +98,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		140D44BA2F9FA36B007C3C0E /* SealedCryptoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SealedCryptoService.swift; sourceTree = "<group>"; };
+		140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SealedCryptoService.swift; sourceTree = "<group>"; };
 		140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		1420296C2F9616D600A72366 /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewModel.swift; sourceTree = "<group>"; };
 		142029702F96256800A72366 /* GetStartedInfoScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedInfoScreen.swift; sourceTree = "<group>"; };
@@ -281,10 +281,10 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		140D44BB2F9FA36B007C3C0E /* Services */ = {
+		140D48C02FA099ED007C3C0E /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				140D44BA2F9FA36B007C3C0E /* SealedCryptoService.swift */,
+				140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -341,7 +341,7 @@
 		146819602F4DE6CF00BED014 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				140D44BB2F9FA36B007C3C0E /* Services */,
+				140D48C02FA099ED007C3C0E /* Services */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				146819502F4DE6CF00BED014 /* Config */,
@@ -702,7 +702,6 @@
 				14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */,
 				14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */,
 				146819842F4DE6CF00BED014 /* JailbreakDetector.swift in Sources */,
-				140D44BC2F9FA36B007C3C0E /* SealedCryptoService.swift in Sources */,
 				14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */,
 				14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */,
 				14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */,
@@ -722,6 +721,7 @@
 				1468199D2F4EDEF000BED014 /* OTPDigitBox.swift in Sources */,
 				14DCE2872F5ABA38008A8DC4 /* AppContainer.swift in Sources */,
 				1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */,
+				140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */,
 				146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */,
 				14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */,
 				1468198E2F4DE6CF00BED014 /* KeychainManager.swift in Sources */,
