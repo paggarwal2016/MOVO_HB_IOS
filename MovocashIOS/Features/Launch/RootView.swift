@@ -50,9 +50,8 @@ struct RootView: View {
                         maxLength: 6,
                         isLoading: authVM.state == .loading,
                         onVerify: { code in
-                            await authVM.completeOTPVerification(code: code, appState: appState) { destination in
+                            await authVM.completeOTPVerification(code: code, appState: appState) { _ in
                                 appState.otpVerified = true
-                                appState.flow = destination
                             }
                         },
                         onResend: {
@@ -99,6 +98,7 @@ struct RootView: View {
                             Task {
                                 await sessionManager.logout(appState: appState)
                                 lockManager.logout()
+                                RSAKeyManager.shared.deleteKeyPair()
                                 appState.flow = .choice
                             }
                         }
