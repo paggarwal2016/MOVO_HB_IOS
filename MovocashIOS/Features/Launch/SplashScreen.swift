@@ -92,7 +92,7 @@ struct SplashScreen: View {
                     #else
                     let success = await authVM.loginWithBiometric(appState: appState)
                     if !success {
-                        await sessionManager.logout(appState: appState)
+                        // Session preserved — user can retry biometric from Choice screen
                         appState.flow = .choice
                     }
                     // On success: loginWithBiometric already sets appState.flow = .home

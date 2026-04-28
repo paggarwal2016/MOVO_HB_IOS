@@ -49,3 +49,12 @@ struct UserActionRequest: Encodable, Sendable {
     let userAction: String
 }
 
+struct EmailVerifyRequest: Encodable, Sendable {
+    let email: String
+    let userAction: String
+}
+
+struct EmailOTPRequest: Encodable, Sendable {
+    let code: String
+    let userAction: String
+}

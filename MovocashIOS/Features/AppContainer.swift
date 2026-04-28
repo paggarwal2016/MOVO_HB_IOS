@@ -69,7 +69,7 @@ final class AppContainer: ObservableObject {
     }
 
     func makeKYCViewModel() -> KYCViewModel {
-        KYCViewModel(kycManager: kycManager, alertManager: alertManager, analytics: analytics)
+        KYCViewModel(kycManager: kycManager, alertManager: alertManager, analytics: analytics, network: network)
     }
     
     func makePlaidACHViewModel() -> PlaidAchViewModel {

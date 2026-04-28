@@ -159,7 +159,11 @@ final class SessionManager: ObservableObject {
     }
 
     // MARK: - Logout
+    private(set) var isLoggingOut = false
+
     func logout(appState: AppState) async {
+        isLoggingOut = true
+        defer { isLoggingOut = false }
         _ = try? await network.request(AuthAPI.logout) as SuccessResponse
         analytics.trackLogout()
         analytics.clearIdentity()

@@ -14,6 +14,7 @@ final class AuthViewModel: ObservableObject {
     @Published var showOTP: Bool = false
     @Published var phoneNumber: String = ""
     @Published var phoneDisplayText: String = ""
+    @Published var email: String = ""
     @Published var context: PhoneFlowType?
     private var isEnrolling = false
     
@@ -70,7 +71,7 @@ final class AuthViewModel: ObservableObject {
     // MARK: - Validate OTP
     
     func validateOTP(code: String) async throws -> AuthTokenSMSResponse {
-        guard state == .idle || state == .otpSent else { throw ModelError.alreadyLoading }
+        guard state != .loading else { throw ModelError.alreadyLoading }
         state = .loading
 
         do {
@@ -112,7 +113,6 @@ final class AuthViewModel: ObservableObject {
             )
 
             analytics.trackLogin(method: .otp)
-            try await kycManager.configureSDK(officeId: AppConfig.officeId)
             let destination: AuthFlow = context == .login ? .home : .signupDetails
             reset()
             onNavigate(destination)
@@ -167,9 +167,49 @@ final class AuthViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Send Email OTP
+
+    func sendEmailOTP() async throws {
+        guard state != .loading else { return }
+        state = .loading
+        do {
+            let response: SuccessResponse = try await network.request(
+                AuthAPI.emailOTP(request: EmailVerifyRequest(email: email, userAction: "SEND-OTP"))
+            )
+            state = .otpSent
+            ToastManager.shared.show(
+                response.message ?? "Code sent to \(email)",
+                style: .success,
+                position: .bottom
+            )
+        } catch {
+            state = .idle
+            throw error
+        }
+    }
+
+    // MARK: - Verify Email OTP
+
+    func verifyEmailOTP(code: String, onSuccess: @escaping () -> Void) async {
+        guard state != .loading else { return }
+        state = .loading
+        do {
+            let _: SuccessResponse = try await network.request(
+                AuthAPI.emailVerify(request: EmailOTPRequest(code: code, userAction: "VERIFY-OTP"))
+            )
+            state = .verified
+            onSuccess()
+        } catch {
+            state = .idle
+            alertManager.showError(error.localizedDescription)
+        }
+    }
+
     func reset() {
         phoneNumber = ""
         phoneDisplayText = ""
+        email = ""
+        state = .idle
     }
 }
 

@@ -13,6 +13,7 @@ enum UserAPI: Endpoint {
     case deleteProfile
     case profileTOS
     case profileVirtualCardTOS
+    case saveUser(request: SaveUserRequest)
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -24,6 +25,7 @@ enum UserAPI: Endpoint {
         case .deleteProfile: return "/users"
         case .profileTOS: return "/users/profile/tos"
         case .profileVirtualCardTOS: return "/users/profile/virtual-card-tos"
+        case .saveUser: return "/user/data"
         }
     }
     
@@ -36,13 +38,15 @@ enum UserAPI: Endpoint {
             return .DELETE
         case .profileTOS, .profileVirtualCardTOS:
             return .PUT
+        case .saveUser:
+            return .POST
         }
     }
     
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .getProfile, .profileTOS, .profileVirtualCardTOS: return .movoAuthorized
+        case .getProfile, .profileTOS, .profileVirtualCardTOS, .saveUser: return .movoAuthorized
         case .deleteProfile: return .authorizedWithOffice
         }
     }
@@ -63,6 +67,8 @@ enum UserAPI: Endpoint {
             return try JSONEncoder().encode(UserActionRequest(userAction: "GET-USER-DATA"))
         case .deleteProfile, .profileTOS, .profileVirtualCardTOS:
             return nil
+        case .saveUser(let request):
+            return try JSONEncoder().encode(request)
         }
     }
 }

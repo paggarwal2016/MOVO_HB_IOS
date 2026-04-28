@@ -12,7 +12,7 @@ struct SignUpScreen: View {
     @FocusState private var emailFocused: Bool
 
     let onBack: () -> Void
-    let onContinue: () -> Void
+    let onContinue: (String) -> Void
     let onSignIn: () -> Void
 
     var body: some View {
@@ -52,7 +52,7 @@ struct SignUpScreen: View {
 
                 PrimaryButton(title: "Send code", isEnabled: vm.isValid) {
                     UIApplication.shared.dismissKeyboard()
-                    onContinue()
+                    onContinue(vm.email)
                 }
                 .disabled(!vm.isValid)
             }

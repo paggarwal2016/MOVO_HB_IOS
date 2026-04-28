@@ -50,8 +50,19 @@ struct RootView: View {
                         maxLength: 6,
                         isLoading: authVM.state == .loading,
                         onVerify: { code in
-                            await authVM.completeOTPVerification(code: code, appState: appState) { _ in
-                                appState.otpVerified = true
+                            await authVM.completeOTPVerification(code: code, appState: appState) { destination in
+                                switch destination {
+                                case .signupDetails:
+                                    appState.flow = .signupDetails
+                                default:
+                                    UserDefaults.standard.set(true, forKey: "kycCompleted")
+                                    if lockManager.isBiometricHardwarePresent && !RSAKeyManager.shared.keysExist() {
+                                        appState.flow = .enableBiometrics
+                                    } else {
+                                        appState.flow = .home
+                                    }
+                                    Task { await pushManager.requestPermission() }
+                                }
                             }
                         },
                         onResend: {
@@ -59,6 +70,7 @@ struct RootView: View {
                         },
                         onBack: {
                             UIApplication.shared.dismissKeyboard()
+                            authVM.reset()
                             appState.flow = appState.context == .login ? .loginPhone : .getStartedPhone
                         }
                     )
@@ -66,20 +78,40 @@ struct RootView: View {
                 case .signupDetails:
                     SignUpScreen(
                         onBack: { appState.flow = .choice },
-                        onContinue: { appState.flow = .emailOTP },
+                        onContinue: { email in
+                            authVM.email = email
+                            Task {
+                                do {
+                                    try await authVM.sendEmailOTP()
+                                    appState.flow = .emailOTP
+                                } catch {
+                                    AlertManager.shared.showError(error.localizedDescription)
+                                }
+                            }
+                        },
                         onSignIn: { appState.flow = .loginPhone }
                     )
 
                 case .emailOTP:
                     OTPScreen(
                         title: "Verify email",
-                        subtitle: "A 6-digit verification code was sent to your email",
+                        subtitle: "A 6-digit verification code was sent to \(authVM.email)",
                         maxLength: 6,
-                        isLoading: false,
-                        onVerify: { _ in
-                            appState.flow = .setupPasscode
+                        isLoading: authVM.state == .loading,
+                        onVerify: { code in
+                            await authVM.verifyEmailOTP(code: code) {
+                                if lockManager.isBiometricHardwarePresent
+                                    && !lockManager.isBiometricEnabled
+                                    && !RSAKeyManager.shared.keysExist() {
+                                    appState.flow = .enableBiometrics
+                                } else {
+                                    appState.flow = .getStartedInfo
+                                }
+                            }
                         },
-                        onResend: { /* dummy — no API yet */ },
+                        onResend: {
+                            try await authVM.sendEmailOTP()
+                        },
                         onBack: { appState.flow = .signupDetails }
                     )
 
@@ -148,6 +180,11 @@ struct RootView: View {
                 case .kyc:
                     EmptyView()
 
+                case .kycSuccess:
+                    KYCSuccessView {
+                        appState.flow = .home
+                    }
+
                 case .home:
                     HomeTabBarView(container: container)
                 }
@@ -168,8 +205,10 @@ struct RootView: View {
             let isInSetupFlow = appState.flow == .splash
                 || appState.flow == .setupPasscode
                 || appState.flow == .enableBiometrics
+                || appState.flow == .kycSuccess
                 || appState.flow == .appLock
             if lockManager.state == .locked
+                && lockManager.isPasscodeSet
                 && appState.isAuthenticated
                 && !isInSetupFlow
                 && !appState.isNewRegistration
@@ -185,6 +224,16 @@ struct RootView: View {
             lockManager.handleScenePhase(newPhase)
             if newPhase == .active, lockManager.state == .locked {
                 lockVM.clearInput()
+                if !lockManager.isPasscodeSet {
+                    if RSAKeyManager.shared.keysExist() {
+                        Task {
+                            let ok = await authVM.loginWithBiometric(appState: appState)
+                            if !ok { appState.flow = .choice }
+                        }
+                    } else {
+                        appState.flow = .choice
+                    }
+                }
             }
             // Onboarding inactivity tracking — only active before the dashboard is reached.
             // Post-dashboard users are governed by AppLockManager's background timeout.
@@ -215,7 +264,7 @@ struct RootView: View {
                 UserDefaults.standard.removeObject(forKey: "kycInProgress")
                 UserDefaults.standard.set(true, forKey: "kycCompleted")
                 appState.isNewRegistration = true
-                appState.flow = .home
+                appState.flow = .kycSuccess
             } onFailure: {
                 UserDefaults.standard.removeObject(forKey: "kycInProgress")
                 appState.flow = .pickDocument
@@ -223,16 +272,17 @@ struct RootView: View {
         }
         .onChangeCompat(of: appState.otpVerified) { verified in
             guard verified else { return }
-            if lockManager.isPasscodeSet {
-                // Returning user — KYC already completed, restore the flag cleared on logout
-                UserDefaults.standard.set(true, forKey: "kycCompleted")
-                appState.flow = .home
-                Task { await pushManager.requestPermission() }
-            } else if appState.context == .getStarted {
-                // New registration — collect email/password before security setup
+            if appState.context == .getStarted {
+                // New registration — collect email + phone before security setup
                 appState.flow = .signupDetails
             } else {
-                appState.flow = .setupPasscode
+                // Login flow — skip passcode, enroll biometric if available
+                UserDefaults.standard.set(true, forKey: "kycCompleted")
+                if lockManager.isBiometricHardwarePresent && !RSAKeyManager.shared.keysExist() {
+                    appState.flow = .enableBiometrics
+                } else {
+                    appState.flow = .home
+                }
                 Task { await pushManager.requestPermission() }
             }
         }
@@ -295,3 +345,44 @@ struct RootView: View {
     }
 }
 
+
+
+
+//onVerify: { _ in
+//                            appState.flow = .setupPasscode
+//                            // Skip passcode setup — go to biometric enrollment if available
+//                            if lockManager.isBiometricHardwarePresent
+//                                && !lockManager.isBiometricEnabled
+//                                && !RSAKeyManager.shared.keysExist() {
+//                                appState.flow = .enableBiometrics
+//                            } else {
+//                                appState.flow = .getStartedInfo
+//                            }
+//                        },
+//                        onResend: { /* dummy — no API yet */ },
+
+//
+//    .onChangeCompat(of: appState.otpVerified) { verified in
+//                guard verified else { return }
+//                if lockManager.isPasscodeSet {
+//                    // Returning user — KYC already completed, restore the flag cleared on logout
+//                    UserDefaults.standard.set(true, forKey: "kycCompleted")
+//                    appState.flow = .home
+//                    Task { await pushManager.requestPermission() }
+//                } else if appState.context == .getStarted {
+//                    // New registration — collect email/password before security setup
+//                if appState.context == .getStarted {
+//                    // New registration — collect email + phone before security setup
+//                    appState.flow = .signupDetails
+//                } else {
+//                    appState.flow = .setupPasscode
+//                    // Login flow — skip passcode, enroll biometric if available
+//                    UserDefaults.standard.set(true, forKey: "kycCompleted")
+//                    if lockManager.isBiometricHardwarePresent && !RSAKeyManager.shared.keysExist() {
+//                        appState.flow = .enableBiometrics
+//                    } else {
+//                        appState.flow = .home
+//                    }
+//                    Task { await pushManager.requestPermission() }
+//                }
+//            }

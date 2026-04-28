@@ -53,7 +53,8 @@ struct MovocashIOSApp: App {
                 .globalToast()
                 .globalAlert()
                 .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-                    guard !isHandlingSessionExpiry else { return }
+                    guard !isHandlingSessionExpiry,
+                          !container.sessionManager.isLoggingOut else { return }
                     isHandlingSessionExpiry = true
                     Task { @MainActor in
                         await container.sessionManager.forceLogout(appState: appState)

@@ -121,6 +121,7 @@ extension KYCManager {
             // preventing "already presenting" conflicts on cancel/error paths.
             let window = UIWindow(windowScene: scene)
             window.windowLevel = .normal + 1
+            window.backgroundColor = .clear
             self.kycWindow = window
 
             let wrapper = KYCViewControllerWrapper()
@@ -204,7 +205,7 @@ private final class KYCViewControllerWrapper: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .black
+        view.backgroundColor = .clear
 
         let nc = NotificationCenter.default
         nc.addObserver(self, selector: #selector(handleCompleted(_:)),    name: .verificationCompleted, object: nil)
@@ -229,7 +230,6 @@ private final class KYCViewControllerWrapper: UIViewController {
 
     @objc private func handleCompleted(_ notification: Notification) {
         guard let user = notification.object as? User else { return }
-        print("user Response", user)
         SecureLogger.info("KYC verificationCompleted", category: .kyc)
         dismissSDKThen { [weak self] in self?.onSuccess?(user) }
     }

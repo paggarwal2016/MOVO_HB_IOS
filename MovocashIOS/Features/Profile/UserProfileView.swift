@@ -49,6 +49,9 @@ struct UserProfileView: View {
                 emptyState
             }
         }
+        .task {
+            await achVM.fetchAccounts()
+        }
     }
     
     // MARK: - Profile Skeleton
@@ -121,6 +124,7 @@ struct UserProfileView: View {
         .listStyle(.insetGrouped)
         .refreshable {
             await userVM.refresh()
+            await achVM.fetchAccounts()
         }
     }
     

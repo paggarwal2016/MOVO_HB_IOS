@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		140D471C2FA0970F007C3C0E /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 140D471B2FA0970F007C3C0E /* MobileBankingSDK */; };
 		140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */; };
+		140D48C82FA0DD4E007C3C0E /* KYCSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */; };
 		140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */; };
 		1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296C2F9616D600A72366 /* SignUpViewModel.swift */; };
 		142029722F96256900A72366 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029712F96256800A72366 /* OTPScreen.swift */; };
@@ -99,6 +100,7 @@
 
 /* Begin PBXFileReference section */
 		140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SealedCryptoService.swift; sourceTree = "<group>"; };
+		140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCSuccessView.swift; sourceTree = "<group>"; };
 		140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		1420296C2F9616D600A72366 /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewModel.swift; sourceTree = "<group>"; };
 		142029702F96256800A72366 /* GetStartedInfoScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedInfoScreen.swift; sourceTree = "<group>"; };
@@ -222,11 +224,6 @@
 		14DCE2362F59BDA4008A8DC4 /* Reachability */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Reachability;
-			sourceTree = "<group>";
-		};
-		14DF5C592F8789C900D2641E /* ViewModels */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		14DF5C5A2F8789FA00D2641E /* Components */ = {
@@ -375,6 +372,7 @@
 		1468196B2F4DE6CF00BED014 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */,
 				142029702F96256800A72366 /* GetStartedInfoScreen.swift */,
 				14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */,
 				142029712F96256800A72366 /* OTPScreen.swift */,
@@ -416,7 +414,6 @@
 			children = (
 				14DF5C5B2F878A3000D2641E /* View */,
 				14DF5C5A2F8789FA00D2641E /* Components */,
-				14DF5C592F8789C900D2641E /* ViewModels */,
 				14716FFA2F86671600198064 /* PlaidService.swift */,
 				14DCE1382F595474008A8DC4 /* KYCEnum.swift */,
 			);
@@ -545,7 +542,6 @@
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,
-				14DF5C592F8789C900D2641E /* ViewModels */,
 				14DF5C5A2F8789FA00D2641E /* Components */,
 				14DF5C5B2F878A3000D2641E /* View */,
 				14FC32572F7BE4370063F6FD /* FCM */,
@@ -721,6 +717,7 @@
 				1468199D2F4EDEF000BED014 /* OTPDigitBox.swift in Sources */,
 				14DCE2872F5ABA38008A8DC4 /* AppContainer.swift in Sources */,
 				1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */,
+				140D48C82FA0DD4E007C3C0E /* KYCSuccessView.swift in Sources */,
 				140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */,
 				146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */,
 				14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */,

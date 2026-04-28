@@ -11,6 +11,8 @@ enum AuthAPI: Endpoint {
     
     case messengerOTP(request: MessengerOTPRequest)
     case tokenSMS(request: TokenSMSRequest)
+    case emailOTP(request: EmailVerifyRequest)
+    case emailVerify(request: EmailOTPRequest)
     case tokenAccess
     case enrollRSA(request: RSAEnrollRequest)
     case tokenRSA(request: RSATokenRequest)
@@ -25,6 +27,8 @@ enum AuthAPI: Endpoint {
         switch self {
         case .messengerOTP: return "/auth/messenger/otp"
         case .tokenSMS:     return "/auth/token-sms"
+        case .emailOTP:     return "/auth/email/otp"
+        case .emailVerify:  return "/auth/email/verify"
         case .tokenAccess:  return "/auth/token-access"
         case .enrollRSA:    return "/rsa"
         case .tokenRSA:     return "/auth/token-rsa"
@@ -37,7 +41,7 @@ enum AuthAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .messengerOTP, .tokenSMS, .tokenAccess,
-                .enrollRSA, .tokenRSA, .nonceRSA, .logout:
+                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify:
             return .POST
         }
     }
@@ -49,6 +53,10 @@ enum AuthAPI: Endpoint {
             return .default
         case .tokenSMS:
             return .movoInfos
+        case .emailOTP:
+            return .movoAuthorized
+        case .emailVerify:
+            return .movoAuthorized
         case .tokenAccess:
             return .movoAuthorized
         case .enrollRSA:
@@ -76,21 +84,20 @@ enum AuthAPI: Endpoint {
         switch self {
         case .messengerOTP(let request):
             return try JSONEncoder().encode(request)
-            
         case .tokenSMS(let request):
             return try JSONEncoder().encode(request)
-            
+        case .emailOTP(let request):
+            return try JSONEncoder().encode(request)
+        case .emailVerify(let request):
+            return try JSONEncoder().encode(request)
         case .tokenAccess:
             let request = UserActionRequest(
                 userAction: "GET_ACCESS_TOKEN")
             return try JSONEncoder().encode(request)
-            
         case .enrollRSA(let request):
             return try JSONEncoder().encode(request)
-
         case .tokenRSA(let request):
             return try JSONEncoder().encode(request)
-            
         case .nonceRSA(let request):
             return try JSONEncoder().encode(request)
         case .logout:
