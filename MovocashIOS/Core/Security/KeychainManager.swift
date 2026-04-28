@@ -152,8 +152,19 @@ final class KeychainManager: KeychainManagerProtocol {
         SecureLogger.info("Deleted key '\(key)' successfully")
     }
     
+    // MARK: Fresh Install
+
+    /// Synchronous — safe to call at launch before any async context.
+    /// Clears auth tokens only; device_id is intentionally preserved.
+    func clearAuthTokens() {
+        ["access_token", "auth_session_id"].forEach { key in
+            SecItemDelete(baseQuery(for: key) as CFDictionary)
+        }
+        SecureLogger.info("Auth tokens cleared on fresh install", category: .auth)
+    }
+
     // MARK: Helpers
-    
+
     private func baseQuery(for key: String) -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,

@@ -18,7 +18,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        
+
+        // 0. Wipe auth state on fresh install — keychain survives uninstall, UserDefaults does not
+        clearOnFreshInstall()
+
         // 1. Firebase
         FirebaseApp.configure()
         // 2. Analytics
@@ -43,6 +46,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
     
+    // MARK: - Fresh Install
+
+    private func clearOnFreshInstall() {
+        let flagKey = "app.hasLaunchedBefore"
+        guard !UserDefaults.standard.bool(forKey: flagKey) else { return }
+
+        KeychainManager.shared.clearAuthTokens()
+        RSAKeyManager.shared.deleteKeyPair()
+        try? PasscodeManager().clearAll()
+
+        UserDefaults.standard.set(true, forKey: flagKey)
+    }
+
     // Pass APNs token → Firebase
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken token: Data) {
