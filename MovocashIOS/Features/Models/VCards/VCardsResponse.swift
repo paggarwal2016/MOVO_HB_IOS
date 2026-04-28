@@ -16,13 +16,14 @@ nonisolated struct VCardsResponse: Decodable, Sendable {
 }
 
 nonisolated struct VCardsList: Decodable, Sendable {
-    let cardNumber: String
-    let expiration: String
-    let lastFour: String
-    let name: String
-    let cvc2: String
-    let firstName: String
-    let lastName: String
+    let cardNumber: String?
+    let expiration: String?
+    let lastFour: String?
+    let name: String?
+    let cvc2: String?
+    let firstName: String?
+    let lastName: String?
+    let middleName: String?
 }
 
 // MARK: - VCards Primary (single object response)

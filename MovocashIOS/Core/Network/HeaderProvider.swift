@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 // MARK: - HeaderType
 
@@ -113,3 +114,38 @@ private extension HeaderProvider {
         ["Content-Type": "application/json", "Accept": "application/json"]
     }
 }
+
+
+// MARK: - Private Helpers
+
+//private extension HeaderProvider {
+//
+//    static func buildMovoInfoJWT() -> String {
+//        let uuid        = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+//        let appVersion  = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+//        let osVersion   = UIDevice.current.systemVersion
+//
+//        let headerJSON  = #"{"alg":"HS256","typ":"JWT"}"#
+//        let payloadJSON = "{\"uuid\":\"\(uuid)\",\"deviceId\":\"\(uuid)\",\"deviceType\":\"ios\",\"appVersion\":\"\(appVersion)\",\"applicationName\":\"movo-ios\",\"osVersion\":\"\(osVersion)\"}"
+//
+//        let headerEncoded  = base64URLEncode(Data(headerJSON.utf8))
+//        let payloadEncoded = base64URLEncode(Data(payloadJSON.utf8))
+//        let signingInput   = "\(headerEncoded).\(payloadEncoded)"
+//
+//        guard let sig = try? SealedCryptoService.hmacSign(Data(signingInput.utf8)) else {
+//            return signingInput
+//        }
+//        return "\(signingInput).\(base64URLEncode(sig))"
+//    }
+//
+//    static func base64URLEncode(_ data: Data) -> String {
+//        data.base64EncodedString()
+//            .replacingOccurrences(of: "+", with: "-")
+//            .replacingOccurrences(of: "/", with: "_")
+//            .replacingOccurrences(of: "=", with: "")
+//    }
+//
+//    static func baseHeaders() async -> [String: String] {
+//        ["Content-Type": "application/json", "Accept": "application/json"]
+//    }
+//}

@@ -129,18 +129,18 @@ struct VCardRowView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(card.name)
+                Text(card.name ?? "")
                     .font(.headline)
                     .foregroundStyle(.primary)
 
-                Text(card.cardNumber.maskedCardNumber())
+                Text((card.cardNumber ?? "").maskedCardNumber())
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            Text("Exp: \(card.expiration)")
+            Text("Exp: \(card.expiration ?? "")")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

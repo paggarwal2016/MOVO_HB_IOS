@@ -137,10 +137,10 @@ struct InternalTransferView: View {
         HStack {
             if let card = primaryCard {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(card.name)
+                    Text(card.name ?? "")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.primary)
-                    Text("•••• \(card.lastFour)")
+                    Text("•••• \(card.lastFour ?? "")")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                 }

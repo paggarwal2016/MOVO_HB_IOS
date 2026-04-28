@@ -20,23 +20,23 @@ struct VirtualCardDetailPopupView: View {
         ) {
             DetailField(
                 label: "CARD NUMBER",
-                value: card.cardNumber,
+                value: card.cardNumber ?? "",
                 copiedField: $copiedField,
                 fullWidth: true,
                 accentColor: Color.primary
             )
-            
+
             Divider().padding(.horizontal, 20)
-            
+
             HStack(alignment: .top, spacing: 0) {
-                PlainField(label: "EXP DATE", value: card.expiration, fullWidth: true)
+                PlainField(label: "EXP DATE", value: card.expiration ?? "", fullWidth: true)
                 Divider().frame(height: 60)
-                PlainField(label: "CVC", value: card.cvc2, fullWidth: true)
+                PlainField(label: "CVC", value: card.cvc2 ?? "", fullWidth: true)
             }
-            
+
             Divider().padding(.horizontal, 20)
-            
-            PlainField(label: "NAME", value: card.name, fullWidth: true)
+
+            PlainField(label: "NAME", value: card.name ?? "", fullWidth: true)
         }        
     }
 }

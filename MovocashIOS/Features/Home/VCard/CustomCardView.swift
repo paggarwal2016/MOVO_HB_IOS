@@ -60,16 +60,16 @@ struct CustomCardView: View {
             
             Spacer()
             
-            Text(card.firstName)
+            Text(card.firstName ?? "")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.6))
                 .textCase(.uppercase)
                 .tracking(1.5)
-            
+
             Spacer().frame(height: 8)
-            
+
             HStack(alignment: .center, spacing: 12) {
-                Text(card.cardNumber.maskedCardNumber())
+                Text((card.cardNumber ?? "").maskedCardNumber())
                     .font(.system(size: 18, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.white)
                 
