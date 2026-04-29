@@ -21,6 +21,8 @@ struct InternalTransferView: View {
     @State private var descriptionText = ""
     @State private var selectedFromAccount: SavingsAccountDetailsResponse?
     @State private var selectedToAccount: SavingsAccountDetailsResponse?
+    @State private var showConfirmation = false
+    @State private var isTransferring = false
     
     var onDismiss:() -> Void
     
@@ -77,11 +79,7 @@ struct InternalTransferView: View {
                     }
                 }
             }
-            .overlay {
-                if transVM.state == .loading {
-                    SpinnerView()
-                }
-            }
+            .sheet(isPresented: $showConfirmation) { confirmationSheet }
         }
     }
 
@@ -224,27 +222,100 @@ struct InternalTransferView: View {
     // MARK: - Confirm Button
 
     private var confirmButton: some View {
-        VStack(spacing: 10) {
-            Button {
-                UIApplication.shared.dismissKeyboard()
-                Task { await submitTransfer() }
-            } label: {
-                Text("Confirm Transfer")
-                    .font(.system(size: 15, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(isValid ? Color.primary : Color(.systemGray5))
-                    .foregroundStyle(isValid ? Color(.systemBackground) : Color(.tertiaryLabel))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-            .disabled(!isValid)
+        PrimaryButton(title: "Confirm", isEnabled: isValid) {
+            UIApplication.shared.dismissKeyboard()
+            showConfirmation = true
         }
+    }
+
+    // MARK: - Confirmation Sheet
+
+    private var confirmationSheet: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color(.systemGray4))
+                .frame(width: 36, height: 4)
+                .padding(.top, 12)
+                .padding(.bottom, 28)
+
+            Text("Confirm Transfer")
+                .font(.system(size: 20, weight: .bold))
+                .padding(.bottom, 24)
+
+            // Amount highlight
+            VStack(spacing: 4) {
+                Text(amount.formatted(.currency(code: "USD")))
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundStyle(.primary)
+                if !descriptionText.isEmpty {
+                    Text(descriptionText)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.gray)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(Color(.systemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+
+            // Summary rows
+            VStack(spacing: 0) {
+                if let from = selectedFromAccount {
+                    confirmationRow(label: "From", value: "\(from.nickname ?? from.clientName)  \(from.maskedAccountNumber)")
+                }
+                if let to = selectedToAccount {
+                    Divider().padding(.leading, 16)
+                    confirmationRow(label: "To", value: "\(to.nickname ?? to.clientName)  \(to.maskedAccountNumber)")
+                }
+            }
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 0.5))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 28)
+
+            PrimaryButton(title: "Send", isLoading: isTransferring) {
+                Task { await submitTransfer() }
+            }
+            .padding(.horizontal, 20)
+
+            Button("Cancel") {
+                showConfirmation = false
+            }
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(.gray)
+            .padding(.top, 14)
+            .padding(.bottom, 32)
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.hidden)
+        .interactiveDismissDisabled(isTransferring)
+    }
+
+    private func confirmationRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 14))
+                .foregroundStyle(.gray)
+            Spacer()
+            Text(value)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 
     // MARK: - Submit
 
     private func submitTransfer() async {
         guard let toAccount = selectedToAccount, let from = selectedFromAccount else { return }
+        isTransferring = true
+        defer { isTransferring = false }
+
         let request = TransactionRequest.Internal(
             description: descriptionText,
             amount: amount,
@@ -253,7 +324,10 @@ struct InternalTransferView: View {
             fromAccountId: from.id,
             phoneNumber: nil
         )
-        guard await transVM.submitInternalTransfer(request: request) else { return }
+
+        let success = await transVM.submitInternalTransfer(request: request)
+        showConfirmation = false
+        guard success else { return }
         ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)
         dismiss()
         onDismiss()

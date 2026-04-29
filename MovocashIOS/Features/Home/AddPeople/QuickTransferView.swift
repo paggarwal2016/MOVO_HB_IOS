@@ -19,6 +19,7 @@ struct QuickTransferView: View {
     @State private var descriptionText = ""
     @State private var selectedAccount: SavingsAccountDetailsResponse?
     @State private var isTransferring = false
+    @State private var showConfirmation = false
 
     init(
         contact: AppContact,
@@ -69,6 +70,7 @@ struct QuickTransferView: View {
             }
         }
         .task { await initAccounts() }
+        .sheet(isPresented: $showConfirmation) { confirmationSheet }
         .globalAlert()
     }
 
@@ -202,10 +204,96 @@ struct QuickTransferView: View {
     // MARK: - Send Button
 
     private var sendButton: some View {
-        PrimaryButton(title: "Send Money", isLoading: isTransferring, isEnabled: isValid) {
+        PrimaryButton(title: "Confirm", isEnabled: isValid) {
             UIApplication.shared.dismissKeyboard()
-            Task { await sendMoney() }
+            showConfirmation = true
         }
+    }
+
+    // MARK: - Confirmation Sheet
+
+    private var confirmationSheet: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color(.systemGray4))
+                .frame(width: 36, height: 4)
+                .padding(.top, 12)
+                .padding(.bottom, 28)
+
+            Text("Confirm Transfer")
+                .font(.system(size: 20, weight: .bold))
+                .padding(.bottom, 24)
+
+            // Amount highlight
+            VStack(spacing: 4) {
+                Text(formattedAmount)
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundStyle(.primary)
+                if !descriptionText.isEmpty {
+                    Text(descriptionText)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.gray)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(Color(.systemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+
+            // Summary rows
+            VStack(spacing: 0) {
+                summaryRow(label: "To", value: contact.name)
+                Divider().padding(.leading, 16)
+                summaryRow(label: "Phone", value: contact.phone)
+                if let account = selectedAccount {
+                    Divider().padding(.leading, 16)
+                    summaryRow(label: "From", value: "\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
+                }
+            }
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 0.5))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 28)
+
+            PrimaryButton(title: "Send", isLoading: isTransferring) {
+                Task { await sendMoney() }
+            }
+            .padding(.horizontal, 20)
+
+            Button("Cancel") {
+                showConfirmation = false
+            }
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(.gray)
+            .padding(.top, 14)
+            .padding(.bottom, 32)
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.hidden)
+        .interactiveDismissDisabled(isTransferring)
+    }
+
+    private var formattedAmount: String {
+        let formatted = String(format: "%.2f", amount)
+        return "$\(formatted)"
+    }
+
+    private func summaryRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 14))
+                .foregroundStyle(.gray)
+            Spacer()
+            Text(value)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 
     // MARK: - Avatar
@@ -245,15 +333,15 @@ struct QuickTransferView: View {
         guard let fromAccount = selectedAccount else { return }
         isTransferring = true
         defer { isTransferring = false }
-        
+
         let sanitized = PhoneNumberValidator.sanitize(contact.phone)
         guard PhoneNumberValidator.isValidUSNumber(sanitized) else {
             AlertManager.shared.showError("Enter a valid phone number")
+            showConfirmation = false
             return
         }
 
         let normalizedPhone = PhoneNumberValidator.normalize(sanitized)
-
         let request = TransactionRequest.Internal(
             description: descriptionText,
             amount: amount,
@@ -262,7 +350,14 @@ struct QuickTransferView: View {
             fromAccountId: fromAccount.id,
             phoneNumber: normalizedPhone
         )
-        guard await transVM.submitInternalTransfer(request: request) else { return }
+
+        let success = await transVM.submitInternalTransfer(request: request)
+        guard success else {
+            showConfirmation = false
+            return
+        }
+        showConfirmation = false
+        try? await Task.sleep(nanoseconds: 350_000_000)
         ToastManager.shared.show("Money sent successfully.", style: .success, position: .bottom)
         dismiss()
     }
