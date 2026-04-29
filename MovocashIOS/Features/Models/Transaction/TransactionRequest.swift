@@ -25,5 +25,6 @@ enum TransactionRequest {
         let toClientId: Int
         let fromAccountId: Int
         let phoneNumber: String?
+        let userAction: String
     }
 }

@@ -21,6 +21,7 @@ struct InternalTransferView: View {
     @State private var selectedToCard: VCardListResponse?
     @State private var primaryCard: VCardsList?
     @State private var cardsList: [VCardListResponse] = []
+    @State private var showCardSheet = false
 
     var onDismiss: () -> Void
 
@@ -77,9 +78,15 @@ struct InternalTransferView: View {
                     SpinnerView()
                 }
             }
+            .sheet(isPresented: $showCardSheet) {
+                CardPickerSheet(cards: cardsList, selected: $selectedToCard)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
             .task {
                 primaryCard = try? await vcardVM.getVCardPrimary()?.data
-                cardsList = (try? await vcardVM.getVCardsAll()) ?? []
+                let all = (try? await vcardVM.getVCardsAll()) ?? []
+                cardsList = all.filter { $0.cardNumber != primaryCard?.cardNumber }
             }
         }
     }
@@ -131,63 +138,60 @@ struct InternalTransferView: View {
         .card()
     }
 
+    // MARK: - From Picker
+
     private var fromAccountPicker: some View {
-        HStack {
+        Group {
             if let card = primaryCard {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(card.name ?? "")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.primary)
-                    Text("•••• \(card.lastFour ?? "")")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                CardChipRow(
+                    name: card.name ?? "Primary Card",
+                    lastFour: card.lastFour ?? "••••",
+                    badge: .cardPrimary,
+                    showIcon: false,
+                )
             } else {
-                Text("Loading...")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary)
+                CardChipSkeleton(card: false)
             }
         }
     }
 
+    // MARK: - To Picker
+
     private var toAccountPicker: some View {
         Group {
-            if cardsList.isEmpty {
-                Text("No cards available")
-                    .font(.system(size: 14))
+            if cardsList.isEmpty && primaryCard == nil {
+                CardChipSkeleton(card: false)
+            } else if cardsList.isEmpty {
+                Text("No other cards available")
+                    .font(.system(size: 13))
                     .foregroundStyle(.secondary)
             } else {
-                Menu {
-                    ForEach(cardsList, id: \.cardNumber) { card in
-                        Button {
-                            selectedToCard = card
-                        } label: {
-                            Text("\(card.name ?? "")  •••• \(card.lastFour ?? "")")
-                        }
-                    }
+                Button {
+                    showCardSheet = true
                 } label: {
                     HStack {
                         if let card = selectedToCard {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(card.name ?? "")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(.primary)
-                                Text("•••• \(card.lastFour ?? "")")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.secondary)
-                            }
+                            CardChipRow(
+                                name: card.name ?? "Virtual Card",
+                                lastFour: card.lastFour ?? "••••",
+                                badge: nil,
+                                showIcon: false,
+                                showChevron: true
+                            )
                         } else {
-                            Text("Select card")
-                                .font(.system(size: 14, weight: .medium))
+                            Text("Select destination card")
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(.secondary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.tertiary)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.secondary)
                     }
-                    .animation(.none, value: selectedToCard?.cardNumber)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -236,12 +240,144 @@ struct InternalTransferView: View {
             toAccountId: toAccountId,
             toClientId: toClientId,
             fromAccountId: from.id,
-            phoneNumber: nil
+            phoneNumber: nil,
+            userAction: "Internal-Transfer"
         )
         guard await transVM.submitInternalTransfer(request: request) else { return }
         ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)
         dismiss()
         onDismiss()
+    }
+}
+
+// MARK: - Card Chip Row
+
+private struct CardChipRow: View {
+    let name: String
+    let lastFour: String
+    let badge: BadgeStatus?
+    var showIcon: Bool = true
+    var showChevron: Bool = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if showIcon {
+                Image(systemName: "creditcard")
+                    .font(.title2)
+                    .foregroundStyle(Color.primary)
+                    .frame(width: 44, height: 44)
+                    .background(Color.primary.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text("•••• \(lastFour)")
+                    .font(.system(size: 11, weight: .medium).monospaced())
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if let badge {
+                StatusBadge(status: badge, size: .small)
+            }
+            if showChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .padding(.leading, 2)
+            }
+        }
+    }
+}
+
+// MARK: - Card Chip Skeleton
+
+private struct CardChipSkeleton: View {
+    var card: Bool = true
+    var body: some View {
+        HStack(spacing: 10) {
+            if card {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 36, height: 36)
+                    .shimmer()
+            }
+            VStack(alignment: .leading, spacing: 5) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 90, height: 11)
+                    .shimmer()
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 60, height: 9)
+                    .shimmer()
+            }
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Card Picker Sheet
+
+private struct CardPickerSheet: View {
+    let cards: [VCardListResponse]
+    @Binding var selected: VCardListResponse?
+    @SwiftUI.Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(cards, id: \.cardNumber) { card in
+                        Button {
+                            selected = card
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 12) {
+                                CardChipRow(
+                                    name: card.name ?? "Virtual Card",
+                                    lastFour: card.lastFour ?? "••••",
+                                    badge: nil
+                                )
+                                Image(systemName: selected?.cardNumber == card.cardNumber
+                                      ? "checkmark.circle.fill"
+                                      : "circle")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(selected?.cardNumber == card.cardNumber
+                                                     ? Color.primary
+                                                     : Color(.systemGray4))
+                                    .animation(.spring(duration: 0.2), value: selected?.cardNumber)
+                            }
+                            .padding(14)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        selected?.cardNumber == card.cardNumber
+                                            ? Color.primary.opacity(0.25)
+                                            : Color.clear,
+                                        lineWidth: 1.5
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(16)
+            }
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .navigationTitle("Select Card")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .font(.system(size: 15, weight: .medium))
+                }
+            }
+        }
     }
 }
 
@@ -256,7 +392,7 @@ private struct FieldRow<Trailing: View>: View {
             Text(label)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
-                .frame(width: 110, alignment: .leading)
+                .frame(width: 70, alignment: .leading)
             Spacer()
             trailing()
         }

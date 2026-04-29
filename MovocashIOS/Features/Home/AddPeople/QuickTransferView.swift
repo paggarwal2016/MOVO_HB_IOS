@@ -254,7 +254,8 @@ struct QuickTransferView: View {
             toAccountId: 0,
             toClientId: 0,
             fromAccountId: fromAccount.id,
-            phoneNumber: normalizedPhone
+            phoneNumber: normalizedPhone,
+            userAction: "Internal-Transfer"
         )
         guard await transVM.submitInternalTransfer(request: request) else { return }
         ToastManager.shared.show("Money sent successfully.", style: .success, position: .bottom)

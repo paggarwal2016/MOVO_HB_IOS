@@ -14,7 +14,7 @@ enum VCardAPI: Endpoint {
     case postVCards(request: VCardsRequest)
     case vCardsProvision(request: VCardsProvisionRequest)
     case createVCard(request: CreateVCardRequest)
-    // /vcards/537 - i need to call
+    case viewVCard(cardId: Int)
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -27,6 +27,7 @@ enum VCardAPI: Endpoint {
         case .getVCardsList: return "/vcards/all"
         case .vCardsProvision: return "/vcards/provision"
         case .createVCard: return "/vcards/create-vcard"
+        case .viewVCard(let cardId): return "/vcards/\(cardId)"
         }
     }
     
@@ -35,7 +36,7 @@ enum VCardAPI: Endpoint {
         switch self {
         case .getVCardsList:
             return .PUT
-        case .getVCardsPrimary:
+        case .getVCardsPrimary, .viewVCard:
             return .PUT
         case .postVCards, .vCardsProvision, .createVCard:
             return .POST
@@ -48,7 +49,7 @@ enum VCardAPI: Endpoint {
         switch self {
         case .vCardsProvision:
             return .movoAuthorized
-        case .getVCardsList, .getVCardsPrimary:
+        case .getVCardsList, .getVCardsPrimary, .viewVCard:
             return .movoAuthorizedAll
         case .postVCards:
             return .movoAuthorizedAllWithIdempotency
@@ -78,6 +79,8 @@ enum VCardAPI: Endpoint {
         case .vCardsProvision(let request):
             return try JSONEncoder().encode(request)
         case .createVCard(let request):
+            return try JSONEncoder().encode(request)
+        case .viewVCard(let request):
             return try JSONEncoder().encode(request)
         }
     }

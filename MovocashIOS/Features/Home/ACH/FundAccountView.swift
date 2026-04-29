@@ -381,7 +381,7 @@ struct FundAccountView: View {
                         let request = ACHRequest(
                             amount: Int(amount) ?? 0,
                             achAccountId: account.achAccountId,
-                            userAction: "SUBMITS_ACH_DEPOSIT"
+                            userAction: "SUBMITS-ACH-DEPOSIT"
                         )
                         let success = await vm.initiateTransfer(request: request)
                         if success {

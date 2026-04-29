@@ -34,7 +34,7 @@ enum TransactionAPI: Endpoint {
     }
     
     // MARK: - Header Configure
-    var headerType: HeaderType { .movoAuthorized }
+    var headerType: HeaderType { .movoAuthorizedWithIdempotency }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? {

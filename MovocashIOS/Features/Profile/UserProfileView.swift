@@ -171,7 +171,9 @@ struct UserProfileView: View {
                         Spacer()
                         Button {
                             guard !account.isDefault else { return }
-                            Task { await achVM.updateAccount(id: account.achAccountId) }
+                            Task { await achVM.updateAccount(id: account.achAccountId)
+                                   await achVM.fetchAccounts()
+                            }
                         } label: {
                             Image(systemName: account.isDefault ? "star.fill" : "star")
                                 .font(.system(size: 15))

@@ -81,18 +81,18 @@ actor NetworkService: NetworkServiceProtocol {
             } catch let error as NetworkError {
                 lastError = error
 
-                // Only retry on specific recoverable server errors.
+                // Only retry on specific recoverable errors.
                 // All other errors throw immediately — no retry.
                 switch error {
-                case .rateLimited, .serverError:
-                    // 429 / 5xx — retry with exponential backoff
+                case .rateLimited, .serverError, .timeout, .noInternet:
+                    // 429 / 5xx / timeout / no connectivity — retry with exponential backoff
                     guard attempt < maxAttempts - 1 else { throw error }
-                    let backoff = UInt64(200_000_000) * UInt64(attempt + 1) // 200ms, 400ms
-                    let jitter  = UInt64.random(in: 0..<50_000_000)         // up to 50ms
+                    let backoff = UInt64(500_000_000) * UInt64(attempt + 1) // 500ms, 1000ms
+                    let jitter  = UInt64.random(in: 0..<100_000_000)        // up to 100ms
                     try await Task.sleep(nanoseconds: backoff + jitter)
 
                 default:
-                    // 401, 404, any other client/network error — throw immediately, no retry
+                    // 401, decode error, any other client error — throw immediately, no retry
                     throw error
                 }
             }

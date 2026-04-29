@@ -27,26 +27,49 @@ final class VCardViewModel: BaseViewModel {
     // MARK: - Vcard get
 
     func getVCardPrimary() async throws -> VCardPrimaryResponse? {
-        var result: VCardPrimaryResponse?
-        try await perform {
-            do {
-                result = try await self.network.request(VCardAPI.getVCardsPrimary)
-                self.analytics.log(AnalyticsEvent.vcardViewed)
-            } catch NetworkError.noContent {
-                // 204 — user has no primary card yet; treat as success with no data
+        do {
+            let envelope: CreateVCardEncryptedResponse = try await perform {
+                try await self.network.request(VCardAPI.getVCardsPrimary)
             }
-            // Any other error propagates to perform {}, which shows a toast
+            guard let encryptedBase64 = envelope.data?.encryptedData else {
+                return nil
+            }
+            let plainData = try SealedCryptoService.decrypt(encryptedBase64: encryptedBase64)
+#if DEBUG
+            if let json = String(data: plainData, encoding: .utf8) {
+                print("[VCard decrypt]", json)
+            }
+#endif
+            let card = try JSONDecoder().decode(VCardsList.self, from: plainData)
+            analytics.log(AnalyticsEvent.vcardViewed)
+            return VCardPrimaryResponse(success: true, message: envelope.message, data: card)
+        } catch NetworkError.noContent {
+            return nil
+        } catch {
+            analytics.log(AnalyticsEvent.vcardFetchFailed)
+            throw error
         }
-        return result
     }
 
     // MARK: - Vcard All
 
     func getVCardsList() async throws -> [VCardsList] {
         do {
-            let response: VCardsResponse = try await perform { try await self.network.request(VCardAPI.getVCardsList) }
+            let envelope: CreateVCardEncryptedResponse = try await perform {
+                try await self.network.request(VCardAPI.getVCardsList)
+            }
+            guard let encryptedBase64 = envelope.data?.encryptedData else {
+                throw NetworkError.decodingError
+            }
+            let plainData = try SealedCryptoService.decrypt(encryptedBase64: encryptedBase64)
+#if DEBUG
+            if let json = String(data: plainData, encoding: .utf8) {
+                print("[VCard decrypt]", json)
+            }
+#endif
+            let cards = try JSONDecoder().decode([VCardsList].self, from: plainData)
             analytics.log(AnalyticsEvent.vcardViewed)
-            return response.data ?? []
+            return cards
         } catch {
             analytics.log(AnalyticsEvent.vcardFetchFailed)
             throw error
@@ -55,9 +78,21 @@ final class VCardViewModel: BaseViewModel {
 
     func getVCardsAll() async throws -> [VCardListResponse] {
         do {
-            let response: VCardListAllResponse = try await perform { try await self.network.request(VCardAPI.getVCardsList) }
+            let envelope: CreateVCardEncryptedResponse = try await perform {
+                try await self.network.request(VCardAPI.getVCardsList)
+            }
+            guard let encryptedBase64 = envelope.data?.encryptedData else {
+                throw NetworkError.decodingError
+            }
+            let plainData = try SealedCryptoService.decrypt(encryptedBase64: encryptedBase64)
+#if DEBUG
+            if let json = String(data: plainData, encoding: .utf8) {
+                print("[VCard decrypt]", json)
+            }
+#endif
+            let cards = try JSONDecoder().decode([VCardListResponse].self, from: plainData)
             analytics.log(AnalyticsEvent.vcardViewed)
-            return response.data ?? []
+            return cards
         } catch {
             analytics.log(AnalyticsEvent.vcardFetchFailed)
             throw error
@@ -68,8 +103,19 @@ final class VCardViewModel: BaseViewModel {
 
     func postVCard(request: VCardsRequest) async throws -> VCardsList {
         do {
-            let response: VCardsResponse = try await perform { try await self.network.request(VCardAPI.postVCards(request: request)) }
-            guard let card = response.data?.first else { throw NetworkError.decodingError }
+            let envelope: CreateVCardEncryptedResponse = try await perform {
+                try await self.network.request(VCardAPI.postVCards(request: request))
+            }
+            guard let encryptedBase64 = envelope.data?.encryptedData else {
+                throw NetworkError.decodingError
+            }
+            let plainData = try SealedCryptoService.decrypt(encryptedBase64: encryptedBase64)
+#if DEBUG
+            if let json = String(data: plainData, encoding: .utf8) {
+                print("[VCard decrypt]", json)
+            }
+#endif
+            let card = try JSONDecoder().decode(VCardsList.self, from: plainData)
             analytics.log(AnalyticsEvent.vcardCreated, params: [
                 AnalyticsParam.accountId: request.accountId
             ])
@@ -82,30 +128,30 @@ final class VCardViewModel: BaseViewModel {
         }
     }
     
-    /// Creates a virtual card.
-    ///
-    /// - Parameters:
-    ///   - request:   Card creation payload.
-    ///   - encrypted: Pass `true` (default) when the server returns an encrypted response
-    ///                (`x-encrypt-response: true` header). Pass `false` for plain `VCardsResponse`.
-    func createVCard(request: CreateVCardRequest, encrypted: Bool = true) async throws -> VCardsList {
-        if encrypted {
-            // Server returns: { "success": true, "data": { "encryptedData": "<base64>" } }
-            let response: CreateVCardEncryptedResponse = try await perform {
+    func createVCard(request: CreateVCardRequest) async throws -> VCardsList {
+        do {
+            let envelope: CreateVCardEncryptedResponse = try await perform {
                 try await self.network.request(VCardAPI.createVCard(request: request))
             }
-            guard let encryptedBase64 = response.data?.encryptedData else {
+            guard let encryptedBase64 = envelope.data?.encryptedData else {
                 throw NetworkError.decodingError
             }
             let plainData = try SealedCryptoService.decrypt(encryptedBase64: encryptedBase64)
-            return try JSONDecoder().decode(VCardsList.self, from: plainData)
-        } else {
-            // Server returns: { "success": true, "data": [{ "cardNumber": ..., ... }] }
-            let response: VCardsResponse = try await perform {
-                try await self.network.request(VCardAPI.createVCard(request: request))
+#if DEBUG
+            if let json = String(data: plainData, encoding: .utf8) {
+                print("[VCard decrypt]", json)
             }
-            guard let card = response.data?.first else { throw NetworkError.decodingError }
+#endif
+            let card = try JSONDecoder().decode(VCardsList.self, from: plainData)
+            analytics.log(AnalyticsEvent.vcardCreated, params: [
+                AnalyticsParam.accountName: request.nickname
+            ])
             return card
+        } catch {
+            analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
+                AnalyticsParam.accountName: request.nickname
+            ])
+            throw error
         }
     }
 }

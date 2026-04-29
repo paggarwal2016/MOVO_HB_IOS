@@ -7,13 +7,26 @@
 
 import Foundation
 
-//
-//Post /fav_contacts
-//
-//{
-//    "favContacts" :["sandeep reyyi"],
-//    "userAction": "ADD-FAVOURITE-CONTACT"
+//enum FavoriteAPI: Endpoint {
+//    
+//    case addFavorite
+//    case ContactList
+//    case updateContact
+//    
+//    
+//    
+//    
+//    var version: APIVersion
+//    
+//    var path: String
+//    
+//    var method: HTTPMethod
+//    
+//    var headerType: HeaderType
+//    
+//    var queryItems: [URLQueryItem]?
+//    
+//    var body: Data?
+//    
+//    
 //}
-//
-//Get
-///fav_contacts

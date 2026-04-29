@@ -62,6 +62,8 @@ struct HeaderType: OptionSet, Sendable {
 
     /// Authorization: Bearer + office-id
     static let authorizedWithOffice: HeaderType = [.bearer, .officeId]
+    
+    static let movoAuthorizedWithIdempotency: HeaderType = [.session, .movoInfo, .Idempotency]
 }
 
 // MARK: - HeaderProvider
