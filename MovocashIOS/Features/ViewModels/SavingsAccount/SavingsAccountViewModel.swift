@@ -78,11 +78,15 @@ final class SavingsAccountViewModel: BaseViewModel {
 
     func updateNickname(name: String, accountId: Int) async {
         do {
-            let _: SuccessResponse = try await perform { [weak self] in
-                guard let self else { throw ModelError.deallocated }
-                return try await network.request(
-                    SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId))
-                )
+            do {
+                let _: SuccessResponse = try await performSilent { [weak self] in
+                    guard let self else { throw ModelError.deallocated }
+                    return try await network.request(
+                        SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId))
+                    )
+                }
+            } catch NetworkError.noContent {
+                // 204 No Content — update succeeded with no body
             }
             analytics.log(AnalyticsEvent.savingsNicknameUpdated, params: [
                 AnalyticsParam.accountId: accountId,
@@ -150,24 +154,31 @@ final class SavingsAccountViewModel: BaseViewModel {
     
     // MARK: - Update Account
     
-    func updateSavingAccount(request: SavingsAccountRequest.UpdateAccount) async throws -> SuccessResponse {
-        try await perform { [weak self] in
-            guard let self else { throw ModelError.deallocated }
-            return try await network.request(SavingsAccountAPI.update(request))
+    func updateSavingAccount(request: SavingsAccountRequest.UpdateAccount) async throws {
+        do {
+            let _: SuccessResponse = try await performSilent { [weak self] in
+                guard let self else { throw ModelError.deallocated }
+                return try await network.request(SavingsAccountAPI.update(request))
+            }
+        } catch NetworkError.noContent {
+            // 204 No Content — update succeeded with no body
         }
     }
     
     // MARK: - Delete Account
     
-    func deleteSavingAccount(request: SavingsAccountRequest.DeleteAccount) async throws -> SuccessResponse {
-        let result: SuccessResponse = try await perform { [weak self] in
-            guard let self else { throw ModelError.deallocated }
-            return try await network.request(SavingsAccountAPI.delete(request))
+    func deleteSavingAccount(request: SavingsAccountRequest.DeleteAccount) async throws {
+        do {
+            let _: SuccessResponse = try await performSilent { [weak self] in
+                guard let self else { throw ModelError.deallocated }
+                return try await network.request(SavingsAccountAPI.delete(request))
+            }
+        } catch NetworkError.noContent {
+            // 204 No Content — delete succeeded with no body
         }
         analytics.log(AnalyticsEvent.savingsAccountDeleted, params: [
             AnalyticsParam.accountId: request.accountId
         ])
-        return result
     }
         
     // MARK: - Account Details
