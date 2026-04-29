@@ -64,6 +64,25 @@ class BaseViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Perform Silent (no error toast — caller handles the error)
+
+    func performSilent<T: Sendable>(_ operation: () async throws -> T) async throws -> T {
+        guard state != .loading else { throw ModelError.alreadyLoading }
+        state = .loading
+        do {
+            let result = try await operation()
+            state = .success
+            defer { state = .idle }
+            return result
+        } catch is CancellationError {
+            state = .idle
+            throw CancellationError()
+        } catch {
+            state = .idle
+            throw error
+        }
+    }
+
     // MARK: - Task Management
     // viewModel.performTask { await callmethods } not used Task { }
 

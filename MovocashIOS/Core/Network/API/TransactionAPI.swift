@@ -12,6 +12,7 @@ enum TransactionAPI: Endpoint {
     case lists(max: Int, accountId: Int)
     case withdrawals(TransactionRequest.Withdrawal)
     case internals(TransactionRequest.Internal)
+    case external(TransactionRequest.External)
     
     // MARK: - Environment Configure
     var environment: Environment { AppConfig.environment }
@@ -22,6 +23,7 @@ enum TransactionAPI: Endpoint {
         case .lists: return "/transactions"
         case .withdrawals: return "/transactions/withdrawal"
         case .internals: return "/transactions/internal"
+        case .external: return "/transactions/external"
         }
     }
     
@@ -29,7 +31,7 @@ enum TransactionAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .lists: return .GET
-        case .withdrawals, .internals: return .POST
+        case .withdrawals, .internals, .external : return .POST
         }
     }
     
@@ -44,7 +46,7 @@ enum TransactionAPI: Endpoint {
                 URLQueryItem(name: "max", value: "\(max)"),
                 URLQueryItem(name: "accountId", value: "\(accountId)")
             ]
-        case .withdrawals, .internals:
+        case .withdrawals, .internals, .external:
             return nil
         }
     }
@@ -63,6 +65,8 @@ enum TransactionAPI: Endpoint {
         case .withdrawals(let request):
             return try JSONEncoder().encode(request)
         case .internals(let request):
+            return try JSONEncoder().encode(request)
+        case .external(let request):
             return try JSONEncoder().encode(request)
         }
     }

@@ -26,4 +26,12 @@ enum TransactionRequest {
         let fromAccountId: Int
         let phoneNumber: String?
     }
+    
+    struct External: Encodable {
+        let description: String
+        let amount: Double
+        let recipientPhoneNumber: String
+        let fromAccountId: Int
+        let smsMessage: String
+    }
 }

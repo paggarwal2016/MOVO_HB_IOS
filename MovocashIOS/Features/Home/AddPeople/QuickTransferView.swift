@@ -12,19 +12,21 @@ struct QuickTransferView: View {
     let contact: AppContact
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @StateObject private var savingVM: SavingsAccountViewModel
+    @ObservedObject private var savingVM: SavingsAccountViewModel
     @StateObject private var transVM: TransactionViewModel
 
     @State private var amountText = ""
     @State private var descriptionText = ""
     @State private var selectedAccount: SavingsAccountDetailsResponse?
+    @State private var isTransferring = false
 
     init(
         contact: AppContact,
-        container: AppContainer
+        container: AppContainer,
+        savingVM: SavingsAccountViewModel
     ) {
         self.contact = contact
-        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        _savingVM = ObservedObject(wrappedValue: savingVM)
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
     }
 
@@ -66,7 +68,7 @@ struct QuickTransferView: View {
                 }
             }
         }
-        .task { await loadAccounts() }
+        .task { await initAccounts() }
         .globalAlert()
     }
 
@@ -200,19 +202,10 @@ struct QuickTransferView: View {
     // MARK: - Send Button
 
     private var sendButton: some View {
-        Button {
+        PrimaryButton(title: "Send Money", isLoading: isTransferring, isEnabled: isValid) {
             UIApplication.shared.dismissKeyboard()
             Task { await sendMoney() }
-        } label: {
-            Text("Send Money")
-                .font(.system(size: 15, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(isValid ? Color.primary : Color(.systemGray5))
-                .foregroundStyle(isValid ? Color.white : Color(.tertiaryLabel))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .disabled(!isValid)
     }
 
     // MARK: - Avatar
@@ -230,15 +223,28 @@ struct QuickTransferView: View {
 
     // MARK: - Actions
 
-    private func loadAccounts() async {
-        await savingVM.loadAccounts()
+    private func initAccounts() async {
+        // If dashboard hasn't loaded accounts yet, load them now
+        if savingVM.accountList == nil {
+            await savingVM.loadAccounts()
+        }
+        // Auto-select primary account, fall back to first if none marked primary
         if selectedAccount == nil {
             selectedAccount = savingVM.accountList?.accounts.first(where: { $0.isPrimary })
+                ?? savingVM.accountList?.accounts.first
+        }
+        // Silently refresh in background — no spinner
+        await savingVM.refreshAccountsSilently()
+        if selectedAccount == nil {
+            selectedAccount = savingVM.accountList?.accounts.first(where: { $0.isPrimary })
+                ?? savingVM.accountList?.accounts.first
         }
     }
 
     private func sendMoney() async {
         guard let fromAccount = selectedAccount else { return }
+        isTransferring = true
+        defer { isTransferring = false }
         
         let sanitized = PhoneNumberValidator.sanitize(contact.phone)
         guard PhoneNumberValidator.isValidUSNumber(sanitized) else {

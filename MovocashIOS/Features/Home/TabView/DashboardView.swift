@@ -143,6 +143,7 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showContactList) {
             ContactView(isPresented: $showContactList)
+                .environmentObject(savingVM)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
