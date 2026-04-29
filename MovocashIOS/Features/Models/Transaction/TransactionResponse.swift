@@ -128,3 +128,9 @@ nonisolated struct TransactionWithdrawalResponse: Codable {
 nonisolated struct TransferInternalResponse: Codable {
     let transferId: Int
 }
+
+// MARK: - Transfer External Response
+
+nonisolated struct TransferExternalResponse: Codable {
+    let externalTransferRequestId: Int
+}

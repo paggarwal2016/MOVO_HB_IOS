@@ -35,17 +35,42 @@ final class SavingsAccountViewModel: BaseViewModel {
     
     // MARK: - Load Accounts
 
+    func refreshAccountsSilently() async {
+        if let list: SavingsAccountListResponse = try? await retryOnTimeout({
+            try await network.request(SavingsAccountAPI.list())
+        }) {
+            accountList = list
+        }
+    }
+
     func loadAccounts() async {
         do {
             accountList = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
-                return try await network.request(SavingsAccountAPI.list())
+                return try await self.retryOnTimeout {
+                    try await self.network.request(SavingsAccountAPI.list())
+                }
             }
             analytics.log(AnalyticsEvent.savingsAccountListViewed)
         } catch is CancellationError {
             // cancelled — no action
         } catch {
             // error surfaced via BaseViewModel toast
+        }
+    }
+
+    // MARK: - Retry Helper
+
+    private func retryOnTimeout<T>(attempts: Int = 3, _ operation: () async throws -> T) async throws -> T {
+        var attempt = 0
+        while true {
+            do {
+                return try await operation()
+            } catch NetworkError.timeout {
+                attempt += 1
+                guard attempt < attempts else { throw NetworkError.timeout }
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+            }
         }
     }
 

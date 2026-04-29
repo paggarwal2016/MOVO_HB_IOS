@@ -13,6 +13,8 @@ struct ContactView: View {
     @StateObject private var viewModel: ContactViewModel
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var container: AppContainer
+    @EnvironmentObject private var savingVM: SavingsAccountViewModel
+    @State private var path = NavigationPath()
     
     init(isPresented: Binding<Bool>, service: ContactsServiceProtocol = ContactsService()) {
         _viewModel = StateObject(wrappedValue: ContactViewModel(service: service, alertManager: AlertManager.shared))
@@ -20,7 +22,7 @@ struct ContactView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 0) {
                 contentBody
             }
@@ -41,7 +43,7 @@ struct ContactView: View {
                 }
             }
             .navigationDestination(for: AppContact.self) { contact in
-                QuickTransferView(contact: contact, container: container)
+                QuickTransferView(contact: contact, container: container, savingVM: savingVM)
             }
         }
         .task {
@@ -190,7 +192,10 @@ struct ContactView: View {
     // MARK: - Favourite Chip
     
     private func favouriteChip(_ contact: AppContact) -> some View {
-        NavigationLink(value: contact) {
+        Button {
+            UIApplication.shared.dismissKeyboard()
+            path.append(contact)
+        } label: {
             VStack(spacing: 3) {
                 contactAvatar(initials: contact.initials, size: 50)
                     .overlay(alignment: .topTrailing) {
@@ -216,7 +221,10 @@ struct ContactView: View {
     
     private func contactRow(_ contact: AppContact) -> some View {
         let starred = viewModel.isFavorite(contact)
-        return NavigationLink(value: contact) {
+        return Button {
+            UIApplication.shared.dismissKeyboard()
+            path.append(contact)
+        } label: {
             HStack(spacing: 14) {
                 contactAvatar(initials: contact.initials, size: 46)
                 VStack(alignment: .leading, spacing: 3) {

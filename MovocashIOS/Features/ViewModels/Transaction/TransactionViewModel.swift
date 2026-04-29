@@ -75,11 +75,11 @@ final class TransactionViewModel: BaseViewModel {
 
     // MARK: - Submit Internal Transfer
 
-    /// Returns `true` on success. Errors are surfaced via BaseViewModel toast.
+    /// Returns `true` on success. Falls back to external transfer if recipient has no Movo account.
     @discardableResult
     func submitInternalTransfer(request: TransactionRequest.Internal) async -> Bool {
         do {
-            let _: TransferInternalResponse = try await perform {
+            let _: TransferInternalResponse = try await performSilent {
                 try await self.network.request(TransactionAPI.internals(request))
             }
             analytics.log(AnalyticsEvent.internalTransferInitiated, params: [
@@ -88,13 +88,47 @@ final class TransactionViewModel: BaseViewModel {
                 AnalyticsParam.toAccountId: request.toAccountId
             ])
             return true
+        } catch NetworkError.serverMessage(let message) where message == "A customer with this phone number does not exist" {
+            return await submitExternalTransfer(from: request)
         } catch is CancellationError {
             return false
         } catch {
+            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
             analytics.log(AnalyticsEvent.internalTransferFailed, params: [
                 AnalyticsParam.amount: request.amount,
                 AnalyticsParam.fromAccountId: request.fromAccountId,
                 AnalyticsParam.toAccountId: request.toAccountId
+            ])
+            return false
+        }
+    }
+
+    // MARK: - Submit External Transfer
+
+    @discardableResult
+    private func submitExternalTransfer(from internalRequest: TransactionRequest.Internal) async -> Bool {
+        let externalRequest = TransactionRequest.External(
+            description: internalRequest.description,
+            amount: internalRequest.amount,
+            recipientPhoneNumber: internalRequest.phoneNumber ?? "",
+            fromAccountId: internalRequest.fromAccountId,
+            smsMessage: "External Transfer"
+        )
+        do {
+            let _: TransferExternalResponse = try await perform {
+                try await self.network.request(TransactionAPI.external(externalRequest))
+            }
+            analytics.log(AnalyticsEvent.internalTransferInitiated, params: [
+                AnalyticsParam.amount: externalRequest.amount,
+                AnalyticsParam.fromAccountId: externalRequest.fromAccountId
+            ])
+            return true
+        } catch is CancellationError {
+            return false
+        } catch {
+            analytics.log(AnalyticsEvent.internalTransferFailed, params: [
+                AnalyticsParam.amount: externalRequest.amount,
+                AnalyticsParam.fromAccountId: externalRequest.fromAccountId
             ])
             return false
         }
