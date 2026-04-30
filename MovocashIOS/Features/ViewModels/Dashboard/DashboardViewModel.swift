@@ -117,8 +117,8 @@ private extension SavingsAccountInfo {
         accountNumber = a.accountNumber
         clientName = a.clientName
         status = AccountStatus(rawValue: a.status) ?? .unknown
-        accountBalance = Decimal(a.accountBalance)
-        availableBalance = Decimal(a.availableBalance)
+        accountBalance = Decimal(string: a.accountBalance) ?? 0
+        availableBalance = Decimal(string: a.availableBalance) ?? 0
         clientId = a.clientId
         nickname = a.nickname.flatMap { $0.isEmpty ? nil : $0 }
         isPrimary = a.isPrimary

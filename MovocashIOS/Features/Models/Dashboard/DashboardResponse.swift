@@ -94,15 +94,14 @@ nonisolated struct DashboardUserDetails: Decodable, Sendable {
 }
 
 // MARK: - PRIMARYACCOUNT
-// accountBalance / availableBalance are Int in this response (not String)
 
 nonisolated struct DashboardAccount: Decodable, Sendable {
     let id: Int
     let accountNumber: String
     let clientName: String
     let status: String
-    let accountBalance: Int
-    let availableBalance: Int
+    let accountBalance: String
+    let availableBalance: String
     let clientId: Int
     var nickname: String?
     let isPrimary: Bool
