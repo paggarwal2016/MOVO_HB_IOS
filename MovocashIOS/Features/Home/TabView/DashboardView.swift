@@ -209,6 +209,7 @@ struct DashboardView: View {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
             guard !hasLoadedData else { return }
             hasLoadedData = true
+            await vm.loadCards()
         }
         .onAppear {
             showCreateCashCard = false
@@ -229,9 +230,9 @@ struct DashboardView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 20) {
                 savingsSection
-                Spacer()
             }
             .padding(.top, 16)
+            .frame(maxWidth: .infinity)        // 👈 lock the column to screen width
         }
         .refreshable {
             await dashboardVM.refresh()
@@ -258,18 +259,9 @@ struct DashboardView: View {
                 }
             }
             .padding(.horizontal, 15)
-
-            cashCardPromoCard
-//            
-//            PrimaryButton(
-//                title: "View Cards",
-//                backgroundColor: .orange.opacity(0.1),
-//                textColor: .black
-//            ) {
-//                showViewCardList = true
-//            }
-//            .padding()
-//            .frame(height: 60)
+            
+            
+            cardSectionView
                         
             ActionCard(title: "Pay Anyone",
                        description: "Send money instantly to anyone in your contact list.",
@@ -291,72 +283,28 @@ struct DashboardView: View {
     }
     
     
-    // MARK: - Cash Card Promo Card
+    // MARK: - Card Section (carousel or empty state)
 
-    private var cashCardPromoCard: some View {
-        VStack(spacing: 0) {
-
-            // Top — image + title/description
-            Button {
-                showCreateCashCard = true
-            } label: {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "creditcard.fill")
-                        .font(.system(size: 22, weight: .regular))
-                        .foregroundStyle(Color(.systemGray2))
-                        .padding(.top, 2)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Create Card")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.primary)
-                        Text("Create a new virtual cash card for instant payments.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.gray)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer()
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-           //if isViewCashAccount {
-                Divider()
-                    .padding(.horizontal, 16)
-
-                // Bottom — view cash cards (full-width tap area)
-                Button {
-                    //showAccountList = true
-                    showViewCardList = true
-                } label: {
-                    HStack {
-                        Text("View Cash Cards")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
+    @ViewBuilder
+    private var cardSectionView: some View {
+        Group {
+            if !vm.hasLoadedCards {
+                ProgressView()
+                    //.tint(VCardTheme.accent)
                     .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            //}
+                    .frame(height: 220)              // 👈 same height as the other states
+            } else if vm.cards.isEmpty {
+                CreateCardView(
+                    title: "Create Card",
+                    message: "Create a virtual card for instant payments.",
+                    onTap: { showCreateCashCard = true }
+                )
+            } else {
+                CardSelectorView(cards: vm.cards, onTap: { showCreateCashCard = true })
+            }
         }
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
-        .padding(.horizontal, 15)
+        .frame(maxWidth: .infinity)                 // 👈 lock width
+        .padding(.horizontal, 15)                   // 👈 single source of horizontal padding
     }
 
     // MARK: - Overlay
@@ -383,6 +331,7 @@ struct DashboardView: View {
             _ = try await vm.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
             showCreateCashCard = false
             ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
+            await vm.loadCards()
         } catch {
             ToastManager.shared.show("Failed to create cash card. Please try again.", style: .error, position: .bottom)
         }

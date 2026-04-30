@@ -11,6 +11,8 @@
 		140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */; };
 		140D48C82FA0DD4E007C3C0E /* KYCSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */; };
 		140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */; };
+		1417849C2FA34B8E000E802C /* CardVcard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1417849B2FA34B8E000E802C /* CardVcard.swift */; };
+		1417849E2FA34CC9000E802C /* CreateCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1417849D2FA34CC9000E802C /* CreateCardView.swift */; };
 		1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296C2F9616D600A72366 /* SignUpViewModel.swift */; };
 		142029722F96256900A72366 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029712F96256800A72366 /* OTPScreen.swift */; };
 		142029732F96256900A72366 /* GetStartedInfoScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029702F96256800A72366 /* GetStartedInfoScreen.swift */; };
@@ -102,6 +104,8 @@
 		140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SealedCryptoService.swift; sourceTree = "<group>"; };
 		140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCSuccessView.swift; sourceTree = "<group>"; };
 		140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		1417849B2FA34B8E000E802C /* CardVcard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardVcard.swift; sourceTree = "<group>"; };
+		1417849D2FA34CC9000E802C /* CreateCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateCardView.swift; sourceTree = "<group>"; };
 		1420296C2F9616D600A72366 /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewModel.swift; sourceTree = "<group>"; };
 		142029702F96256800A72366 /* GetStartedInfoScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedInfoScreen.swift; sourceTree = "<group>"; };
 		142029712F96256800A72366 /* OTPScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPScreen.swift; sourceTree = "<group>"; };
@@ -423,6 +427,7 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				146893D92FA33D7A001918AE /* Dashboard */,
 				14D36C582F7AAF150024760F /* ShimmerModifier.swift */,
 				14D52CBC2F9B908500CB648B /* EmptyStateView.swift */,
 				14D36C592F7AAF150024760F /* SkeletonViews.swift */,
@@ -482,6 +487,15 @@
 				146819982F4DE72C00BED014 /* MovocashIOSTestsLaunchTests.swift */,
 			);
 			path = MovocashIOSUITests;
+			sourceTree = "<group>";
+		};
+		146893D92FA33D7A001918AE /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				1417849B2FA34B8E000E802C /* CardVcard.swift */,
+				1417849D2FA34CC9000E802C /* CreateCardView.swift */,
+			);
+			path = Dashboard;
 			sourceTree = "<group>";
 		};
 		14BF482E2F4C873A00FD7B53 = {
@@ -680,6 +694,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1417849E2FA34CC9000E802C /* CreateCardView.swift in Sources */,
 				146819772F4DE6CF00BED014 /* Environment.swift in Sources */,
 				142029722F96256900A72366 /* OTPScreen.swift in Sources */,
 				142029732F96256900A72366 /* GetStartedInfoScreen.swift in Sources */,
@@ -719,6 +734,7 @@
 				1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */,
 				140D48C82FA0DD4E007C3C0E /* KYCSuccessView.swift in Sources */,
 				140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */,
+				1417849C2FA34B8E000E802C /* CardVcard.swift in Sources */,
 				146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */,
 				14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */,
 				1468198E2F4DE6CF00BED014 /* KeychainManager.swift in Sources */,

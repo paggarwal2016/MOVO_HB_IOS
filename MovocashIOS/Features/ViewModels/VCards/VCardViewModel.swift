@@ -24,6 +24,25 @@ final class VCardViewModel: BaseViewModel {
         super.init(alertManager: alertManager)
     }
 
+    // MARK: - State
+
+    @Published var apiCards: [VCardListResponse] = []
+    @Published var hasLoadedCards: Bool = false
+
+    func loadCards() async {
+        do {
+            apiCards = try await getVCardsAll()
+        } catch {
+            // Error already surfaced by perform(_:) in getVCardsAll
+        }
+        hasLoadedCards = true
+    }
+    
+    // 🎨 UI-ready data
+        var cards: [CardUIModel] {
+            apiCards.map { $0.toUIModel() }
+        }
+
     // MARK: - Vcard get
 
     func getVCardPrimary() async throws -> VCardPrimaryResponse? {

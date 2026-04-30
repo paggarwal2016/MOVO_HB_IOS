@@ -23,6 +23,7 @@ enum DashboardSection: Sendable {
     case payAnyone(DashboardPayAnyone)
     case rewards(DashboardRewards)
     case linkedAccounts(DashboardLinkedAccounts)
+    case myCards(DashboardMyCards)
     case menu([DashboardMenuItem])
     case unknown
 }
@@ -46,6 +47,8 @@ extension DashboardSection: Decodable {
         case "LINKEDACCOUNTS":
             let wrapper = try c.decode(NestedWrapper<DashboardLinkedAccounts>.self, forKey: .data)
             self = .linkedAccounts(wrapper.data)
+        case "MYCARDS":
+            self = .myCards(try c.decode(DashboardMyCards.self, forKey: .data))
         case "MENU":
             self = .menu(try c.decode([DashboardMenuItem].self, forKey: .data))
         default:
@@ -133,11 +136,11 @@ nonisolated struct DashboardRewards: Decodable, Sendable {
 // MARK: - LINKEDACCOUNTS
 
 nonisolated struct DashboardLinkedAccounts: Decodable, Sendable {
-    let accountId: Int
-    let customerId: Int
+    let accountId: Int?
+    let customerId: Int?
     let title: String
     let description: String
-    let linkedAccounts: [DashboardLinkedAccount]
+    let linkedAccounts: [DashboardLinkedAccount]?
     let actions: [DashboardAction]
 }
 
@@ -151,6 +154,14 @@ nonisolated struct DashboardLinkedAccount: Decodable, Sendable {
     let plaidAccountBalance: String
     let isDefault: Bool
     let isPlaidLoginRequired: Bool
+}
+
+// MARK: - MYCARDS
+
+nonisolated struct DashboardMyCards: Decodable, Sendable {
+    let title: String
+    let description: String
+    let actions: [DashboardAction]
 }
 
 // MARK: - Shared

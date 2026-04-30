@@ -91,6 +91,13 @@ final class DashboardViewModel: BaseViewModel {
         }.first
     }
 
+    var myCards: DashboardMyCards? {
+        dashboard?.data.compactMap { section -> DashboardMyCards? in
+            guard case .myCards(let m) = section else { return nil }
+            return m
+        }.first
+    }
+
     func optimisticallyUpdateNickname(_ nickname: String) {
         guard var current = dashboard else { return }
         current.data = current.data.map { section in

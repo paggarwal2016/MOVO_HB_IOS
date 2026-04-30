@@ -36,7 +36,7 @@ struct UserProfileView: View {
     // on first load so the section populates without waiting for the separate fetch.
     private var effectiveAccounts: [ACHAccount] {
         if !achVM.accounts.isEmpty { return achVM.accounts }
-        return dashboardVM.linkedAccounts?.linkedAccounts.map { ACHAccount(from: $0) } ?? []
+        return dashboardVM.linkedAccounts?.linkedAccounts?.map { ACHAccount(from: $0) } ?? []
     }
     
     var body: some View {
