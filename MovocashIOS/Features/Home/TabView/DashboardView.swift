@@ -57,6 +57,7 @@ struct DashboardView: View {
     
     @State private var showViewCardList = false
     @State private var hasLoadedData = false
+    @State private var selectedCard: VCardListResponse? = nil
     
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -205,6 +206,18 @@ struct DashboardView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(item: $selectedCard) { card in
+            CardDetailSheet(
+                card: card,
+                primaryAccountId: dashboardVM.primaryAccount?.id,
+                savingVM: savingVM,
+                onDeleted: {
+                    Task { await vm.loadCards() }
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
             guard !hasLoadedData else { return }
@@ -320,7 +333,13 @@ struct DashboardView: View {
                     onTap: { showCreateCashCard = true }
                 )
             } else {
-                CardSelectorView(cards: vm.cards, sectionTitle: data.title, onTap: { showCreateCashCard = true })
+                CardSelectorView(
+                    cards: vm.cards,
+                    sectionTitle: data.title,
+                    onTap: { showCreateCashCard = true },
+                    onEyeTap: { card in selectedCard = card },
+                    onShowMore: { showViewCardList = true }
+                )
             }
         }
         .frame(maxWidth: .infinity)

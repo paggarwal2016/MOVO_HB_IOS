@@ -38,10 +38,7 @@ final class VCardViewModel: BaseViewModel {
         hasLoadedCards = true
     }
     
-    // 🎨 UI-ready data
-        var cards: [CardUIModel] {
-            apiCards.map { $0.toUIModel() }
-        }
+    var cards: [VCardListResponse] { apiCards }
 
     // MARK: - Vcard get
 

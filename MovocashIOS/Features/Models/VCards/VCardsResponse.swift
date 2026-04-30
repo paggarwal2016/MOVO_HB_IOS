@@ -66,6 +66,10 @@ nonisolated struct VCardListResponse: Codable, Sendable {
     let cardNumber: String?
 }
 
+extension VCardListResponse: Identifiable {
+    public var id: String { "\(savingsAccountId ?? 0)-\(lastFour ?? "")" }
+}
+
 extension VCardListResponse {
 
     var fullName: String {
@@ -74,9 +78,13 @@ extension VCardListResponse {
             .joined(separator: " ")
     }
 
+    var displayName: String {
+        fullName.isEmpty ? (name ?? "N/A") : fullName
+    }
+
     var maskedNumber: String {
         guard let lastFour else { return "•••• •••• •••• ••••" }
-        return "••••   ••••   ••••   \(lastFour)"
+        return "•••• •••• •••• \(lastFour)"
     }
 
     var formattedExpiry: String {
@@ -84,7 +92,7 @@ extension VCardListResponse {
     }
 
     var displayBalance: String {
-        "$ 0.00" // 👉 replace with real API field later
+        "$ 0.00"
     }
 }
 
@@ -95,23 +103,3 @@ nonisolated struct VCardListAllResponse: Decodable, Sendable {
 }
 
 
-struct CardUIModel: Identifiable {
-    let id = UUID()
-    let balanceText: String
-    let cardNumber: String
-    let expiry: String
-    let holderName: String
-    let brand: String
-}
-
-extension VCardListResponse {
-    func toUIModel() -> CardUIModel {
-        CardUIModel(
-            balanceText: displayBalance,
-            cardNumber: maskedNumber,
-            expiry: formattedExpiry,
-            holderName: fullName.isEmpty ? (name ?? "N/A") : fullName,
-            brand: "VISA" // or from API later
-        )
-    }
-}
