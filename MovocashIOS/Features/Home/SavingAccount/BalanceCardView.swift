@@ -12,6 +12,7 @@ struct BalanceCardView: View {
 
     let account: SavingsAccountInfo
     var backgroundColor: Color = Color(#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1))
+    var viewCardsLabel: String? = nil
     var onCardTap: () -> Void
     var onPrimaryTap: () -> Void
     var onViewCardTap: () -> Void
@@ -64,24 +65,26 @@ struct BalanceCardView: View {
             .padding(.top, 18)
             .padding(.bottom, 16)
 
-            Divider()
+            if let label = viewCardsLabel {
+                Divider()
 
-            // ── Bottom row ────────────────────────────────────────────────
-            Button { onViewCardTap() } label: {
-                HStack {
-                    Text("View cards")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1)))
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1)))
+                // ── Bottom row ────────────────────────────────────────────────
+                Button { onViewCardTap() } label: {
+                    HStack {
+                        Text(label)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1)))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1)))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .contentShape(Rectangle())
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .background(
             RoundedRectangle(cornerRadius: 16)

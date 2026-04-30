@@ -241,70 +241,90 @@ struct DashboardView: View {
     
     @ViewBuilder
     private var savingsSection: some View {
-        if let account = displayAccount {
-            BalanceCardView(
-                account: account,
-                onCardTap: { showPrimaryAccountDetails = true },
-                onPrimaryTap: { showEditNickname = true },
-                onViewCardTap: { showViewCard = true }
-            )
-
-            // ── Quick actions ──────────────────────────────────────────────
-            HStack(spacing: 12) {
-                quickActionButton(icon: "list.bullet.rectangle", title: "Transactions") {
-                    showTransactions = true
-                }
-                quickActionButton(icon: "person.text.rectangle", title: "Move Money") {
-                    showMoveMoney = true
-                }
-            }
-            .padding(.horizontal, 15)
-            
-            
-            cardSectionView
-                        
-            ActionCard(title: "Pay Anyone",
-                       description: "Send money instantly to anyone in your contact list.",
-                       buttonLabel: "Send Money") {
-                showContactList = true
-                SecureLogger.debug("Quick transfer tapped", category: .general)
-            }
-            
-            ActionCard(title: "Link Bank Account",
-                       description: "To make inverstments, deposits, withdrawals and securely link your bank account.",
-                       buttonLabel: "Connect bank",
-                       isLoading: achVM.state == .loading) {
-                Task { await achVM.startPlaidLink() }
-                SecureLogger.debug("Link your bank tapped", category: .general)
+        if let sections = dashboardVM.dashboard?.data {
+            ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
+                dashboardSectionView(section)
             }
         } else if dashboardVM.state == .loading && dashboardVM.primaryAccount == nil {
             CardSkeletonView()
         }
     }
-    
-    
-    // MARK: - Card Section (carousel or empty state)
 
     @ViewBuilder
-    private var cardSectionView: some View {
+    private func dashboardSectionView(_ section: DashboardSection) -> some View {
+        switch section {
+        case .primaryAccount(let accountData):
+            if let account = displayAccount {
+                BalanceCardView(
+                    account: account,
+                    viewCardsLabel: accountData.actions.first(where: { $0.action == "VIEW-CARDS" })?.label,
+                    onCardTap: { showPrimaryAccountDetails = true },
+                    onPrimaryTap: { showEditNickname = true },
+                    onViewCardTap: { showViewCard = true }
+                )
+                let visibleActions = accountData.actions.filter { $0.action != "VIEW-CARDS" }
+                if !visibleActions.isEmpty {
+                    LazyVGrid(
+                        columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                        spacing: 12
+                    ) {
+                        ForEach(visibleActions, id: \.action) { action in
+                            quickActionButton(
+                                icon: quickActionIcon(for: action.action),
+                                title: action.label
+                            ) {
+                                handleQuickAction(action.action)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 15)
+                }
+            }
+        case .payAnyone(let data):
+            ActionCard(
+                title: data.title,
+                description: data.description,
+                buttonLabel: data.actions.first?.label ?? "Send Money"
+            ) {
+                showContactList = true
+                SecureLogger.debug("Quick transfer tapped", category: .general)
+            }
+        case .linkedAccounts(let data):
+            ActionCard(
+                title: data.title,
+                description: data.description,
+                buttonLabel: data.actions.first?.label ?? "Link an account",
+                isLoading: achVM.state == .loading
+            ) {
+                Task { await achVM.startPlaidLink() }
+                SecureLogger.debug("Link your bank tapped", category: .general)
+            }
+        case .myCards(let data):
+            myCardsSectionView(data)
+        case .userDetails, .rewards, .menu, .unknown:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func myCardsSectionView(_ data: DashboardMyCards) -> some View {
         Group {
             if !vm.hasLoadedCards {
                 ProgressView()
-                    //.tint(VCardTheme.accent)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 220)              // 👈 same height as the other states
+                    .frame(height: 220)
             } else if vm.cards.isEmpty {
                 CreateCardView(
-                    title: "Create Card",
-                    message: "Create a virtual card for instant payments.",
+                    title: data.title,
+                    message: data.description,
                     onTap: { showCreateCashCard = true }
                 )
             } else {
-                CardSelectorView(cards: vm.cards, onTap: { showCreateCashCard = true })
+                CardSelectorView(cards: vm.cards, sectionTitle: data.title, onTap: { showCreateCashCard = true })
             }
         }
-        .frame(maxWidth: .infinity)                 // 👈 lock width
-        .padding(.horizontal, 15)                   // 👈 single source of horizontal padding
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 15)
     }
 
     // MARK: - Overlay
@@ -347,12 +367,13 @@ struct DashboardView: View {
                 Text(title)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.black)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 16)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 14)
@@ -363,5 +384,23 @@ struct DashboardView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func quickActionIcon(for action: String) -> String {
+        switch action {
+        case "TRANSACTIONS":           return "list.bullet.rectangle"
+        case "MOVE-MONEY":             return "person.text.rectangle"
+        case "ISSUE-A-PHYSICAL-CARD":  return "creditcard"
+        default:                       return "chevron.right"
+        }
+    }
+
+    private func handleQuickAction(_ action: String) {
+        switch action {
+        case "TRANSACTIONS":           showTransactions = true
+        case "MOVE-MONEY":             showMoveMoney = true
+        case "ISSUE-A-PHYSICAL-CARD":  break
+        default:                       break
+        }
     }
 }

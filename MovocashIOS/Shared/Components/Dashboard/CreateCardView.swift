@@ -53,12 +53,15 @@ struct CreateCardView: View {
                     
                     // MARK: - Message
                     Text(message)
-                        .font(.system(size: 17)) // ✅ smaller
+                        .font(.system(size: 14))
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
-                        .minimumScaleFactor(0.75) // ✅ shrink if needed
-                        .padding(.horizontal, 10)
+                        .allowsTightening(true)              // ✅ better spacing
+                        .minimumScaleFactor(0.9)             // ✅ slight shrink only if needed
+                        .frame(maxWidth: .infinity)          // ✅ use full card width
+                        .fixedSize(horizontal: false, vertical: true) // ✅ prevents clipping
+                        .padding(.horizontal, 12)
                     
                     Spacer(minLength: 8) // ✅ bottom balance
                 }

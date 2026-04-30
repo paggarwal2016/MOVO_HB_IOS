@@ -62,12 +62,14 @@ struct HomeTabBarView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var userVM: UserViewModel
+    @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
 
     @StateObject private var dashboardVM: DashboardViewModel
 
     @State private var selectedTab: Tab = .home
+    @State private var isLoggingOut = false
 
     init(container: AppContainer) {
         _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
@@ -75,7 +77,9 @@ struct HomeTabBarView: View {
 
     var body: some View {
         Group {
-            if dashboardVM.dashboard == nil {
+            if let message = dashboardVM.supportMessage {
+                supportScreen(message: message)
+            } else if dashboardVM.dashboard == nil {
                 skeletonScreen
             } else {
                 realTabView
@@ -214,5 +218,47 @@ private extension HomeTabBarView {
         guard appState.isNewRegistration else { return }
         lockManager.resetToUnlocked()
         appState.isNewRegistration = false
+    }
+}
+
+
+// MARK: - Support Screen
+
+private extension HomeTabBarView {
+
+    @ViewBuilder
+    func supportScreen(message: String) -> some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 52))
+                .foregroundStyle(.primary)
+
+            Text(message)
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            PrimaryButton(
+                title: "Log Out",
+                backgroundColor: .primary,
+                textColor: .white,
+                isLoading: isLoggingOut
+            ) {
+                isLoggingOut = true
+                Task {
+                    await sessionManager.logout(appState: appState)
+                    lockManager.logout()
+                    isLoggingOut = false
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
     }
 }

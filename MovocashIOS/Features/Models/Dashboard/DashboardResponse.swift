@@ -13,6 +13,15 @@ nonisolated struct DashboardResponse: Decodable, Sendable {
     let success: Bool
     let message: String
     var data: [DashboardSection]
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        success = try c.decode(Bool.self, forKey: .success)
+        message = try c.decode(String.self, forKey: .message)
+        data = (try? c.decode([DashboardSection].self, forKey: .data)) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey { case success, message, data }
 }
 
 // MARK: - Section Enum
@@ -108,6 +117,7 @@ nonisolated struct DashboardAccount: Decodable, Sendable {
     let clientId: Int
     var nickname: String?
     let isPrimary: Bool
+    let actions: [DashboardAction]
 }
 
 // MARK: - PAYANYONE

@@ -12,8 +12,9 @@ struct CardItemView: View {
     
     let card: CardUIModel
     let isSelected: Bool
-    let showSelection: Bool   // 👈 NEW
-    
+    let showSelection: Bool
+    var onSelect: (() -> Void)? = nil
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             
@@ -57,7 +58,7 @@ struct CardItemView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(card.expiry)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.white)
                             .font(.caption)
                         
                         Text(card.holderName)
@@ -75,11 +76,15 @@ struct CardItemView: View {
             }
             .padding()
             
-            // ✅ Show only when multiple cards
-            if showSelection && isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.primary)
-                    .padding(10)
+            // Radio → tick: circle by default, checkmark.circle.fill when selected
+            if showSelection {
+                Button { onSelect?() } label: {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 22))
+                        .foregroundColor(isSelected ? .primary : .white.opacity(0.6))
+                        .padding(10)
+                }
+                .buttonStyle(.plain)
             }
         }
         .frame(height: 170)
@@ -92,9 +97,10 @@ struct CardItemView: View {
 
 
 struct CardSelectorView: View {
-    
+
     @State private var selectedIndex: Int = 0
     let cards: [CardUIModel]
+    var sectionTitle: String = "My Cards"
     var onTap: () -> Void
     
     var body: some View {
@@ -106,8 +112,8 @@ struct CardSelectorView: View {
             VStack(alignment: .leading) {
                 
                 HStack {
-                    Text(isSingle ? "Card" : "Choose cards")
-                        .font(.system(size: 20, weight: .semibold))
+                    Text(sectionTitle)
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.black)
                     
                     Spacer()
@@ -140,28 +146,35 @@ struct CardSelectorView: View {
                     .frame(width: cardWidth)
                     
                 } else {
-                    
-                    // ✅ MULTIPLE CARDS (SCROLL)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            
-                            ForEach(cards.indices, id: \.self) { index in
-                                
-                                CardItemView(
-                                    card: cards[index],
-                                    isSelected: selectedIndex == index,
-                                    showSelection: true
-                                )
-                                .frame(width: cardWidth)
-                                .onTapGesture {
-                                    withAnimation(.spring()) {
-                                        selectedIndex = index
+
+                    // ✅ MULTIPLE CARDS (SCROLL + bring selected to front)
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(cards.indices, id: \.self) { index in
+                                    CardItemView(
+                                        card: cards[index],
+                                        isSelected: selectedIndex == index,
+                                        showSelection: true,
+                                        onSelect: {
+                                            withAnimation(.spring()) {
+                                                selectedIndex = index
+                                                proxy.scrollTo(index, anchor: .center)
+                                            }
+                                        }
+                                    )
+                                    .frame(width: cardWidth)
+                                    .id(index)
+                                    .onTapGesture {
+                                        withAnimation(.spring()) {
+                                            proxy.scrollTo(index, anchor: .center)
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    
+
                     // ✅ Pagination (ONLY for multiple)
                     HStack(spacing: 6) {
                         ForEach(cards.indices, id: \.self) { index in
@@ -171,7 +184,8 @@ struct CardSelectorView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 6)
+                    .padding(.top, 4)
+                    .padding(.bottom, 5)
                 }
             }
         }

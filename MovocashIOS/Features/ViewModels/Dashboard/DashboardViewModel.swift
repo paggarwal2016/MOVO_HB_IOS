@@ -108,6 +108,11 @@ final class DashboardViewModel: BaseViewModel {
         dashboard = current
     }
 
+    var supportMessage: String? {
+        guard let d = dashboard, d.data.isEmpty else { return nil }
+        return d.message
+    }
+
     var menuItems: [DashboardMenuItem] {
         dashboard?.data.compactMap { section -> [DashboardMenuItem]? in
             guard case .menu(let items) = section else { return nil }
