@@ -60,6 +60,7 @@ struct DashboardView: View {
     @State private var showViewCardList = false
     @State private var hasLoadedData = false
     @State private var selectedCard: VCardListResponse? = nil
+    @State private var showCardDetail = false
     
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -205,22 +206,25 @@ struct DashboardView: View {
                 }
             )
         }
-        .sheet(isPresented: $showViewCardList) {
-            ViewCardsListScreen(isPresented: $showViewCardList, container: container)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(item: $selectedCard) { card in
-            CardDetailSheet(
-                card: card,
+        .navigationDestination(isPresented: $showViewCardList) {
+            ViewCardsListScreen(
+                cards: vm.cards,
                 primaryAccountId: dashboardVM.primaryAccount?.id,
-                savingVM: savingVM, container: container,
-                onDeleted: {
-                    Task { await vm.loadCards() }
-                }
+                container: container,
+                onDeleted: { Task { await vm.loadCards() } }
             )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+        }
+        .navigationDestination(isPresented: $showCardDetail) {
+            if let card = selectedCard {
+                CardDetailSheet(
+                    card: card,
+                    primaryAccountId: dashboardVM.primaryAccount?.id,
+                    savingVM: savingVM, container: container,
+                    onDeleted: {
+                        Task { await vm.loadCards() }
+                    }
+                )
+            }
         }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
@@ -343,7 +347,10 @@ struct DashboardView: View {
                     cards: vm.cards,
                     sectionTitle: data.title,
                     onTap: { showCreateCashCard = true },
-                    onEyeTap: { card in selectedCard = card },
+                    onEyeTap: { card in
+                        selectedCard = card
+                        showCardDetail = true
+                    },
                     onShowMore: { showViewCardList = true }
                 )
             }

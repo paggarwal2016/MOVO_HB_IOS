@@ -9,145 +9,151 @@ import SwiftUI
 
 struct ViewCardsListScreen: View {
     
-    @Binding var isPresented: Bool
-    @StateObject private var vm: VCardViewModel
+    let cards: [VCardListResponse]
+    let primaryAccountId: Int?
+    let container: AppContainer
+    var onDeleted: (() -> Void)?
     
-    init(isPresented: Binding<Bool>, container: AppContainer) {
-        _isPresented = isPresented
-        _vm = StateObject(wrappedValue: container.makeVCardViewModel())
+    @StateObject private var savingVM: SavingsAccountViewModel
+    @StateObject private var cardVM: VCardViewModel
+    
+    init(
+        cards: [VCardListResponse],
+        primaryAccountId: Int?,
+        container: AppContainer,
+        onDeleted: (() -> Void)? = nil
+    ) {
+        self.cards = cards
+        self.primaryAccountId = primaryAccountId
+        self.container = container
+        self.onDeleted = onDeleted
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
     
-    @State private var vcards: [VCardsList] = []
-    @State private var selectedCard: VCardsList?
+    @State private var selectedCard: VCardListResponse?
+    @State private var showCardDetail = false
+    @State private var showCreateCard = false
     
-    // Derived binding — popup dismisses by setting selectedCard to nil
-    private var isShowingDetail: Binding<Bool> {
-        Binding(
-            get: { selectedCard != nil },
-            set: { if !$0 { selectedCard = nil } }
-        )
+    // Use VM cards after first load, otherwise show what DashboardView passed in.
+    private var displayCards: [VCardListResponse] {
+        cardVM.hasLoadedCards ? cardVM.cards : cards
     }
     
     var body: some View {
-        ZStack {
-            NavigationStack {
-                vcardList
-                    .navigationTitle("Cash Cards")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") { isPresented = false }
-                                .foregroundStyle(Color.primary)
-                                .fontWeight(.semibold)
-                        }
-                    }
-            }
-            
-            if vm.state == .loading && !vcards.isEmpty {
-                SpinnerView()
-            }
-        }
-        .overlay { overlayContent }
-        .globalAlert()
-        .task { await getVCardsList }
-    }
-    
-    // MARK: - Overlay
-    
-    @ViewBuilder
-    private var overlayContent: some View {
-        if let card = selectedCard {
-            dimmedOverlay { selectedCard = nil } content: {
-                VirtualCardDetailPopupView(
-                    card: card,
-                    isPresented: isShowingDetail
-                )
-                .padding(.horizontal, 15)
-            }
-        }
-    }
-    
-    // MARK: - VCard List
-    
-    private var vcardList: some View {
-        List {
-            if vm.state == .loading && vcards.isEmpty {
-                ForEach(0..<4, id: \.self) { _ in
-                    AccountRowSkeleton().cardListRowStyle()
-                }
+        Group {
+            if displayCards.isEmpty {
+                emptyState
             } else {
-                ForEach(vcards.indices, id: \.self) { index in
-                    VCardRowView(card: vcards[index])
-                        .contentShape(Rectangle())
-                        .onTapGesture { selectedCard = vcards[index] }
-                        .cardListRowStyle()
+                cardsList
+            }
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("Cards")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showCreateCard = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.primary)
                 }
             }
         }
-        .listStyle(.plain)
-        .background(Color(.systemGroupedBackground))
-    }
-    
-    // MARK: - Load
-    
-    private var getVCardsList: Void {
-        get async {
-            do {
-                vcards = try await vm.getVCardsList()
-            } catch {
-                ToastManager.shared.show("Failed to load cards.", style: .error, position: .bottom)
+        .sheet(isPresented: $showCreateCard) {
+            CreateCashCardView(
+                onCancel: { showCreateCard = false },
+                onCreate: { nickname, pin in
+                    await createCard(nickname: nickname, pin: pin)
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .navigationDestination(isPresented: $showCardDetail) {
+            if let card = selectedCard {
+                CardDetailSheet(
+                    card: card,
+                    primaryAccountId: primaryAccountId,
+                    savingVM: savingVM,
+                    container: container,
+                    onDeleted: {
+                        onDeleted?()
+                        Task { await cardVM.loadCards() }
+                    }
+                )
             }
         }
+        .globalAlert()
     }
-}
-
-// MARK: - List Row Style
-
-private extension View {
-    func cardListRowStyle() -> some View {
-        self
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color(.systemGroupedBackground))
-            .listRowInsets(EdgeInsets())
-    }
-}
-
-// MARK: - VCard Row
-
-struct VCardRowView: View {
-
-    let card: VCardsList
-
-    var body: some View {
-        HStack(spacing: 12) {
-
-            Image(systemName: "creditcard")
-                .font(.title2)
-                .foregroundStyle(Color.primary)
-                .frame(width: 44, height: 44)
-                .background(Color.primary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(card.name ?? "")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Text((card.cardNumber ?? "").maskedCardNumber())
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+    
+    // MARK: - Cards List
+    
+    private var cardsList: some View {
+        ScrollView(showsIndicators: false) {
+            LazyVStack(spacing: 14) {
+                ForEach(displayCards, id: \.id) { card in
+                    CardItemView(
+                        card: card,
+                        isSelected: false,
+                        onEyeTap: { tapped in
+                            selectedCard = tapped
+                            showCardDetail = true
+                        }
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 5)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedCard = card
+                        showCardDetail = true
+                    }
+                }
             }
-
-            Spacer()
-
-            Text("Exp: \(card.expiration ?? "")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
         }
-        .padding(14)
-        .background(.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+    }
+    
+    // MARK: - Create Card
+    
+    private func createCard(nickname: String, pin: String) async {
+        do {
+            _ = try await cardVM.createVCard(
+                request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION")
+            )
+            showCreateCard = false
+            ToastManager.shared.show("Card \"\(nickname)\" created!", style: .success, position: .bottom)
+            await cardVM.loadCards()
+            onDeleted?()
+        } catch {
+            ToastManager.shared.show("Failed to create card. Please try again.", style: .error, position: .bottom)
+        }
+    }
+    
+    // MARK: - Empty State
+    
+    private var emptyState: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color(.systemGray5))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "creditcard.slash")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundStyle(Color.secTcolor)
+            }
+            Text("No Cards Yet")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.preTcolor)
+            Text("Cards you create will appear here.")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.secTcolor)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.bottom, 60)
     }
 }

@@ -64,6 +64,7 @@ struct CardDetailSheet: View {
                 }
             }
         }
+        .navigationBarBackButtonHidden(true)
         .alert("Delete Card", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 Task { await deleteCard() }
