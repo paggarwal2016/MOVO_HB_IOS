@@ -67,12 +67,14 @@ struct HomeTabBarView: View {
     @EnvironmentObject private var lockManager: AppLockManager
 
     @StateObject private var dashboardVM: DashboardViewModel
+    @StateObject private var linkAccountVM: ACHViewModel
 
     @State private var selectedTab: Tab = .home
     @State private var isLoggingOut = false
 
     init(container: AppContainer) {
         _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
+        _linkAccountVM = StateObject(wrappedValue: container.makeACHViewModel())
     }
 
     var body: some View {
@@ -202,9 +204,9 @@ private extension HomeTabBarView {
     @ViewBuilder
     func destination(for tab: Tab) -> some View {
         switch tab {
-        case .home:     DashboardView(container: container, dashboardVM: dashboardVM)
+        case .home:     DashboardView(container: container, dashboardVM: dashboardVM, linkAccountVM: linkAccountVM)
         case .accounts: AccountsView()
-        case .profile:  UserProfileView(container: container, dashboardVM: dashboardVM)
+        case .profile:  UserProfileView(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
         }
     }
 }

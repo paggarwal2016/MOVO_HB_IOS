@@ -81,4 +81,6 @@ extension Color {
     static let secTcolor = Color(#colorLiteral(red: 0.501960814, green: 0.501960814, blue: 0.501960814, alpha: 1))
     
     static let appBackground = Color(#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1))
+    
+    static let matteBlack = Color(#colorLiteral(red: 0.1568627451, green: 0.1568627451, blue: 0.168627451, alpha: 1))
 }

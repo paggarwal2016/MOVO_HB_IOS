@@ -56,9 +56,12 @@ final class SessionManager: ObservableObject {
             accessToken: accessToken
         )
 
+        // Configure KYC SDK with the authenticated session
+        try await kycManager.configureSDK(officeId: AppConfig.officeId)
+
         // Update UI state
         appState.isAuthenticated = true
-        
+
         analytics.identifyUser(from: accessToken)
     }
 

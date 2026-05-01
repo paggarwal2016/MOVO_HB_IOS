@@ -103,6 +103,64 @@ struct ProfileAvatarSkeleton: View {
     }
 }
 
+// MARK: - LinkedAccountSkeleton
+// Matches ActionCard / LinkedAccountsSectionView empty-state shape
+
+struct LinkedAccountSkeleton: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SkeletonBlock(height: 16, cornerRadius: 6)
+                .frame(width: 120)
+            SkeletonBlock(height: 13, cornerRadius: 5)
+            SkeletonBlock(height: 13, cornerRadius: 5)
+                .frame(maxWidth: .infinity)
+                .padding(.trailing, 40)
+            SkeletonBlock(height: 44, cornerRadius: 10)
+        }
+        .padding(20)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
+        .padding(.horizontal, 15)
+    }
+}
+
+// MARK: - DashboardSkeletonView
+// Full-page skeleton mirroring all dashboard sections during initial load
+
+struct DashboardSkeletonView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            // primaryAccount — balance card
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.gray.opacity(0.2))
+                .frame(height: 180)
+                .shimmer()
+                .padding(.horizontal, 15)
+
+            // quick action buttons 2×1 grid
+            HStack(spacing: 12) {
+                SkeletonBlock(height: 52, cornerRadius: 14)
+                SkeletonBlock(height: 52, cornerRadius: 14)
+            }
+            .padding(.horizontal, 15)
+
+            // payAnyone action card
+            SkeletonBlock(height: 110, cornerRadius: 16)
+                .padding(.horizontal, 15)
+
+            // linkedAccounts card
+            SkeletonBlock(height: 110, cornerRadius: 16)
+                .padding(.horizontal, 15)
+
+            // myCards section
+            CardSkeletonView()
+        }
+        .padding(.top, 16)
+    }
+}
+
 // MARK: - AccountRowSkeleton
 // Matches AccountRowView layout in AccountListSheetView
 

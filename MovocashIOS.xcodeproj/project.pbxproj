@@ -43,6 +43,7 @@
 		1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468199E2F4EE8B000BED014 /* OTPViewModel.swift */; };
 		146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A02F4F0A2100BED014 /* AlertManager.swift */; };
 		146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A22F4F272500BED014 /* PhoneFormatter.swift */; };
+		146E02212FA4A9020000C193 /* LinkedAccountsSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */; };
 		14716FFE2F86671600198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FFA2F86671600198064 /* PlaidService.swift */; };
 		147170012F8667AF00198064 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 147170002F8667AF00198064 /* LinkKit */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
@@ -137,6 +138,7 @@
 		1468199E2F4EE8B000BED014 /* OTPViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPViewModel.swift; sourceTree = "<group>"; };
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		146819A22F4F272500BED014 /* PhoneFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFormatter.swift; sourceTree = "<group>"; };
+		146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedAccountsSectionView.swift; sourceTree = "<group>"; };
 		14716FFA2F86671600198064 /* PlaidService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidService.swift; sourceTree = "<group>"; };
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
 		14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -494,6 +496,7 @@
 		146893D92FA33D7A001918AE /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */,
 				1417849B2FA34B8E000E802C /* CardView.swift */,
 				1417849D2FA34CC9000E802C /* CreateCardView.swift */,
 				141784A12FA34B8E000E802C /* CardDetailSheet.swift */,
@@ -723,6 +726,7 @@
 				14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */,
 				14CDCDAF2F97A33A00BF1BDF /* SignUpScreen.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
+				146E02212FA4A9020000C193 /* LinkedAccountsSectionView.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,

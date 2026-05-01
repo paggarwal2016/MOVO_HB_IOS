@@ -70,7 +70,9 @@ struct Transaction: Decodable, Identifiable, Sendable {
             amount:   amount,
             isCredit: isCredit,
             date:     formatter.date(from: date) ?? Date(),
-            rawDate:  date
+            rawDate:  date,
+            status:   status,
+            type:     type
         )
     }
 }
@@ -101,6 +103,8 @@ struct TransactionItem: Identifiable, Sendable {
     let isCredit: Bool
     let date: Date
     let rawDate: String
+    let status: String
+    let type: TransactionType
 
     private static let amountFormatter: NumberFormatter = {
         let f = NumberFormatter()

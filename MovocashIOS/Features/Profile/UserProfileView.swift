@@ -17,12 +17,12 @@ struct UserProfileView: View {
     
     @ObservedObject var dashboardVM: DashboardViewModel
     
-    @StateObject private var achVM: ACHViewModel
+    @ObservedObject var achVM: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
-    
-    init(container: AppContainer, dashboardVM: DashboardViewModel) {
+
+    init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel) {
         self.dashboardVM = dashboardVM
-        _achVM = StateObject(wrappedValue: container.makeACHViewModel())
+        self.achVM = achVM
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
     
@@ -50,6 +50,7 @@ struct UserProfileView: View {
             }
         }
         .task {
+            guard achVM.accounts.isEmpty else { return }
             await achVM.fetchAccounts()
         }
     }
@@ -145,18 +146,28 @@ struct UserProfileView: View {
             } else {
                 ForEach(effectiveAccounts, id: \.achAccountId) { account in
                     HStack(spacing: 12) {
-                        if let uiImage = account.logoImage {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 32, height: 32)
-                                .clipShape(Circle())
-                        } else {
-                            Image(systemName: "building.columns")
-                                .font(.system(size: 16))
-                                .foregroundStyle(Color.softBlue)
-                                .frame(width: 32, height: 32)
+                        ZStack {
+                            let initial = account.institutionName.first.map(String.init) ?? "?"
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(account.logoImage != nil ? Color(.systemBackground) : Color.matteBlack)
+                                .frame(width: 46, height: 46)
+                            if let logo = account.logoImage {
+                                Image(uiImage: logo)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 45, height: 45)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            } else {
+                                Text(initial.uppercased())
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
                         }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color(.systemGray5), lineWidth: account.logoImage != nil ? 1 : 0)
+                        )
+                                                
                         VStack(alignment: .leading, spacing: 2) {
                             Text(account.accountName)
                                 .font(.subheadline)

@@ -16,11 +16,14 @@ struct CardItemView: View {
 
     var body: some View {
         ZStack {
+
+            // 🔥 Premium Black Background
             RoundedRectangle(cornerRadius: 20)
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(.systemGray5).opacity(0.15),
+                            Color.black,
+                            Color(red: 0.08, green: 0.08, blue: 0.08),
                             Color.black
                         ],
                         startPoint: .topLeading,
@@ -28,14 +31,37 @@ struct CardItemView: View {
                     )
                 )
                 .overlay(
+                    // ✨ Subtle top light reflection
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(isSelected ? .primary : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.12),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .center
+                            )
+                        )
+                )
+                .overlay(
+                    // 🎯 Premium border
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(
+                            isSelected
+                            ? Color.white.opacity(0.6)
+                            : Color.white.opacity(0.1),
+                            lineWidth: isSelected ? 1.5 : 1
+                        )
                 )
 
+            // 🧾 Card Content
             VStack(alignment: .leading, spacing: 16) {
+
+                // Balance
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Balance")
-                        .foregroundColor(.white)
+                        .foregroundColor(.white.opacity(0.7))
                         .font(.caption)
 
                     Text(card.displayBalance)
@@ -44,25 +70,31 @@ struct CardItemView: View {
                         .bold()
                 }
 
+                // Card Number + Eye
                 HStack(spacing: 8) {
                     Text(card.maskedNumber)
                         .foregroundColor(.white)
                         .font(.system(size: 16, weight: .medium, design: .monospaced))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                    Button { onEyeTap?(card) } label: {
+
+                    Button {
+                        onEyeTap?(card)
+                    } label: {
                         Image(systemName: "eye")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.white.opacity(0.8))
                     }
                     .buttonStyle(.plain)
+
                     Spacer()
                 }
 
+                // Expiry + Name + Network
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(card.formattedExpiry)
-                            .foregroundColor(.white)
+                            .foregroundColor(.white.opacity(0.7))
                             .font(.caption)
 
                         Text(card.displayName)
@@ -72,15 +104,18 @@ struct CardItemView: View {
 
                     Spacer()
 
-                    Text("VISA")
+                    // Replace with Image if needed
+                    Text("Mastercard")
                         .foregroundColor(.white)
                         .font(.headline)
                         .bold()
+                        .padding(.top, 17)
                 }
             }
             .padding()
         }
         .frame(height: 170)
+
     }
 }
 
@@ -100,7 +135,7 @@ struct CardSelectorView: View {
         GeometryReader { geo in
 
             let isSingle = cards.count == 1
-            let cardWidth = isSingle ? geo.size.width : geo.size.width * 0.8
+            let cardWidth = isSingle ? geo.size.width : geo.size.width - 35
 
             VStack(alignment: .leading) {
 
@@ -112,16 +147,9 @@ struct CardSelectorView: View {
                     Spacer()
 
                     Button(action: { onTap() }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.black)
-                                .frame(width: 36, height: 36)
-
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                        .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                        Text("Add new +")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.primary)
                     }
                 }
                 .padding(.horizontal, 2)
@@ -136,7 +164,7 @@ struct CardSelectorView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
+                            HStack(spacing: 8) {
                                 ForEach(visibleCards.indices, id: \.self) { index in
                                     CardItemView(
                                         card: visibleCards[index],
@@ -195,6 +223,6 @@ struct CardSelectorView: View {
                 }
             }
         }
-        .frame(height: cards.count <= 1 ? 220 : cards.count > CardSelectorView.maxVisible ? 280 : 245)
+        .frame(height: cards.count <= 1 ? 220 : cards.count > CardSelectorView.maxVisible ? 265 : 245)
     }
 }

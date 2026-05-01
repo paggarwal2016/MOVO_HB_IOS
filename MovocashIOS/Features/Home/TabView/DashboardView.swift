@@ -27,14 +27,16 @@ struct DashboardView: View {
     @StateObject private var savingVM: SavingsAccountViewModel
 
     @StateObject private var achVM: PlaidAchViewModel
+    @ObservedObject var linkAccountVM: ACHViewModel
 
     @ObservedObject var dashboardVM: DashboardViewModel
 
     private let container: AppContainer
 
-    init(container: AppContainer, dashboardVM: DashboardViewModel) {
+    init(container: AppContainer, dashboardVM: DashboardViewModel, linkAccountVM: ACHViewModel) {
         self.container = container
         self.dashboardVM = dashboardVM
+        self.linkAccountVM = linkAccountVM
         _vm = StateObject(wrappedValue: container.makeVCardViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
@@ -210,19 +212,21 @@ struct DashboardView: View {
             CardDetailSheet(
                 card: card,
                 primaryAccountId: dashboardVM.primaryAccount?.id,
-                savingVM: savingVM,
+                savingVM: savingVM, container: container,
                 onDeleted: {
                     Task { await vm.loadCards() }
                 }
             )
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
             guard !hasLoadedData else { return }
             hasLoadedData = true
-            await vm.loadCards()
+            async let cards: () = vm.loadCards()
+            async let linkedAccounts: () = linkAccountVM.fetchAccounts()
+            _ = await (cards, linkedAccounts)
         }
         .onAppear {
             showCreateCashCard = false
@@ -259,7 +263,7 @@ struct DashboardView: View {
                 dashboardSectionView(section)
             }
         } else if dashboardVM.state == .loading && dashboardVM.primaryAccount == nil {
-            CardSkeletonView()
+            DashboardSkeletonView()
         }
     }
 
@@ -303,15 +307,32 @@ struct DashboardView: View {
                 SecureLogger.debug("Quick transfer tapped", category: .general)
             }
         case .linkedAccounts(let data):
-            ActionCard(
+            LinkedAccountsSectionView(
                 title: data.title,
                 description: data.description,
                 buttonLabel: data.actions.first?.label ?? "Link an account",
-                isLoading: achVM.state == .loading
-            ) {
-                Task { await achVM.startPlaidLink() }
-                SecureLogger.debug("Link your bank tapped", category: .general)
-            }
+                accounts: linkAccountVM.accounts,
+                isLoading: achVM.state == .loading,
+                isLoadingAccounts: linkAccountVM.state == .loading,
+                onLinkAccount: {
+                    Task {
+                        await achVM.startPlaidLink()
+                        if achVM.linkedAccount != nil {
+                            await linkAccountVM.fetchAccounts()
+                        }
+                    }
+                    SecureLogger.debug("Link your bank tapped", category: .general)
+                },
+                onConnectAnother: {
+                    Task {
+                        await achVM.startPlaidLink()
+                        if achVM.linkedAccount != nil {
+                            await linkAccountVM.fetchAccounts()
+                        }
+                    }
+                    SecureLogger.debug("Connect another bank tapped", category: .general)
+                }
+            )
         case .myCards(let data):
             myCardsSectionView(data)
         case .userDetails, .rewards, .menu, .unknown:
@@ -323,8 +344,7 @@ struct DashboardView: View {
     private func myCardsSectionView(_ data: DashboardMyCards) -> some View {
         Group {
             if !vm.hasLoadedCards {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
+                CardSkeletonView()
                     .frame(height: 220)
             } else if vm.cards.isEmpty {
                 CreateCardView(
