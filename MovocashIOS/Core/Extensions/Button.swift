@@ -9,8 +9,17 @@ import Foundation
 import SwiftUI
 
 struct PrimaryButton: View {
-    var image: Image? = nil // 👈 optional image
+    
+    enum ContentAlignment {
+        case left
+        case center
+        case right
+    }
+    
+    var image: Image? = nil
     let title: String
+    var alignment: ContentAlignment = .center
+    
     var backgroundColor: Color = Color.primary
     var textColor: Color = .white
     var isLoading: Bool = false
@@ -24,23 +33,37 @@ struct PrimaryButton: View {
             }
         }) {
             ZStack {
+                
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(
                             CircularProgressViewStyle(tint: textColor)
                         )
                 } else {
-                    HStack(spacing: 8) {
+                    
+                    HStack {
                         
-                        if let image = image {
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 18, height: 18)
+                        // Right aligned → push content to right
+                        if alignment == .right {
+                            Spacer()
                         }
                         
-                        Text(title)
-                            .font(.system(size: 16, weight: .semibold))
+                        HStack(spacing: 8) {
+                            if let image = image {
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 18, height: 18)
+                            }
+                            
+                            Text(title)
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        
+                        // Left aligned → push content to left
+                        if alignment == .left {
+                            Spacer()
+                        }
                     }
                 }
             }
@@ -65,55 +88,6 @@ struct PrimaryButton: View {
         .disabled(!isEnabled || isLoading)
     }
 }
-
-//struct PrimaryButton: View {
-//    
-//    let title: String
-//    var backgroundColor: Color = Color.primary
-//    var textColor: Color = .white
-//    var isLoading: Bool = false
-//    var isEnabled: Bool = true
-//    var action: () -> Void
-//    
-//    var body: some View {
-//        Button(action: {
-//            if isEnabled && !isLoading {
-//                action()
-//            }
-//        }) {
-//            ZStack {
-//                if isLoading {
-//                    ProgressView()
-//                        .progressViewStyle(
-//                            CircularProgressViewStyle(tint: textColor)
-//                        )
-//                } else {
-//                    Text(title)
-//                        .font(.system(size: 16, weight: .semibold))
-//                }
-//            }
-//            .foregroundStyle(textColor)
-//            .frame(maxWidth: .infinity)
-//            .frame(height: 54)
-//            .background(
-//                isEnabled
-//                ? backgroundColor
-//                : backgroundColor.opacity(0.4)
-//            )
-//            .cornerRadius(14)
-//            .shadow(
-//                color: isEnabled
-//                ? backgroundColor.opacity(0.25)
-//                : .clear,
-//                radius: 8,
-//                x: 0,
-//                y: 4
-//            )
-//        }
-//        .disabled(!isEnabled || isLoading)
-//    }
-//}
-
 
 
 struct BackButton: View {

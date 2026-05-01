@@ -160,7 +160,9 @@ struct DashboardView: View {
         .sheet(isPresented: $showFundAccount) {
             if let account = displayAccount {
                 FundAccountView(container: container, primaryAccount: account) {
-                    Task { await achVM.startPlaidLink() }
+                    Task {
+                        await achVM.startPlaidLink()
+                    }
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -249,7 +251,7 @@ struct DashboardView: View {
                 savingsSection
             }
             .padding(.top, 16)
-            .frame(maxWidth: .infinity)        // 👈 lock the column to screen width
+            .frame(maxWidth: .infinity)
         }
         .refreshable {
             await dashboardVM.refresh()
@@ -272,30 +274,14 @@ struct DashboardView: View {
         switch section {
         case .primaryAccount(let accountData):
             if let account = displayAccount {
-                BalanceCardView(
+                PrimaryAccountContent(
                     account: account,
-                    viewCardsLabel: accountData.actions.first(where: { $0.action == "VIEW-CARDS" })?.label,
+                    accountData: accountData,
                     onCardTap: { showPrimaryAccountDetails = true },
                     onPrimaryTap: { showEditNickname = true },
-                    onViewCardTap: { showViewCard = true }
+                    onViewCardTap: { showViewCard = true },
+                    onQuickAction: handleQuickAction
                 )
-                let visibleActions = accountData.actions.filter { $0.action != "VIEW-CARDS" }
-                if !visibleActions.isEmpty {
-                    LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                        spacing: 12
-                    ) {
-                        ForEach(visibleActions, id: \.action) { action in
-                            quickActionButton(
-                                icon: quickActionIcon(for: action.action),
-                                title: action.label
-                            ) {
-                                handleQuickAction(action.action)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 15)
-                }
             }
         case .payAnyone(let data):
             ActionCard(
@@ -380,7 +366,6 @@ struct DashboardView: View {
                 .padding(.horizontal, 15)
             }
         }
-
     }
     
     // MARK: - Private Functions
@@ -396,44 +381,6 @@ struct DashboardView: View {
         }
     }
 
-    @ViewBuilder
-    private func quickActionButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.black)
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.black)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
-            )
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(.systemGray5), lineWidth: 1))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func quickActionIcon(for action: String) -> String {
-        switch action {
-        case "TRANSACTIONS":           return "list.bullet.rectangle"
-        case "MOVE-MONEY":             return "person.text.rectangle"
-        case "ISSUE-A-PHYSICAL-CARD":  return "creditcard"
-        default:                       return "chevron.right"
-        }
-    }
-
     private func handleQuickAction(_ action: String) {
         switch action {
         case "TRANSACTIONS":           showTransactions = true
@@ -441,5 +388,42 @@ struct DashboardView: View {
         case "ISSUE-A-PHYSICAL-CARD":  break
         default:                       break
         }
+    }
+}
+
+// MARK: - Extracted Subview (Prevents re-renders during scroll)
+struct PrimaryAccountContent: View {
+    let account: SavingsAccountInfo
+    let accountData: DashboardAccount
+    let onCardTap: () -> Void
+    let onPrimaryTap: () -> Void
+    let onViewCardTap: () -> Void
+    let onQuickAction: (String) -> Void
+    
+    var body: some View {
+        BalanceCardView(
+            account: account,
+            viewCardsLabel: accountData.actions.first(where: { $0.action == "VIEW-CARDS" })?.label,
+            onCardTap: onCardTap,
+            onPrimaryTap: onPrimaryTap,
+            onViewCardTap: onViewCardTap
+        )
+        HStack(spacing: 10) {
+            PrimaryButton(image: Image(systemName: "list.bullet.rectangle"),
+                          title: "Transactions",
+                          alignment: .center,
+                          backgroundColor: .white,
+                          textColor: .black) {
+                onQuickAction("TRANSACTIONS")
+            }
+            PrimaryButton(image: Image(systemName: "person.text.rectangle"),
+                          title: "Move Money",
+                          alignment: .center,
+                          backgroundColor: .white,
+                          textColor: .black) {
+                onQuickAction("MOVE-MONEY")
+            }
+        }
+        .padding(.horizontal, 12)
     }
 }

@@ -95,7 +95,7 @@ struct CardDetailSheet: View {
                         .frame(width: 32, height: 32)
                     Image(systemName: "xmark")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.black)
                 }
             }
             .buttonStyle(.plain)
