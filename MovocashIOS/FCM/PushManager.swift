@@ -8,11 +8,13 @@
 import Foundation
 import UserNotifications
 import UIKit
-import FirebaseMessaging
+// FIREBASE PUSH: Re-enable when push notifications are ready.
+// Step 5 — uncomment the import below:
+// import FirebaseMessaging
 import Combine
 import SwiftUI
 
-enum PushSource { case foreground, background, tap}
+enum PushSource { case foreground, background, tap }
 
 @MainActor
 class PushManager: ObservableObject {
@@ -29,8 +31,7 @@ class PushManager: ObservableObject {
     private init() {
         unreadCount = UserDefaults.standard.integer(forKey: "pushUnreadCount")
     }
-    
-    
+
     func requestPermission() async {
         do {
             let granted = try await UNUserNotificationCenter.current()
@@ -39,54 +40,55 @@ class PushManager: ObservableObject {
                 UIApplication.shared.registerForRemoteNotifications()
             }
             await refreshPermissionStatus()
-            // AnalyticsManager.shared.logPushPermission
         } catch {
-            // CrashlyticsManager.shared.record("Push permission request")
             SecureLogger.error("Push permission request")
-            
         }
     }
-    
+
     func refreshPermissionStatus() async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         permissionStatus = settings.authorizationStatus
     }
-    
+
     // ── Token ────────────────────────────────────────────
+
     func onTokenRefresh(_ token: String) {
         fcmToken = token
         UserDefaults.standard.set(token, forKey: "fcmToken")
         uploadTokenToServer(token)
         subscribeToDefaultTopics()
     }
-    
+
     func fetchToken() async {
-        do {
-            let token = try await Messaging.messaging().token()
-            fcmToken = token
-            UserDefaults.standard.set(token, forKey: "fcmToken")
-        } catch {
-            //CrashlyticsManager.shared.record
-            SecureLogger.error("FCM token fetch")
-        }
+        // FIREBASE PUSH: Re-enable when push notifications are ready.
+        // Step 6 — uncomment the block below to fetch the FCM token:
+        // do {
+        //     let token = try await Messaging.messaging().token()
+        //     fcmToken = token
+        //     UserDefaults.standard.set(token, forKey: "fcmToken")
+        // } catch {
+        //     SecureLogger.error("FCM token fetch")
+        // }
     }
-    
+
     func deleteTokenOnLogout() async {
-        do {
-            try await Messaging.messaging().deleteToken()
-            fcmToken = ""
-            UserDefaults.standard.removeObject(forKey: "fcmToken")
-            ["transactions", "alerts", "promotions", "market_updates"].forEach {
-                Messaging.messaging().unsubscribe(fromTopic: $0) { _ in }
-            }
-        } catch {
-            //CrashlyticsManager.shared.record
-            SecureLogger.error("Token delete on logout")
-        }
+        // FIREBASE PUSH: Re-enable when push notifications are ready.
+        // Step 7 — uncomment the FCM block below to delete the token on logout:
+        // do {
+        //     try await Messaging.messaging().deleteToken()
+        //     ["transactions", "alerts", "promotions", "market_updates"].forEach {
+        //         Messaging.messaging().unsubscribe(fromTopic: $0) { _ in }
+        //     }
+        // } catch {
+        //     SecureLogger.error("Token delete on logout")
+        // }
+
+        fcmToken = ""
+        UserDefaults.standard.removeObject(forKey: "fcmToken")
     }
-    
-    
+
     // ── Handle payload ───────────────────────────────────
+
     func handle(userInfo: [AnyHashable: Any], source: PushSource) {
         let msg = PushMessage(userInfo: userInfo)
         messages.insert(msg, at: 0)
@@ -96,16 +98,14 @@ class PushManager: ObservableObject {
         case .foreground:
             updateBadge(to: unreadCount + 1)
         case .background:
-            // Sync with the badge value set by APNs in the payload
             if let aps = userInfo["aps"] as? [String: Any],
                let badge = aps["badge"] as? Int {
                 updateBadge(to: badge)
             }
         case .tap:
-            break // clearBadgeOnActive() handles this when app opens
+            break
         }
 
-        //        CrashlyticsManager.shared.log
         SecureLogger.debug("Push received: type=\(msg.type.rawValue) source=\(source)")
     }
 
@@ -115,6 +115,7 @@ class PushManager: ObservableObject {
     }
 
     // ── Private ──────────────────────────────────────────
+
     private func updateBadge(to count: Int) {
         unreadCount = count
         UserDefaults.standard.set(count, forKey: unreadCountKey)
@@ -124,34 +125,40 @@ class PushManager: ObservableObject {
             UIApplication.shared.applicationIconBadgeNumber = count
         }
     }
-    
+
     private func subscribeToDefaultTopics() {
-        ["transactions", "alerts", "promotions", "market_updates"].forEach {
-            Messaging.messaging().subscribe(toTopic: $0) { _ in }
-        }
+        // FIREBASE PUSH: Re-enable when push notifications are ready.
+        // Step 8 — uncomment the block below to subscribe to default FCM topics:
+        // ["transactions", "alerts", "promotions", "market_updates"].forEach {
+        //     Messaging.messaging().subscribe(toTopic: $0) { _ in }
+        // }
     }
-    
-    
+
     func subscribe(to topic: String) {
-        Messaging.messaging().subscribe(toTopic: topic) { error in
-            if let error {
-                // CrashlyticsManager.record.error
-                SecureLogger.error("Subscribe: \(topic), Error: \(error)")
-            }
-        }
+        // FIREBASE PUSH: Re-enable when push notifications are ready.
+        // Step 9 — uncomment the block below to subscribe to a topic:
+        // Messaging.messaging().subscribe(toTopic: topic) { error in
+        //     if let error {
+        //         SecureLogger.error("Subscribe: \(topic), Error: \(error)")
+        //     }
+        // }
     }
-    
+
     func unsubscribe(from topic: String) {
-        Messaging.messaging().unsubscribe(fromTopic: topic)
+        // FIREBASE PUSH: Re-enable when push notifications are ready.
+        // Step 10 — uncomment the line below to unsubscribe from a topic:
+        // Messaging.messaging().unsubscribe(fromTopic: topic)
     }
-    
+
     // ── UI helpers ───────────────────────────────────────
+
     func markAllRead() { updateBadge(to: 0) }
+
     func clearAll() {
         messages.removeAll()
         updateBadge(to: 0)
     }
-    
+
     private func uploadTokenToServer(_ token: String) {
         // API Call update the token to server
     }

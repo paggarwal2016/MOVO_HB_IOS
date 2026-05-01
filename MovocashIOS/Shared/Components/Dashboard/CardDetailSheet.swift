@@ -12,14 +12,12 @@ struct CardDetailSheet: View {
     let savingVM: SavingsAccountViewModel
     let container: AppContainer
     var onDeleted: () -> Void
-    var onTransfer: (() -> Void)? = nil
-    var onTopUp: (() -> Void)? = nil
-    var onAddToWallet: (() -> Void)? = nil
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
 
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
+    @State private var showTransfer = false
     @StateObject private var txVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
 
@@ -28,19 +26,13 @@ struct CardDetailSheet: View {
         primaryAccountId: Int?,
         savingVM: SavingsAccountViewModel,
         container: AppContainer,
-        onDeleted: @escaping () -> Void,
-        onTransfer: (() -> Void)? = nil,
-        onTopUp: (() -> Void)? = nil,
-        onAddToWallet: (() -> Void)? = nil
+        onDeleted: @escaping () -> Void
     ) {
         self.card = card
         self.primaryAccountId = primaryAccountId
         self.savingVM = savingVM
         self.container = container
         self.onDeleted = onDeleted
-        self.onTransfer = onTransfer
-        self.onTopUp = onTopUp
-        self.onAddToWallet = onAddToWallet
         _txVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
@@ -73,9 +65,31 @@ struct CardDetailSheet: View {
         } message: {
             Text("Are you sure you want to delete this card? This action cannot be undone.")
         }
+        .sheet(isPresented: $showTransfer) {
+            if let primaryAccount = savingVM.accountList?.data.accounts.first(where: { $0.isPrimary }) {
+                InternalTransferView(
+                    toClientId: primaryAccount.clientId,
+                    fromAccount: primaryAccount,
+                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
+                    container: container,
+                    onDismiss: { showTransfer = false }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
         .task {
-            guard let accountId = card.savingsAccountId else { return }
-            await txVM.loadTransactions(max: 10, accountId: accountId)
+            let accountId = card.savingsAccountId
+            let needsAccounts = savingVM.accountList == nil
+            async let transactions: () = {
+                guard let accountId else { return }
+                await txVM.loadTransactions(max: 10, accountId: accountId)
+            }()
+            async let accounts: () = {
+                guard needsAccounts else { return }
+                await savingVM.loadAccounts()
+            }()
+            _ = await (transactions, accounts)
         }
     }
 
@@ -200,8 +214,7 @@ struct CardDetailSheet: View {
                 iconBg: Color(red: 0.2, green: 0.78, blue: 0.5).opacity(0.15),
                 label: "Transfer"
             ) {
-                dismiss()
-                onTransfer?()
+                showTransfer = true
             }
             actionTile(
                 icon: "arrow.down.circle",
@@ -209,8 +222,7 @@ struct CardDetailSheet: View {
                 iconBg: Color(red: 0.95, green: 0.3, blue: 0.3).opacity(0.15),
                 label: "Top up"
             ) {
-                dismiss()
-                onTopUp?()
+                // TODO: Implement Top Up flow
             }
         }
     }
@@ -361,7 +373,6 @@ struct CardDetailSheet: View {
                     guard let accountId = card.savingsAccountId else { return }
                     await achVM.addVirtualCardToAppleWallet(accountId: accountId, localizedDescription: "Apple pay")
                 }
-                //onAddToWallet?()
             })
             
             PrimaryButton(image:Image(systemName: "trash"),

@@ -5,30 +5,22 @@
 //  Created by Movo Developer on 04/03/26.
 //
 
-import Foundation
 import SwiftUI
 
 struct DashboardView: View {
-    
+
     // MARK: - Environment
 
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
-    @EnvironmentObject var userVM: UserViewModel
-    @EnvironmentObject var authVM: AuthViewModel
 
-    // MARK: - VCard
+    // MARK: - ViewModels
 
     @StateObject private var vm: VCardViewModel
-
-    // MARK: - Savings
-
     @StateObject private var savingVM: SavingsAccountViewModel
-
     @StateObject private var achVM: PlaidAchViewModel
     @ObservedObject var linkAccountVM: ACHViewModel
-
     @ObservedObject var dashboardVM: DashboardViewModel
 
     private let container: AppContainer
@@ -41,47 +33,41 @@ struct DashboardView: View {
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
-    @State private var showAccountList = false
+
+    // MARK: - Navigation State
+
     @State private var showPrimaryAccountDetails = false
     @State private var showAccountDetail = false
     @State private var showTransactions = false
     @State private var showCreateCashCard = false
     @State private var showEditNickname = false
-    
     @State private var showViewCard = false
     @State private var showFunds = false
-
     @State private var showMoveMoney = false
     @State private var showFundAccount = false
-
     @State private var showContactList = false
     @State private var showInternalTransfer = false
-    
     @State private var showViewCardList = false
+    @State private var showAccountList = false
     @State private var hasLoadedData = false
     @State private var selectedCard: VCardListResponse? = nil
     @State private var showCardDetail = false
-    
+
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
     }
 
-    private var isViewCashAccount: Bool {
-        savingVM.accountList?.data.accounts.contains(where: { !$0.isPrimary }) ?? false
-    }
-    
     // MARK: - Body
-    
+
     var body: some View {
         ZStack(alignment: .top) {
             Color(.systemGroupedBackground).ignoresSafeArea()
-            
             VStack(spacing: 0) {
                 headerView
                 scrollContent
             }
         }
-        .overlay { overlayContent }
+        .overlay { combinedOverlay }
         .sheet(isPresented: $showCreateCashCard) {
             CreateCashCardView(
                 onCancel: { showCreateCashCard = false },
@@ -107,11 +93,6 @@ struct DashboardView: View {
                 }
             }
         )
-        .overlay {
-            if dashboardVM.state == .loading && !showCreateCashCard && dashboardVM.primaryAccount == nil {
-                SpinnerView()
-            }
-        }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
                 SavingAccountDetailView(accountId: account.id, showAccountCard: true, container: container)
@@ -143,11 +124,9 @@ struct DashboardView: View {
                 InternalTransferView(
                     toClientId: account.clientId,
                     fromAccount: account,
-                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter({ !$0.isPrimary }) ?? [],
+                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
                     container: container,
-                    onDismiss: {
-                        Task { await dashboardVM.refresh() }
-                    }
+                    onDismiss: { Task { await dashboardVM.refresh() } }
                 )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -161,9 +140,7 @@ struct DashboardView: View {
         .sheet(isPresented: $showFundAccount) {
             if let account = displayAccount {
                 FundAccountView(container: container, primaryAccount: account) {
-                    Task {
-                        await achVM.startPlaidLink()
-                    }
+                    Task { await achVM.startPlaidLink() }
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -174,11 +151,9 @@ struct DashboardView: View {
                 InternalTransferView(
                     toClientId: account.clientId,
                     fromAccount: account,
-                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter({ !$0.isPrimary }) ?? [],
+                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
                     container: container,
-                    onDismiss: {
-                        Task { await dashboardVM.refresh() }
-                    }
+                    onDismiss: { Task { await dashboardVM.refresh() } }
                 )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -188,21 +163,15 @@ struct DashboardView: View {
             MoveMoneyMenuView(
                 onFundAccount: {
                     showMoveMoney = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        showFundAccount = true
-                    }
+                    Task { try? await Task.sleep(nanoseconds: 350_000_000); showFundAccount = true }
                 },
                 onTransferMoney: {
                     showMoveMoney = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        showContactList = true
-                    }
+                    Task { try? await Task.sleep(nanoseconds: 350_000_000); showContactList = true }
                 },
                 onInternalTransfer: {
                     showMoveMoney = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        showInternalTransfer = true
-                    }
+                    Task { try? await Task.sleep(nanoseconds: 350_000_000); showInternalTransfer = true }
                 }
             )
         }
@@ -219,10 +188,9 @@ struct DashboardView: View {
                 CardDetailSheet(
                     card: card,
                     primaryAccountId: dashboardVM.primaryAccount?.id,
-                    savingVM: savingVM, container: container,
-                    onDeleted: {
-                        Task { await vm.loadCards() }
-                    }
+                    savingVM: savingVM,
+                    container: container,
+                    onDeleted: { Task { await vm.loadCards() } }
                 )
             }
         }
@@ -238,20 +206,23 @@ struct DashboardView: View {
             showCreateCashCard = false
         }
     }
-    
+
     // MARK: - Subviews
-    
+
     private var headerView: some View {
-        CustomHeaderView(userName: dashboardVM.userDetails?.initials ?? "", userImage: dashboardVM.userDetails?.profilePicture ?? "") {
+        CustomHeaderView(
+            userName: dashboardVM.userDetails?.initials ?? "",
+            userImage: dashboardVM.userDetails?.profilePicture ?? ""
+        ) {
             sessionManager.logoutWithConfirmation(appState: appState) {
                 lockManager.logout()
             }
         }
     }
-    
+
     private var scrollContent: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
+            LazyVStack(spacing: 20) {
                 savingsSection
             }
             .padding(.top, 16)
@@ -261,17 +232,36 @@ struct DashboardView: View {
             await dashboardVM.refresh()
         }
     }
-    
+
     @ViewBuilder
     private var savingsSection: some View {
         if let sections = dashboardVM.dashboard?.data {
-            ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
-                dashboardSectionView(section)
+            ForEach(sections.indices, id: \.self) { index in
+                dashboardSectionView(sections[index])
             }
         } else if dashboardVM.state == .loading && dashboardVM.primaryAccount == nil {
             DashboardSkeletonView()
         }
     }
+
+    @ViewBuilder
+    private var combinedOverlay: some View {
+        if dashboardVM.state == .loading && !showCreateCashCard && dashboardVM.primaryAccount == nil {
+            SpinnerView()
+        }
+        if showPrimaryAccountDetails, let display = displayAccount {
+            dimmedOverlay { showPrimaryAccountDetails = false } content: {
+                SavingActDetailPopupView(
+                    account: display,
+                    isPresented: $showPrimaryAccountDetails,
+                    showEditNickname: $showEditNickname
+                )
+                .padding(.horizontal, 15)
+            }
+        }
+    }
+
+    // MARK: - Section Views
 
     @ViewBuilder
     private func dashboardSectionView(_ section: DashboardSection) -> some View {
@@ -307,18 +297,14 @@ struct DashboardView: View {
                 onLinkAccount: {
                     Task {
                         await achVM.startPlaidLink()
-                        if achVM.linkedAccount != nil {
-                            await linkAccountVM.fetchAccounts()
-                        }
+                        if achVM.linkedAccount != nil { await linkAccountVM.fetchAccounts() }
                     }
                     SecureLogger.debug("Link your bank tapped", category: .general)
                 },
                 onConnectAnother: {
                     Task {
                         await achVM.startPlaidLink()
-                        if achVM.linkedAccount != nil {
-                            await linkAccountVM.fetchAccounts()
-                        }
+                        if achVM.linkedAccount != nil { await linkAccountVM.fetchAccounts() }
                     }
                     SecureLogger.debug("Connect another bank tapped", category: .general)
                 }
@@ -359,23 +345,7 @@ struct DashboardView: View {
         .padding(.horizontal, 15)
     }
 
-    // MARK: - Overlay
-    
-    @ViewBuilder
-    private var overlayContent: some View {
-        if showPrimaryAccountDetails, let display = displayAccount {
-            dimmedOverlay { showPrimaryAccountDetails = false } content: {
-                SavingActDetailPopupView(
-                    account: display,
-                    isPresented: $showPrimaryAccountDetails,
-                    showEditNickname: $showEditNickname
-                )
-                .padding(.horizontal, 15)
-            }
-        }
-    }
-    
-    // MARK: - Private Functions
+    // MARK: - Actions
 
     private func createCashCard(nickname: String, pin: String) async {
         do {
@@ -390,10 +360,10 @@ struct DashboardView: View {
 
     private func handleQuickAction(_ action: String) {
         switch action {
-        case "TRANSACTIONS":           showTransactions = true
-        case "MOVE-MONEY":             showMoveMoney = true
-        case "ISSUE-A-PHYSICAL-CARD":  break
-        default:                       break
+        case "TRANSACTIONS":          showTransactions = true
+        case "MOVE-MONEY":            showMoveMoney = true
+        case "ISSUE-A-PHYSICAL-CARD": break
+        default:                      break
         }
     }
 }
@@ -406,7 +376,7 @@ struct PrimaryAccountContent: View {
     let onPrimaryTap: () -> Void
     let onViewCardTap: () -> Void
     let onQuickAction: (String) -> Void
-    
+
     var body: some View {
         BalanceCardView(
             account: account,
@@ -416,18 +386,22 @@ struct PrimaryAccountContent: View {
             onViewCardTap: onViewCardTap
         )
         HStack(spacing: 10) {
-            PrimaryButton(image: Image(systemName: "list.bullet.rectangle"),
-                          title: "Transactions",
-                          alignment: .center,
-                          backgroundColor: .white,
-                          textColor: .black) {
+            PrimaryButton(
+                image: Image(systemName: "list.bullet.rectangle"),
+                title: "Transactions",
+                alignment: .center,
+                backgroundColor: .white,
+                textColor: .black
+            ) {
                 onQuickAction("TRANSACTIONS")
             }
-            PrimaryButton(image: Image(systemName: "person.text.rectangle"),
-                          title: "Move Money",
-                          alignment: .center,
-                          backgroundColor: .white,
-                          textColor: .black) {
+            PrimaryButton(
+                image: Image(systemName: "person.text.rectangle"),
+                title: "Move Money",
+                alignment: .center,
+                backgroundColor: .white,
+                textColor: .black
+            ) {
                 onQuickAction("MOVE-MONEY")
             }
         }
