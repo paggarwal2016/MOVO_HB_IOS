@@ -21,6 +21,7 @@ struct CardDetailSheet: View {
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
     @StateObject private var txVM: TransactionViewModel
+    @StateObject private var achVM: PlaidAchViewModel
 
     init(
         card: VCardListResponse,
@@ -41,6 +42,7 @@ struct CardDetailSheet: View {
         self.onTopUp = onTopUp
         self.onAddToWallet = onAddToWallet
         _txVM = StateObject(wrappedValue: container.makeTransactionViewModel())
+        _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
 
     var body: some View {
@@ -353,7 +355,13 @@ struct CardDetailSheet: View {
             PrimaryButton(image:Image(systemName: "wallet.pass"),
                           title: "Add to Apple Wallet",
                           backgroundColor: .primary,
-                          action: { onAddToWallet?() })
+                          action: {
+                Task {
+                    guard let accountId = card.savingsAccountId else { return }
+                    await achVM.addVirtualCardToAppleWallet(accountId: accountId, localizedDescription: "Apple pay")
+                }
+                //onAddToWallet?()
+            })
             
             PrimaryButton(image:Image(systemName: "trash"),
                           title: "Delete account",
