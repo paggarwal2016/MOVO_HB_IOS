@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import WebKit
+import PDFKit
 
 struct PDFViewScreen: View {
 
@@ -15,6 +15,7 @@ struct PDFViewScreen: View {
 
     @StateObject private var viewModel: PDFViewModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @State private var hasReachedEnd = false
 
     init(documentType: DocumentType, container: AppContainer, onAccept: @escaping () -> Void) {
         self.documentType = documentType
@@ -70,7 +71,7 @@ private extension PDFViewScreen {
             }
 
             Spacer()
-            
+
             Button {
                 dismiss()
             } label: {
@@ -97,7 +98,9 @@ private extension PDFViewScreen {
     var contentArea: some View {
         ZStack {
             if let data = viewModel.data {
-                PDFWebView(data: data)
+                PDFKitView(data: data) {
+                    hasReachedEnd = true
+                }
             } else if viewModel.state != .loading {
                 EmptyStateView(
                     image: "doc.fill",
@@ -116,7 +119,6 @@ private extension PDFViewScreen {
 
     var bottomBar: some View {
         VStack(spacing: 0) {
-            // Gradient fade over the PDF edge
             LinearGradient(
                 colors: [Color(.systemBackground).opacity(0), Color(.systemBackground)],
                 startPoint: .top,
@@ -126,11 +128,14 @@ private extension PDFViewScreen {
             .allowsHitTesting(false)
 
             VStack(spacing: 10) {
-                Text("By tapping Accept, you agree to the above document.")
+                Text(hasReachedEnd
+                     ? "By tapping Accept, you agree to the above document."
+                     : "Scroll to the end to accept this document.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
+                    .animation(.easeInOut, value: hasReachedEnd)
 
                 Button {
                     onAccept()
@@ -145,11 +150,12 @@ private extension PDFViewScreen {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    //.background(documentType.iconColor)
-                    .background(Color.primary)
+                    .background(hasReachedEnd ? Color.primary : Color(.systemGray3))
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .animation(.easeInOut, value: hasReachedEnd)
                 }
                 .buttonStyle(.plain)
+                .disabled(!hasReachedEnd)
                 .padding(.horizontal, 20)
             }
             .padding(.bottom, 32)
@@ -158,24 +164,67 @@ private extension PDFViewScreen {
     }
 }
 
-// MARK: - WKWebView PDF Wrapper
+// MARK: - PDFKit View
 
-private struct PDFWebView: UIViewRepresentable {
+private struct PDFKitView: UIViewRepresentable {
 
     let data: Data
+    let onReachEnd: () -> Void
 
-    func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        webView.scrollView.bounces = false
-        return webView
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onReachEnd: onReachEnd)
     }
 
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        webView.load(
-            data,
-            mimeType: "application/pdf",
-            characterEncodingName: "",
-            baseURL: URL(string: "about:blank")!
+    func makeUIView(context: Context) -> PDFView {
+        let pdfView = PDFView()
+        pdfView.displayMode = .singlePageContinuous
+        pdfView.displayDirection = .vertical
+        pdfView.autoScales = true
+        pdfView.backgroundColor = UIColor.systemBackground
+
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.pageChanged(_:)),
+            name: .PDFViewPageChanged,
+            object: pdfView
         )
+
+        if let document = PDFDocument(data: data) {
+            pdfView.document = document
+            // Single-page docs never trigger PDFViewPageChangedNotification on scroll,
+            // so signal end after the current render pass completes.
+            if document.pageCount <= 1 {
+                DispatchQueue.main.async { context.coordinator.signalEnd() }
+            }
+        }
+        return pdfView
+    }
+
+    func updateUIView(_ pdfView: PDFView, context: Context) {}
+
+    // MARK: Coordinator
+
+    final class Coordinator: NSObject {
+        private let onReachEnd: () -> Void
+        private var didFire = false
+
+        init(onReachEnd: @escaping () -> Void) {
+            self.onReachEnd = onReachEnd
+        }
+
+        func signalEnd() {
+            guard !didFire else { return }
+            didFire = true
+            onReachEnd()
+        }
+
+        @objc func pageChanged(_ notification: Notification) {
+            guard let pdfView = notification.object as? PDFView,
+                  let document = pdfView.document,
+                  let currentPage = pdfView.currentPage,
+                  let lastPage = document.page(at: document.pageCount - 1),
+                  currentPage == lastPage else { return }
+            signalEnd()
+        }
     }
 }
