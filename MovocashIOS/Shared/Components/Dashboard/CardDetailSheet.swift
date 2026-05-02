@@ -66,11 +66,16 @@ struct CardDetailSheet: View {
             Text("Are you sure you want to delete this card? This action cannot be undone.")
         }
         .sheet(isPresented: $showTransfer) {
-            if let primaryAccount = savingVM.accountList?.data.accounts.first(where: { $0.isPrimary }) {
+            let accounts = savingVM.accountList?.data.accounts ?? []
+            let cardAccount = accounts.first(where: { $0.id == card.savingsAccountId })
+            let primaryAccount = accounts.first(where: { $0.isPrimary })
+            let fromAccount = cardAccount ?? primaryAccount
+            if let fromAccount {
                 InternalTransferView(
-                    toClientId: primaryAccount.clientId,
-                    fromAccount: primaryAccount,
-                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
+                    toClientId: fromAccount.clientId,
+                    fromAccount: fromAccount,
+                    nonPrimaryAccounts: accounts.filter { $0.id != fromAccount.id },
+                    preselectedFromCard: card,
                     container: container,
                     onDismiss: { showTransfer = false }
                 )

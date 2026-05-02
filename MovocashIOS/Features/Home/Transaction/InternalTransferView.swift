@@ -14,6 +14,7 @@ struct InternalTransferView: View {
     @StateObject private var vcardVM: VCardViewModel
 
     private let toClientId: Int
+    private let preselectedFromCard: VCardListResponse?
 
     @State private var amountText = ""
     @State private var descriptionText = ""
@@ -34,10 +35,12 @@ struct InternalTransferView: View {
         toClientId: Int,
         fromAccount: SavingsAccountInfo?,
         nonPrimaryAccounts: [SavingsAccountInfo],
+        preselectedFromCard: VCardListResponse? = nil,
         container: AppContainer,
         onDismiss: @escaping () -> Void,
     ) {
         self.toClientId = toClientId
+        self.preselectedFromCard = preselectedFromCard
         _selectedFromAccount = State(initialValue: fromAccount)
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
@@ -84,9 +87,12 @@ struct InternalTransferView: View {
                     .presentationDragIndicator(.visible)
             }
             .task {
-                primaryCard = try? await vcardVM.getVCardPrimary()?.data
+                if preselectedFromCard == nil {
+                    primaryCard = try? await vcardVM.getVCardPrimary()?.data
+                }
                 let all = (try? await vcardVM.getVCardsAll()) ?? []
-                cardsList = all.filter { $0.cardNumber != primaryCard?.cardNumber }
+                let excludeNumber = preselectedFromCard?.cardNumber ?? primaryCard?.cardNumber
+                cardsList = all.filter { $0.cardNumber != excludeNumber }
             }
         }
     }
@@ -142,7 +148,14 @@ struct InternalTransferView: View {
 
     private var fromAccountPicker: some View {
         Group {
-            if let card = primaryCard {
+            if let card = preselectedFromCard {
+                CardChipRow(
+                    name: card.name ?? "Card",
+                    lastFour: card.lastFour ?? "••••",
+                    badge: nil,
+                    showIcon: false,
+                )
+            } else if let card = primaryCard {
                 CardChipRow(
                     name: card.name ?? "Primary Card",
                     lastFour: card.lastFour ?? "••••",
