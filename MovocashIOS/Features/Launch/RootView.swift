@@ -23,6 +23,8 @@ struct RootView: View {
     @ObservedObject var passcodeSetupVM: AppLockViewModel
     @ObservedObject var kycVM: KYCViewModel
 
+    @State private var legalAcceptedItems: Set<String> = []
+
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -124,6 +126,7 @@ struct RootView: View {
                             Task {
                                 await sessionManager.logout(appState: appState)
                                 appState.flow = .choice
+                                legalAcceptedItems = []
                             }
                         },
                         onBack: {
@@ -132,8 +135,11 @@ struct RootView: View {
                                 lockManager.logout()
                                 RSAKeyManager.shared.deleteKeyPair()
                                 appState.flow = .choice
+                                legalAcceptedItems = []
                             }
-                        }
+                        },
+                        container: container,
+                        acceptedItems: $legalAcceptedItems
                     )
 
                     // ── Step 1: set + confirm passcode ─────────────────────────

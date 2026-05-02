@@ -101,6 +101,48 @@ actor NetworkService: NetworkServiceProtocol {
         throw lastError
     }
     
+    // MARK: - Raw Data Request
+    func requestData(_ endpoint: Endpoint) async throws -> Data {
+
+        if await JailbreakDetector.shared.isJailbroken {
+            throw NetworkError.securityViolation
+        }
+
+        let request = try await builder.build(from: endpoint)
+
+        guard let url = request.url else {
+            throw NetworkError.invalidURL
+        }
+
+        SecureLogger.debug("API URL: \(url)", category: .network)
+
+        var lastError: NetworkError = .unknown
+
+        for attempt in 0..<maxAttempts {
+            do {
+                if attempt == 0 {
+                    return try await performRawRequest(request)
+                } else {
+                    let retryRequest = try await builder.build(from: endpoint)
+                    return try await performRawRequest(retryRequest)
+                }
+            } catch let error as NetworkError {
+                lastError = error
+                switch error {
+                case .rateLimited, .serverError, .timeout, .noInternet:
+                    guard attempt < maxAttempts - 1 else { throw error }
+                    let backoff = UInt64(500_000_000) * UInt64(attempt + 1)
+                    let jitter  = UInt64.random(in: 0..<100_000_000)
+                    try await Task.sleep(nanoseconds: backoff + jitter)
+                default:
+                    throw error
+                }
+            }
+        }
+
+        throw lastError
+    }
+
     // MARK: - Refresh Token
 //    private func refreshToken() async throws { // TODO: Vinu
 //        if isRefreshing {
@@ -255,6 +297,76 @@ actor NetworkService: NetworkServiceProtocol {
             SecureLogger.error("Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)", category: .network)
             throw NetworkError.decodingError
         }
+    }
+
+    // MARK: - Perform Raw Request
+    private nonisolated func performRawRequest(_ request: URLRequest) async throws -> Data {
+
+#if DEBUG
+        debugPrintRequest(request)
+#endif
+
+        let start = Date()
+        defer {
+            let ms = Date().timeIntervalSince(start) * 1000
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd hh:mm:ss.SSS"
+            let timestamp = formatter.string(from: start)
+            SecureLogger.info(
+                "[\(timestamp)] [\(request.httpMethod ?? "?")] \(request.url?.path ?? "unknown") — Duration: \(String(format: "%.0f", ms))ms",
+                category: .network
+            )
+        }
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            throw CancellationError()
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
+                 .internationalRoamingOff, .callIsActive:
+                throw NetworkError.noInternet
+            case .timedOut:
+                throw NetworkError.timeout
+            case .serverCertificateUntrusted, .serverCertificateHasUnknownRoot,
+                 .serverCertificateNotYetValid, .serverCertificateHasBadDate,
+                 .clientCertificateRejected, .clientCertificateRequired,
+                 .secureConnectionFailed, .cannotLoadFromNetwork:
+                throw NetworkError.securityViolation
+            default:
+                throw NetworkError.requestFailed(urlError.localizedDescription)
+            }
+        } catch {
+            throw NetworkError.requestFailed(error.localizedDescription)
+        }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        if http.statusCode == 401 {
+            let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data))?.message
+                ?? "Session expired. Please login again."
+            Task { @MainActor in
+                NotificationCenter.default.post(name: .sessionExpired, object: nil,
+                                                userInfo: ["message": message])
+            }
+            throw NetworkError.unauthorized
+        }
+
+        if http.statusCode == 429 { throw NetworkError.rateLimited }
+        if (500...599).contains(http.statusCode) { throw NetworkError.serverError }
+        if !(200...299).contains(http.statusCode) {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
+            throw NetworkError.apiError(http.statusCode)
+        }
+
+        SecureLogger.info("API Success.", category: .network)
+        return data
     }
 }
 

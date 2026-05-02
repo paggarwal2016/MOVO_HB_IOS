@@ -87,4 +87,8 @@ final class AppContainer: ObservableObject {
         DashboardViewModel(network: network, alertManager: alertManager)
     }
 
+    func makePDFViewModel() -> PDFViewModel {
+        PDFViewModel(network: network, alertManager: alertManager, analytics: analytics)
+    }
+
 }

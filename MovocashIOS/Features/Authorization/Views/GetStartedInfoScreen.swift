@@ -10,9 +10,10 @@ import SwiftUI
 // MARK: - Model
 
 private struct LegalItem: Identifiable {
-    let id    = UUID()
-    let icon:  String
-    let title: String
+    let id           = UUID()
+    let title:         String
+    let subtitle:      String
+    let documentType:  DocumentType
 }
 
 // MARK: - View
@@ -24,8 +25,12 @@ struct GetStartedInfoScreen: View {
     let onNotNow: () -> Void
     let onBack:   () -> Void
 
+    // MARK: Dependencies
+    let container: AppContainer
+
     // MARK: State
-    @State private var acceptedItems: Set<String> = []
+    @Binding var acceptedItems: Set<String>
+    @State private var selectedItem: LegalItem?
 
     // MARK: Data
     private let requirements: [String] = [
@@ -36,9 +41,15 @@ struct GetStartedInfoScreen: View {
     ]
 
     private let legalItems: [LegalItem] = [
-        LegalItem(icon: "doc.plaintext", title: "Privacy Policy"),
-        LegalItem(icon: "doc.plaintext", title: "Terms of Use Agreement"),
-        LegalItem(icon: "signature",     title: "Electronic Consent")
+        LegalItem(title: "Privacy Policy",
+                  subtitle: "How we handle your personal data",
+                  documentType: .privacy),
+        LegalItem(title: "Terms of Use Agreement",
+                  subtitle: "Rules and conditions for using Movo",
+                  documentType: .tos),
+        LegalItem(title: "Electronic Consent",
+                  subtitle: "Digital agreement and consent",
+                  documentType: .cardholderAgreement)
     ]
 
     private var allAccepted: Bool {
@@ -48,111 +59,200 @@ struct GetStartedInfoScreen: View {
     // MARK: Body
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 28) {
-                navigationBar
-                titleSection
-                requirementsSection
-                Divider()
-                legalSection
-                Spacer().frame(height: 8)
-                footerButtons
+        VStack(spacing: 0) {
+            navBar
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 24) {
+                    headerSection
+                    requirementsSection
+                    documentsSection
+                    Spacer().frame(height: 8)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
             }
-            .padding()
+            bottomBar
+        }
+        .background(Color(.systemBackground))
+        .sheet(item: $selectedItem) { item in
+            PDFViewScreen(documentType: item.documentType, container: container) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    _ = acceptedItems.insert(item.title)
+                }
+            }
         }
     }
 }
 
-// MARK: - Subviews
+// MARK: - Top Nav
 
 private extension GetStartedInfoScreen {
 
-    var navigationBar: some View {
+    var navBar: some View {
         HStack {
             BackButton { onBack() }
             Spacer()
+            Text("\(acceptedItems.count)/\(legalItems.count) accepted")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(Capsule())
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
     }
+}
 
-    var titleSection: some View {
-        Text("Accept Terms to continue")
-            .titleStyle()
-    }
+// MARK: - Header
 
-    var requirementsSection: some View {
+private extension GetStartedInfoScreen {
+
+    var headerSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("To use Movo, you must:")
+            Text("Legal Agreements")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(.primary)
+            Text("Open each document, read it, and tap **Accept** inside to continue.")
                 .font(.subheadline)
-                .foregroundColor(.secTcolor)
-
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(requirements, id: \.self) { item in
-                    HStack(spacing: 10) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.primary)
-                        Text(item)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.preTcolor)
-                    }
-                }
-            }
-            .padding(.top, 8)
-        }
-    }
-
-    var legalSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Legal info")
-                .font(.subheadline)
-                .foregroundColor(.secTcolor)
-                .padding(.bottom, 12)
-
-            VStack(spacing: 0) {
-                ForEach(legalItems) { item in
-                    legalRow(item)
-                    Divider()
-                }
-            }
-        }
-    }
-
-    var footerButtons: some View {
-        PrimaryButton(title: "Accept & Continue", isEnabled: allAccepted) {
-            onReady()
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
 
-// MARK: - Legal Row
+// MARK: - Requirements
 
 private extension GetStartedInfoScreen {
 
-    func legalRow(_ item: LegalItem) -> some View {
+    var requirementsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("Eligibility", icon: "checkmark.seal.fill")
+
+            VStack(spacing: 0) {
+                ForEach(Array(requirements.enumerated()), id: \.offset) { index, item in
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.primary)
+                        Text(item)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                    }
+                    .padding(.vertical, 11)
+                    .padding(.horizontal, 16)
+
+                    if index < requirements.count - 1 {
+                        Divider().padding(.leading, 44)
+                    }
+                }
+            }
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+}
+
+// MARK: - Documents
+
+private extension GetStartedInfoScreen {
+
+    var documentsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("Documents to accept", icon: "doc.fill")
+
+            VStack(spacing: 12) {
+                ForEach(legalItems) { item in
+                    documentCard(item)
+                }
+            }
+        }
+    }
+
+    func documentCard(_ item: LegalItem) -> some View {
         let isAccepted = acceptedItems.contains(item.title)
 
         return Button {
-            acceptedItems.insert(item.title)
+            selectedItem = item
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: item.icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(.preTcolor)
-                    .frame(width: 24)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(item.documentType.iconColor.opacity(0.12))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: item.documentType.icon)
+                        .font(.system(size: 19, weight: .medium))
+                        .foregroundStyle(item.documentType.iconColor)
+                }
 
-                Text(item.title)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.preTcolor)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(item.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Spacer()
 
-                Image(systemName: isAccepted ? "checkmark" : "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(isAccepted ? .primary : .secTcolor)
-                    .animation(.easeInOut(duration: 0.2), value: isAccepted)
+                if isAccepted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Color.primary)
+                        .transition(.scale.combined(with: .opacity))
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(.tertiaryLabel))
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
-            .padding(.vertical, 16)
+            .padding(16)
         }
         .buttonStyle(.plain)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    (isAccepted ? Color.primary : Color(UIColor.separator)).opacity(0.5),
+                    lineWidth: 1.5
+                )
+        )
+        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isAccepted)
+    }
+}
+
+// MARK: - Bottom Bar
+
+private extension GetStartedInfoScreen {
+
+    var bottomBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            VStack(spacing: 10) {
+                PrimaryButton(title: "Accept All & Continue", isEnabled: allAccepted) {
+                    onReady()
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 14)
+            .padding(.bottom, 24)
+        }
+        .background(Color(.systemBackground))
+    }
+}
+
+// MARK: - Helpers
+
+private extension GetStartedInfoScreen {
+
+    func sectionLabel(_ text: String, icon: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
     }
 }

@@ -69,6 +69,7 @@
 		14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */; };
 		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
 		14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */; };
+		14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */; };
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
 /* End PBXBuildFile section */
 
@@ -163,6 +164,7 @@
 		14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderProvider.swift; sourceTree = "<group>"; };
 		14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
 		14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberValidator.swift; sourceTree = "<group>"; };
+		14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewScreen.swift; sourceTree = "<group>"; };
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
@@ -386,6 +388,7 @@
 				142029712F96256800A72366 /* OTPScreen.swift */,
 				142337B92F5807890030B4E7 /* ChoiceScreen.swift */,
 				142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */,
+				14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */,
 				146819682F4DE6CF00BED014 /* Components */,
 			);
 			path = Views;
@@ -734,6 +737,7 @@
 				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
 				14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */,
 				1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */,
+				14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */,
 				14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */,
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
 				1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */,
