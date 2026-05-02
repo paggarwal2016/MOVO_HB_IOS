@@ -125,6 +125,8 @@ struct CardSelectorView: View {
     private static let maxVisible = 5
 
     @State private var selectedIndex: Int = 0
+    @State private var dragOffset: CGFloat = 0
+    @State private var peekInset: CGFloat = 0
     let cards: [VCardListResponse]
     var sectionTitle: String = "My Cards"
     var onTap: () -> Void
@@ -135,7 +137,7 @@ struct CardSelectorView: View {
         GeometryReader { geo in
 
             let isSingle = cards.count == 1
-            let cardWidth = isSingle ? geo.size.width : geo.size.width - 35
+            let cardWidth = isSingle ? geo.size.width : geo.size.width - 28
 
             VStack(alignment: .leading) {
 
@@ -162,44 +164,86 @@ struct CardSelectorView: View {
                         .frame(width: cardWidth)
 
                 } else {
-                    ScrollViewReader { proxy in
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(visibleCards.indices, id: \.self) { index in
-                                    CardItemView(
-                                        card: visibleCards[index],
-                                        isSelected: selectedIndex == index,
-                                        onEyeTap: onEyeTap
-                                    )
-                                    .frame(width: cardWidth)
-                                    .id(index)
-                                    .onTapGesture {
-                                        withAnimation(.spring()) {
-                                            selectedIndex = index
-                                            proxy.scrollTo(index, anchor: .center)
-                                        }
-                                    }
+                    let cardStride = cardWidth + 8
+
+                    // Offset-based carousel: HStack overflows naturally for peek effect
+                    HStack(spacing: 8) {
+                        ForEach(visibleCards.indices, id: \.self) { index in
+                            CardItemView(
+                                card: visibleCards[index],
+                                isSelected: selectedIndex == index,
+                                onEyeTap: onEyeTap
+                            )
+                            .frame(width: cardWidth)
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                    selectedIndex = index
+                                    dragOffset = 0
+                                    peekInset = index > 0 ? 14 : 0
                                 }
                             }
                         }
-
-                        HStack(spacing: 6) {
-                            ForEach(visibleCards.indices, id: \.self) { index in
-                                Capsule()
-                                    .fill(index == selectedIndex ? .primary : Color.gray.opacity(0.3))
-                                    .frame(width: index == selectedIndex ? 18 : 6, height: 6)
-                                    .onTapGesture {
-                                        withAnimation(.spring()) {
-                                            selectedIndex = index
-                                            proxy.scrollTo(index, anchor: .center)
-                                        }
-                                    }
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 4)
                     }
+                    .offset(x: CGFloat(-selectedIndex) * cardStride + peekInset + dragOffset)
+                    .frame(height: 170, alignment: .leading)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 10)
+                            .onChanged { value in
+                                let dx = abs(value.translation.width)
+                                let dy = abs(value.translation.height)
+                                guard dx > dy else { return }
+                                let raw = value.translation.width
+                                if (selectedIndex == 0 && raw > 0) ||
+                                   (selectedIndex == visibleCards.count - 1 && raw < 0) {
+                                    dragOffset = raw / 3
+                                } else {
+                                    dragOffset = raw
+                                }
+                            }
+                            .onEnded { value in
+                                let dx = abs(value.translation.width)
+                                let dy = abs(value.translation.height)
+                                guard dx > dy else {
+                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                        dragOffset = 0
+                                    }
+                                    return
+                                }
+                                let translation = value.translation.width
+                                let predicted  = value.predictedEndTranslation.width
+                                var newIndex = selectedIndex
+                                if translation < -(cardStride / 4) || predicted < -(cardStride / 2) {
+                                    newIndex = min(selectedIndex + 1, visibleCards.count - 1)
+                                } else if translation > (cardStride / 4) || predicted > (cardStride / 2) {
+                                    newIndex = max(selectedIndex - 1, 0)
+                                }
+                                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                    selectedIndex = newIndex
+                                    dragOffset = 0
+                                    peekInset = newIndex > 0 ? 14 : 0
+                                }
+                            }
+                    )
+
+                    // Pagination capsule
+                    HStack(spacing: 6) {
+                        ForEach(visibleCards.indices, id: \.self) { index in
+                            Capsule()
+                                .fill(index == selectedIndex ? Color.primary : Color.gray.opacity(0.3))
+                                .frame(width: index == selectedIndex ? 18 : 6, height: 6)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
+                                .onTapGesture {
+                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                        selectedIndex = index
+                                        dragOffset = 0
+                                        peekInset = index > 0 ? 14 : 0
+                                    }
+                                }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 4)
 
                     if hasMore {
                         Button { onShowMore?() } label: {
