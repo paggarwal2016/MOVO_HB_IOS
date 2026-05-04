@@ -27,10 +27,14 @@ struct PasscodeSetupView: View {
                 if vm.setupStep == .enterNew {
                     HStack {
                         BackButton {
-                            lockManager.logout()
-                            Task {
-                                await sessionManager.logout(appState: appState)
-                                appState.flow = .choice
+                            if let cancel = onCancel {
+                                cancel()
+                            } else {
+                                lockManager.logout()
+                                Task {
+                                    await sessionManager.logout(appState: appState)
+                                    appState.flow = .choice
+                                }
                             }
                         }
                         Spacer()

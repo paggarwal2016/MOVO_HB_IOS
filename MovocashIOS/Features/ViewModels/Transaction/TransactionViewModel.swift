@@ -14,6 +14,41 @@ final class TransactionViewModel: BaseViewModel {
     // MARK: - Published State
 
     @Published var transactions: [TransactionItem] = []
+    @Published var searchText: String = ""
+
+    // MARK: - Computed
+
+    var filteredTransactions: [TransactionItem] {
+        let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !query.isEmpty else { return transactions }
+        return transactions.filter {
+            $0.title.lowercased().contains(query) ||
+            $0.subtitle.lowercased().contains(query) ||
+            $0.amountFormatted.lowercased().contains(query) ||
+            $0.status.lowercased().contains(query)
+        }
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMMM d, yyyy"
+        return f
+    }()
+
+    var groupedTransactions: [(label: String, date: Date, items: [TransactionItem])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: filteredTransactions) {
+            calendar.startOfDay(for: $0.date)
+        }
+        return grouped.map { date, items in
+            let label: String
+            if calendar.isDateInToday(date)     { label = "Today" }
+            else if calendar.isDateInYesterday(date) { label = "Yesterday" }
+            else { label = Self.dayFormatter.string(from: date) }
+            return (label: label, date: date, items: items.sorted { $0.date > $1.date })
+        }
+        .sorted { $0.date > $1.date }
+    }
 
     // MARK: - Dependencies
 
@@ -55,6 +90,21 @@ final class TransactionViewModel: BaseViewModel {
     }
 
     // MARK: - Load Transactions
+
+    func loadTransactionsFiltered(filter: TransactionFilter) async {
+        do {
+            let response: TransactionResponse = try await perform {
+                try await self.network.request(TransactionAPI.filtered(filter))
+            }
+            transactions = response.transactions.map { $0.toItem() }
+            analytics.log(AnalyticsEvent.transactionListViewed, params: [
+                AnalyticsParam.accountId: filter.accountId,
+                AnalyticsParam.count: response.transactions.count
+            ])
+        } catch is CancellationError {
+        } catch {
+        }
+    }
 
     func loadTransactions(max: Int, accountId: Int) async {
         do {

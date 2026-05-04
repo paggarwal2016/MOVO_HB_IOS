@@ -20,12 +20,39 @@ struct UserProfileView: View {
     @ObservedObject var achVM: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
 
+    @State private var showDisableBiometricAlert = false
+    @State private var showBiometricEnrollSheet  = false
+    @State private var showSecuritySettings      = false
+
     init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel) {
         self.dashboardVM = dashboardVM
         self.achVM = achVM
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
     
+    private var effectiveBiometricType: BiometricType {
+        lockManager.isBiometricAvailable
+            ? lockManager.biometricType
+            : lockManager.hardwareBiometricType
+    }
+
+    private var biometricToggleBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: { lockManager.isBiometricEnabled },
+            set: { isOn in
+                if isOn {
+                    guard lockManager.isPasscodeSet else {
+                        lockManager.showTemporaryError("Set a passcode first to enable biometrics.")
+                        return
+                    }
+                    showBiometricEnrollSheet = true
+                } else {
+                    showDisableBiometricAlert = true
+                }
+            }
+        )
+    }
+
     // Prefers the fully-fetched profile; falls back to dashboard data while the
     // separate profile fetch is in-flight so the tab shows content immediately.
     private var effectiveProfile: UserProfileResponse? {
@@ -98,34 +125,30 @@ struct UserProfileView: View {
     private func profileList(_ profile: UserProfileResponse) -> some View {
         List {
             avatarSection(profile)
-            personalInfoSection(profile)
-            contactSection(profile)
-            addressSection(profile)
-            idVerificationSection(profile)
+            securitySection
             accountStatusSection(profile)
             linkedBankAccountsSection
-            
-            //            PrimaryButton(title: "Delete Account") {
-            //                AlertManager.shared.showConfirmation(
-            //                    title: "Delete",
-            //                    message: "Are you sure you want to permanently delete your account?",
-            //                    onConfirm: {
-            //                        Task {
-            //                            let success = await userVM.deleteAccount()
-            //                            if success {
-            //                                lockManager.logout()
-            //                                await sessionManager.logout(appState: appState)
-            //                                ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
-            //                            }
-            //                        }
-            //                    }
-            //                )
-            //            }
         }
         .listStyle(.insetGrouped)
         .refreshable {
             await userVM.refresh()
             await achVM.fetchAccounts()
+        }
+        .sheet(isPresented: $showBiometricEnrollSheet) {
+            BiometricEnrollView(
+                lockManager: lockManager,
+                onEnable: { showBiometricEnrollSheet = false },
+                onSkip:   { showBiometricEnrollSheet = false }
+            )
+        }
+        .alert("Disable \(effectiveBiometricType.displayName)?", isPresented: $showDisableBiometricAlert) {
+            Button("Disable", role: .destructive) { lockManager.revokeBiometricSafely() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("You'll need your passcode to unlock MovoCash.")
+        }
+        .navigationDestination(isPresented: $showSecuritySettings) {
+            SecuritySettingsView(lockManager: lockManager)
         }
     }
     
@@ -233,76 +256,194 @@ struct UserProfileView: View {
     }
     
     // MARK: - Sections  (profile passed in, no more dangling reference)
-    
+
+    private var securitySection: some View {
+        Section {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(lockManager.isBiometricHardwarePresent
+                              ? (lockManager.isBiometricEnabled ? Color.green : Color(.systemGray3))
+                              : Color.blue)
+                        .frame(width: 32, height: 32)
+                    Image(systemName: lockManager.isBiometricHardwarePresent
+                          ? effectiveBiometricType.systemImageName
+                          : "lock.shield.fill")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(lockManager.isBiometricHardwarePresent
+                         ? effectiveBiometricType.displayName
+                         : "Security Settings")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    Text(lockManager.isBiometricHardwarePresent
+                         ? (lockManager.isBiometricEnabled ? "Enabled" : "Disabled")
+                         : "Passcode & authentication")
+                        .font(.caption)
+                        .foregroundStyle(
+                            lockManager.isBiometricHardwarePresent && lockManager.isBiometricEnabled
+                                ? Color.green : Color.secondary
+                        )
+                }
+
+                Spacer()
+
+                if lockManager.isBiometricHardwarePresent {
+                    Toggle("", isOn: biometricToggleBinding)
+                        .labelsHidden()
+                        .tint(.green)
+                        .fixedSize()
+                    Rectangle()
+                        .fill(Color(.systemGray4))
+                        .frame(width: 0.5, height: 22)
+                        .padding(.horizontal, 4)
+                }
+
+                Button { showSecuritySettings = true } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 2)
+        } header: {
+            Text("Authentication & Security")
+        } footer: {
+            if lockManager.isBiometricHardwarePresent {
+                Text(lockManager.isBiometricEnabled
+                     ? "\(effectiveBiometricType.displayName) is active for quick, secure sign-in."
+                     : "Enable \(effectiveBiometricType.displayName) for faster, more secure access.")
+            }
+        }
+    }
+
     private func avatarSection(_ profile: UserProfileResponse) -> some View {
         Section {
-            VStack(spacing: 10) {
-                ProfileImageView(imageURL: profile.profilePicture,
-                                 userName: profile.initials,
-                                 width: 65,
-                                 height: 65)
-                Text(profile.fullName)
-                    .font(.title2).fontWeight(.semibold)
-                Text("@\(profile.username)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 6) {
-                    StatusBadge(status: profile.emailVerified ? .emailVerified : .emailUnverified)
-                    StatusBadge(status: profile.smsVerified ? .smsVerified : .smsUnverified)
-                    StatusBadge(status: profile.isTwoFactorEnabled ? .twoFactorEnabled : .twoFactorDisabled)
+            VStack(spacing: 20) {
+                ProfileImageView(
+                    imageURL: profile.profilePicture,
+                    userName: profile.initials,
+                    width: 82,
+                    height: 82
+                )
+                .overlay(Circle().stroke(Color(.systemGray5), lineWidth: 2))
+
+                VStack(spacing: 4) {
+                    Text(profile.fullName)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .lineLimit(nil)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                    Text("@\(profile.username)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                    Text(profile.displayEmail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(nil)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                 }
-                .padding(.top, 2)
+
+                HStack(spacing: 12) {
+                    PrimaryButton(
+                        image: Image(systemName: "person.fill"),
+                        title: "View Profile"
+                    ) { }
+
+                    PrimaryButton(
+                        image: Image(systemName: "trash.fill"),
+                        title: "Delete Account",
+                        backgroundColor: Color.primary,
+                        textColor: Color.red
+                    ) {
+                        AlertManager.shared.showConfirmation(
+                            title: "Delete",
+                            message: "Are you sure you want to permanently delete your account?",
+                            onConfirm: {
+                                Task {
+                                    let success = await userVM.deleteAccount()
+                                    if success {
+                                        lockManager.logout()
+                                        await sessionManager.logout(appState: appState)
+                                        ToastManager.shared.show("Account delete successfully.", style: .success, position: .bottom)
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
+            .listRowSeparator(.hidden)
         }
     }
-    
-    private func personalInfoSection(_ profile: UserProfileResponse) -> some View {
-        Section("Personal info") {
-            ProfileRow(label: "First name",   value: profile.firstName ?? "--")
-            ProfileRow(label: "Last name",    value: profile.lastName ?? "--")
-            ProfileRow(label: "Date of birth",value: profile.dob ?? "--")
-            ProfileRow(label: "Customer ID",  value: "\(profile.customerId)")
-        }
-    }
-    
-    private func contactSection(_ profile: UserProfileResponse) -> some View {
-        Section("Contact") {
-            ProfileRow(label: "Email", value: profile.displayEmail)
-            ProfileRow(label: "Phone", value: profile.displayPhone)
-        }
-    }
-    
-    private func addressSection(_ profile: UserProfileResponse) -> some View {
-        Section("Address") {
-            ProfileRow(label: "Line 1", value: profile.addressLine1 ?? "--")
-            if let line2 = profile.addressLine2, !line2.isEmpty {
-                ProfileRow(label: "Line 2", value: line2)
-            }
-            ProfileRow(label: "City / State", value: {
-                let parts = [profile.city, profile.state].compactMap { $0?.isEmpty == false ? $0 : nil }
-                return parts.isEmpty ? "--" : parts.joined(separator: ", ")
-            }())
-            ProfileRow(label: "ZIP",          value: profile.zip ?? "--")
-        }
-    }
-    
-    private func idVerificationSection(_ profile: UserProfileResponse) -> some View {
-        Section("ID verification") {
-            ProfileRow(label: "License number", value: profile.driversLicenseNumber ?? "--")
-            ProfileRow(label: "State",          value: profile.driversLicenseState ?? "--")
-            ProfileRow(label: "Expiration",     value: profile.driversLicenseExpiration ?? "--")
-        }
-    }
-    
+
     private func accountStatusSection(_ profile: UserProfileResponse) -> some View {
-        Section("Account status") {
-            StatusRow(label: "KYC required", isRequired: profile.isAdditionalKycRequired, trueStyle: .required, falseStyle: .complete)
-            StatusRow(label: "CIP status", isRequired: profile.cipAllowed, trueStyle: .allowed, falseStyle: .notAllowed)
-            StatusRow(label: "Plaid auth", isRequired: profile.isPlaidAuthRequired, trueStyle: .connected, falseStyle: .required)
-            StatusRow(label: "Account active", isRequired: !profile.isDeactivated, trueStyle: .active, falseStyle: .deactivated)
+        Section("Account Status") {
+            accountStatusRow(
+                icon: "person.badge.shield.checkmark.fill",
+                iconColor: profile.isAdditionalKycRequired ? .orange : .green,
+                label: "KYC Status",
+                style: profile.isAdditionalKycRequired ? .required : .complete
+            )
+            accountStatusRow(
+                icon: "checkmark.seal.fill",
+                iconColor: profile.cipAllowed ? .green : .red,
+                label: "CIP Status",
+                style: profile.cipAllowed ? .allowed : .notAllowed
+            )
+            accountStatusRow(
+                icon: "link.circle.fill",
+                iconColor: profile.isPlaidAuthRequired ? .orange : .green,
+                label: "Bank Link",
+                style: profile.isPlaidAuthRequired ? .required : .connected
+            )
+            accountStatusRow(
+                icon: "checkmark.circle.fill",
+                iconColor: !profile.isDeactivated ? .green : .red,
+                label: "Account",
+                style: !profile.isDeactivated ? .active : .deactivated
+            )
         }
+    }
+
+    private func accountStatusRow(icon: String, iconColor: Color, label: String, style: StatusStyle) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(iconColor.opacity(0.12))
+                    .frame(width: 32, height: 32)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(iconColor)
+            }
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+            Spacer()
+            HStack(spacing: 4) {
+                Image(systemName: style.icon).font(.caption2)
+                Text(style.label).font(.caption).fontWeight(.medium)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(style.color.opacity(0.12))
+            .foregroundStyle(style.color)
+            .clipShape(Capsule())
+        }
+        .padding(.vertical, 2)
     }
 }
 
@@ -311,16 +452,32 @@ struct UserProfileView: View {
 struct ProfileRow: View {
     let label: String
     let value: String
-    
+    var icon: String? = nil
+    var iconColor: Color = .blue
+
     var body: some View {
-        HStack {
-            Text(label)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text(value)
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.trailing)
+        HStack(alignment: .center, spacing: 14) {
+            if let icon {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(iconColor)
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white)
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .font(.subheadline)
+        .padding(.vertical, 2)
     }
 }

@@ -84,3 +84,48 @@ extension Color {
     
     static let matteBlack = Color(#colorLiteral(red: 0.1568627451, green: 0.1568627451, blue: 0.168627451, alpha: 1))
 }
+
+
+
+enum AppColor {
+    
+    // MARK: - Background
+    static let app = Color(hex: "#0C0C0C")
+    static let tab = Color(hex: "#0C0C0C")
+    
+    // Card
+    static let card = Color(hex: "#1E1E21")
+    
+    // MARK: - Surface
+    static let surface = Color(hex: "#1A1A1F")
+    static let surfaceHover = Color(hex: "#22222A")
+    static let surfacePressed = Color(hex: "#2C2C35")
+    
+    // MARK: - Primary Text / CTA
+    static let primary = Color(hex: "#C8CDD6")
+    static let primaryHover = Color(hex: "#D6DAE2")
+    static let primaryPressed = Color(hex: "#B0B6C0")
+    static let primaryDisabled = Color(hex: "#5F636B")
+    
+    // MARK: - Selection
+    static let selectedBackground = Color(hex: "#2C2C35")
+    static let selectedText = Color(hex: "#C8CDD6")
+    static let selectionOverlay = Color.white.opacity(0.08)
+    
+    // MARK: - Focus
+    static let focusRing = Color(hex: "#F5F6F7")
+    
+    // MARK: - Highlight
+    static let textSelection = Color.white.opacity(0.30)
+    static let searchHighlight = Color.white.opacity(0.14)
+    
+    // MARK: - Destructive
+    static let destructive = Color(hex: "#E5484D")
+    static let destructivePressed = Color(hex: "#C73237")
+    
+    // MARK: - Text
+    static let primaryText = Color(hex: "#F4F4F8")
+    static let secondaryText = Color(hex: "#9D9FA6")
+    
+    static let white = Color(#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1))
+}

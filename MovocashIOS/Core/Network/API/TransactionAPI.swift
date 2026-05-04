@@ -8,8 +8,9 @@
 import Foundation
 
 enum TransactionAPI: Endpoint {
-    
+
     case lists(max: Int, accountId: Int)
+    case filtered(TransactionFilter)
     case withdrawals(TransactionRequest.Withdrawal)
     case internals(TransactionRequest.Internal)
     
@@ -19,16 +20,16 @@ enum TransactionAPI: Endpoint {
     // MARK: - URL Path
     var path: String {
         switch self {
-        case .lists: return "/transactions"
-        case .withdrawals: return "/transactions/withdrawal"
-        case .internals: return "/transactions/internal"
+        case .lists, .filtered: return "/transactions"
+        case .withdrawals:      return "/transactions/withdrawal"
+        case .internals:        return "/transactions/internal"
         }
     }
-    
+
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .lists: return .GET
+        case .lists, .filtered:       return .GET
         case .withdrawals, .internals: return .POST
         }
     }
@@ -41,9 +42,11 @@ enum TransactionAPI: Endpoint {
         switch self {
         case .lists(let max, let accountId):
             return [
-                URLQueryItem(name: "max", value: "\(max)"),
+                URLQueryItem(name: "max",       value: "\(max)"),
                 URLQueryItem(name: "accountId", value: "\(accountId)")
             ]
+        case .filtered(let filter):
+            return filter.queryItems
         case .withdrawals, .internals:
             return nil
         }
@@ -58,7 +61,7 @@ enum TransactionAPI: Endpoint {
     
     private func encodeBody() throws -> Data? {
         switch self {
-        case .lists:
+        case .lists, .filtered:
             return nil
         case .withdrawals(let request):
             return try JSONEncoder().encode(request)

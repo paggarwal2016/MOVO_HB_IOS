@@ -102,9 +102,11 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showTransactions) {
             if let account = displayAccount {
-                SavingAccountDetailView(accountId: account.id, showAccountCard: false, container: container)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                NavigationStack {
+                    TransactionListView(container: container, accountId: account.id)
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showAccountList) {

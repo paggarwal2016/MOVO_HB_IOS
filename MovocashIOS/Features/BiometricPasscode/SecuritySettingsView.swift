@@ -29,7 +29,7 @@ struct SecuritySettingsView: View {
 
     var body: some View {
         List {
-            passcodeSection
+            //passcodeSection
             biometricSection
             activitySection
         }
@@ -52,10 +52,10 @@ struct SecuritySettingsView: View {
 
             case .setupPasscode:
                 PasscodeSetupView(
-                    vm: AppLockViewModel(lockManager: lockManager)
-                ) {
-                    route = nil
-                }
+                    vm: AppLockViewModel(lockManager: lockManager),
+                    onSuccess: { route = nil },
+                    onCancel:  { route = nil }
+                )
 
             case .enrollBiometric:
                 BiometricEnrollView(
