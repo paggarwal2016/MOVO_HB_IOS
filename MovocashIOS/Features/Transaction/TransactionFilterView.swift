@@ -13,6 +13,7 @@ import SwiftUI
 struct TransactionFilterView: View {
 
     @Binding var filter: TransactionFilter
+    var showLast4: Bool
     var onApply:  () -> Void
     var onReset:  () -> Void
     var onCancel: () -> Void
@@ -87,7 +88,7 @@ struct TransactionFilterView: View {
                         dateSection
                         amountSection
                         statusSection
-                        last4Section
+                        if showLast4 { last4Section }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 24)

@@ -103,7 +103,7 @@ struct DashboardView: View {
         .sheet(isPresented: $showTransactions) {
             if let account = displayAccount {
                 NavigationStack {
-                    TransactionListView(container: container, accountId: account.id)
+                    TransactionListView(container: container, accountId: account.id, mode: .common)
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)

@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+// MARK: - Transaction Mode
+
+enum TransactionMode {
+    case individual  // single card — card last 4 filter hidden
+    case common      // all cards  — card last 4 filter visible
+}
+
 // MARK: - TransactionListView
 
 struct TransactionListView: View {
@@ -14,12 +21,14 @@ struct TransactionListView: View {
     @StateObject private var viewModel: TransactionViewModel
 
     private let accountId: Int
+    private let mode: TransactionMode
     @State private var activeFilter:  TransactionFilter
     @State private var pendingFilter: TransactionFilter
     @State private var showFilterSheet = false
 
-    init(container: AppContainer, accountId: Int) {
+    init(container: AppContainer, accountId: Int, mode: TransactionMode = .common) {
         self.accountId = accountId
+        self.mode = mode
         _viewModel = StateObject(wrappedValue: container.makeTransactionViewModel())
         let base = TransactionFilter(accountId: accountId)
         _activeFilter  = State(initialValue: base)
@@ -62,7 +71,7 @@ struct TransactionListView: View {
         .navigationBarTitleDisplayMode(.large)
         .onAppear { applyNavBarAppearance() }
         .sheet(isPresented: $showFilterSheet) {
-            TransactionFilterView(filter: $pendingFilter) {
+            TransactionFilterView(filter: $pendingFilter, showLast4: mode == .common) {
                 activeFilter = pendingFilter
                 Task { await viewModel.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
