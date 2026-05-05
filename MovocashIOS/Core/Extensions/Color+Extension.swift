@@ -128,4 +128,8 @@ enum AppColor {
     static let secondaryText = Color(hex: "#9D9FA6")
     
     static let white = Color(#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1))
+    
+    static let green = Color(hex: "#629F86")
+    static let coolGary = Color(hex: "#8E8F95")
+    static let richBlack = Color(hex: "#121117")
 }

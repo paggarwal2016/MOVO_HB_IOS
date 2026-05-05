@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 // MARK: - Tab Definition
 
@@ -49,8 +50,18 @@ enum TabBarAppearance {
     static func configure() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = .white
-        UITabBar.appearance().standardAppearance = appearance
+        appearance.backgroundColor = MovoTheme.color.background.uiColor
+        appearance.shadowColor = MovoTheme.color.accent.uiColor.withAlphaComponent(0.5)
+
+        let selected   = MovoTheme.color.accent.uiColor
+        let unselected = MovoTheme.color.textTertiary.uiColor
+
+        appearance.stackedLayoutAppearance.selected.iconColor = selected
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: selected]
+        appearance.stackedLayoutAppearance.normal.iconColor   = unselected
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes   = [.foregroundColor: unselected]
+
+        UITabBar.appearance().standardAppearance   = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 }
@@ -187,7 +198,8 @@ private extension HomeTabBarView {
                 tabContent(for: tab)
             }
         }
-        .tint(Color.primary)
+        .tint(Color.movo.accent)
+        .onAppear { TabBarAppearance.configure() }
     }
 
     @ViewBuilder
@@ -205,7 +217,7 @@ private extension HomeTabBarView {
     func destination(for tab: Tab) -> some View {
         switch tab {
         case .home:     DashboardView(container: container, dashboardVM: dashboardVM, linkAccountVM: linkAccountVM)
-        case .accounts: AccountsView()
+        case .accounts: PayAnyoneView()
         case .profile:  UserProfileView(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
         }
     }

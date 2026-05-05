@@ -164,6 +164,7 @@
 		14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderProvider.swift; sourceTree = "<group>"; };
 		14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
 		14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberValidator.swift; sourceTree = "<group>"; };
+		14E42FF32FAA2D0C00B2025C /* MovocashIOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOS.entitlements; sourceTree = "<group>"; };
 		14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewScreen.swift; sourceTree = "<group>"; };
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
@@ -475,6 +476,7 @@
 		146819762F4DE6CF00BED014 /* MovocashIOS */ = {
 			isa = PBXGroup;
 			children = (
+				14E42FF32FAA2D0C00B2025C /* MovocashIOS.entitlements */,
 				14B2CB892FA8BF7B0068FC23 /* Font */,
 				14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */,
 				14FC32662F7C028A0063F6FD /* Info.plist */,
@@ -972,6 +974,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = MovocashIOS/MovocashIOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = EW9324XEV9;

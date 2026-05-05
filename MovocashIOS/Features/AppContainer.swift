@@ -91,4 +91,12 @@ final class AppContainer: ObservableObject {
         PDFViewModel(network: network, alertManager: alertManager, analytics: analytics)
     }
 
+    func makeContactViewModel() -> ContactViewModel {
+        ContactViewModel(
+            service: ContactsService(),
+            network: network,
+            alertManager: alertManager
+        )
+    }
+
 }

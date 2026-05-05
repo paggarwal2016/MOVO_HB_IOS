@@ -37,7 +37,7 @@ struct TransactionListView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            AppColor.app.ignoresSafeArea()
+            Color.movo.background.ignoresSafeArea()
             VStack(spacing: 0) {
                 searchBar
                 transactionContent
@@ -50,15 +50,15 @@ struct TransactionListView: View {
             } label: {
                 ZStack() {
                     Circle()
-                        .fill(AppColor.primary)
+                        .fill(Color.movo.textSecondary)
                         .frame(width: 56, height: 56)
                         .shadow(color: Color.gray.opacity(0.35), radius: 12, x: 0, y: 5)
                     Image("filter")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(AppColor.app)
+                        .foregroundStyle(Color.movo.background)
                     if activeFilter.hasActiveFilters {
                         Circle()
-                            .fill(AppColor.primaryDisabled)
+                            .fill(Color.movo.textDisabled)
                             .frame(width: 12, height: 12)
                             .offset(x: 6, y: -6)
                     }
@@ -97,7 +97,7 @@ struct TransactionListView: View {
                 .foregroundStyle(.secondary)
                 .font(.system(size: 15))
             TextField("Search transactions...", text: $viewModel.searchText)
-                .font(AppFont.activityName)
+                .font(Typography.caption.font)
                 .autocorrectionDisabled()
             if !viewModel.searchText.isEmpty {
                 Button { viewModel.searchText = "" } label: {
@@ -141,19 +141,19 @@ struct TransactionListView: View {
                 } header: {
                     HStack {
                         Text(group.label)
-                            .font(AppFont.activityName)
+                            .font(Typography.caption.font)
                             .foregroundStyle(.secondary)
                             .textCase(nil)
                         Spacer()
                         Text("\(group.items.count)")
-                            .font(AppFont.cta)
+                            .font(Typography.captionSmall.font)
                             .foregroundStyle(.tertiary)
                     }
                     .padding(.horizontal, 2)
                 }
             }
             Text("\(viewModel.filteredTransactions.count) transaction\(viewModel.filteredTransactions.count == 1 ? "" : "s")")
-                .font(AppFont.body)
+                .font(Typography.caption.font)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .listRowBackground(Color.clear)
@@ -184,18 +184,18 @@ struct TransactionListView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
-                    .font(Font.montserrat(.semiBold, size: 14))
+                    .font(Typography.body.font)
                     .foregroundStyle(isFailed ? .secondary : .primary)
                     .lineLimit(1)
                     .strikethrough(isFailed)
                 HStack(spacing: 4) {
                     Text(item.subtitle)
-                        .font(AppFont.body)
+                        .font(Typography.caption.font)
                         .foregroundStyle(.secondary)
                     Text("·")
                         .foregroundStyle(.tertiary)
                     Text(shortTime(item.date))
-                        .font(AppFont.body)
+                        .font(Typography.caption.font)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -204,10 +204,10 @@ struct TransactionListView: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 Text(item.amountFormatted)
-                    .font(AppFont.activityAmount)
+                    .font(Typography.body.font)
                     .foregroundStyle(
                         isFailed      ? Color.secondary  :
-                        item.isCredit ? Color.successGreen : Color.primary
+                        item.isCredit ? Color.movo.success : Color.primary
                     )
                 if isPending {
                     statusBadge("Pending", color: .warningOrange)
@@ -224,7 +224,7 @@ struct TransactionListView: View {
 
     private func statusBadge(_ label: String, color: Color) -> some View {
         Text(label.uppercased())
-            .font(AppFont.quickAction)
+            .font(Typography.eyebrow.font)
             .foregroundStyle(color)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
@@ -238,18 +238,18 @@ struct TransactionListView: View {
             Spacer()
             Image(systemName: "list.bullet.rectangle.portrait")
                 .font(.system(size: 52, weight: .ultraLight))
-                .foregroundStyle(AppColor.primaryText)
+                .foregroundStyle(Color.movo.textPrimary)
             VStack(spacing: 6) {
                 Text(viewModel.searchText.isEmpty && !activeFilter.hasActiveFilters
                      ? "No transactions yet"
                      : "No results found")
-                    .font(AppFont.hero)
-                    .foregroundStyle(AppColor.primaryText)
+                    .font(Typography.cardHero.font)
+                    .foregroundStyle(Color.movo.textPrimary)
                 Text(viewModel.searchText.isEmpty && !activeFilter.hasActiveFilters
                      ? "Your transactions will appear here once activity begins."
                      : "Try adjusting your search or clearing the filters.")
-                    .font(AppFont.activityName)
-                    .foregroundStyle(AppColor.secondaryText)
+                    .font(Typography.caption.font)
+                    .foregroundStyle(Color.movo.textTertiary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
             }
@@ -260,8 +260,8 @@ struct TransactionListView: View {
                     Task { await viewModel.loadTransactionsFiltered(filter: activeFilter) }
                 }
                 .buttonStyle(.borderedProminent)
-                .foregroundStyle(AppColor.app)
-                .tint(AppColor.primary)
+                .foregroundStyle(Color.movo.background)
+                .tint(Color.movo.textSecondary)
             }
             Spacer()
         }
@@ -323,7 +323,7 @@ struct TransactionListView: View {
     }
 
     private func applyNavBarAppearance() {
-        let titleColor = UIColor(AppColor.primaryText)
+        let titleColor = MovoTheme.color.textPrimary.uiColor
         let appearance = UINavigationBarAppearance()
         appearance.configureWithTransparentBackground()
         appearance.titleTextAttributes = [.foregroundColor: titleColor]

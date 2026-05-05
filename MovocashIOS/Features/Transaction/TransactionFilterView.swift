@@ -48,17 +48,17 @@ struct TransactionFilterView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            AppColor.app.ignoresSafeArea()
+            Color.movo.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Header
                 HStack {
                     Text("Filter")
-                        .font(Font.montserrat(.bold, size: 22))
+                        .font(Typography.sectionTitle.font)
                         .foregroundStyle(.white)
                     if activeCount > 0 {
                         Text("\(activeCount) active")
-                            .font(AppFont.activityName)
+                            .font(Typography.caption.font)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
@@ -66,7 +66,7 @@ struct TransactionFilterView: View {
                     }
                     Spacer()
                     Button("Reset", action: onReset)
-                        .font(Font.montserrat(.semiBold, size: 14))
+                        .font(Typography.body.font)
                         .foregroundStyle(.white.opacity(0.7))
                 }
                 .padding(.horizontal, 20)
@@ -100,18 +100,18 @@ struct TransactionFilterView: View {
     private var searchSection: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle((AppColor.secondaryText))
+                .foregroundStyle((Color.movo.textTertiary))
                 .font(.system(size: 15))
             TextField("", text: $filter.merchantName,
                       prompt: Text("Search by name or merchant").foregroundColor(.white.opacity(0.6)))
-                .font(AppFont.activityName)
-                .foregroundStyle(AppColor.white)
-                .tint(AppColor.white)
+                .font(Typography.caption.font)
+                .foregroundStyle(Color.movo.textPrimary)
+                .tint(Color.movo.textPrimary)
                 .autocorrectionDisabled()
             if !filter.merchantName.isEmpty {
                 Button { filter.merchantName = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(AppColor.secondaryText)
+                        .foregroundStyle(Color.movo.textTertiary)
                 }
                 .buttonStyle(.plain)
             }
@@ -150,8 +150,8 @@ struct TransactionFilterView: View {
             applyPreset(preset)
         } label: {
             Text(preset.rawValue)
-                .font(Font.montserrat(selected ? .semiBold : .regular, size: 13))
-                .foregroundStyle(selected ? AppColor.app : Color.white)
+                .font(selected ? Typography.bodyCompact.font : Typography.subtitle.font)
+                .foregroundStyle(selected ? Color.movo.background : Color.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 9)
                 .background(selected ? Color.white : Color.white.opacity(0.1), in: Capsule())
@@ -166,7 +166,7 @@ struct TransactionFilterView: View {
         )
         return VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(AppFont.eyebrow)
+                .font(Typography.eyebrow.font)
                 .foregroundStyle(.white.opacity(0.5))
                 .tracking(0.8)
             Group {
@@ -193,7 +193,7 @@ struct TransactionFilterView: View {
                 sectionHeader("AMOUNT")
                 Spacer()
                 Text("$\(Int(minSlider)) – $\(Int(maxSlider))\(maxSlider >= 500 ? "+" : "")")
-                    .font(Font.montserrat(.semiBold, size: 13))
+                    .font(Typography.bodyCompact.font)
                     .foregroundStyle(.white)
             }
 
@@ -202,9 +202,9 @@ struct TransactionFilterView: View {
                 .padding(.vertical, 6)
 
             HStack {
-                Text("$0").font(AppFont.body).foregroundStyle(.white.opacity(0.4))
+                Text("$0").font(Typography.caption.font).foregroundStyle(.white.opacity(0.4))
                 Spacer()
-                Text("$500+").font(AppFont.body).foregroundStyle(.white.opacity(0.4))
+                Text("$500+").font(Typography.caption.font).foregroundStyle(.white.opacity(0.4))
             }
             
             HStack(spacing: 12) {
@@ -217,12 +217,12 @@ struct TransactionFilterView: View {
     private var amountTextField: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("AMOUNT")
-                .font(AppFont.eyebrow)
+                .font(Typography.eyebrow.font)
                 .foregroundStyle(.white.opacity(0.5))
                 .tracking(0.8)
             HStack(spacing: 4) {
                 Text("$")
-                    .font(AppFont.body)
+                    .font(Typography.caption.font)
                     .foregroundStyle(.white.opacity(0.6))
                 TextField("", text: Binding(
                     get: { filter.amount.map { "\(Int($0))" } ?? "" },
@@ -244,7 +244,7 @@ struct TransactionFilterView: View {
     private var last4TextField: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("CARD LAST 4")
-                .font(AppFont.eyebrow)
+                .font(Typography.eyebrow.font)
                 .foregroundStyle(.white.opacity(0.5))
                 .tracking(0.8)
             HStack(spacing: 6) {
@@ -277,8 +277,8 @@ struct TransactionFilterView: View {
                     let selected = filter.transactionStatus == value
                     Button { filter.transactionStatus = value } label: {
                         Text(label)
-                            .font(Font.montserrat(selected ? .semiBold : .regular, size: 13))
-                            .foregroundStyle(selected ? AppColor.app : .white)
+                            .font(selected ? Typography.bodyCompact.font : Typography.subtitle.font)
+                            .foregroundStyle(selected ? Color.movo.background : .white)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 9)
                             .background(selected ? Color.white : Color.white.opacity(0.1), in: Capsule())
@@ -294,7 +294,7 @@ struct TransactionFilterView: View {
     private var bottomBar: some View {
         HStack(spacing: 12) {
             Button("Cancel", action: onCancel)
-                .font(Font.montserrat(.semiBold, size: 16))
+                .font(Typography.buttonLarge.font)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
@@ -305,8 +305,8 @@ struct TransactionFilterView: View {
                 onApply()
             } label: {
                 Text("Apply Filters")
-                    .font(Font.montserrat(.semiBold, size: 16))
-                    .foregroundStyle(AppColor.app)
+                    .font(Typography.buttonLarge.font)
+                    .foregroundStyle(Color.movo.background)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
@@ -314,14 +314,14 @@ struct TransactionFilterView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
-        .background(AppColor.app)
+        .background(Color.movo.background)
     }
 
     // MARK: - Section Header
 
     private func sectionHeader(_ text: String) -> some View {
         Text(text)
-            .font(AppFont.sectionHeader)
+            .font(Typography.micro.font)
             .foregroundStyle(.white.opacity(0.5))
             .tracking(0.8)
     }
