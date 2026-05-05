@@ -41,7 +41,7 @@ struct TransactionFilterView: View {
         if !filter.transactionStatus.isEmpty  { n += 1 }
         if !filter.merchantName.isEmpty        { n += 1 }
         if !filter.last4.isEmpty              { n += 1 }
-        if minSlider > 0 || maxSlider < 500   { n += 1 }
+        if filter.amount != nil || minSlider > 0 || maxSlider < 500 { n += 1 }
         if fromDate != nil || toDate != nil   { n += 1 }
         return n
     }
@@ -51,11 +51,6 @@ struct TransactionFilterView: View {
             AppColor.app.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Capsule()
-                    .fill(Color.white.opacity(0.25))
-                    .frame(width: 36, height: 4)
-                    .padding(.top, 12)
-
                 // Header
                 HStack {
                     Text("Filter")
@@ -88,7 +83,6 @@ struct TransactionFilterView: View {
                         dateSection
                         amountSection
                         statusSection
-                        if showLast4 { last4Section }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 24)
@@ -203,37 +197,74 @@ struct TransactionFilterView: View {
                     .foregroundStyle(.white)
             }
 
-            VStack(spacing: 8) {
-                HStack(spacing: 10) {
-                    Text("Min")
-                        .font(AppFont.body)
-                        .foregroundStyle(.white.opacity(0.5))
-                        .frame(width: 28, alignment: .leading)
-                    Slider(value: $minSlider, in: 0...500, step: 5)
-                        .tint(.white)
-                        .onChange(of: minSlider) { v in
-                            if v > maxSlider { minSlider = maxSlider }
-                        }
-                }
-                HStack(spacing: 10) {
-                    Text("Max")
-                        .font(AppFont.body)
-                        .foregroundStyle(.white.opacity(0.5))
-                        .frame(width: 28, alignment: .leading)
-                    Slider(value: $maxSlider, in: 0...500, step: 5)
-                        .tint(.white)
-                        .onChange(of: maxSlider) { v in
-                            if v < minSlider { maxSlider = minSlider }
-                        }
-                }
-            }
+            RangeSliderView(minValue: $minSlider, maxValue: $maxSlider, bounds: 0...500, step: 5)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
 
             HStack {
                 Text("$0").font(AppFont.body).foregroundStyle(.white.opacity(0.4))
                 Spacer()
                 Text("$500+").font(AppFont.body).foregroundStyle(.white.opacity(0.4))
             }
+            
+            HStack(spacing: 12) {
+                amountTextField
+                if showLast4 { last4TextField }
+            }
         }
+    }
+
+    private var amountTextField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("AMOUNT")
+                .font(AppFont.eyebrow)
+                .foregroundStyle(.white.opacity(0.5))
+                .tracking(0.8)
+            HStack(spacing: 4) {
+                Text("$")
+                    .font(AppFont.body)
+                    .foregroundStyle(.white.opacity(0.6))
+                TextField("", text: Binding(
+                    get: { filter.amount.map { "\(Int($0))" } ?? "" },
+                    set: { str in
+                        filter.amount = str.isEmpty ? nil : Double(str)
+                    }
+                ), prompt: Text("Exact").foregroundColor(.white.opacity(0.5)))
+                .keyboardType(.numberPad)
+                .foregroundStyle(.white)
+                .tint(.white)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var last4TextField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("CARD LAST 4")
+                .font(AppFont.eyebrow)
+                .foregroundStyle(.white.opacity(0.5))
+                .tracking(0.8)
+            HStack(spacing: 6) {
+                Image(systemName: "creditcard")
+                    .foregroundStyle(.white.opacity(0.5))
+                    .font(.system(size: 13))
+                TextField("", text: $filter.last4,
+                          prompt: Text("1234").foregroundColor(.white.opacity(0.5)))
+                    .keyboardType(.numberPad)
+                    .foregroundStyle(.white)
+                    .tint(.white)
+                    .onChange(of: filter.last4) { v in
+                        if v.count > 4 { filter.last4 = String(v.prefix(4)) }
+                    }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Status
@@ -255,29 +286,6 @@ struct TransactionFilterView: View {
                     .buttonStyle(.plain)
                 }
             }
-        }
-    }
-
-    // MARK: - Card Last 4
-
-    private var last4Section: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("CARD LAST 4")
-            HStack(spacing: 10) {
-                Image(systemName: "creditcard")
-                    .foregroundStyle(.white.opacity(0.5))
-                TextField("", text: $filter.last4,
-                          prompt: Text("e.g. 1234").foregroundColor(.white.opacity(0.6)))
-                    .keyboardType(.numberPad)
-                    .foregroundStyle(.white)
-                    .tint(.white)
-                    .onChange(of: filter.last4) { v in
-                        if v.count > 4 { filter.last4 = String(v.prefix(4)) }
-                    }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
         }
     }
 
@@ -356,6 +364,85 @@ struct TransactionFilterView: View {
     }
 }
 
+
+// MARK: - Range Slider
+
+private struct RangeSliderView: View {
+    @Binding var minValue: Double
+    @Binding var maxValue: Double
+    let bounds: ClosedRange<Double>
+    let step: Double
+
+    @State private var minDragStart: Double? = nil
+    @State private var maxDragStart: Double? = nil
+
+    private let thumbDiameter: CGFloat = 26
+    private let trackHeight: CGFloat = 4
+
+    var body: some View {
+        GeometryReader { proxy in
+            let w = proxy.size.width
+            let span = bounds.upperBound - bounds.lowerBound
+            let minX = fraction(minValue, span: span) * w
+            let maxX = fraction(maxValue, span: span) * w
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(height: trackHeight)
+
+                Capsule()
+                    .fill(Color.white)
+                    .frame(width: max(0, maxX - minX), height: trackHeight)
+                    .offset(x: minX)
+
+                // Min thumb
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: thumbDiameter, height: thumbDiameter)
+                    .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
+                    .offset(x: minX - thumbDiameter / 2)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { drag in
+                                let start = minDragStart ?? minValue
+                                if minDragStart == nil { minDragStart = minValue }
+                                let startX = fraction(start, span: span) * w
+                                let raw = bounds.lowerBound + Double((startX + drag.translation.width) / w) * span
+                                let stepped = (raw / step).rounded() * step
+                                minValue = max(bounds.lowerBound, min(stepped, maxValue - step))
+                            }
+                            .onEnded { _ in minDragStart = nil }
+                    )
+
+                // Max thumb
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: thumbDiameter, height: thumbDiameter)
+                    .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
+                    .offset(x: maxX - thumbDiameter / 2)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { drag in
+                                let start = maxDragStart ?? maxValue
+                                if maxDragStart == nil { maxDragStart = maxValue }
+                                let startX = fraction(start, span: span) * w
+                                let raw = bounds.lowerBound + Double((startX + drag.translation.width) / w) * span
+                                let stepped = (raw / step).rounded() * step
+                                maxValue = min(bounds.upperBound, max(stepped, minValue + step))
+                            }
+                            .onEnded { _ in maxDragStart = nil }
+                    )
+            }
+            .frame(height: thumbDiameter)
+        }
+        .frame(height: thumbDiameter)
+    }
+
+    private func fraction(_ value: Double, span: Double) -> CGFloat {
+        CGFloat((value - bounds.lowerBound) / span)
+    }
+}
 
 // MARK: - DateFormatter Helpers
 

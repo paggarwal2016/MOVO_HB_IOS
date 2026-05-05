@@ -53,7 +53,7 @@ struct TransactionListView: View {
                         .fill(AppColor.primary)
                         .frame(width: 56, height: 56)
                         .shadow(color: Color.gray.opacity(0.35), radius: 12, x: 0, y: 5)
-                    Image(systemName: activeFilter.hasActiveFilters ? "slider.horizontal.3" : "plus")
+                    Image("filter")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(AppColor.app)
                     if activeFilter.hasActiveFilters {
