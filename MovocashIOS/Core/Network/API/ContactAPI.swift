@@ -7,76 +7,77 @@
 
 import Foundation
 
-enum ContactAPI {
-    
-    case
-    
+enum ContactAPI: Endpoint {
+
+    case addFavourite(request: ContactRequest.AddFavourite)
+    case deleteFavourite(request: ContactRequest.DeleteFavourite)
+    case create(request: ContactRequest.Create)
+    case getFavourite(id: String, request: ContactRequest.MarkFavourite)
+    case getContacts(request: ContactRequest.GetLists)
+    case getFavourites(request: ContactRequest.GetLists)
+
+    // MARK: - API Version
+    var version: APIVersion { .v1 }
+
+    // MARK: - URL Path
+    var path: String {
+        switch self {
+        case .addFavourite:              return "/contacts/favourite"
+        case .deleteFavourite:           return "/fav_contacts"
+        case .create:                    return "/contacts"
+        case .getFavourite(let id, _):   return "/contacts/\(id)"
+        case .getContacts:               return "/contacts"
+        case .getFavourites:             return "/fav_contacts"
+        }
+    }
+
+    // MARK: - HTTP Method
+    var method: HTTPMethod {
+        switch self {
+        case .addFavourite:    return .POST
+        case .deleteFavourite: return .DELETE
+        case .create:          return .POST
+        case .getFavourite:    return .PATCH
+        case .getContacts:     return .GET
+        case .getFavourites:   return .GET
+        }
+    }
+
+    // MARK: - Header Configure
+    var headerType: HeaderType { [.session, .movoInfo] }
+
+    // MARK: - Query Items
+    var queryItems: [URLQueryItem]? {
+        switch self {
+        case .getContacts(let request), .getFavourites(let request):
+            return [
+                URLQueryItem(name: "responseFlag", value: request.responseFlag),
+                URLQueryItem(name: "userAction",   value: request.userAction)
+            ]
+        default:
+            return nil
+        }
+    }
+
+    // MARK: - Body
+    var body: Data? {
+        get throws {
+            try encodeBody()
+        }
+    }
+
+    private func encodeBody() throws -> Data? {
+        switch self {
+        case .addFavourite(let request):
+            return try JSONEncoder().encode(request)
+        case .deleteFavourite(let request):
+            return try JSONEncoder().encode(request)
+        case .create(let request):
+            return try JSONEncoder().encode(request)
+        case .getFavourite(_, let request):
+            return try JSONEncoder().encode(request)
+        case .getContacts, .getFavourites:
+            return nil
+        }
+    }
 }
-
-//POST
-//{{base_url}}/contacts/favourite
-
-//{
-//  "contact_id": "sghdfghjwdhjkfhjksdfhjh",
-//  "is_fav": true,
-//  "addNewContact": false,
-//  "userAction": "ADD-FAVOURITE-CONTACT"
-//}
-
-
-
-
-
-
-//DELETE
-//{{base_url}}/fav_contacts
-
-//{
-//    "favContacts" :"sandeep reyyi",
-//    "userAction": "DELETE-FAVOURITE-CONTACT"
-//}
-
-
-
-
-//
-//Add
-//POST
-//{{base_url}}/contacts
-
-//{
-//    "nickname": "Jordan",
-//    "phoneNumber": "+19999990000",
-//    "is_fav": false,
-//    "addNewContact": true,
-//    "userAction":"ADD-NEW-CONTACT"
-//}
-
-
-
-
-//Patch
-//{{base_url}}/contacts/cc376cee-2e3d-4344-ad56-b0d86ec9d2db
-
-
-//{
-//    "is_fav": true,
-//    "userAction": "UPDATE-NEW-CONTACT"
-//}
-
-//
-//PUT
-//{{base_url}}/contacts
-
-//{
-//    "userAction":"GET-CONTACTS",
-//    "responseFlag":"getContact"
-//}
-
-
-//{{base_url}}/contacts
-
-//{
-//    "userAction":"GET-CONTACTS",
-//    "responseFlag":"getContact"
-//}

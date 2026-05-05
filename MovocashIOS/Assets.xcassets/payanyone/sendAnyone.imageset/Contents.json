@@ -1,0 +1,23 @@
+{
+  "images" : [
+    {
+      "filename" : "movo_pay_anyone_illustration_1x.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "movo_pay_anyone_illustration_2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "movo_pay_anyone_illustration_3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

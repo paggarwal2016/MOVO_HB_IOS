@@ -14,8 +14,8 @@ struct ContactView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var container: AppContainer
     
-    init(isPresented: Binding<Bool>, service: ContactsServiceProtocol = ContactsService()) {
-        _viewModel = StateObject(wrappedValue: ContactViewModel(service: service, alertManager: AlertManager.shared))
+    init(isPresented: Binding<Bool>, service: ContactsServiceProtocol = ContactsService(), network: NetworkServiceProtocol = NetworkService.shared) {
+        _viewModel = StateObject(wrappedValue: ContactViewModel(service: service, network: network, alertManager: AlertManager.shared))
         _isPresented = isPresented
     }
     
@@ -194,7 +194,9 @@ struct ContactView: View {
             VStack(spacing: 3) {
                 contactAvatar(initials: contact.initials, size: 50)
                     .overlay(alignment: .topTrailing) {
-                        Button { viewModel.toggleFavorite(contact) } label: {
+                        Button {
+                            //viewModel.toggleFavorite(contact)
+                        } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 16))
                                 .foregroundStyle(Color(.systemGray3), Color(.systemBackground))
@@ -227,7 +229,9 @@ struct ContactView: View {
                         .foregroundColor(.gray)
                 }
                 Spacer()
-                Button { viewModel.toggleFavorite(contact) } label: {
+                Button {
+                    //viewModel.toggleFavorite(contact)
+                } label: {
                     Image(systemName: starred ? "star.fill" : "star")
                         .font(.system(size: 18))
                         .foregroundColor(starred ? Color.primary : Color(.systemGray3))
