@@ -20,6 +20,7 @@ struct PayAnyoneView: View {
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
+    @State private var showAddContact = false
     
     init() {
         _viewModel = StateObject(wrappedValue: ContactViewModel(
@@ -75,7 +76,7 @@ struct PayAnyoneView: View {
                             .padding(.bottom, 12)
                         introBlock
                             .padding(.bottom, 18)
-                        addContactCard
+                        addContactView
                             .padding(.horizontal, 14)
                             .padding(.bottom, 14)
                         orDivider
@@ -84,10 +85,30 @@ struct PayAnyoneView: View {
                         contactsSection
                             .padding(.horizontal, 14)
                             .padding(.bottom, 18)
-                        permissionCard
                     }
                     Spacer().frame(height: 80)
                 }
+            }
+            
+            if showAddContact {
+                ZStack {
+                    
+                    // Dim background
+                    Color.black.opacity(0.50)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation {
+                                showAddContact = false
+                            }
+                        }
+                    
+                    // Center Card
+                    addContactView
+                        .background(Color.movo.background)
+                        .frame(maxWidth: 360)
+                        .padding(.horizontal, 20)
+                }
+                .zIndex(10)
             }
         }
         .background(Color.movo.background)
@@ -109,6 +130,34 @@ struct PayAnyoneView: View {
                 Task { await viewModel.load() }
             }
         }
+    }
+    
+    private var addContactView: some View {
+        AddContactCardView(
+            nickname: $nickname,
+            phoneNumber: $phoneNumber,
+            isLoading: viewModel.state == .loading,
+            isFormValid: isFormValid,
+            onAdd: {
+                let digits = PhoneFormatter1.formatUS(phoneNumber)
+                
+                Task {
+                    let success = await viewModel.createContact(
+                        nickname: nickname.trimmingCharacters(in: .whitespaces),
+                        phoneNumber: "+1\(PhoneFormatter1.rawDigits(digits))"
+                    )
+                    
+                    if success {
+                        nickname = ""
+                        phoneNumber = ""
+                        showAddContact = false
+                    }
+                }
+            },
+            onCancel: {
+                showAddContact = false
+            }
+        )
     }
     
     // MARK: - Sections
@@ -686,7 +735,7 @@ extension PayAnyoneView {
                     .tracking(-0.5)
             }
             Spacer()
-            Button(action: {}) {
+            Button(action: { withAnimation { showAddContact = true } }) {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .heavy))
@@ -813,4 +862,5 @@ extension PayAnyoneView {
             .buttonStyle(.plain)
         }
     }
+    
 }

@@ -41,3 +41,26 @@ enum PhoneFormatter {
         return result
     }
 }
+
+
+struct PhoneFormatter1 {
+    
+    static func formatUS(_ input: String) -> String {
+        let digits = String(input.filter(\.isNumber).prefix(10))
+        
+        switch digits.count {
+        case 0:
+            return ""
+        case 1...3:
+            return "(\(digits)"
+        case 4...6:
+            return "(\(digits.prefix(3))) \(digits.dropFirst(3))"
+        default:
+            return "(\(digits.prefix(3))) \(digits.dropFirst(3).prefix(3))-\(digits.dropFirst(6))"
+        }
+    }
+    
+    static func rawDigits(_ input: String) -> String {
+        return String(input.filter(\.isNumber).prefix(10))
+    }
+}

@@ -191,3 +191,134 @@ struct TabBarItem: View {
         }
     }
 }
+
+
+
+// MARK: - AddContact
+
+struct AddContactCardView: View {
+    
+    @Binding var nickname: String
+    @Binding var phoneNumber: String
+    
+    let isLoading: Bool
+    let isFormValid: Bool
+    
+    let onAdd: () -> Void
+    let onCancel: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            
+            Text("ADD NEW CONTACT")
+                .font(Typography.eyebrow.font)
+                .tracking(0.8)
+                .foregroundColor(Color.movo.textTertiary)
+            
+            // Nickname
+            TextField("", text: $nickname,
+                      prompt: Text("Nickname (e.g., Mom, Roommate)")
+                .foregroundColor(Color.movo.textDisabled))
+            .font(Typography.subtitle.font)
+            .foregroundColor(Color.movo.textPrimary)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.movo.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color.movo.elevated, lineWidth: 0.5)
+                    )
+            )
+            
+            // Phone Field (WITH formatting logic)
+            HStack(spacing: 10) {
+                Text("+1")
+                    .font(Typography.subtitle.font)
+                    .foregroundColor(Color.movo.textTertiary)
+                    .padding(.trailing, 10)
+                    .overlay(
+                        Rectangle()
+                            .fill(Color.movo.elevated)
+                            .frame(width: 0.5)
+                            .padding(.vertical, 4),
+                        alignment: .trailing
+                    )
+                
+                TextField("", text: $phoneNumber,
+                          prompt: Text("(555) 000-0000")
+                    .foregroundColor(Color.movo.textDisabled))
+                .font(Typography.subtitle.font)
+                .foregroundColor(Color.movo.textPrimary)
+                .keyboardType(.phonePad)
+                .onChange(of: phoneNumber) { newValue in
+                    let formatted = PhoneFormatter1.formatUS(newValue)
+                    if phoneNumber != formatted {
+                        phoneNumber = formatted
+                    }
+                }
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.movo.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color.movo.accentBorder, lineWidth: 0.5)
+                    )
+            )
+            
+            // Buttons
+            HStack(spacing: 8) {
+                
+                Button(action: onCancel) {
+                    Text("Cancel")
+                        .font(Typography.button.font)
+                        .foregroundColor(Color.movo.textSecondary)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.movo.elevated.opacity(0.6))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(Color.movo.elevated, lineWidth: 0.5)
+                                )
+                        )
+                }
+                
+                Button(action: onAdd) {
+                    Group {
+                        if isLoading {
+                            ProgressView()
+                                .tint(Color.movo.background)
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Add Contact")
+                                .font(Typography.button.font)
+                                .foregroundColor(Color.movo.background)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(isFormValid ? Color.movo.accent : Color.movo.accent.opacity(0.35))
+                    )
+                }
+                .disabled(!isFormValid || isLoading)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.movo.elevated.opacity(0.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(Color.movo.elevated, lineWidth: 0.5)
+                )
+        )
+    }
+}
