@@ -69,7 +69,8 @@ final class ContactViewModel: BaseViewModel {
         loadError = nil
         do {
             let result = try await perform { try await self.contactsService.fetchContacts() }
-            contacts = result
+            apiContacts = result
+            print("contacts",contacts)
             analytics.log(AnalyticsEvent.contactListViewed, params: [
                 AnalyticsParam.count: result.count
             ])

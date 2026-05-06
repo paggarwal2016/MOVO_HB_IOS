@@ -113,7 +113,7 @@ struct PayAnyoneView: View {
         }
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
-        .navigationDestination(for: AppContact.self) { contact in
+        .navigationDestination(for: ContactRecord.self) { contact in
             QuickTransferView(contact: contact, container: container)
         }
         .onAppear {
@@ -440,10 +440,10 @@ struct PayAnyoneView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 8)
             
-            ForEach(viewModel.filtered) { contact in
+            ForEach(viewModel.apiContacts) { contact in
                 NavigationLink(value: contact) { contactRow(contact) }
                     .buttonStyle(.plain)
-                if contact.id != viewModel.filtered.last?.id {
+                if contact.id != viewModel.apiContacts.last?.id {
                     Rectangle().fill(Color.movo.elevated).frame(height: 0.5).padding(.horizontal, 14)
                 }
             }
@@ -466,14 +466,14 @@ struct PayAnyoneView: View {
             .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: 0.5))
     }
     
-    private func contactRow(_ contact: AppContact) -> some View {
+    private func contactRow(_ contact: ContactRecord) -> some View {
         HStack(spacing: 12) {
-            contactAvatar(initials: contact.initials, size: 38)
+            contactAvatar(initials: "T", size: 38)
             VStack(alignment: .leading, spacing: 2) {
-                Text(contact.name)
+                Text(contact.nickname ?? "")
                     .font(Typography.bodyCompact.font)
                     .foregroundColor(Color.movo.textPrimary)
-                Text(contact.phone)
+                Text(contact.phoneNumber ?? "")
                     .font(Typography.captionSmall.font)
                     .foregroundColor(Color.movo.textTertiary)
             }

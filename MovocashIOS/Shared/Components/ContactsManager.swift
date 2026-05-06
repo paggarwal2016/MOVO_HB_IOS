@@ -12,7 +12,7 @@ import SwiftUI
 // MARK: - Protocol (the key to DI + testability)
 
 protocol ContactsServiceProtocol {
-    func fetchContacts() async throws -> [AppContact]
+    func fetchContacts() async throws -> [ContactRecord]
 }
 
 // MARK: - Model
@@ -24,10 +24,12 @@ struct AppContact: Identifiable, Hashable {
     let initials: String
 }
 
+
+
 // MARK: - Real implementation (used in production)
 
 final class ContactsService: ContactsServiceProtocol {
-    func fetchContacts() async throws -> [AppContact] {
+    func fetchContacts() async throws -> [ContactRecord] {
         let store = CNContactStore()
         let status = CNContactStore.authorizationStatus(for: .contacts)
 
@@ -51,40 +53,20 @@ final class ContactsService: ContactsServiceProtocol {
             let keys = [CNContactIdentifierKey, CNContactGivenNameKey, CNContactFamilyNameKey,
                         CNContactPhoneNumbersKey] as [CNKeyDescriptor]
             let request = CNContactFetchRequest(keysToFetch: keys)
-            var result: [AppContact] = []
+            var result: [ContactRecord] = []
             try store.enumerateContacts(with: request) { contact, _ in
                 let name = "\(contact.givenName) \(contact.familyName)"
                     .trimmingCharacters(in: .whitespaces)
                 let phone = contact.phoneNumbers.first?.value.stringValue ?? ""
                 let initials = "\(contact.givenName.prefix(1))\(contact.familyName.prefix(1))"
                 guard !name.isEmpty else { return }
-                result.append(AppContact(
-                    id: contact.identifier,
-                    name: name,
-                    phone: phone,
-                    initials: initials
-                ))
+                result.append(ContactRecord(id: contact.identifier, isFav: false, nickname: name, createdAt: Date(), phoneNumber: phone, isAdded: false, updatedAt: Date()))
             }
-            return result.sorted { $0.name < $1.name }
+            return result.sorted { $0.nickname ?? "" < $1.nickname ?? "" }
         }.value
     }
 }
 
-// MARK: - Mock implementation (used in tests + previews)
-
-final class MockContactsService: ContactsServiceProtocol {
-    var shouldFail = false
-    var mockContacts: [AppContact] = [
-        AppContact(id: "1", name: "Alice Johnson", phone: "+1 555 001 0001", initials: "AJ"),
-        AppContact(id: "2", name: "Bob Smith",     phone: "+1 555 001 0002", initials: "BS"),
-        AppContact(id: "3", name: "Clara Lee",     phone: "+1 555 001 0003", initials: "CL")
-    ]
-
-    func fetchContacts() async throws -> [AppContact] {
-        if shouldFail { throw ContactsError.permissionDenied }
-        return mockContacts
-    }
-}
 
 // MARK: - Error
 

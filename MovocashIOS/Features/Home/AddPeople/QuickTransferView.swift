@@ -9,7 +9,7 @@ import SwiftUI
 
 struct QuickTransferView: View {
 
-    let contact: AppContact
+    let contact: ContactRecord
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var savingVM: SavingsAccountViewModel
@@ -20,7 +20,7 @@ struct QuickTransferView: View {
     @State private var selectedAccount: SavingsAccountInfo?
 
     init(
-        contact: AppContact,
+        contact: ContactRecord,
         container: AppContainer
     ) {
         self.contact = contact
@@ -76,9 +76,9 @@ struct QuickTransferView: View {
         HStack(spacing: 14) {
             contactAvatar(initials: contact.initials, size: 52)
             VStack(alignment: .leading, spacing: 4) {
-                Text(contact.name)
+                Text(contact.nickname ?? "")
                     .font(.system(size: 16, weight: .semibold))
-                Text(contact.phone)
+                Text(contact.phoneNumber ?? "")
                     .font(.system(size: 13))
                     .foregroundStyle(.gray)
             }
@@ -240,7 +240,7 @@ struct QuickTransferView: View {
     private func sendMoney() async {
         guard let fromAccount = selectedAccount else { return }
         
-        let sanitized = PhoneNumberValidator.sanitize(contact.phone)
+        let sanitized = PhoneNumberValidator.sanitize(contact.phoneNumber ?? "")
         guard PhoneNumberValidator.isValidUSNumber(sanitized) else {
             AlertManager.shared.showError("Enter a valid phone number")
             return

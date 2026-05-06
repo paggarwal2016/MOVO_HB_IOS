@@ -24,7 +24,7 @@ nonisolated struct ContactsData: Decodable, Sendable {
 
 // MARK: - Contact
 
-nonisolated struct ContactRecord: Decodable, Identifiable, Sendable {
+nonisolated struct ContactRecord: Decodable, Identifiable, Sendable, Hashable {
     
     let id: String
     let isFav: Bool

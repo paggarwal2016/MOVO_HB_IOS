@@ -40,7 +40,7 @@ struct ContactView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .navigationDestination(for: AppContact.self) { contact in
+            .navigationDestination(for: ContactRecord.self) { contact in
                 QuickTransferView(contact: contact, container: container)
             }
         }
