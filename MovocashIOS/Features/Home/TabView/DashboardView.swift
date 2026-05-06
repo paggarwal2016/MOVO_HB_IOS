@@ -61,7 +61,8 @@ struct DashboardView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+//            Color(.systemGroupedBackground).ignoresSafeArea()
+            MovoBackground()
             VStack(spacing: 0) {
                 headerView
                 scrollContent

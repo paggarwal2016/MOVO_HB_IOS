@@ -38,8 +38,8 @@ enum ContactAPI: Endpoint {
         case .deleteFavourite: return .DELETE
         case .create:          return .POST
         case .getFavourite:    return .PATCH
-        case .getContacts:     return .GET
-        case .getFavourites:   return .GET
+        case .getContacts:     return .PUT
+        case .getFavourites:   return .PUT
         }
     }
 

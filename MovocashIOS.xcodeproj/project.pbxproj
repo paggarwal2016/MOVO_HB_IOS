@@ -172,6 +172,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		1404179D2FAB2E8600622003 /* Screen */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Screen;
+			sourceTree = "<group>";
+		};
 		142337C92F5846870030B4E7 /* Launch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Launch;
@@ -225,11 +230,6 @@
 		14B2CB892FA8BF7B0068FC23 /* Font */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Font;
-			sourceTree = "<group>";
-		};
-		14C623D52F6A96A100D0B719 /* Profile */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Profile;
 			sourceTree = "<group>";
 		};
 		14DBC58E2F5014AD000D84FD /* Extensions */ = {
@@ -417,8 +417,8 @@
 		1468196D2F4DE6CF00BED014 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				1404179D2FAB2E8600622003 /* Screen */,
 				14AC54BA2FA8952F0032574E /* Transaction */,
-				14C623D52F6A96A100D0B719 /* Profile */,
 				145EB9FC2F62ABA80072DE68 /* Models */,
 				145EBA052F62B9620072DE68 /* ViewModels */,
 				148622252F60178B00792DB2 /* BiometricPasscode */,
@@ -566,6 +566,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				1404179D2FAB2E8600622003 /* Screen */,
 				142337C92F5846870030B4E7 /* Launch */,
 				142337CB2F584C010030B4E7 /* Home */,
 				145EB9F72F62A9560072DE68 /* API */,
@@ -577,7 +578,6 @@
 				1489F26B2F67E0C20046FAD4 /* TextInputAlert */,
 				14AC54BA2FA8952F0032574E /* Transaction */,
 				14B2CB892FA8BF7B0068FC23 /* Font */,
-				14C623D52F6A96A100D0B719 /* Profile */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,

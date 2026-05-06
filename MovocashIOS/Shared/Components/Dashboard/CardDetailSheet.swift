@@ -6,21 +6,21 @@
 import SwiftUI
 
 struct CardDetailSheet: View {
-
+    
     let card: VCardListResponse
     let primaryAccountId: Int?
     let savingVM: SavingsAccountViewModel
     let container: AppContainer
     var onDeleted: () -> Void
-
+    
     @SwiftUI.Environment(\.dismiss) private var dismiss
-
+    
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
     @State private var showTransfer = false
     @StateObject private var txVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
-
+    
     init(
         card: VCardListResponse,
         primaryAccountId: Int?,
@@ -36,23 +36,21 @@ struct CardDetailSheet: View {
         _txVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
-
+    
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                navBar
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 20) {
-                        cardRevealBlock
-                        actionTiles
-                        recentActivitySection
-                        bottomButtons
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 20)
-                    .padding(.bottom, 40)
+            MovoBackground()
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    navBar
+                    cardHero
+                    cardNumberRow
+                    appleWalletButton
+                    quickActions
+                    recentActivitySection
+                    deleteSection
+                    Spacer().frame(height: Spacing.xxl)
                 }
             }
         }
@@ -97,358 +95,420 @@ struct CardDetailSheet: View {
             _ = await (transactions, accounts)
         }
     }
-
-    // MARK: - Nav Bar
-
-    private var navBar: some View {
-        HStack {
-            Circle()
-                .fill(Color.clear)
-                .frame(width: 32, height: 32)
-            Spacer()
-            Text("My Card")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.black)
-            Spacer()
-            Button { dismiss() } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.gray.opacity(0.12))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.black)
-                }
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-    }
-
-    // MARK: - Card Reveal Block
-
-    private var cardRevealBlock: some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(white: 0.14), Color(white: 0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+    
+    
+    private var appleWalletButton: some View {
+        Button(action: {
+            Task {
+                guard let accountId = card.savingsAccountId else { return }
+                await achVM.addVirtualCardToAppleWallet(
+                    accountId: accountId,
+                    localizedDescription: "Apple Pay"
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                )
-
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("CARD NUMBER")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.5))
-                            .tracking(1)
-                        Text(card.cardNumber ?? card.maskedNumber)
-                            .font(.system(size: 17, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white)
-                    }
-                    Spacer()
-                    Button {
-                        UIPasteboard.general.string = card.cardNumber ?? card.maskedNumber
-                        ToastManager.shared.show("Card number copied", style: .success, position: .bottom)
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color.white.opacity(0.6))
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                HStack(spacing: 28) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("EXPIRES")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.5))
-                            .tracking(1)
-                        Text(card.formattedExpiry)
-                            .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("CVC")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.5))
-                            .tracking(1)
-                        Text(card.cvc2 ?? "•••")
-                            .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white)
-                    }
-                }
-
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("CARDHOLDER")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.5))
-                            .tracking(1)
-                        Text(card.displayName.uppercased())
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                    Spacer()
-                    Text("mastercard")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.7))
-                }
             }
-            .padding(20)
-        }
-        .frame(minHeight: 180)
-        .shadow(color: .black.opacity(0.4), radius: 16, x: 0, y: 8)
-    }
-
-    // MARK: - Action Tiles
-
-    private var actionTiles: some View {
-        HStack(spacing: 12) {
-            actionTile(
-                icon: "arrow.left.arrow.right",
-                iconColor: Color(red: 0.2, green: 0.78, blue: 0.5),
-                iconBg: Color(red: 0.2, green: 0.78, blue: 0.5).opacity(0.15),
-                label: "Transfer"
-            ) {
-                showTransfer = true
+        }) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "wallet.pass")
+                    .font(.system(size: 18, weight: .medium))
+                Text("Add to Apple Wallet")
+                    .textStyle(Typography.bodyCompact)
+                    .fontWeight(.semibold)
             }
-            actionTile(
-                icon: "arrow.down.circle",
-                iconColor: Color(red: 0.95, green: 0.3, blue: 0.3),
-                iconBg: Color(red: 0.95, green: 0.3, blue: 0.3).opacity(0.15),
-                label: "Top up"
-            ) {
-                // TODO: Implement Top Up flow
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func actionTile(
-        icon: String,
-        iconColor: Color,
-        iconBg: Color,
-        label: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            VStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(iconBg)
-                        .frame(width: 50, height: 50)
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(iconColor)
-                }
-                Text(label)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.preTcolor)
-            }
+            .foregroundColor(Color.movo.background)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(Color.secondary)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.lg)
+                    .fill(Color.movo.textPrimary)
             )
         }
         .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.screenHorizontal)
+        .padding(.bottom, Spacing.xl)
     }
-
+    
+    private var deleteSection: some View {
+        Button(action: { showDeleteConfirm = true }) {
+            Text("Delete card")
+                .textStyle(Typography.caption)
+                .foregroundColor(Color.movo.textTertiary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.lg)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.screenHorizontal)
+        .padding(.top, Spacing.xs)
+    }
+    
+    public func copyCardNumber() {
+        let text = card.fullNumberPasteboard
+        UIPasteboard.general.string = text
+        ToastManager.shared.show("Card number copied", style: .success, position: .bottom)
+    }
+    
+    // MARK: - Nav Bar
+    
+    private var navBar: some View {
+        HStack {
+            CircularNavButton(systemName: "chevron.left") { dismiss() }
+            Spacer()
+            Text("My Card")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+            Spacer()
+            CircularNavButton(systemName: "ellipsis") { }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.sm)
+    }
+    
+    private var cardHero: some View {
+        MovoCardHero(card: card)
+            .frame(width: 220)
+            .padding(.top, Spacing.lg)
+            .padding(.bottom, Spacing.xxl)
+            .frame(maxWidth: .infinity)
+    }
+    
+    public struct MovoCardHero: View {
+        public let card: VCardListResponse
+        
+        private var formattedBalance: String {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = card.currencyCode
+            formatter.maximumFractionDigits = 2
+            return formatter.string(from: card.balance as NSDecimalNumber) ?? "—"
+        }
+        
+        public var body: some View {
+            VStack(alignment: .leading, spacing: 0) {
+                
+                // Top: brand lockup + status pill
+                HStack(alignment: .center) {
+                    HStack(spacing: 6) {
+                        MLogo()
+                            .frame(width: 22, height: 22)
+                        Text("MOVOCASH")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(1.8)
+                            .foregroundColor(Color.movo.textPrimary)
+                    }
+                    Spacer()
+                    StatusPill(card.isActive ? "Active" : "Inactive",
+                               variant: card.isActive ? .accent : .neutral)
+                }
+                
+                // Balance
+                VStack(alignment: .leading, spacing: 3) {
+                    Eyebrow("Available balance")
+                    Text(formattedBalance)
+                        .textStyle(Typography.cardHero)
+                        .foregroundColor(Color.movo.textPrimary)
+                        .monospacedDigit()
+                }
+                .padding(.top, Spacing.lg)
+                
+                // Chip + contactless
+                HStack(spacing: 14) {
+                    CardChip()
+                        .frame(width: 44, height: 34)
+                    ContactlessIcon()
+                        .frame(width: 22, height: 22)
+                }
+                .padding(.top, Spacing.md)
+                
+                Spacer(minLength: 8)
+                
+                // Card number
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("CARD NUMBER")
+                        .font(.system(size: 7.5, weight: .medium))
+                        .tracking(1.0)
+                        .foregroundColor(Color.movo.textTertiary)
+                    Text(card.maskedNumber)
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .tracking(1.3)
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+                
+                // Bottom: DEBIT + Mastercard
+                HStack(alignment: .bottom) {
+                    Text(card.tier.uppercased())
+                        .font(.system(size: 8.5, weight: .medium))
+                        .tracking(1.5)
+                        .foregroundColor(Color.movo.textSecondary)
+                    Spacer()
+                    MastercardMark()
+                }
+                .padding(.top, Spacing.lg)
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.lg)
+            .aspectRatio(0.63, contentMode: .fit)
+            .background(cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
+            )
+            .shadow(color: .black.opacity(0.6), radius: 25, x: 0, y: 20)
+            .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 4)
+        }
+        
+        private var cardBackground: some View {
+            ZStack {
+                // Base gradient
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.10, green: 0.10, blue: 0.13),
+                        Color(red: 0.04, green: 0.04, blue: 0.05),
+                        Color(red: 0.02, green: 0.02, blue: 0.03)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                // Top shimmer
+                RadialGradient(
+                    colors: [Color.movo.textPrimary.opacity(0.10), .clear],
+                    center: .top,
+                    startRadius: 0,
+                    endRadius: 180
+                )
+                .blendMode(.overlay)
+            }
+        }
+    }
+    
+    
+    private var cardNumberRow: some View {
+        HStack(alignment: .center, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: 4) {
+                Eyebrow("Card number")
+                Text(card.maskedNumber)
+                    .font(.system(size: 15, weight: .medium, design: .monospaced))
+                    .foregroundColor(Color.movo.textPrimary)
+                    .tracking(1.5)
+                Text("Exp \(card.expiration ?? "") · CVC \(card.cvc2 ?? "")")
+                    .textStyle(Typography.captionSmall)
+                    .foregroundColor(Color.movo.textTertiary)
+                    .padding(.top, 2)
+            }
+            
+            Spacer(minLength: 0)
+            
+            Button(action: copyCardNumber) {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.movo.accent)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .fill(Color.movo.accentTint)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Radius.button)
+                                    .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
+                            )
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.surface.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        )
+        .padding(.horizontal, Spacing.screenHorizontal)
+        .padding(.bottom, Spacing.lg)
+    }
+    
+    
+    private var quickActions: some View {
+        HStack(spacing: Spacing.sm) {
+            QuickActionCell(
+                icon: AnyView(
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color.movo.accent)
+                ),
+                iconBackground: Color.movo.accentTint,
+                iconBorder: Color.movo.accentBorder,
+                label: "Transfer",
+                action: { showTransfer = true }
+            )
+            QuickActionCell(
+                icon: AnyView(
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color.movo.textSecondary)
+                ),
+                iconBackground: Color.movo.elevated,
+                iconBorder: nil,
+                label: "Add money",
+                action: {}
+            )
+        }
+        .padding(.horizontal, Spacing.screenHorizontal)
+        .padding(.bottom, Spacing.xl)
+    }
+    
+    
+    private struct QuickActionCell: View {
+        let icon: AnyView
+        let iconBackground: Color
+        let iconBorder: Color?
+        let label: String
+        let action: () -> Void
+        
+        var body: some View {
+            Button(action: action) {
+                VStack(spacing: Spacing.sm) {
+                    icon
+                        .frame(width: 36, height: 36)
+                        .background(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .fill(iconBackground)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Radius.button)
+                                        .strokeBorder(iconBorder ?? .clear, lineWidth: Stroke.hairline)
+                                )
+                        )
+                    Text(label)
+                        .textStyle(Typography.captionSmall)
+                        .foregroundColor(Color.movo.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .fill(Color.movo.surface.opacity(0.7))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.heroCard)
+                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    
     // MARK: - Recent Activity
-
+    
     private var recentActivitySection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Recent activity")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.preTcolor)
-
-            if txVM.state == .loading && txVM.transactions.isEmpty {
-                AccountRowSkeleton()
-            } else if txVM.transactions.isEmpty {
-                Text("No recent transactions")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.secTcolor)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-            } else {
-                let grouped = groupedTransactions(txVM.transactions)
-                ForEach(grouped, id: \.0) { date, items in
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(date)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.4))
-                            .padding(.bottom, 10)
-
-                        VStack(spacing: 0) {
-                            ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
-                                transactionRow(item)
-                                if idx < items.count - 1 {
-                                    Divider()
-                                        .background(Color.white.opacity(0.06))
-                                        .padding(.leading, 58)
-                                }
-                            }
-                        }
-                        .background(Color.white.opacity(0.05))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+        VStack(spacing: Spacing.sm) {
+            HStack {
+                Eyebrow("Recent activity")
+                Spacer()
+                Button("See all") { /* navigate */ }
+                    .font(Typography.captionSmall.font)
+                    .foregroundColor(Color.movo.accent)
+            }
+            .padding(.horizontal, 4)
+            
+            VStack(spacing: 0) {
+                ForEach(Array(txVM.transactions.enumerated()), id: \.element.id) { index, item in
+                    ActivityRow(item: item)
+                    if index < txVM.transactions.count - 1 {
+                        Rectangle()
+                            .fill(Color.movo.border)
+                            .frame(height: Stroke.hairline)
+                            .padding(.leading, 60)
                     }
                 }
             }
+            .background(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .fill(Color.movo.surface.opacity(0.85))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.heroCard)
+                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    )
+            )
         }
+        .padding(.horizontal, Spacing.screenHorizontal)
+        .padding(.bottom, Spacing.lg)
     }
-
-    @ViewBuilder
-    private func transactionRow(_ item: TransactionItem) -> some View {
-        let isPending = item.status.lowercased() == "pending"
-        let isFailed  = item.status.lowercased() == "failed" || item.status.lowercased() == "declined"
-
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(iconBackground(for: item.type))
-                    .frame(width: 42, height: 42)
-                Image(systemName: iconName(for: item.type))
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
+    
+    private struct ActivityRow: View {
+        let item: TransactionItem
+        
+        private var formattedAmount: String {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = "USD"
+            let prefix = item.amount < 0 ? "−" : "+"
+            let value = abs(item.amount)
+            let formatted = formatter.string(from: value as NSDecimalNumber) ?? "—"
+            return "\(prefix)\(formatted)"
+        }
+        
+        private var amountColor: Color {
+            item.type == .deposit ? Color.movo.accent : Color.movo.textPrimary
+        }
+        
+        private var iconSystemName: String {
+            switch item.type {
+            case .deposit:         return "arrow.down.left"
+            case .withdraw:        return "arrow.up.right"
+            case .payment:         return "creditcard"
+            case .transfer:        return "arrow.left.arrow.right"
+            case .unknown:         return "questionmark"
             }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(isFailed ? Color.white.opacity(0.4) : .white)
-                    .strikethrough(isFailed, color: Color.white.opacity(0.4))
-                    .lineLimit(1)
-                Text(shortTime(item.date))
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.white.opacity(0.4))
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(item.amountFormatted)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(item.isCredit ? Color(red: 0.2, green: 0.78, blue: 0.5) : .white)
-
-                if isPending {
-                    Text("PENDING")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.75, blue: 0.0))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.15))
-                        .clipShape(Capsule())
-                } else if isFailed {
-                    Text("FAILED")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Color(red: 0.95, green: 0.3, blue: 0.3))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(Color(red: 0.95, green: 0.3, blue: 0.3).opacity(0.15))
-                        .clipShape(Capsule())
+        }
+        
+        var body: some View {
+            HStack(spacing: Spacing.md) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [Color.movo.elevated, Color.movo.surface],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                    Circle()
+                        .strokeBorder(
+                            item.type == .deposit ? Color.movo.accent : Color.movo.borderStrong,
+                            lineWidth: Stroke.hairline
+                        )
+                    Image(systemName: iconSystemName)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(Color.movo.textSecondary)
                 }
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 13)
-    }
-
-    // MARK: - Bottom Buttons
-
-    private var bottomButtons: some View {
-        VStack(spacing: 12) {
-            
-            PrimaryButton(image:Image(systemName: "wallet.pass"),
-                          title: "Add to Apple Wallet",
-                          backgroundColor: .primary,
-                          action: {
-                Task {
-                    guard let accountId = card.savingsAccountId else { return }
-                    await achVM.addVirtualCardToAppleWallet(accountId: accountId, localizedDescription: "Apple pay")
+                .frame(width: 36, height: 36)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.title)
+                        .textStyle(Typography.bodyCompact)
+                        .foregroundColor(Color.movo.textPrimary)
+                    Text("12/05/2026")
+                        .textStyle(Typography.captionSmall)
+                        .foregroundColor(Color.movo.textTertiary)
                 }
-            })
-            
-            PrimaryButton(image:Image(systemName: "trash"),
-                          title: "Delete account",
-                          backgroundColor: Color.preTcolor,
-                          action: { showDeleteConfirm = true })
-            .disabled(isDeleting)
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func groupedTransactions(_ items: [TransactionItem]) -> [(String, [TransactionItem])] {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        var groups: [(String, [TransactionItem])] = []
-        var seen: [String: Int] = [:]
-
-        for item in items {
-            let label = groupLabel(for: item.date, today: today, calendar: calendar)
-            if let idx = seen[label] {
-                groups[idx].1.append(item)
-            } else {
-                seen[label] = groups.count
-                groups.append((label, [item]))
+                
+                Spacer()
+                
+                Text(formattedAmount)
+                    .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                    .foregroundColor(amountColor)
             }
-        }
-        return groups
-    }
-
-    private func groupLabel(for date: Date, today: Date, calendar: Calendar) -> String {
-        let itemDay = calendar.startOfDay(for: date)
-        let diff = calendar.dateComponents([.day], from: itemDay, to: today).day ?? 0
-        switch diff {
-        case 0:  return "Today"
-        case 1:  return "Yesterday"
-        default:
-            let f = DateFormatter()
-            f.dateFormat = "MMM d, yyyy"
-            return f.string(from: date)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.md)
         }
     }
-
-    private func shortTime(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "h:mm a"
-        return f.string(from: date)
-    }
-
-    private func iconName(for type: TransactionType) -> String {
-        switch type {
-        case .deposit:  return "arrow.down.left"
-        case .withdraw: return "arrow.up.right"
-        case .payment:  return "creditcard"
-        case .transfer: return "arrow.left.arrow.right"
-        case .unknown:  return "questionmark"
-        }
-    }
-
-    private func iconBackground(for type: TransactionType) -> Color {
-        switch type {
-        case .deposit:  return Color(red: 0.2, green: 0.78, blue: 0.5).opacity(0.8)
-        case .withdraw: return Color(red: 0.95, green: 0.3, blue: 0.3).opacity(0.8)
-        case .payment:  return Color(red: 0.4, green: 0.4, blue: 0.9).opacity(0.8)
-        case .transfer: return Color(red: 0.9, green: 0.6, blue: 0.1).opacity(0.8)
-        case .unknown:  return Color.white.opacity(0.2)
-        }
-    }
-
+    
     // MARK: - Delete
-
+    
     private func deleteCard() async {
         guard let primaryId = primaryAccountId,
               let accountId = card.savingsAccountId else {
@@ -473,3 +533,34 @@ struct CardDetailSheet: View {
         isDeleting = false
     }
 }
+
+
+
+
+
+
+
+
+//////////////////////////////////////////
+//////////////////////////////////////////
+//////////////////////////////////////////
+///
+///
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Task {
+//    guard let accountId = card.savingsAccountId else { return }
+//    await achVM.addVirtualCardToAppleWallet(accountId: accountId, localizedDescription: "Apple pay")
+//}

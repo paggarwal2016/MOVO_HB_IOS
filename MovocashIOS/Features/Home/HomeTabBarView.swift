@@ -218,7 +218,7 @@ private extension HomeTabBarView {
         switch tab {
         case .home:     DashboardView(container: container, dashboardVM: dashboardVM, linkAccountVM: linkAccountVM)
         case .accounts: PayAnyoneView()
-        case .profile:  UserProfileView(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
+        case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
         }
     }
 }

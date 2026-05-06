@@ -445,27 +445,6 @@ struct PayAnyoneView: View {
 
 // MARK: - Reusable Components
 
-private struct CircularNavButton: View {
-    let systemName: String
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.movo.textSecondary)
-                .frame(width: 32, height: 32)
-                .background(
-                    Circle()
-                        .fill(Color.movo.elevated.opacity(0.8))
-                        .overlay(
-                            Circle()
-                                .strokeBorder(Color.movo.elevated, lineWidth: 0.5)
-                        )
-                )
-        }
-    }
-}
-
 private struct TabBarItem: View {
     let label: String
     let icon: String

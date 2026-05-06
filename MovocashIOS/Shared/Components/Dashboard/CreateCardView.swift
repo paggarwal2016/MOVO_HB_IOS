@@ -47,7 +47,7 @@ struct CreateCardView: View {
                     // MARK: - Title
                     Text(title)
                         .font(.system(size: 20, weight: .semibold)) // ✅ reduced
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8) // ✅ prevents overflow
                     

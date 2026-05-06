@@ -50,7 +50,7 @@ struct InternalTransferView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+                MovoBackground()
                 ScrollView {
                     VStack(spacing: 12) {
                         amountCard

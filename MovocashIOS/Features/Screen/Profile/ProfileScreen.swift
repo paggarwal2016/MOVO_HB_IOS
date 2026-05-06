@@ -1,5 +1,5 @@
 //
-//  UserProfileView.swift
+//  ProfileScreen.swift
 //  MovocashIOS
 //
 //  Created by Movo Developer on 18/03/26.
@@ -8,36 +8,36 @@
 import Foundation
 import SwiftUI
 
-struct UserProfileView: View {
-
+struct ProfileScreen: View {
+    
     @EnvironmentObject var userVM: UserViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var lockManager: AppLockManager
-
+    
     @ObservedObject var dashboardVM: DashboardViewModel
     @ObservedObject var achVM: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
-
+    
     @State private var showDisableBiometricAlert = false
     @State private var showBiometricEnrollSheet  = false
     @State private var showSecuritySettings      = false
     @State private var isLoggingOut              = false
     @State private var showSignOutAlert          = false
     @State private var showDeleteAlert           = false
-
+    
     init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel) {
         self.dashboardVM = dashboardVM
         self.achVM = achVM
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
-
+    
     private var effectiveBiometricType: BiometricType {
         lockManager.isBiometricAvailable
-            ? lockManager.biometricType
-            : lockManager.hardwareBiometricType
+        ? lockManager.biometricType
+        : lockManager.hardwareBiometricType
     }
-
+    
     private var biometricToggleBinding: Binding<Bool> {
         Binding<Bool>(
             get: { lockManager.isBiometricEnabled },
@@ -54,16 +54,16 @@ struct UserProfileView: View {
             }
         )
     }
-
+    
     private var effectiveProfile: UserProfileResponse? {
         userVM.profile ?? dashboardVM.userDetails.map { UserProfileResponse(from: $0) }
     }
-
+    
     private var effectiveAccounts: [ACHAccount] {
         if !achVM.accounts.isEmpty { return achVM.accounts }
         return dashboardVM.linkedAccounts?.linkedAccounts?.map { ACHAccount(from: $0) } ?? []
     }
-
+    
     var body: some View {
         ZStack {
             MovoBackground()
@@ -86,31 +86,31 @@ struct UserProfileView: View {
 
 // MARK: - Profile Content
 
-private extension UserProfileView {
-
+private extension ProfileScreen {
+    
     func profileContent(_ profile: UserProfileResponse) -> some View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
                 avatarHeader(profile)
-
+                
                 infoCard(title: "PERSONAL INFO") {
                     infoRow(label: "First name", value: profile.firstName ?? "—")
                     cardDivider
                     infoRow(label: "Last name",  value: profile.lastName  ?? "—")
                 }
-
+                
                 infoCard(title: "CONTACT") {
                     infoRow(label: "Email", value: profile.displayEmail)
                     cardDivider
                     infoRow(label: "Phone", value: profile.displayPhone)
                 }
-
+                
                 infoCard(title: "ADDRESS") {
                     infoRow(label: "State", value: profile.state ?? "—")
                     cardDivider
                     infoRow(label: "ZIP",   value: profile.zip   ?? "—")
                 }
-
+                
                 securityCard
                 linkedBankCard
                 signOutButton
@@ -173,15 +173,19 @@ private extension UserProfileView {
             Text("This will permanently delete your account. This action cannot be undone.")
         }
     }
-
+    
     // MARK: Avatar Header
-
+    
     func avatarHeader(_ profile: UserProfileResponse) -> some View {
         VStack(spacing: Spacing.lg) {
             ZStack {
                 Circle()
-                    .fill(Color.movo.accent.opacity(0.18))
-                    .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: 1.5))
+                    .fill(LinearGradient(
+                        colors: [Color.movo.elevated, Color.movo.surface],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .overlay(Circle().strokeBorder(Color.movo.accent, lineWidth: 0.5))
                 if let urlStr = profile.profilePicture,
                    !urlStr.isEmpty,
                    let url = URL(string: urlStr) {
@@ -195,8 +199,13 @@ private extension UserProfileView {
                     initialsLabel(profile.initials)
                 }
             }
-            .frame(width: 82, height: 82)
-
+            .frame(width: 72, height: 72)
+            .background(
+                Circle()
+                    .fill(Color.movo.accentSoft)
+                    .padding(-4)
+            )
+            
             VStack(spacing: 4) {
                 Text(profile.fullName)
                     .font(Typography.cardTitle.font)
@@ -207,7 +216,7 @@ private extension UserProfileView {
                     .font(Typography.caption.font)
                     .foregroundStyle(Color.movo.textTertiary)
             }
-
+            
             HStack(spacing: Spacing.sm) {
                 if profile.emailVerified      { verifiedPill("Email verified",  icon: "checkmark")  }
                 if profile.smsVerified        { verifiedPill("SMS verified",    icon: "iphone")     }
@@ -218,13 +227,13 @@ private extension UserProfileView {
         .padding(.bottom, Spacing.xs)
         .frame(maxWidth: .infinity)
     }
-
+    
     func initialsLabel(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 26, weight: .bold, design: .rounded))
             .foregroundStyle(Color.movo.accent)
     }
-
+    
     func verifiedPill(_ label: String, icon: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
@@ -238,9 +247,9 @@ private extension UserProfileView {
         .background(Color.movo.accentTint, in: Capsule())
         .overlay(Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: 0.5))
     }
-
+    
     // MARK: Info Card
-
+    
     @ViewBuilder
     func infoCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -254,7 +263,7 @@ private extension UserProfileView {
                 .strokeBorder(Color.movo.border, lineWidth: 0.5))
         }
     }
-
+    
     func infoRow(label: String, value: String) -> some View {
         HStack {
             Text(label)
@@ -269,22 +278,22 @@ private extension UserProfileView {
         .padding(.vertical, 14)
         .padding(.horizontal, Spacing.lg)
     }
-
+    
     var cardDivider: some View {
         Divider()
             .background(Color.movo.border)
             .padding(.horizontal, Spacing.lg)
     }
-
+    
     func eyebrowLabel(_ text: String) -> some View {
         Text(text)
             .font(Typography.eyebrow.font)
             .foregroundStyle(Color.movo.textTertiary)
             .padding(.leading, 4)
     }
-
+    
     // MARK: Security Card
-
+    
     var securityCard: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             eyebrowLabel("SECURITY")
@@ -300,28 +309,28 @@ private extension UserProfileView {
                     Image(systemName: lockManager.isBiometricHardwarePresent
                           ? effectiveBiometricType.systemImageName
                           : "lock.shield.fill")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(lockManager.isBiometricHardwarePresent
-                                         ? Color.movo.accent
-                                         : Color.movo.textSecondary)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(lockManager.isBiometricHardwarePresent
+                                     ? Color.movo.accent
+                                     : Color.movo.textSecondary)
                 }
-
+                
                 VStack(alignment: .leading, spacing: 3) {
                     Text(lockManager.isBiometricHardwarePresent
                          ? effectiveBiometricType.displayName
                          : "Security Settings")
-                        .font(Typography.body.font)
-                        .foregroundStyle(Color.movo.textPrimary)
+                    .font(Typography.body.font)
+                    .foregroundStyle(Color.movo.textPrimary)
                     Text(lockManager.isBiometricHardwarePresent
                          ? "Use \(effectiveBiometricType.displayName) to log in and authorize payments"
                          : "Passcode & authentication")
-                        .font(Typography.caption.font)
-                        .foregroundStyle(Color.movo.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    .font(Typography.caption.font)
+                    .foregroundStyle(Color.movo.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
-
+                
                 Spacer()
-
+                
                 if lockManager.isBiometricHardwarePresent {
                     Toggle("", isOn: biometricToggleBinding)
                         .labelsHidden()
@@ -343,9 +352,9 @@ private extension UserProfileView {
                 .strokeBorder(Color.movo.border, lineWidth: 0.5))
         }
     }
-
+    
     // MARK: Linked Bank Accounts Card
-
+    
     var linkedBankCard: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             eyebrowLabel("LINKED BANK ACCOUNTS")
@@ -378,7 +387,7 @@ private extension UserProfileView {
                 .strokeBorder(Color.movo.border, lineWidth: 0.5))
         }
     }
-
+    
     func bankAccountRow(_ account: ACHAccount) -> some View {
         HStack(spacing: 12) {
             ZStack {
@@ -399,7 +408,7 @@ private extension UserProfileView {
             }
             .overlay(RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(Color.movo.border, lineWidth: account.logoImage != nil ? 1 : 0))
-
+            
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: Spacing.sm) {
                     Text(account.institutionName)
@@ -413,9 +422,9 @@ private extension UserProfileView {
                     .font(Typography.caption.font)
                     .foregroundStyle(Color.movo.textTertiary)
             }
-
+            
             Spacer()
-
+            
             HStack(spacing: Spacing.sm) {
                 if !account.isDefault {
                     Button {
@@ -433,7 +442,7 @@ private extension UserProfileView {
                     }
                     .buttonStyle(.plain)
                 }
-
+                
                 Button {
                     AlertManager.shared.showConfirmation(
                         title: "Remove Account",
@@ -456,7 +465,7 @@ private extension UserProfileView {
         .padding(.vertical, 14)
         .padding(.horizontal, Spacing.lg)
     }
-
+    
     var connectBankRow: some View {
         Button {
             Task {
@@ -481,7 +490,7 @@ private extension UserProfileView {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.movo.textTertiary)
+                    .foregroundStyle(Color.movo.accent)
             }
             .padding(.vertical, 14)
             .padding(.horizontal, Spacing.lg)
@@ -489,9 +498,9 @@ private extension UserProfileView {
         .buttonStyle(.plain)
         .disabled(plaidVM.state == .loading)
     }
-
+    
     // MARK: Bottom Actions
-
+    
     var signOutButton: some View {
         Button {
             showSignOutAlert = true
@@ -516,7 +525,7 @@ private extension UserProfileView {
         .buttonStyle(.plain)
         .disabled(isLoggingOut)
     }
-
+    
     var deleteAccountButton: some View {
         Button {
             showDeleteAlert = true
@@ -536,17 +545,17 @@ private extension UserProfileView {
         }
         .buttonStyle(.plain)
     }
-
+    
     var footerText: some View {
-        Text("Movo · v\(AppInfo.version) (build \(AppInfo.buildNumber))")
+        Text("Movo · v\(AppInfo.version)")
             .font(Typography.captionSmall.font)
             .foregroundStyle(Color.movo.textTertiary)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.top, Spacing.xs)
     }
-
+    
     // MARK: Skeleton
-
+    
     var profileSkeleton: some View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
@@ -567,7 +576,7 @@ private extension UserProfileView {
                     }
                 }
                 .padding(.top, Spacing.lg)
-
+                
                 ForEach(0..<3, id: \.self) { _ in
                     VStack(spacing: 0) {
                         ForEach(0..<2, id: \.self) { i in
@@ -603,9 +612,9 @@ private extension UserProfileView {
         .scrollContentBackground(.hidden)
         .allowsHitTesting(false)
     }
-
+    
     // MARK: Empty State
-
+    
     var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "person.crop.circle.badge.exclamationmark")

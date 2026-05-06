@@ -94,6 +94,25 @@ extension VCardListResponse {
     var displayBalance: String {
         "$ 0.00"
     }
+    
+    var currencyCode: String {
+        "USD"
+    }
+    
+    var balance: Decimal {
+        10.0
+    }
+    
+    var isActive: Bool {
+        true
+    }
+    var tier: String {
+        "debit"
+    }
+    
+    var fullNumberPasteboard: String {
+        ""
+    }
 }
 
 nonisolated struct VCardListAllResponse: Decodable, Sendable {
