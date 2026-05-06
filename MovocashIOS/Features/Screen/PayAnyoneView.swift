@@ -50,20 +50,42 @@ struct PayAnyoneView: View {
             MovoBackground()
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    heroIllustration
-                        .padding(.top, 18)
-                        .padding(.bottom, 12)
-                    introBlock
-                        .padding(.bottom, 18)
-                    addContactCard
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 14)
-                    orDivider
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 18)
-                    contactsSection
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 18)
+                    
+                    let hasAnyData =
+                    !viewModel.contacts.isEmpty ||
+                    !viewModel.apiContacts.isEmpty ||
+                    !viewModel.favoriteContacts.isEmpty
+                    
+                    if viewModel.state == .loading && !hasAnyData {
+                        contactsLoadingCard
+                        
+                    } else if hasAnyData {
+                        balanceCard
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.bottom, Spacing.lg)
+                        
+                        frequentContactsSection
+                            .padding(.bottom, Spacing.lg)
+                        
+                        contactsListCard
+                            .padding(.bottom, Spacing.lg)
+                    } else {
+                        heroIllustration
+                            .padding(.top, 18)
+                            .padding(.bottom, 12)
+                        introBlock
+                            .padding(.bottom, 18)
+                        addContactCard
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 14)
+                        orDivider
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 18)
+                        contactsSection
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 18)
+                        permissionCard
+                    }
                     Spacer().frame(height: 80)
                 }
             }
@@ -75,6 +97,10 @@ struct PayAnyoneView: View {
         }
         .onAppear {
             if isAuthorized { Task { await viewModel.load() } }
+            Task {
+                await viewModel.loadApiContacts()
+                await viewModel.loadFavourites()
+            }
         }
         .onChange(of: scenePhase) { newPhase in
             guard newPhase == .active else { return }
@@ -224,12 +250,17 @@ struct PayAnyoneView: View {
     
     @ViewBuilder
     private var contactsSection: some View {
-        if isAuthorized {
-            if viewModel.state == .loading && viewModel.contacts.isEmpty {
-                contactsLoadingCard
-            } else {
-                contactsListCard
-            }
+        
+        let hasAnyData =
+        !viewModel.contacts.isEmpty ||
+        !viewModel.apiContacts.isEmpty ||
+        !viewModel.favoriteContacts.isEmpty
+        
+        if viewModel.state == .loading && !hasAnyData {
+            contactsLoadingCard
+            
+        } else if hasAnyData {
+            contactsListCard
         } else {
             permissionCard
         }
@@ -443,30 +474,6 @@ struct PayAnyoneView: View {
     }
 }
 
-// MARK: - Reusable Components
-
-private struct TabBarItem: View {
-    let label: String
-    let icon: String
-    let active: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundColor(active ? Color.movo.accent : Color.movo.textTertiary)
-                Text(label)
-                    .font(Typography.micro.font)
-                    .foregroundColor(active ? Color.movo.accent : Color.movo.textTertiary)
-                    .fontWeight(active ? .medium : .regular)
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-}
-
 // MARK: - Hero Illustration (two figures + flying bill)
 
 private struct PayAnyoneHeroIllustration: View {
@@ -666,3 +673,144 @@ private struct FloatingAvatar: View {
     }
 }
 
+
+extension PayAnyoneView {
+    
+    private var balanceCard: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Eyebrow("Available to send")
+                Text("10.00")
+                    .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                    .foregroundColor(Color.movo.textPrimary)
+                    .tracking(-0.5)
+            }
+            Spacer()
+            Button(action: {}) {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11, weight: .heavy))
+                    Text("New")
+                        .textStyle(Typography.button)
+                }
+            }
+            .frame(width: 80)
+            .buttonStyle(MovoCompactButtonStyle())
+        }
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(LinearGradient(
+                    colors: [Color.movo.elevated, Color.movo.surface],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
+                )
+        )
+    }
+    
+    private var frequentContactsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                Eyebrow("Frequent")
+                Spacer()
+                Button(action: {}) {
+                    Text("See all")
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundColor(Color.movo.textSecondary)
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.sm + 2) {
+                    ForEach(viewModel.apiContacts) { contact in
+                        QuickContactCell(contact: contact) {
+                            //vm.selectContact(contact)
+                        }
+                    }
+                    AddContactCell {
+                        //vm.addContact()
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, Spacing.xs)
+            }
+        }
+    }
+    
+    private struct AddContactCell: View {
+        let action: () -> Void
+        var body: some View {
+            Button(action: action) {
+                VStack(spacing: Spacing.sm) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.movo.elevated.opacity(0.5))
+                        Circle()
+                            .strokeBorder(
+                                Color.movo.borderStrong,
+                                style: StrokeStyle(lineWidth: Stroke.hairline, dash: [3, 2])
+                            )
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .regular))
+                            .foregroundColor(Color.movo.textTertiary)
+                    }
+                    .frame(width: 56, height: 56)
+                    
+                    Text("Add")
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
+                }
+                .frame(width: 64)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    private struct QuickContactCell: View {
+        let contact: ContactRecord
+        let action: () -> Void
+        
+        var body: some View {
+            Button(action: action) {
+                VStack(spacing: Spacing.sm) {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: [Color.movo.elevated, Color.movo.surface],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                        Circle()
+                            .strokeBorder(
+                                contact.isOnMovo ? Color.movo.accent : Color.movo.border,
+                                lineWidth: Stroke.hairline
+                            )
+                        Text(contact.initials)
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(Color.movo.textPrimary)
+                    }
+                    .frame(width: 56, height: 56)
+                    .overlay(
+                        contact.isOnMovo
+                        ? Circle()
+                            .strokeBorder(Color.movo.accentSoft, lineWidth: 3)
+                            .padding(-3)
+                        : nil
+                    )
+                    
+                    Text((contact.nickname?.split(separator: " ").first.map(String.init) ?? contact.nickname) ?? "")
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundColor(Color.movo.textSecondary)
+                        .lineLimit(1)
+                }
+                .frame(width: 64)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}

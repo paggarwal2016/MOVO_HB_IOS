@@ -290,7 +290,7 @@ struct CardDetailSheet: View {
         HStack(alignment: .center, spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 4) {
                 Eyebrow("Card number")
-                Text(card.maskedNumber)
+                Text(card.cardNumber ?? "''")
                     .font(.system(size: 15, weight: .medium, design: .monospaced))
                     .foregroundColor(Color.movo.textPrimary)
                     .tracking(1.5)

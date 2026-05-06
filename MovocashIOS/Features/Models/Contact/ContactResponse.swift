@@ -4,47 +4,65 @@
 //
 //  Created by Vinu on 05/05/26.
 //
-//  NOTE: These are placeholder models. Replace field names and types
-//  with the actual Skinny Processor API response schema once available.
 
 import Foundation
 
 // MARK: - Contact List Response
+// MARK: - Response
 
 nonisolated struct ContactListResponse: Decodable, Sendable {
+    let success: Bool
+    let message: String
+    let data: ContactsData
+}
+
+// MARK: - Data Wrapper
+
+nonisolated struct ContactsData: Decodable, Sendable {
     let contacts: [ContactRecord]
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        contacts = try container.decodeIfPresent([ContactRecord].self, forKey: .contacts) ?? []
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case contacts
-    }
 }
 
-// MARK: - Contact Record
+// MARK: - Contact
 
-struct ContactRecord: Decodable, Identifiable, Sendable {
+nonisolated struct ContactRecord: Decodable, Identifiable, Sendable {
+    
     let id: String
-    let nickname: String
-    let phoneNumber: String
     let isFav: Bool
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id          = try container.decodeIfPresent(String.self, forKey: .id)          ?? ""
-        nickname    = try container.decodeIfPresent(String.self, forKey: .nickname)    ?? ""
-        phoneNumber = try container.decodeIfPresent(String.self, forKey: .phoneNumber) ?? ""
-        isFav       = try container.decodeIfPresent(Bool.self,   forKey: .isFav)       ?? false
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case id, nickname, phoneNumber
+    let nickname: String?
+    let createdAt: Date
+    let phoneNumber: String?
+    let isAdded: Bool
+    let updatedAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id = "contact_id"
         case isFav = "is_fav"
+        case nickname
+        case createdAt = "created_at"
+        case phoneNumber = "phone_number"
+        case isAdded = "is_added"
+        case updatedAt = "updated_at"
     }
 }
+
+extension ContactRecord {
+    public var isOnMovo: Bool {
+        false
+    }
+    
+    public var initials: String {
+        let parts = nickname?.split(separator: " ")
+        guard let first = parts?.first?.first else { return "?" }
+        return String(first).uppercased()
+    }
+    
+}
+
+
+
+
+
+
 
 // MARK: - Contact Action Response
 

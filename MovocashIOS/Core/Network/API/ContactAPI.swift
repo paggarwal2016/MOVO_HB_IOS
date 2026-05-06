@@ -47,17 +47,7 @@ enum ContactAPI: Endpoint {
     var headerType: HeaderType { [.session, .movoInfo] }
 
     // MARK: - Query Items
-    var queryItems: [URLQueryItem]? {
-        switch self {
-        case .getContacts(let request), .getFavourites(let request):
-            return [
-                URLQueryItem(name: "responseFlag", value: request.responseFlag),
-                URLQueryItem(name: "userAction",   value: request.userAction)
-            ]
-        default:
-            return nil
-        }
-    }
+    var queryItems: [URLQueryItem]? { return nil }
 
     // MARK: - Body
     var body: Data? {
@@ -76,8 +66,8 @@ enum ContactAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .getFavourite(_, let request):
             return try JSONEncoder().encode(request)
-        case .getContacts, .getFavourites:
-            return nil
+        case .getContacts(let request), .getFavourites(let request):
+            return try JSONEncoder().encode(request)
         }
     }
 }

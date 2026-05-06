@@ -166,3 +166,28 @@ struct MastercardMark: View {
         }
     }
 }
+
+
+
+
+struct TabBarItem: View {
+    let label: String
+    let icon: String
+    let active: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(active ? Color.movo.accent : Color.movo.textTertiary)
+                Text(label)
+                    .font(Typography.micro.font)
+                    .foregroundColor(active ? Color.movo.accent : Color.movo.textTertiary)
+                    .fontWeight(active ? .medium : .regular)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}

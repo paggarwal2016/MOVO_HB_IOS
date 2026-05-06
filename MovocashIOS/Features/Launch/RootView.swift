@@ -192,6 +192,7 @@ struct RootView: View {
                     }
 
                 case .home:
+                    //PayAnyoneView()
                     HomeTabBarView(container: container)
                 }
             }

@@ -292,7 +292,7 @@ actor NetworkService: NetworkServiceProtocol {
         // Decode successful response — treat empty body on other 2xx as `{}`
         let decodableData = data.isEmpty ? Data("{}".utf8) : data
         do {
-            return try JSONDecoder().decode(T.self, from: decodableData)
+            return try await JSONDecoder.fintechDecoder.decode(T.self, from: decodableData)
         } catch {
             SecureLogger.error("Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)", category: .network)
             throw NetworkError.decodingError
@@ -440,5 +440,40 @@ extension NetworkService {
         }
         
         print("=======================\n")
+    }
+}
+
+
+
+
+
+
+
+
+extension JSONDecoder {
+    static var fintechDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [
+            .withInternetDateTime,
+            .withFractionalSeconds
+        ]
+        
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateStr = try container.decode(String.self)
+            
+            if let date = isoFormatter.date(from: dateStr) {
+                return date
+            }
+            
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid date format: \(dateStr)"
+            )
+        }
+        
+        return decoder
     }
 }

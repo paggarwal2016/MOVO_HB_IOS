@@ -84,14 +84,14 @@ final class ContactViewModel: BaseViewModel {
     // MARK: - Load API Contacts
 
     func loadApiContacts() async {
-        let request = ContactRequest.GetLists(responseFlag: "ALL", userAction: "GET_CONTACTS")
+        let request = ContactRequest.GetLists(responseFlag: "getContact", userAction: "GET_CONTACTS")
         do {
             let response: ContactListResponse = try await perform {
                 try await self.network.request(ContactAPI.getContacts(request: request))
             }
-            apiContacts = response.contacts
+            apiContacts = response.data.contacts
             analytics.log(AnalyticsEvent.contactListViewed, params: [
-                AnalyticsParam.count: response.contacts.count
+                AnalyticsParam.count: response.data.contacts.count
             ])
         } catch is CancellationError {
         } catch {
@@ -109,7 +109,7 @@ final class ContactViewModel: BaseViewModel {
             let response: ContactListResponse = try await perform {
                 try await self.network.request(ContactAPI.getFavourites(request: request))
             }
-            favourites = response.contacts
+            favourites = response.data.contacts
         } catch is CancellationError {
         } catch {}
     }
