@@ -73,7 +73,7 @@ final class ContactViewModel: BaseViewModel {
             ($0.phoneNumber ?? "").contains(search)
         }
     }
-    
+
     var favoriteContacts: [ContactRecord] { favourites }
     
     func isFavorite(_ contact: ContactRecord) -> Bool {
@@ -150,12 +150,12 @@ final class ContactViewModel: BaseViewModel {
     
     func loadFrequent() async {
         do {
-            let response: ContactListResponse = try await perform {
+            let response: RecentTransferResponse = try await perform {
                 try await self.network.request(ContactAPI.getRecent)
             }
-            frequents = response.data.contacts
+            frequents = response.contacts
             analytics.log(AnalyticsEvent.contactFrequent, params: [
-                AnalyticsParam.count: response.data.contacts.count
+                AnalyticsParam.count: response.contacts.count
             ])
         } catch is CancellationError {
         } catch {
@@ -191,10 +191,14 @@ final class ContactViewModel: BaseViewModel {
     // MARK: - Toggle Favourite
     
     func toggleFavourite(_ record: ContactRecord) async {
-        if isFavorite(record) {
-            await markFavourite(id: record.id, isFav: false)
+        let existsInApi = apiContacts.contains { $0.id == record.id } ||
+                          favourites.contains  { $0.id == record.id }
+        if existsInApi {
+            await markFavourite(id: record.id, isFav: !isFavorite(record))
         } else {
-            await markFavourite(id: record.id, isFav: true)
+            let rawPhone = (record.phoneNumber ?? "").filter { $0.isNumber }
+            let formattedPhone = rawPhone.hasPrefix("1") ? "+\(rawPhone)" : "+1\(rawPhone)"
+            await addFavourite(contactId: record.id, nickname: record.nickname ?? "", phoneNumber: formattedPhone)
         }
         await loadApiContacts()
         await loadFavourites()
@@ -223,11 +227,12 @@ final class ContactViewModel: BaseViewModel {
     
     // MARK: - Private
     
-    private func addFavourite(contactId: String) async {
+    private func addFavourite(contactId: String, nickname: String, phoneNumber: String) async {
         let request = ContactRequest.AddFavourite(
             contact_id: contactId,
             is_fav: true,
-            addNewContact: false,
+            nickname: nickname,
+            phoneNumber: phoneNumber,
             userAction: "ADD-CONTACT"
         )
         do {

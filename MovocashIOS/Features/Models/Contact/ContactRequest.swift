@@ -12,7 +12,8 @@ enum ContactRequest {
     struct AddFavourite: Codable, Equatable, Sendable {
         let contact_id: String
         let is_fav: Bool
-        let addNewContact: Bool
+        let nickname: String
+        let phoneNumber: String
         let userAction: String
     }
     

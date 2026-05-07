@@ -158,6 +158,15 @@ final class AppLockManager: ObservableObject {
     /// to background. Used to prevent auto-unlock when the user backgrounded
     /// while still on the lock screen (partial or no passcode entry).
     private var wasUnlockedWhenBackgrounded: Bool = false
+    /// Set to true before intentionally opening a system prompt (e.g. Settings
+    /// for permissions). Prevents the lock screen firing on the next foreground
+    /// event so the user lands back on the same screen they left.
+    private var skipNextLock: Bool = false
+    /// Durable version of skipNextLock — set when the user opens the OS Settings
+    /// for a permission grant (contacts, camera, etc.). Unlike skipNextLock, this
+    /// survives the .inactive scene-phase bounce that happens when Settings opens,
+    /// so the flag is still live when the real .active fires on return.
+    private var permissionFlowActive: Bool = false
 
     // MARK: - Init (Production)
 
@@ -216,12 +225,36 @@ final class AppLockManager: ObservableObject {
 
     // MARK: - App Lifecycle
 
+    /// Call before programmatically opening a system screen (Settings, permission
+    /// dialogs) so the lock screen does not appear when the user returns.
+    func suppressLockOnNextForeground() {
+        skipNextLock = true
+    }
+
+    /// Call before opening OS Settings for a runtime permission grant (contacts,
+    /// camera, etc.). Sets both the one-shot flag and the durable flag so the
+    /// lock is suppressed even if the scene-phase bounces through .inactive first.
+    func notifyWillOpenPermissionSettings() {
+        skipNextLock = true
+        permissionFlowActive = true
+    }
+
     func handleScenePhase(_ phase: ScenePhase) {
         switch phase {
         case .background:
             backgroundedAt = clock.now()
             wasUnlockedWhenBackgrounded = (state == .unlocked)
         case .active:
+            // Consume both suppression flags atomically. permissionFlowActive is
+            // the durable version that survives the .inactive bounce when Settings
+            // opens; skipNextLock is the one-shot flag for other callers.
+            let suppress = skipNextLock || permissionFlowActive
+            skipNextLock = false
+            permissionFlowActive = false
+            if suppress {
+                backgroundedAt = nil
+                return
+            }
             guard let since = backgroundedAt else { return }
             backgroundedAt = nil
             let elapsed = clock.now().timeIntervalSince(since)

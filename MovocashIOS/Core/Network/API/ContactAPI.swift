@@ -29,7 +29,7 @@ enum ContactAPI: Endpoint {
         case .makeFavourite(let id, _):   return "/contacts/\(id)"
         case .getContacts:               return "/contacts"
         case .getFavourites:             return "/contacts"
-        case .getRecent:                 return "/recent-phone-numbers"
+        case .getRecent:                 return "/recent-transfer"
         }
     }
 
@@ -42,7 +42,7 @@ enum ContactAPI: Endpoint {
         case .makeFavourite:    return .PATCH
         case .getContacts:     return .PUT
         case .getFavourites:   return .PUT
-        case .getRecent:       return .GET
+        case .getRecent:       return .PUT
         }
     }
 
@@ -72,8 +72,7 @@ enum ContactAPI: Endpoint {
         case .getContacts(let request), .getFavourites(let request):
             return try JSONEncoder().encode(request)
         case .getRecent:
-            return nil
-            //try JSONEncoder().encode(UserActionRequest(userAction: "GET-RECENT"))
+            return try JSONEncoder().encode(UserActionRequest(userAction: "RECENT-TRANSFER"))
         }
     }
 }

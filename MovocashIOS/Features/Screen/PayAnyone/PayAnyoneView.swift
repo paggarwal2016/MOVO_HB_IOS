@@ -15,17 +15,22 @@ struct PayAnyoneView: View {
     @StateObject private var contactVM: ContactViewModel
     @StateObject private var savingVM: SavingsAccountViewModel
     @EnvironmentObject private var container: AppContainer
+    @EnvironmentObject private var lockManager: AppLockManager
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     @SwiftUI.Environment(\.openURL) private var openURL
-    
+
+    @Binding var selectedTab: Tab
+
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     @State private var showAddContact = false
-    
-    init(container: AppContainer) {
+    @State private var wentToSettings = false
+
+    init(container: AppContainer, selectedTab: Binding<Tab>) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        _selectedTab = selectedTab
     }
     
     private var isFormValid: Bool {
@@ -49,14 +54,14 @@ struct PayAnyoneView: View {
         !contactVM.favourites.isEmpty ||
         !contactVM.frequents.isEmpty
     }
-
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             MovoBackground()
-
+            
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-
+                    
                     if hasAnyData {
                         balanceCard
                             .padding(.horizontal, Spacing.lg)
@@ -69,6 +74,17 @@ struct PayAnyoneView: View {
                         
                         contactsListCard
                             .padding(.bottom, Spacing.lg)
+                        
+                        if !isAuthorized {
+                            orDivider
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 18)
+                            
+                            permissionCard
+                                .padding(.horizontal, 14)
+                                .padding(.bottom, 18)
+                        }
+                        
                     } else {
                         heroIllustration
                             .padding(.top, 18)
@@ -109,7 +125,7 @@ struct PayAnyoneView: View {
                 }
                 .zIndex(10)
             }
-                    
+            
             if contactVM.state == .loading && !hasAnyData {
                 SpinnerView()
             }
@@ -121,14 +137,13 @@ struct PayAnyoneView: View {
         }
         .onAppear {
             Task {
-                async let savings: Void = savingVM.loadAccounts()
-                async let apiContacts: Void = contactVM.loadApiContacts()
-                async let favourites: Void = contactVM.loadFavourites()
-                async let frequent: Void = contactVM.loadFrequent()
-                _ = await (savings, apiContacts, favourites, frequent)
-            }
-            if isAuthorized {
-                Task { await contactVM.load() }
+                await savingVM.loadAccounts()
+                await contactVM.loadApiContacts()
+                await contactVM.loadFavourites()
+                await contactVM.loadFrequent()
+                if isAuthorized {
+                    await contactVM.load()
+                }
             }
         }
         .onChange(of: scenePhase) { newPhase in
@@ -136,6 +151,19 @@ struct PayAnyoneView: View {
             authStatus = CNContactStore.authorizationStatus(for: .contacts)
             if isAuthorized && contactVM.contacts.isEmpty {
                 Task { await contactVM.load() }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            guard wentToSettings else { return }
+            wentToSettings = false
+            lockManager.resetToUnlocked()
+            authStatus = CNContactStore.authorizationStatus(for: .contacts)
+            if isAuthorized {
+                if contactVM.contacts.isEmpty {
+                    Task { await contactVM.load() }
+                }
+            } else {
+                selectedTab = .home
             }
         }
     }
@@ -521,7 +549,11 @@ struct PayAnyoneView: View {
     }
     
     private func openSettings() {
-        if let url = URL(string: "app-settings:") { openURL(url) }
+        lockManager.notifyWillOpenPermissionSettings()
+        wentToSettings = true
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            openURL(url)
+        }
     }
     
     private func formatUSPhone(_ digits: String) -> String {

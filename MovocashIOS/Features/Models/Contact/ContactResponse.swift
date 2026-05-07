@@ -28,9 +28,9 @@ nonisolated struct ContactRecord: Decodable, Identifiable, Sendable, Hashable {
     
     let id: String
     let isFav: Bool
-    let nickname: String?
+    var nickname: String?
     let createdAt: Date
-    let phoneNumber: String?
+    var phoneNumber: String?
     let isAdded: Bool
     let updatedAt: Date
     
@@ -63,6 +63,12 @@ extension ContactRecord {
 
 
 
+
+// MARK: - Recent Transfer Response (flat shape: { "contacts": [...] })
+
+nonisolated struct RecentTransferResponse: Decodable, Sendable {
+    let contacts: [ContactRecord]
+}
 
 // MARK: - Contact Action Response
 
