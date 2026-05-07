@@ -65,10 +65,16 @@ enum AnalyticsEvent {
     static let internalTransferFailed     = "internal_transfer_failed"
 
     // MARK: - Contacts
-    static let contactListViewed          = "contact_list_viewed"
-    static let contactListFailed          = "contact_list_failed"
-    static let contactFavorited           = "contact_favorited"
-    static let contactUnfavorited         = "contact_unfavorited"
+    static let contactListViewed                = "contact_list_viewed"
+    static let contactListFailed                = "contact_list_failed"
+    static let contactFavoritedList             = "contact_favorite_list"
+    static let contactFavoritedListFailed       = "contact_favorite_list_failed"
+    static let contactAddFavorited              = "contact_favorite_add"
+    static let contactAddFavoritedFailed        = "contact_favorite_add_failed"
+    static let contactRemoveFavorite            = "contact_favorite_remove"
+    static let contactRemoveFavoriteFailed      = "contact_favorite_remove_failed"
+    static let contactFrequent                  = "contact_frequent"
+    static let contactFrequentFailed            = "contact_frequent_failed"
 
     // MARK: - VCards
     static let vcardViewed                = "vcard_viewed"

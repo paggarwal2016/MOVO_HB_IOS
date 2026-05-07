@@ -113,8 +113,8 @@ final class DashboardViewModel: BaseViewModel {
         return d.message
     }
 
-    var menuItems: [DashboardMenuItem] {
-        dashboard?.data.compactMap { section -> [DashboardMenuItem]? in
+    var menuItems: [DashboardAction] {
+        dashboard?.data.compactMap { section -> [DashboardAction]? in
             guard case .menu(let items) = section else { return nil }
             return items
         }.first ?? []

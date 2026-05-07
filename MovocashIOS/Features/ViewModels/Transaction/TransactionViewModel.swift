@@ -15,6 +15,8 @@ final class TransactionViewModel: BaseViewModel {
 
     @Published var transactions: [TransactionItem] = []
     @Published var searchText: String = ""
+    @Published public var searchQuery: String = ""
+    public var totalCount: Int { transactions.count }
 
     // MARK: - Computed
 

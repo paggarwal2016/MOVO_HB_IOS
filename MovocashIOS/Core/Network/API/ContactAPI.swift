@@ -12,9 +12,10 @@ enum ContactAPI: Endpoint {
     case addFavourite(request: ContactRequest.AddFavourite)
     case deleteFavourite(request: ContactRequest.DeleteFavourite)
     case create(request: ContactRequest.Create)
-    case getFavourite(id: String, request: ContactRequest.MarkFavourite)
+    case makeFavourite(id: String, request: ContactRequest.MarkFavourite)
     case getContacts(request: ContactRequest.GetLists)
     case getFavourites(request: ContactRequest.GetLists)
+    case getRecent
 
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -23,11 +24,12 @@ enum ContactAPI: Endpoint {
     var path: String {
         switch self {
         case .addFavourite:              return "/contacts/favourite"
-        case .deleteFavourite:           return "/fav_contacts"
+        case .deleteFavourite:           return "/contacts"
         case .create:                    return "/contacts"
-        case .getFavourite(let id, _):   return "/contacts/\(id)"
+        case .makeFavourite(let id, _):   return "/contacts/\(id)"
         case .getContacts:               return "/contacts"
-        case .getFavourites:             return "/fav_contacts"
+        case .getFavourites:             return "/contacts"
+        case .getRecent:                 return "/recent-phone-numbers"
         }
     }
 
@@ -37,9 +39,10 @@ enum ContactAPI: Endpoint {
         case .addFavourite:    return .POST
         case .deleteFavourite: return .DELETE
         case .create:          return .POST
-        case .getFavourite:    return .PATCH
+        case .makeFavourite:    return .PATCH
         case .getContacts:     return .PUT
         case .getFavourites:   return .PUT
+        case .getRecent:       return .GET
         }
     }
 
@@ -64,10 +67,13 @@ enum ContactAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .create(let request):
             return try JSONEncoder().encode(request)
-        case .getFavourite(_, let request):
+        case .makeFavourite(_, let request):
             return try JSONEncoder().encode(request)
         case .getContacts(let request), .getFavourites(let request):
             return try JSONEncoder().encode(request)
+        case .getRecent:
+            return nil
+            //try JSONEncoder().encode(UserActionRequest(userAction: "GET-RECENT"))
         }
     }
 }

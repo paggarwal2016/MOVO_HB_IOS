@@ -15,17 +15,6 @@ protocol ContactsServiceProtocol {
     func fetchContacts() async throws -> [ContactRecord]
 }
 
-// MARK: - Model
-
-struct AppContact: Identifiable, Hashable {
-    let id: String
-    let name: String
-    let phone: String
-    let initials: String
-}
-
-
-
 // MARK: - Real implementation (used in production)
 
 final class ContactsService: ContactsServiceProtocol {

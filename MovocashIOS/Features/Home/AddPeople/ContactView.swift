@@ -143,35 +143,34 @@ struct ContactView: View {
     
     private var contactList: some View {
         List {
-            if !viewModel.favoriteContacts.isEmpty {
+            if !viewModel.filteredFavourites.isEmpty {
                 Section {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 20) {
-                            ForEach(viewModel.favoriteContacts, content: favouriteChip)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
+                    ForEach(viewModel.filteredFavourites) { contact in
+                        contactRow(contact)
+                            .padding(.horizontal, 12)
+                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 14))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     }
-                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16))
                 } header: {
                     sectionHeader("Favourites")
                 }
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
             }
-            
-            Section {
-                ForEach(viewModel.filtered) { contact in
-                    contactRow(contact)
-                        .padding(.horizontal, 12)
-                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 14))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+
+            if !viewModel.filteredContacts.isEmpty {
+                Section {
+                    ForEach(viewModel.filteredContacts) { contact in
+                        contactRow(contact)
+                            .padding(.horizontal, 12)
+                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 14))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    }
+                } header: {
+                    sectionHeader("All Contacts")
                 }
-            } header: {
-                sectionHeader("All Contacts")
             }
         }
         .listStyle(.plain)
@@ -187,50 +186,23 @@ struct ContactView: View {
             .tracking(0.6)
     }
     
-    // MARK: - Favourite Chip
-    
-    private func favouriteChip(_ contact: AppContact) -> some View {
-        NavigationLink(value: contact) {
-            VStack(spacing: 3) {
-                contactAvatar(initials: contact.initials, size: 50)
-                    .overlay(alignment: .topTrailing) {
-                        Button {
-                            //viewModel.toggleFavorite(contact)
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundStyle(Color(.systemGray3), Color(.systemBackground))
-                        }
-                        .buttonStyle(.plain)
-                        .offset(x: 5, y: -5)
-                    }
-                Text(contact.name.components(separatedBy: " ").first ?? contact.name)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .frame(maxWidth: 60)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-    
     // MARK: - Contact Row
-    
-    private func contactRow(_ contact: AppContact) -> some View {
+
+    private func contactRow(_ contact: ContactRecord) -> some View {
         let starred = viewModel.isFavorite(contact)
         return NavigationLink(value: contact) {
             HStack(spacing: 14) {
                 contactAvatar(initials: contact.initials, size: 46)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(contact.name)
+                    Text(contact.nickname ?? "")
                         .font(.system(size: 15, weight: .medium))
-                    Text(contact.phone)
+                    Text(contact.phoneNumber ?? "")
                         .font(.system(size: 13))
                         .foregroundColor(.gray)
                 }
                 Spacer()
                 Button {
-                    //viewModel.toggleFavorite(contact)
+                    Task { await viewModel.toggleFavourite(contact) }
                 } label: {
                     Image(systemName: starred ? "star.fill" : "star")
                         .font(.system(size: 18))

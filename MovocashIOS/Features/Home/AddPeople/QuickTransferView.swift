@@ -36,7 +36,7 @@ struct QuickTransferView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            MovoBackground()
 
             ScrollView {
                 VStack(spacing: 12) {

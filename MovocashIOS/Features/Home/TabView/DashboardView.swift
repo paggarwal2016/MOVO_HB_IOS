@@ -101,15 +101,6 @@ struct DashboardView: View {
                     .presentationDragIndicator(.visible)
             }
         }
-        .sheet(isPresented: $showTransactions) {
-            if let account = displayAccount {
-                NavigationStack {
-                    TransactionListView(container: container, accountId: account.id, mode: .common)
-                }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-            }
-        }
         .sheet(isPresented: $showAccountList) {
             AccountListSheetView(savingsList: $savingVM.accountList, isPresented: $showAccountList, container: container)
                 .presentationDetents([.large])
@@ -186,14 +177,22 @@ struct DashboardView: View {
                 onDeleted: { Task { await vm.loadCards() } }
             )
         }
+        .navigationDestination(isPresented: $showTransactions) {
+            if let account = displayAccount {
+                    TransactionListView(container: container,
+                                        accountId: account.id,
+                                        mode: .common)
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationBarBackButtonHidden(true)
+            }
+        }
         .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {
-                CardDetailSheet(
-                    card: card,
-                    primaryAccountId: dashboardVM.primaryAccount?.id,
-                    savingVM: savingVM,
-                    container: container,
-                    onDeleted: { Task { await vm.loadCards() } }
+                CardDetailSheet(card: card,
+                                primaryAccountId: dashboardVM.primaryAccount?.id,
+                                savingVM: savingVM,
+                                container: container,
+                                onDeleted: { Task { await vm.loadCards() } }
                 )
             }
         }
@@ -283,7 +282,7 @@ struct DashboardView: View {
         case .payAnyone(let data):
             ActionCard(
                 title: data.title,
-                description: data.description,
+                description: data.description ?? "",
                 buttonLabel: data.actions.first?.label ?? "Send Money"
             ) {
                 showContactList = true

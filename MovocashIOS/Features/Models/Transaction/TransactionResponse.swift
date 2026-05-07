@@ -30,7 +30,7 @@ nonisolated struct TransactionResponse: Decodable {
 
 struct Transaction: Decodable, Identifiable, Sendable {
     let id: Int
-    let status: String
+    let status: String?
     let location: String?
     let description: String?
     let amount: Decimal
@@ -42,7 +42,7 @@ struct Transaction: Decodable, Identifiable, Sendable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id              = try container.decode(Int.self, forKey: .id)
-        status          = try container.decodeIfPresent(String.self, forKey: .status) ?? ""
+        status          = try container.decodeIfPresent(String.self, forKey: .status)
         location        = try container.decodeIfPresent(String.self, forKey: .location)
         description     = try container.decodeIfPresent(String.self, forKey: .description)
         let amountStr   = try container.decodeIfPresent(String.self, forKey: .amount) ?? "0"
@@ -57,21 +57,37 @@ struct Transaction: Decodable, Identifiable, Sendable {
         case id, status, location, description, amount, to, from, type, date
     }
 
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "M/d/yyyy HH:mm:ss"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
     func toItem() -> TransactionItem {
-        let isCredit = type == .deposit
-        let title    = isCredit
-            ? (from ?? description ?? "Unknown")
-            : (to   ?? description ?? "Unknown")
-        let formatter = ISO8601DateFormatter()
+        let isCredit   = type == .deposit
+        let locNil     = location.flatMap  { $0.isEmpty ? nil : $0 }
+        let fromNil    = from?.isEmpty == false ? from : nil
+        let toNil      = to?.isEmpty   == false ? to   : nil
+        let descNil    = description?.isEmpty == false ? description : nil
+        let title: String
+        if isCredit {
+            // Deposit: prefer source name (from), then location label, then description
+            title = fromNil ?? locNil ?? descNil ?? "Unknown"
+        } else {
+            // Payment / Transfer: prefer recipient (to), then description
+            title = toNil ?? descNil ?? "Unknown"
+        }
+        let parsedDate = Self.dateFormatter.date(from: date) ?? Date()
         return TransactionItem(
             id:       id,
             title:    title,
             subtitle: type.displayTitle,
             amount:   amount,
             isCredit: isCredit,
-            date:     formatter.date(from: date) ?? Date(),
+            date:     parsedDate,
             rawDate:  date,
-            status:   status,
+            status:   status ?? "",
             type:     type
         )
     }

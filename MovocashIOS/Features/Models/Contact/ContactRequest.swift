@@ -17,7 +17,7 @@ enum ContactRequest {
     }
     
     struct DeleteFavourite: Codable, Equatable, Sendable {
-        let favContacts: String
+        let contact_id: String
         let userAction: String
     }
     

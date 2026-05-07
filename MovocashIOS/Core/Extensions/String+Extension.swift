@@ -19,3 +19,20 @@ extension String {
         return "\(first4) **** **** \(last4)"
     }
 }
+
+
+extension Decimal {
+    
+    func toString() -> String {
+        NSDecimalNumber(decimal: self).stringValue
+    }
+    
+    func toCurrencyString() -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        
+        return formatter.string(from: NSDecimalNumber(decimal: self)) ?? "0.00"
+    }
+}

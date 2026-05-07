@@ -33,7 +33,7 @@ enum DashboardSection: Sendable {
     case rewards(DashboardRewards)
     case linkedAccounts(DashboardLinkedAccounts)
     case myCards(DashboardMyCards)
-    case menu([DashboardMenuItem])
+    case menu([DashboardAction])
     case unknown
 }
 
@@ -59,7 +59,7 @@ extension DashboardSection: Decodable {
         case "MYCARDS":
             self = .myCards(try c.decode(DashboardMyCards.self, forKey: .data))
         case "MENU":
-            self = .menu(try c.decode([DashboardMenuItem].self, forKey: .data))
+            self = .menu(try c.decode([DashboardAction].self, forKey: .data))
         default:
             self = .unknown
         }
@@ -126,12 +126,10 @@ nonisolated struct DashboardPayAnyone: Decodable, Sendable {
     let accountId: Int
     let customerId: Int
     let title: String
-    let description: String
-    let favContactList: [DashboardContact]
+    let description: String?
+    let favContactList: [String]
     let actions: [DashboardAction]
 }
-
-nonisolated struct DashboardContact: Decodable, Sendable {}
 
 // MARK: - REWARDS
 
@@ -181,9 +179,3 @@ nonisolated struct DashboardAction: Decodable, Sendable {
     let action: String
 }
 
-// MARK: - MENU
-
-nonisolated struct DashboardMenuItem: Decodable, Sendable {
-    let label: String
-    let action: String
-}

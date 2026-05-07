@@ -12,7 +12,8 @@ import Contacts
 
 struct PayAnyoneView: View {
     
-    @StateObject private var viewModel: ContactViewModel
+    @StateObject private var contactVM: ContactViewModel
+    @StateObject private var savingVM: SavingsAccountViewModel
     @EnvironmentObject private var container: AppContainer
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     @SwiftUI.Environment(\.openURL) private var openURL
@@ -22,12 +23,9 @@ struct PayAnyoneView: View {
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     @State private var showAddContact = false
     
-    init() {
-        _viewModel = StateObject(wrappedValue: ContactViewModel(
-            service: ContactsService(),
-            network: NetworkService.shared,
-            alertManager: AlertManager.shared
-        ))
+    init(container: AppContainer) {
+        _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
     
     private var isFormValid: Bool {
@@ -46,27 +44,28 @@ struct PayAnyoneView: View {
         authStatus == .denied || authStatus == .restricted
     }
     
+    private var hasAnyData: Bool {
+        !contactVM.mergedContacts.isEmpty ||
+        !contactVM.favourites.isEmpty ||
+        !contactVM.frequents.isEmpty
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             MovoBackground()
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    
-                    let hasAnyData =
-                    !viewModel.contacts.isEmpty ||
-                    !viewModel.apiContacts.isEmpty ||
-                    !viewModel.favoriteContacts.isEmpty
-                    
-                    if viewModel.state == .loading && !hasAnyData {
-                        contactsLoadingCard
-                        
-                    } else if hasAnyData {
+
+                    if hasAnyData {
                         balanceCard
                             .padding(.horizontal, Spacing.lg)
                             .padding(.bottom, Spacing.lg)
                         
-                        frequentContactsSection
-                            .padding(.bottom, Spacing.lg)
+                        if contactVM.frequents.count > 0 {
+                            frequentContactsSection
+                                .padding(.bottom, Spacing.lg)
+                        }
                         
                         contactsListCard
                             .padding(.bottom, Spacing.lg)
@@ -110,6 +109,10 @@ struct PayAnyoneView: View {
                 }
                 .zIndex(10)
             }
+                    
+            if contactVM.state == .loading && !hasAnyData {
+                SpinnerView()
+            }
         }
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
@@ -117,17 +120,22 @@ struct PayAnyoneView: View {
             QuickTransferView(contact: contact, container: container)
         }
         .onAppear {
-            if isAuthorized { Task { await viewModel.load() } }
             Task {
-                await viewModel.loadApiContacts()
-                await viewModel.loadFavourites()
+                async let savings: Void = savingVM.loadAccounts()
+                async let apiContacts: Void = contactVM.loadApiContacts()
+                async let favourites: Void = contactVM.loadFavourites()
+                async let frequent: Void = contactVM.loadFrequent()
+                _ = await (savings, apiContacts, favourites, frequent)
+            }
+            if isAuthorized {
+                Task { await contactVM.load() }
             }
         }
         .onChange(of: scenePhase) { newPhase in
             guard newPhase == .active else { return }
             authStatus = CNContactStore.authorizationStatus(for: .contacts)
-            if isAuthorized && viewModel.contacts.isEmpty {
-                Task { await viewModel.load() }
+            if isAuthorized && contactVM.contacts.isEmpty {
+                Task { await contactVM.load() }
             }
         }
     }
@@ -136,13 +144,13 @@ struct PayAnyoneView: View {
         AddContactCardView(
             nickname: $nickname,
             phoneNumber: $phoneNumber,
-            isLoading: viewModel.state == .loading,
+            isLoading: contactVM.state == .loading,
             isFormValid: isFormValid,
             onAdd: {
                 let digits = PhoneFormatter1.formatUS(phoneNumber)
                 
                 Task {
-                    let success = await viewModel.createContact(
+                    let success = await contactVM.createContact(
                         nickname: nickname.trimmingCharacters(in: .whitespaces),
                         phoneNumber: "+1\(PhoneFormatter1.rawDigits(digits))"
                     )
@@ -260,7 +268,7 @@ struct PayAnyoneView: View {
                 
                 Button(action: addContact) {
                     Group {
-                        if viewModel.state == .loading {
+                        if contactVM.state == .loading {
                             ProgressView().tint(Color.movo.background).scaleEffect(0.8)
                         } else {
                             Text("Add Contact").font(Typography.button.font).foregroundColor(Color.movo.background)
@@ -273,7 +281,7 @@ struct PayAnyoneView: View {
                             .fill(isFormValid ? Color.movo.accent : Color.movo.accent.opacity(0.35))
                     )
                 }
-                .disabled(!isFormValid || viewModel.state == .loading)
+                .disabled(!isFormValid || contactVM.state == .loading)
             }
             .padding(.top, 2)
         }
@@ -299,16 +307,7 @@ struct PayAnyoneView: View {
     
     @ViewBuilder
     private var contactsSection: some View {
-        
-        let hasAnyData =
-        !viewModel.contacts.isEmpty ||
-        !viewModel.apiContacts.isEmpty ||
-        !viewModel.favoriteContacts.isEmpty
-        
-        if viewModel.state == .loading && !hasAnyData {
-            contactsLoadingCard
-            
-        } else if hasAnyData {
+        if hasAnyData {
             contactsListCard
         } else {
             permissionCard
@@ -377,13 +376,13 @@ struct PayAnyoneView: View {
             // Search bar
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").foregroundColor(Color.movo.textDisabled)
-                TextField("", text: $viewModel.search,
+                TextField("", text: $contactVM.search,
                           prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
                 .font(Typography.subtitle.font)
                 .foregroundColor(Color.movo.textPrimary)
                 .autocorrectionDisabled()
-                if !viewModel.search.isEmpty {
-                    Button { viewModel.search = "" } label: {
+                if !contactVM.search.isEmpty {
+                    Button { contactVM.search = "" } label: {
                         Image(systemName: "xmark.circle.fill").foregroundColor(Color.movo.textDisabled)
                     }
                     .buttonStyle(.plain)
@@ -402,49 +401,39 @@ struct PayAnyoneView: View {
             .padding(.bottom, 10)
             
             // Favourites
-            if !viewModel.favoriteContacts.isEmpty {
+            if !contactVM.filteredFavourites.isEmpty {
                 Text("FAVOURITES")
                     .font(Typography.eyebrow.font)
                     .tracking(0.8)
                     .foregroundColor(Color.movo.textTertiary)
                     .padding(.horizontal, 14)
+                    .padding(.top, 12)
                     .padding(.bottom, 8)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 14) {
-                        ForEach(viewModel.favoriteContacts) { contact in
-                            NavigationLink(value: contact) {
-                                VStack(spacing: 5) {
-                                    contactAvatar(initials: contact.initials, size: 44)
-                                    Text(contact.name.components(separatedBy: " ").first ?? contact.name)
-                                        .font(Typography.captionSmall.font)
-                                        .foregroundColor(Color.movo.textTertiary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
+                ForEach(contactVM.filteredFavourites) { contact in
+                    NavigationLink(value: contact) { contactRow(contact) }
+                        .buttonStyle(.plain)
+                    if contact.id != contactVM.filteredFavourites.last?.id {
+                        Rectangle().fill(Color.movo.elevated).frame(height: 0.5).padding(.horizontal, 14)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 4)
                 }
-                .padding(.bottom, 10)
                 Rectangle().fill(Color.movo.elevated).frame(height: 0.5).padding(.horizontal, 14)
             }
             
             // All contacts
-            Text("ALL CONTACTS")
-                .font(Typography.eyebrow.font)
-                .tracking(0.8)
-                .foregroundColor(Color.movo.textTertiary)
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-            
-            ForEach(viewModel.apiContacts) { contact in
-                NavigationLink(value: contact) { contactRow(contact) }
-                    .buttonStyle(.plain)
-                if contact.id != viewModel.apiContacts.last?.id {
-                    Rectangle().fill(Color.movo.elevated).frame(height: 0.5).padding(.horizontal, 14)
+            if !contactVM.filteredContacts.isEmpty {
+                Text("ALL CONTACTS")
+                    .font(Typography.eyebrow.font)
+                    .tracking(0.8)
+                    .foregroundColor(Color.movo.textTertiary)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+                ForEach(contactVM.filteredContacts) { contact in
+                    NavigationLink(value: contact) { contactRow(contact) }
+                        .buttonStyle(.plain)
+                    if contact.id != contactVM.filteredContacts.last?.id {
+                        Rectangle().fill(Color.movo.elevated).frame(height: 0.5).padding(.horizontal, 14)
+                    }
                 }
             }
             Spacer().frame(height: 10)
@@ -455,6 +444,8 @@ struct PayAnyoneView: View {
                 .overlay(RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(Color.movo.elevated, lineWidth: 0.5))
         )
+        .padding(.leading, Spacing.lg)
+        .padding(.trailing, Spacing.lg)
     }
     
     private func contactAvatar(initials: String, size: CGFloat) -> some View {
@@ -468,16 +459,36 @@ struct PayAnyoneView: View {
     
     private func contactRow(_ contact: ContactRecord) -> some View {
         HStack(spacing: 12) {
-            contactAvatar(initials: "T", size: 38)
+            contactAvatar(initials: contact.initials, size: 38)
             VStack(alignment: .leading, spacing: 2) {
-                Text(contact.nickname ?? "")
-                    .font(Typography.bodyCompact.font)
-                    .foregroundColor(Color.movo.textPrimary)
+                HStack(spacing: 6) {
+                    Text(contact.nickname ?? "")
+                        .font(Typography.bodyCompact.font)
+                        .foregroundColor(Color.movo.textPrimary)
+                    if contact.isAdded {
+                        Text("MOVO")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(Color.movo.accent)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule().fill(Color.movo.accent.opacity(0.15))
+                            )
+                    }
+                }
                 Text(contact.phoneNumber ?? "")
                     .font(Typography.captionSmall.font)
                     .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
+            Button {
+                Task { await contactVM.toggleFavourite(contact) }
+            } label: {
+                Image(systemName: contactVM.isFavorite(contact) ? "star.fill" : "star")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(contactVM.isFavorite(contact) ? Color.movo.accent : Color.movo.textDisabled)
+            }
+            .buttonStyle(.plain)
             Image(systemName: "chevron.right")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(Color.movo.textDisabled)
@@ -491,7 +502,7 @@ struct PayAnyoneView: View {
     private func addContact() {
         Task {
             let digits = phoneNumber.filter(\.isNumber)
-            let success = await viewModel.createContact(
+            let success = await contactVM.createContact(
                 nickname: nickname.trimmingCharacters(in: .whitespaces),
                 phoneNumber: "+1\(digits)"
             )
@@ -504,7 +515,7 @@ struct PayAnyoneView: View {
     
     private func enableContacts() {
         Task {
-            await viewModel.load()
+            await contactVM.load()
             authStatus = CNContactStore.authorizationStatus(for: .contacts)
         }
     }
@@ -729,7 +740,7 @@ extension PayAnyoneView {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Eyebrow("Available to send")
-                Text("10.00")
+                Text(savingVM.accountList.map { "$\($0.data.totalAvailableBalance.toCurrencyString())" } ?? "$0.00")
                     .font(.system(size: 22, weight: .semibold).monospacedDigit())
                     .foregroundColor(Color.movo.textPrimary)
                     .tracking(-0.5)
@@ -739,11 +750,11 @@ extension PayAnyoneView {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .heavy))
-                    Text("New")
+                    Text("Add Contact")
                         .textStyle(Typography.button)
                 }
             }
-            .frame(width: 80)
+            .frame(width: 120)
             .buttonStyle(MovoCompactButtonStyle())
         }
         .padding(Spacing.lg)
@@ -776,47 +787,15 @@ extension PayAnyoneView {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.sm + 2) {
-                    ForEach(viewModel.apiContacts) { contact in
+                    ForEach(contactVM.mergedContacts) { contact in
                         QuickContactCell(contact: contact) {
                             //vm.selectContact(contact)
                         }
-                    }
-                    AddContactCell {
-                        //vm.addContact()
                     }
                 }
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, Spacing.xs)
             }
-        }
-    }
-    
-    private struct AddContactCell: View {
-        let action: () -> Void
-        var body: some View {
-            Button(action: action) {
-                VStack(spacing: Spacing.sm) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.movo.elevated.opacity(0.5))
-                        Circle()
-                            .strokeBorder(
-                                Color.movo.borderStrong,
-                                style: StrokeStyle(lineWidth: Stroke.hairline, dash: [3, 2])
-                            )
-                        Image(systemName: "plus")
-                            .font(.system(size: 18, weight: .regular))
-                            .foregroundColor(Color.movo.textTertiary)
-                    }
-                    .frame(width: 56, height: 56)
-                    
-                    Text("Add")
-                        .font(.system(size: 10, weight: .regular))
-                        .foregroundColor(Color.movo.textTertiary)
-                }
-                .frame(width: 64)
-            }
-            .buttonStyle(.plain)
         }
     }
     

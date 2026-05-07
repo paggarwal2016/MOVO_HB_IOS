@@ -36,7 +36,7 @@ enum Tab: Hashable {
     init?(action: String) {
         switch action {
         case "Home":      self = .home
-        case "SendMoney": self = .accounts
+        case "PayAnyone": self = .accounts
         case "Settings":  self = .profile
         default:          return nil
         }
@@ -217,7 +217,7 @@ private extension HomeTabBarView {
     func destination(for tab: Tab) -> some View {
         switch tab {
         case .home:     DashboardView(container: container, dashboardVM: dashboardVM, linkAccountVM: linkAccountVM)
-        case .accounts: PayAnyoneView()
+        case .accounts: PayAnyoneView(container: container)
         case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
         }
     }

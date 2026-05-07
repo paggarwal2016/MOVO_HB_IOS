@@ -10,75 +10,112 @@ import SwiftUI
 // MARK: - Transaction Mode
 
 enum TransactionMode {
-    case individual  // single card — card last 4 filter hidden
-    case common      // all cards  — card last 4 filter visible
+    case individual
+    case common
 }
 
 // MARK: - TransactionListView
 
 struct TransactionListView: View {
-
-    @StateObject private var viewModel: TransactionViewModel
-
+    
+    @StateObject private var transactionVM: TransactionViewModel
+    @SwiftUI.Environment(\.dismiss) private var dismiss
+    @FocusState private var searchFocused: Bool
+    
     private let accountId: Int
     private let mode: TransactionMode
-    @State private var activeFilter:  TransactionFilter
-    @State private var pendingFilter: TransactionFilter
-    @State private var showFilterSheet = false
-
+    @State private var activeFilter:    TransactionFilter
+    @State private var pendingFilter:   TransactionFilter
+    @State private var showFilterSheet  = false
+    @State private var activeChipFilter: TransactionChipFilter = .all
+    
     init(container: AppContainer, accountId: Int, mode: TransactionMode = .common) {
         self.accountId = accountId
         self.mode = mode
-        _viewModel = StateObject(wrappedValue: container.makeTransactionViewModel())
+        _transactionVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         let base = TransactionFilter(accountId: accountId)
         _activeFilter  = State(initialValue: base)
         _pendingFilter = State(initialValue: base)
     }
-
+    
+    // MARK: - Computed
+    
+    private var chipFilteredTransactions: [TransactionItem] {
+        guard activeChipFilter != .all else { return transactionVM.filteredTransactions }
+        return transactionVM.filteredTransactions.filter { activeChipFilter.matches($0) }
+    }
+    
+    private var displayGroups: [(label: String, date: Date, items: [TransactionItem])] {
+        let calendar  = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d, yyyy"
+        let grouped = Dictionary(grouping: chipFilteredTransactions) {
+            calendar.startOfDay(for: $0.date)
+        }
+        return grouped.map { date, items in
+            let label: String
+            if calendar.isDateInToday(date)          { label = "Today" }
+            else if calendar.isDateInYesterday(date) { label = "Yesterday" }
+            else                                     { label = formatter.string(from: date) }
+            return (label: label, date: date, items: items.sorted { $0.date > $1.date })
+        }
+        .sorted { $0.date > $1.date }
+    }
+    
+    private var totalMoneyIn: Decimal {
+        transactionVM.transactions.filter { $0.isCredit }.reduce(0) { $0 + $1.amount }
+    }
+    
+    private var totalMoneyOut: Decimal {
+        transactionVM.transactions.filter { !$0.isCredit }.reduce(0) { $0 + $1.amount }
+    }
+    
+    private var moneyInCount:  Int { transactionVM.transactions.filter { $0.isCredit }.count }
+    private var moneyOutCount: Int { transactionVM.transactions.filter { !$0.isCredit }.count }
+    
+    private var activeFilterCount: Int {
+        var n = 0
+        if !activeFilter.transactionStatus.isEmpty                    { n += 1 }
+        if !activeFilter.merchantName.isEmpty                          { n += 1 }
+        if !activeFilter.last4.isEmpty                                { n += 1 }
+        if activeFilter.minAmount != nil || activeFilter.maxAmount != nil { n += 1 }
+        if !activeFilter.fromDate.isEmpty || !activeFilter.toDate.isEmpty { n += 1 }
+        return n
+    }
+    
+    // MARK: - Body
+    
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Color.movo.background.ignoresSafeArea()
-            VStack(spacing: 0) {
-                searchBar
-                transactionContent
-            }
-
-            // MARK: Floating Action Button
-            Button {
-                pendingFilter   = activeFilter
-                showFilterSheet = true
-            } label: {
-                ZStack() {
-                    Circle()
-                        .fill(Color.movo.textSecondary)
-                        .frame(width: 56, height: 56)
-                        .shadow(color: Color.gray.opacity(0.35), radius: 12, x: 0, y: 5)
-                    Image("filter")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.movo.background)
-                    if activeFilter.hasActiveFilters {
-                        Circle()
-                            .fill(Color.movo.textDisabled)
-                            .frame(width: 12, height: 12)
-                            .offset(x: 6, y: -6)
-                    }
+        ZStack {
+            MovoBackground()
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    navBar
+                    monthSummary
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.lg - 2)
+                    searchAndFilterRow
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.md)
+                    filterChipsRow
+                        .padding(.bottom, Spacing.md - 2)
+                    
+                    transactionContent
                 }
             }
-            .padding(.trailing, 24)
-            .padding(.bottom, 28)
         }
-        .navigationTitle("Transactions")
-        .navigationBarTitleDisplayMode(.large)
-        .onAppear { applyNavBarAppearance() }
+        .background(Color.movo.background)
+        .preferredColorScheme(.dark)
         .sheet(isPresented: $showFilterSheet) {
             TransactionFilterView(filter: $pendingFilter, showLast4: mode == .common) {
                 activeFilter = pendingFilter
-                Task { await viewModel.loadTransactionsFiltered(filter: activeFilter) }
+                Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
             } onReset: {
                 pendingFilter = TransactionFilter(accountId: accountId)
                 activeFilter  = pendingFilter
-                Task { await viewModel.loadTransactionsFiltered(filter: activeFilter) }
+                Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
             } onCancel: {
                 showFilterSheet = false
@@ -86,249 +123,562 @@ struct TransactionListView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .task { await viewModel.loadTransactionsFiltered(filter: activeFilter) }
+        .task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
     }
-
-    // MARK: - Search Bar
-
-    private var searchBar: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .font(.system(size: 15))
-            TextField("Search transactions...", text: $viewModel.searchText)
-                .font(Typography.caption.font)
-                .autocorrectionDisabled()
-            if !viewModel.searchText.isEmpty {
-                Button { viewModel.searchText = "" } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
-
+    
     // MARK: - Content
-
+    
     @ViewBuilder
     private var transactionContent: some View {
-        if viewModel.state == .loading && viewModel.transactions.isEmpty {
+        if transactionVM.state == .loading && transactionVM.transactions.isEmpty {
             loadingSkeleton
-        } else if viewModel.groupedTransactions.isEmpty {
+        } else if displayGroups.isEmpty {
             emptyState
         } else {
             transactionList
         }
     }
-
+    
     // MARK: - Transaction List
-
+    
+    @ViewBuilder
+    private func dayTotalsLabel(for items: [TransactionItem]) -> some View {
+        let f: NumberFormatter = {
+            let nf = NumberFormatter()
+            nf.numberStyle = .decimal
+            nf.minimumFractionDigits = 2
+            nf.maximumFractionDigits = 2
+            return nf
+        }()
+        let totalOut = items.filter { !$0.isCredit }.reduce(Decimal(0)) { $0 + $1.amount }
+        let totalIn  = items.filter {  $0.isCredit }.reduce(Decimal(0)) { $0 + $1.amount }
+        
+        HStack(spacing: 5) {
+            if totalOut > 0 {
+                Text("−$\(f.string(from: NSDecimalNumber(decimal: totalOut)) ?? "0.00")")
+                    .font(.system(size: 10, weight: .regular).monospacedDigit())
+                    .foregroundColor(Color.movo.textDisabled)
+            }
+            if totalOut > 0 && totalIn > 0 {
+                Text("·")
+                    .font(.system(size: 10))
+                    .foregroundColor(Color.movo.textDisabled)
+            }
+            if totalIn > 0 {
+                Text("+$\(f.string(from: NSDecimalNumber(decimal: totalIn)) ?? "0.00")")
+                    .font(.system(size: 10, weight: .regular).monospacedDigit())
+                    .foregroundColor(Color.movo.textDisabled)
+            }
+        }
+    }
+    
     private var transactionList: some View {
-        List {
-            ForEach(viewModel.groupedTransactions, id: \.date) { group in
-                Section {
-                    ForEach(group.items) { item in
-                        transactionRow(item)
-                            .listRowInsets(EdgeInsets(top: 3, leading: 16, bottom: 3, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                    }
-                } header: {
+        LazyVStack(spacing: Spacing.lg) {
+            ForEach(displayGroups, id: \.date) { group in
+                VStack(spacing: Spacing.sm) {
+                    // Section header — scrolls with content
                     HStack {
-                        Text(group.label)
-                            .font(Typography.caption.font)
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
+                        Text(group.label.uppercased())
+                            .font(.system(size: 11, weight: .semibold))
+                            .tracking(0.8)
+                            .foregroundColor(Color.movo.textTertiary)
                         Spacer()
-                        Text("\(group.items.count)")
-                            .font(Typography.captionSmall.font)
-                            .foregroundStyle(.tertiary)
+                        dayTotalsLabel(for: group.items)
                     }
-                    .padding(.horizontal, 2)
-                }
-            }
-            Text("\(viewModel.filteredTransactions.count) transaction\(viewModel.filteredTransactions.count == 1 ? "" : "s")")
-                .font(Typography.caption.font)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .padding(.vertical, 8)
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .refreshable { await viewModel.loadTransactionsFiltered(filter: activeFilter) }
-    }
-
-    // MARK: - Transaction Row
-
-    private func transactionRow(_ item: TransactionItem) -> some View {
-        let isPending = item.status.lowercased() == "pending"
-        let isFailed  = item.status.lowercased() == "failed"
-                     || item.status.lowercased() == "declined"
-
-        return HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(iconColor(for: item.type).opacity(0.12))
-                    .frame(width: 46, height: 46)
-                Image(systemName: iconName(for: item.type))
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(iconColor(for: item.type))
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
-                    .font(Typography.body.font)
-                    .foregroundStyle(isFailed ? .secondary : .primary)
-                    .lineLimit(1)
-                    .strikethrough(isFailed)
-                HStack(spacing: 4) {
-                    Text(item.subtitle)
-                        .font(Typography.caption.font)
-                        .foregroundStyle(.secondary)
-                    Text("·")
-                        .foregroundStyle(.tertiary)
-                    Text(shortTime(item.date))
-                        .font(Typography.caption.font)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(item.amountFormatted)
-                    .font(Typography.body.font)
-                    .foregroundStyle(
-                        isFailed      ? Color.secondary  :
-                        item.isCredit ? Color.movo.success : Color.primary
+                    .padding(.horizontal, Spacing.lg)
+                    
+                    // Grouped card
+                    VStack(spacing: 0) {
+                        ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
+                            TransactionRow(item: item, action: {})
+                            
+                            if index < group.items.count - 1 {
+                                Rectangle()
+                                    .fill(Color.movo.border)
+                                    .frame(height: Stroke.hairline)
+                                    .padding(.leading, Spacing.md + 2 + 38 + Spacing.md)
+                            }
+                        }
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: Radius.heroCard)
+                            .fill(Color.movo.surface.opacity(0.85))
                     )
-                if isPending {
-                    statusBadge("Pending", color: .warningOrange)
-                } else if isFailed {
-                    statusBadge("Failed", color: .errorRed)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.heroCard)
+                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
+                    .padding(.horizontal, Spacing.lg)
                 }
             }
+            
+            Text("\(chipFilteredTransactions.count) transaction\(chipFilteredTransactions.count == 1 ? "" : "s")")
+                .font(Typography.caption.font)
+                .foregroundColor(Color.movo.textDisabled)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, Spacing.sm)
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 14)
-        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(.systemGray5), lineWidth: 0.5))
+        .padding(.bottom, Spacing.md)
     }
-
-    private func statusBadge(_ label: String, color: Color) -> some View {
-        Text(label.uppercased())
-            .font(Typography.eyebrow.font)
-            .foregroundStyle(color)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.12), in: Capsule())
+    
+    // MARK: - Transaction Row
+    
+    private struct TransactionRow: View {
+        let item:   TransactionItem
+        let action: () -> Void
+        
+        private var isPending: Bool { item.status.lowercased() == "pending" }
+        private var isFailed:  Bool {
+            item.status.lowercased() == "failed" || item.status.lowercased() == "declined"
+        }
+        
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: Spacing.md) {
+                    iconView
+                        .frame(width: 38, height: 38)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(item.title)
+                                .textStyle(Typography.bodyCompact)
+                                .foregroundColor(isFailed ? Color.movo.textTertiary : Color.movo.textPrimary)
+                                .lineLimit(1)
+                                .strikethrough(isFailed, color: Color.movo.textDisabled)
+                            
+                            statusPill
+                        }
+                        
+                        Text(combinedSubtitle)
+                            .textStyle(Typography.caption)
+                            .foregroundColor(Color.movo.textTertiary)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    amountView
+                }
+                .padding(.horizontal, Spacing.md + 2)
+                .padding(.vertical, 13)
+            }
+            .buttonStyle(.plain)
+        }
+        
+        // MARK: Icon
+        
+        @ViewBuilder
+        private var iconView: some View {
+            ZStack {
+                Circle()
+                    .fill(iconBackground)
+                Circle()
+                    .strokeBorder(iconBorderColor,
+                                  style: StrokeStyle(
+                                    lineWidth: iconBorderWidth,
+                                    dash: isPending ? [3, 2] : []
+                                  ))
+                Image(systemName: iconSystemName)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(iconForeground)
+            }
+        }
+        
+        private var iconSystemName: String {
+            switch item.type {
+            case .deposit:  return "arrow.down"
+            case .withdraw: return "arrow.up"
+            case .payment:  return "bag"
+            case .transfer: return "arrow.left.arrow.right"
+            case .unknown:  return "questionmark"
+            }
+        }
+        
+        private var iconBackground: AnyShapeStyle {
+            if item.type == .deposit {
+                return AnyShapeStyle(LinearGradient(
+                    colors: [Color.movo.accentTint, Color.movo.surface],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+            }
+            return AnyShapeStyle(LinearGradient(
+                colors: [Color.movo.elevated, Color.movo.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ))
+        }
+        
+        private var iconForeground: Color {
+            if isFailed  { return Color.movo.danger }
+            if isPending { return Color.movo.warning }
+            return item.type == .deposit ? Color.movo.accent : Color.movo.textSecondary
+        }
+        
+        private var iconBorderColor: Color {
+            if isFailed  { return Color.movo.danger.opacity(0.5) }
+            if isPending { return Color.movo.warning }
+            return item.type == .deposit ? Color.movo.accent : Color.movo.borderStrong
+        }
+        
+        private var iconBorderWidth: CGFloat { isPending ? Stroke.thin : Stroke.hairline }
+        
+        // MARK: Status Pill
+        
+        @ViewBuilder
+        private var statusPill: some View {
+            if isPending {
+                StatusPill("Pending", variant: .warning)
+                    .scaleEffect(0.85)
+                    .frame(height: 14)
+            } else if isFailed {
+                StatusPill("Failed", variant: .danger)
+                    .scaleEffect(0.85)
+                    .frame(height: 14)
+            }
+        }
+        
+        // MARK: Subtitle
+        
+        private var combinedSubtitle: String {
+            let f = DateFormatter()
+            f.dateFormat = "h:mm a"
+            let time = f.string(from: item.date)
+            return item.subtitle.isEmpty ? time : "\(item.subtitle) · \(time)"
+        }
+        
+        // MARK: Amount
+        
+        private var amountView: some View {
+            Text(item.amountFormatted)
+                .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                .foregroundColor(isFailed ? Color.movo.textDisabled : (item.isCredit ? Color.movo.accent : Color.movo.textPrimary))
+                .strikethrough(isFailed, color: Color.movo.textDisabled)
+        }
     }
-
+    
+    
+    
+    
+    
+    
+    
     // MARK: - Empty State
-
+    
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        let noFilters = transactionVM.searchText.isEmpty
+        && !activeFilter.hasActiveFilters
+        && activeChipFilter == .all
+        return VStack(spacing: Spacing.lg) {
             Spacer()
             Image(systemName: "list.bullet.rectangle.portrait")
-                .font(.system(size: 52, weight: .ultraLight))
-                .foregroundStyle(Color.movo.textPrimary)
-            VStack(spacing: 6) {
-                Text(viewModel.searchText.isEmpty && !activeFilter.hasActiveFilters
-                     ? "No transactions yet"
-                     : "No results found")
-                    .font(Typography.cardHero.font)
-                    .foregroundStyle(Color.movo.textPrimary)
-                Text(viewModel.searchText.isEmpty && !activeFilter.hasActiveFilters
+                .font(.system(size: 40, weight: .ultraLight))
+                .foregroundColor(Color.movo.textTertiary)
+            
+            VStack(spacing: Spacing.sm) {
+                Text(noFilters ? "No transactions yet" : "No results found")
+                    .textStyle(Typography.cardTitle)
+                    .foregroundColor(Color.movo.textPrimary)
+                Text(noFilters
                      ? "Your transactions will appear here once activity begins."
                      : "Try adjusting your search or clearing the filters.")
-                    .font(Typography.caption.font)
-                    .foregroundStyle(Color.movo.textTertiary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                .font(Typography.caption.font)
+                .foregroundColor(Color.movo.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.huge)
             }
-            if activeFilter.hasActiveFilters {
-                Button("Clear Filters") {
-                    activeFilter  = TransactionFilter(accountId: accountId)
-                    pendingFilter = activeFilter
-                    Task { await viewModel.loadTransactionsFiltered(filter: activeFilter) }
+            
+            if activeFilter.hasActiveFilters || activeChipFilter != .all {
+                Button {
+                    activeFilter      = TransactionFilter(accountId: accountId)
+                    pendingFilter     = activeFilter
+                    activeChipFilter  = .all
+                    Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
+                } label: {
+                    Text("Clear Filters")
+                        .font(Typography.button.font)
+                        .foregroundColor(Color.movo.background)
+                        .padding(.horizontal, Spacing.xl)
+                        .padding(.vertical, Spacing.md)
+                        .background(Color.movo.accent, in: Capsule())
                 }
-                .buttonStyle(.borderedProminent)
-                .foregroundStyle(Color.movo.background)
-                .tint(Color.movo.textSecondary)
+                .buttonStyle(.plain)
             }
             Spacer()
         }
     }
-
+    
     // MARK: - Loading Skeleton
-
+    
     private var loadingSkeleton: some View {
-        List {
+        LazyVStack(spacing: 0) {
             ForEach(0..<8, id: \.self) { _ in
-                HStack(spacing: 14) {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray5))
-                        .frame(width: 46, height: 46)
+                HStack(spacing: Spacing.md) {
+                    Circle()
+                        .fill(Color.movo.elevated)
+                        .frame(width: 38, height: 38)
                     VStack(alignment: .leading, spacing: 6) {
-                        RoundedRectangle(cornerRadius: 4).fill(Color(.systemGray5)).frame(width: 140, height: 13)
-                        RoundedRectangle(cornerRadius: 4).fill(Color(.systemGray6)).frame(width: 90,  height: 11)
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.movo.elevated)
+                            .frame(width: 130, height: 12)
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.movo.surface)
+                            .frame(width: 85, height: 10)
                     }
                     Spacer()
-                    RoundedRectangle(cornerRadius: 4).fill(Color(.systemGray5)).frame(width: 60, height: 13)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.movo.elevated)
+                        .frame(width: 55, height: 12)
                 }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 14)
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+                .padding(.horizontal, Spacing.md + 2)
+                .padding(.vertical, 13)
+                .padding(.horizontal, Spacing.lg)
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
         .allowsHitTesting(false)
     }
+    
+}
 
-    // MARK: - Icon Helpers
+// MARK: - Extension: Nav, Summary, Search, Filter
 
-    private func iconName(for type: TransactionType) -> String {
-        switch type {
-        case .deposit:  return "arrow.down.circle.fill"
-        case .withdraw: return "arrow.up.circle.fill"
-        case .payment:  return "creditcard.fill"
-        case .transfer: return "arrow.left.arrow.right.circle.fill"
-        case .unknown:  return "questionmark.circle.fill"
+extension TransactionListView {
+    
+    private var navBar: some View {
+        HStack {
+            CircularNavButton(systemName: "chevron.left") { dismiss() }
+            Spacer()
+            Text("Transactions")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+            Spacer()
+            Color.clear.frame(width: 32, height: 32)
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.lg - 2)
+        .padding(.bottom, Spacing.md)
+    }
+    
+    private var monthSummary: some View {
+        HStack(spacing: Spacing.lg) {
+            SummaryCell(label: "Money in · \(moneyInCount)",
+                        value: totalMoneyIn,
+                        isInflow: true)
+            Rectangle()
+                .fill(Color.movo.border)
+                .frame(width: Stroke.hairline, height: 36)
+            SummaryCell(label: "Money out · \(moneyOutCount)",
+                        value: totalMoneyOut,
+                        isInflow: false)
+        }
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.surface.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        )
+    }
+    
+    private var searchAndFilterRow: some View {
+        HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(Color.movo.textTertiary)
+                
+                TextField("",
+                          text: $transactionVM.searchText,
+                          prompt: Text("Search transactions, merchants…")
+                    .foregroundColor(Color.movo.textDisabled))
+                .textStyle(Typography.bodyCompact)
+                .foregroundColor(Color.movo.textPrimary)
+                .focused($searchFocused)
+            }
+            .padding(.horizontal, Spacing.md + 2)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.button)
+                    .fill(Color.movo.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .strokeBorder(searchFocused ? Color.movo.accentBorder : Color.movo.border,
+                                          lineWidth: Stroke.hairline)
+                    )
+            )
+            
+            FilterIconButton(activeCount: activeFilterCount) {
+                pendingFilter   = activeFilter
+                showFilterSheet = true
+            }
         }
     }
-
-    private func iconColor(for type: TransactionType) -> Color {
-        switch type {
-        case .deposit:  return .successGreen
-        case .withdraw: return .errorRed
-        case .payment:  return .softBlue
-        case .transfer: return .accentPurple
-        case .unknown:  return Color(.systemGray3)
+    
+    private var filterChipsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(TransactionChipFilter.allCases) { chip in
+                    FilterChip(
+                        filter:   chip,
+                        isActive: activeChipFilter == chip,
+                        count:    chip == .all ? transactionVM.totalCount : nil,
+                        action:   { activeChipFilter = chip }
+                    )
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
         }
     }
-
-    private func shortTime(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "h:mm a"
-        return f.string(from: date)
+    
+    // MARK: - Nested Views
+    
+    private struct FilterChip: View {
+        let filter:   TransactionChipFilter
+        let isActive: Bool
+        let count:    Int?
+        let action:   () -> Void
+        
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: 5) {
+                    if let icon = filter.systemIcon {
+                        Image(systemName: icon)
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    Text(filter.label)
+                        .font(.system(size: 11, weight: .medium))
+                    
+                    if let count {
+                        Text("\(count)")
+                            .font(.system(size: 9, weight: .semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(
+                                Capsule().fill(isActive ? Color.movo.accent : Color.movo.accent.opacity(0.15))
+                            )
+                            .foregroundColor(isActive ? Color.movo.background : Color.movo.accent)
+                    }
+                }
+                .foregroundColor(isActive ? Color.movo.accent : Color.movo.textSecondary)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule()
+                        .fill(isActive ? Color.movo.accentTint : Color.movo.elevated.opacity(0.6))
+                        .overlay(
+                            Capsule().strokeBorder(
+                                isActive ? Color.movo.accentBorder : Color.movo.border,
+                                lineWidth: Stroke.hairline
+                            )
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+        }
     }
+    
+    private struct SummaryCell: View {
+        let label:    String
+        let value:    Decimal
+        let isInflow: Bool
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: Spacing.xs + 2) {
+                Eyebrow(label)
+                Text(formattedValue)
+                    .font(.system(size: 16, weight: .semibold).monospacedDigit())
+                    .foregroundColor(isInflow ? Color.movo.accent : Color.movo.textPrimary)
+                    .tracking(-0.2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        
+        private var formattedValue: String {
+            let f = NumberFormatter()
+            f.numberStyle = .decimal
+            f.minimumFractionDigits = 2
+            f.maximumFractionDigits = 2
+            let abs = NSDecimalNumber(decimal: Swift.abs(value))
+            let prefix = isInflow ? "+" : "−"
+            return "\(prefix)$\(f.string(from: abs) ?? "0.00")"
+        }
+    }
+    
+    private struct FilterIconButton: View {
+        let activeCount: Int
+        let action: () -> Void
+        
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: "line.3.horizontal.decrease")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
+                    .frame(width: 38, height: 38)
+                    .background(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .fill(Color.movo.surface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Radius.button)
+                                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                            )
+                    )
+                    .overlay(alignment: .topTrailing) {
+                        if activeCount > 0 {
+                            Text("\(activeCount)")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(Color.movo.background)
+                                .frame(width: 14, height: 14)
+                                .background(
+                                    Circle()
+                                        .fill(Color.movo.accent)
+                                        .overlay(Circle().strokeBorder(Color.movo.background, lineWidth: 1.5))
+                                )
+                                .offset(x: 4, y: -4)
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
 
-    private func applyNavBarAppearance() {
-        let titleColor = MovoTheme.color.textPrimary.uiColor
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.titleTextAttributes = [.foregroundColor: titleColor]
-        appearance.largeTitleTextAttributes = [.foregroundColor: titleColor]
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+// MARK: - Chip Filter
+
+enum TransactionChipFilter: String, CaseIterable, Identifiable, Sendable {
+    case all, moneyIn, moneyOut, cardPurchases, transfers, pending
+    
+    var id: String { rawValue }
+    
+    var label: String {
+        switch self {
+        case .all:           return "All"
+        case .moneyIn:       return "Money in"
+        case .moneyOut:      return "Money out"
+        case .cardPurchases: return "Card purchases"
+        case .transfers:     return "Transfers"
+        case .pending:       return "Pending"
+        }
+    }
+    
+    var systemIcon: String? {
+        switch self {
+        case .moneyIn:  return "arrow.down.left"
+        case .moneyOut: return "arrow.up.right"
+        default:        return nil
+        }
+    }
+    
+    func matches(_ item: TransactionItem) -> Bool {
+        switch self {
+        case .all:           return true
+        case .moneyIn:       return item.isCredit
+        case .moneyOut:      return !item.isCredit
+        case .cardPurchases: return item.type == .payment
+        case .transfers:     return item.type == .transfer
+        case .pending:       return item.status.lowercased() == "pending"
+        }
     }
 }
