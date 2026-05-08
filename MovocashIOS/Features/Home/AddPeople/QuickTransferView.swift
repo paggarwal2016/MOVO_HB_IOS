@@ -18,6 +18,8 @@ struct QuickTransferView: View {
     @State private var amountText = ""
     @State private var descriptionText = ""
     @State private var selectedAccount: SavingsAccountInfo?
+    @State private var showConfirmSheet = false
+    @State private var successData: SuccessConfirmation?
 
     init(
         contact: ContactRecord,
@@ -68,6 +70,31 @@ struct QuickTransferView: View {
         }
         .task { await loadAccounts() }
         .globalAlert()
+        .sheet(isPresented: $showConfirmSheet) {
+            ConfirmationBottomSheet(
+                channel: .peer,
+                amount: amountText,
+                fromName: selectedAccount.map { $0.nickname ?? $0.clientName } ?? "—",
+                fromMask: selectedAccount?.maskedAccountNumber,
+                toName: contact.nickname ?? contact.phoneNumber ?? "—",
+                toMask: contact.phoneNumber.map { "••\($0.suffix(4))" },
+                isLoading: transVM.state == .loading,
+                onCancel: { showConfirmSheet = false },
+                onConfirm: { Task { await sendMoney() } }
+            )
+            .padding(.top, 30)
+            .presentationDetents([.height(420)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(24)
+        }
+        .fullScreenCover(item: $successData) { data in
+            SuccessConfirmationView(
+                viewModel: SuccessConfirmationViewModel(success: data) {
+                    successData = nil
+                    dismiss()
+                }
+            )
+        }
     }
 
     // MARK: - Contact Card
@@ -202,7 +229,7 @@ struct QuickTransferView: View {
     private var sendButton: some View {
         Button {
             UIApplication.shared.dismissKeyboard()
-            Task { await sendMoney() }
+            showReview()
         } label: {
             Text("Send Money")
                 .font(.system(size: 15, weight: .medium))
@@ -237,9 +264,7 @@ struct QuickTransferView: View {
         }
     }
 
-    private func sendMoney() async {
-        guard let fromAccount = selectedAccount else { return }
-        
+    private func showReview() {
         let rawPhone = contact.phoneNumber ?? ""
         let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
         let sanitized = PhoneNumberValidator.sanitize(withCountry)
@@ -247,7 +272,15 @@ struct QuickTransferView: View {
             AlertManager.shared.showError("Enter a valid phone number")
             return
         }
+        showConfirmSheet = true
+    }
 
+    private func sendMoney() async {
+        guard let fromAccount = selectedAccount else { return }
+
+        let rawPhone = contact.phoneNumber ?? ""
+        let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
+        let sanitized = PhoneNumberValidator.sanitize(withCountry)
         let normalizedPhone = PhoneNumberValidator.normalize(sanitized)
 
         let request = TransactionRequest.Internal(
@@ -261,7 +294,19 @@ struct QuickTransferView: View {
             nickname: contact.nickname ?? ""
         )
         guard await transVM.submitInternalTransfer(request: request) else { return }
-        ToastManager.shared.show("Money sent successfully.", style: .success, position: .bottom)
-        dismiss()
+
+        showConfirmSheet = false
+        let dateText = Date.now.formatted(date: .long, time: .shortened)
+        successData = SuccessConfirmation(
+            channel: .peer,
+            amount: Decimal(string: amountText) ?? 0,
+            fromAccountName: fromAccount.nickname ?? fromAccount.clientName,
+            fromAccountMask: fromAccount.maskedAccountNumber,
+            toAccountName: contact.nickname ?? contact.phoneNumber ?? "",
+            toAccountMask: nil,
+            arrivesText: "Instantly",
+            dateText: dateText,
+            referenceCode: "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"
+        )
     }
 }

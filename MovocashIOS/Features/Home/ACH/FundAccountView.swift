@@ -27,6 +27,7 @@ struct FundAccountView: View {
     @State private var amount: String = "0"
     @State private var showConfirmSheet: Bool = false
     @State private var isFromExpanded: Bool = false
+    @State private var successData: SuccessConfirmation?
     @FocusState private var isAmountFocused: Bool
 
     private var enteredAmount: Decimal { Decimal(string: amount) ?? 0 }
@@ -90,11 +91,54 @@ struct FundAccountView: View {
             if !focused && amount.isEmpty { amount = "0" }
         }
         .sheet(isPresented: $showConfirmSheet) {
-            confirmationSheet
-                .padding(.top, 30)
-                .presentationDetents([.height(420)])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(24)
+            ConfirmationBottomSheet(
+                channel: .external,
+                amount: amount,
+                fromName: selectedAccount?.accountName ?? "—",
+                fromMask: selectedAccount.map { "••\($0.accountNumber.suffix(4))" },
+                toName: primaryAccount.displayName,
+                toMask: primaryAccount.maskedAccountNumber,
+                isLoading: vm.state == .loading,
+                onCancel: { showConfirmSheet = false },
+                onConfirm: {
+                    guard let account = selectedAccount else { return }
+                    Task {
+                        let request = ACHRequest(
+                            amount: Int(amount) ?? 0,
+                            achAccountId: account.achAccountId,
+                            userAction: "SUBMITS-ACH-DEPOSIT"
+                        )
+                        let success = await vm.initiateTransfer(request: request)
+                        if success {
+                            showConfirmSheet = false
+                            let dateText = Date.now.formatted(date: .long, time: .shortened)
+                            successData = SuccessConfirmation(
+                                channel: .external,
+                                amount: Decimal(string: amount) ?? 0,
+                                fromAccountName: account.accountName,
+                                fromAccountMask: "••\(account.accountNumber.suffix(4))",
+                                toAccountName: primaryAccount.displayName,
+                                toAccountMask: primaryAccount.maskedAccountNumber,
+                                arrivesText: "1–3 business days",
+                                dateText: dateText,
+                                referenceCode: "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"
+                            )
+                        }
+                    }
+                }
+            )
+            .padding(.top, 30)
+            .presentationDetents([.height(420)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(24)
+        }
+        .fullScreenCover(item: $successData) { data in
+            SuccessConfirmationView(
+                viewModel: SuccessConfirmationViewModel(success: data) {
+                    successData = nil
+                    dismiss()
+                }
+            )
         }
     }
 
@@ -446,117 +490,4 @@ struct FundAccountView: View {
         isAmountFocused = true
     }
 
-    // MARK: - Confirmation Sheet
-
-    private var confirmationSheet: some View {
-        VStack(alignment: .leading, spacing: 0) {
-
-            // Title
-            Text("Review Transfer")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(Color.movo.textPrimary)
-                .padding(.top, Spacing.lg)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.bottom, Spacing.sm)
-
-            // Amount — mirrors main amountDisplay style
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text("$")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(Color.movo.textSecondary)
-                    .baselineOffset(14)
-                let parts = amount.split(separator: ".")
-                Text(parts.first.map(String.init) ?? "0")
-                    .font(.system(size: 48, weight: .bold).monospacedDigit())
-                    .foregroundColor(Color.movo.textPrimary)
-                Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                    .font(.system(size: 22, weight: .semibold).monospacedDigit())
-                    .foregroundColor(Color.movo.textSecondary)
-                    .baselineOffset(14)
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.lg)
-
-            // Detail card — same surface + border style as transferPanel
-            VStack(spacing: 0) {
-                confDetailRow(label: "FROM",
-                              title: selectedAccount?.accountName ?? "—",
-                              subtitle: selectedAccount.map { "••\($0.accountNumber.suffix(4))" })
-
-                Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
-                    .padding(.horizontal, Spacing.lg)
-
-                confDetailRow(label: "TO",
-                              title: primaryAccount.displayName,
-                              subtitle: primaryAccount.maskedAccountNumber)
-
-                Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
-                    .padding(.horizontal, Spacing.lg)
-
-                confDetailRow(label: "AVAILABLE",
-                              title: "1–3 business days",
-                              subtitle: nil)
-            }
-            .background(
-                RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .fill(Color.movo.surface.opacity(0.85))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.heroCard)
-                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                    )
-            )
-            .padding(.horizontal, Spacing.lg)
-
-            Spacer()
-
-            HStack(spacing: Spacing.sm) {
-                PrimaryButton(title: "Cancel", backgroundColor: Color.movo.surface, textColor: Color.movo.textSecondary) {
-                    showConfirmSheet = false
-                }
-                PrimaryButton(title: "Confirm", backgroundColor: Color.movo.accent, textColor: .black, isLoading: vm.state == .loading) {
-                    guard let account = selectedAccount else { return }
-                    Task {
-                        let request = ACHRequest(
-                            amount: Int(amount) ?? 0,
-                            achAccountId: account.achAccountId,
-                            userAction: "SUBMITS-ACH-DEPOSIT"
-                        )
-                        let success = await vm.initiateTransfer(request: request)
-                        if success {
-                            showConfirmSheet = false
-                            ToastManager.shared.show("Transfer initiated successfully.", style: .success, position: .bottom)
-                            dismiss()
-                        }
-                    }
-                }
-                .frame(height: 52)
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.md)
-            .padding(.bottom, Spacing.xl)
-        }
-        .preferredColorScheme(.dark)
-    }
-
-    private func confDetailRow(label: String, title: String, subtitle: String?) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(0.6)
-                    .foregroundColor(Color.movo.textTertiary)
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color.movo.textPrimary)
-                if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(Color.movo.textTertiary)
-                }
-            }
-            Spacer()
-        }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.md)
-    }
 }
