@@ -24,8 +24,8 @@ struct PayAnyoneView: View {
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
-    @State private var showAddContact = false
-    @State private var wentToSettings = false
+    @State private var showCreateContactScreen = false
+    @State private var selectedFrequent: ContactRecord? = nil
     
     init(container: AppContainer, selectedTab: Binding<Tab>) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
@@ -62,6 +62,7 @@ struct PayAnyoneView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     navBar
+                        .padding(.bottom, Spacing.lg)
                     if hasAnyData {
                         balanceCard
                             .padding(.horizontal, Spacing.lg)
@@ -80,7 +81,7 @@ struct PayAnyoneView: View {
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 18)
                             
-                            permissionCard
+                            permissionCompactCard
                                 .padding(.horizontal, 14)
                                 .padding(.bottom, 18)
                         }
@@ -91,8 +92,6 @@ struct PayAnyoneView: View {
                             .padding(.bottom, 12)
                         introBlock
                             .padding(.bottom, 18)
-                        
-                        
                         
                         addContactView
                             .padding(.horizontal, 14)
@@ -107,36 +106,25 @@ struct PayAnyoneView: View {
                     Spacer().frame(height: 80)
                 }
             }
-            
-            if showAddContact {
-                ZStack {
-                    
-                    // Dim background
-                    Color.black.opacity(0.50)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation {
-                                showAddContact = false
-                            }
-                        }
-                    
-                    // Center Card
-                    addContactView
-                        .background(Color.movo.background)
-                        .frame(maxWidth: 360)
-                        .padding(.horizontal, 20)
-                }
-                .zIndex(10)
-            }
-            
+                        
             if contactVM.state == .loading && !hasAnyData {
                 SpinnerView()
             }
         }
+        .blur(radius: showCreateContactScreen ? 6 : 0)
+        .animation(.easeInOut(duration: 0.25), value: showCreateContactScreen)
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
         .navigationDestination(for: ContactRecord.self) { contact in
             QuickTransferView(contact: contact, container: container)
+        }
+        .navigationDestination(isPresented: Binding(
+            get: { selectedFrequent != nil },
+            set: { if !$0 { selectedFrequent = nil } }
+        )) {
+            if let contact = selectedFrequent {
+                QuickTransferView(contact: contact, container: container)
+            }
         }
         .onAppear {
             Task {
@@ -156,47 +144,34 @@ struct PayAnyoneView: View {
                 Task { await contactVM.load() }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            guard wentToSettings else { return }
-            wentToSettings = false
-            lockManager.resetToUnlocked()
-            authStatus = CNContactStore.authorizationStatus(for: .contacts)
-            if isAuthorized {
-                if contactVM.contacts.isEmpty {
-                    Task { await contactVM.load() }
+        .sheet(isPresented: $showCreateContactScreen) {
+            AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
+                Task {
+                    let success = await contactVM.createContact(
+                        nickname: data.nickname,
+                        phoneNumber: data.phoneE164
+                    )
+                    contactVM.clear()
+                    showCreateContactScreen = false
+                    if success {
+                        ToastManager.shared.show(
+                            "\(data.nickname) added to contacts",
+                            style: .success,
+                            position: .bottom
+                        )
+                    }
                 }
-            } else {
-                selectedTab = .home
-            }
+            }, onCancel: { showCreateContactScreen = false })
+            .presentationDetents([.height(320)])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.movo.surface)
         }
     }
     
     private var addContactView: some View {
-        AddContactCardView(
-            nickname: $nickname,
-            phoneNumber: $phoneNumber,
-            isLoading: contactVM.state == .loading,
-            isFormValid: isFormValid,
-            onAdd: {
-                let digits = PhoneFormatter1.formatUS(phoneNumber)
-                
-                Task {
-                    let success = await contactVM.createContact(
-                        nickname: nickname.trimmingCharacters(in: .whitespaces),
-                        phoneNumber: "+1\(PhoneFormatter1.rawDigits(digits))"
-                    )
-                    
-                    if success {
-                        nickname = ""
-                        phoneNumber = ""
-                        showAddContact = false
-                    }
-                }
-            },
-            onCancel: {
-                showAddContact = false
-            }
-        )
+        AddContactActionCard(action: {
+            showCreateContactScreen = true
+        })
     }
     
     // MARK: - Sections
@@ -225,105 +200,6 @@ struct PayAnyoneView: View {
         .padding(.horizontal, 24)
     }
     
-    private var addContactCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("ADD NEW CONTACT")
-                .font(Typography.eyebrow.font)
-                .tracking(0.8)
-                .foregroundColor(Color.movo.textTertiary)
-            
-            TextField("", text: $nickname,
-                      prompt: Text("Nickname (e.g., Mom, Roommate)")
-                .foregroundColor(Color.movo.textDisabled))
-            .font(Typography.subtitle.font)
-            .foregroundColor(Color.movo.textPrimary)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.movo.surface)
-                    .overlay(RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color.movo.elevated, lineWidth: 0.5))
-            )
-            
-            HStack(spacing: 10) {
-                Text("+1")
-                    .font(Typography.subtitle.font)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .padding(.trailing, 10)
-                    .overlay(
-                        Rectangle()
-                            .fill(Color.movo.elevated)
-                            .frame(width: 0.5)
-                            .padding(.vertical, 4),
-                        alignment: .trailing
-                    )
-                TextField("", text: $phoneNumber,
-                          prompt: Text("(555) 000-0000")
-                    .foregroundColor(Color.movo.textDisabled))
-                .font(Typography.subtitle.font)
-                .foregroundColor(Color.movo.textPrimary)
-                .keyboardType(.phonePad)
-                .onChange(of: phoneNumber) { newValue in
-                    let digits = String(newValue.filter(\.isNumber).prefix(10))
-                    let formatted = formatUSPhone(digits)
-                    if phoneNumber != formatted { phoneNumber = formatted }
-                }
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.movo.surface)
-                    .overlay(RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color.movo.accentBorder, lineWidth: 0.5))
-            )
-            
-            HStack(spacing: 8) {
-                Button {
-                    nickname = ""
-                    phoneNumber = ""
-                } label: {
-                    Text("Cancel")
-                        .font(Typography.button.font)
-                        .foregroundColor(Color.movo.textSecondary)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.movo.elevated.opacity(0.6))
-                                .overlay(RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(Color.movo.elevated, lineWidth: 0.5))
-                        )
-                }
-                
-                Button(action: addContact) {
-                    Group {
-                        if contactVM.state == .loading {
-                            ProgressView().tint(Color.movo.background).scaleEffect(0.8)
-                        } else {
-                            Text("Add Contact").font(Typography.button.font).foregroundColor(Color.movo.background)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(isFormValid ? Color.movo.accent : Color.movo.accent.opacity(0.35))
-                    )
-                }
-                .disabled(!isFormValid || contactVM.state == .loading)
-            }
-            .padding(.top, 2)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.movo.elevated.opacity(0.5))
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(Color.movo.elevated, lineWidth: 0.5))
-        )
-    }
     
     private var orDivider: some View {
         HStack(spacing: 12) {
@@ -341,51 +217,72 @@ struct PayAnyoneView: View {
         if hasAnyData {
             contactsListCard
         } else {
-            permissionCard
+            permissionCompactCard
         }
     }
     
     // MARK: - Permission Card
     
-    private var permissionCard: some View {
-        VStack(spacing: 14) {
-            ContactsPermissionIllustration()
-                .frame(width: 200, height: 100)
+    private var permissionCompactCard: some View {
+        
+        HStack(alignment: .top, spacing: Spacing.md + 2) {
             
-            VStack(spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.lg)
+                    .fill(Color.movo.accentTint)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.lg)
+                            .strokeBorder(Color.movo.accentBorder,
+                                          lineWidth: Stroke.hairline)
+                    )
+                Image(systemName: "person.2.badge.plus")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(Color.movo.accent)
+            }
+            .frame(width: 44, height: 44)
+            
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Movo is better with friends")
-                    .font(Typography.cardTitle.font)
+                    .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
-                Text(isDenied
-                     ? "Contact access was denied. Open Settings to allow Movo to read your contacts."
-                     : "Grant access to your contacts to find people on Movo and send money instantly.")
-                .font(Typography.captionSmall.font)
-                .foregroundColor(Color.movo.textTertiary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-                .padding(.horizontal, 8)
+                
+                Text("Find people you know already on Movo and send instantly.")
+                    .textStyle(Typography.captionSmall)
+                    .foregroundColor(Color.movo.textTertiary)
+                    .lineSpacing(1.5)
+                    .padding(.bottom, Spacing.sm + 2)
+                
+                HStack(spacing: Spacing.md + 2) {
+                    Button(action:  isDenied ? openSettings : enableContacts) {
+                        Text("Enable Contacts")
+                            .textStyle(Typography.button)
+                            .foregroundColor(Color.movo.onAccent)
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.vertical, 9)
+                            .background(
+                                RoundedRectangle(cornerRadius: Radius.button)
+                                    .fill(Color.movo.accent)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            
-            Button(action: isDenied ? openSettings : enableContacts) {
-                Text(isDenied ? "Open Settings" : "Enable Contacts")
-                    .font(Typography.button.font)
-                    .foregroundColor(Color.movo.background)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: 200)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.movo.accent))
-            }
-            .padding(.top, 2)
         }
-        .padding(.vertical, 18)
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity)
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: Radius.heroCard)
                 .fill(Color.movo.surface.opacity(0.85))
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(Color.movo.elevated, lineWidth: 0.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
         )
     }
+    
+    
+    
+    
     
     // MARK: - Contacts List
     
@@ -553,18 +450,8 @@ struct PayAnyoneView: View {
     
     private func openSettings() {
         lockManager.notifyWillOpenPermissionSettings()
-        wentToSettings = true
         if let url = URL(string: UIApplication.openSettingsURLString) {
             openURL(url)
-        }
-    }
-    
-    private func formatUSPhone(_ digits: String) -> String {
-        switch digits.count {
-        case 0:       return ""
-        case 1...3:   return "(\(digits)"
-        case 4...6:   return "(\(digits.prefix(3))) \(digits.dropFirst(3))"
-        default:      return "(\(digits.prefix(3))) \(digits.dropFirst(3).prefix(3))-\(digits.dropFirst(6))"
         }
     }
     
@@ -580,6 +467,22 @@ struct PayAnyoneView: View {
         .padding(.top, Spacing.lg - 2)
         .padding(.bottom, Spacing.md)
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 }
 
 // MARK: - Hero Illustration (two figures + flying bill)
@@ -783,7 +686,7 @@ private struct FloatingAvatar: View {
 
 
 extension PayAnyoneView {
-    
+
     private var balanceCard: some View {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -794,7 +697,7 @@ extension PayAnyoneView {
                     .tracking(-0.5)
             }
             Spacer()
-            Button(action: { withAnimation { showAddContact = true } }) {
+            Button(action: { withAnimation { showCreateContactScreen = true } }) {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .heavy))
@@ -823,7 +726,7 @@ extension PayAnyoneView {
     private var frequentContactsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Eyebrow("Frequent")
+                Eyebrow("RECENT PAY")
                 Spacer()
                 Button(action: {}) {
                     Text("See all")
@@ -837,7 +740,15 @@ extension PayAnyoneView {
                 HStack(spacing: Spacing.sm + 2) {
                     ForEach(contactVM.frequents) { contact in
                         QuickContactCell(contact: contact) {
-                            //vm.selectContact(contact)
+                            selectedFrequent = ContactRecord(
+                                id: contact.id,
+                                isFav: false,
+                                nickname: contact.nickname,
+                                createdAt: Date(),
+                                phoneNumber: contact.phoneNumber,
+                                isAdded: false,
+                                updatedAt: Date()
+                            )
                         }
                     }
                 }

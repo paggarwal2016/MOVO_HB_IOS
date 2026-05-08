@@ -8,27 +8,27 @@
 import SwiftUI
 
 struct FundAccountView: View {
-    
+
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @StateObject private var vm: ACHViewModel
+    @ObservedObject private var vm: ACHViewModel
     @StateObject private var achVM: PlaidAchViewModel
-    
+
     let primaryAccount: SavingsAccountInfo
-    /// Called when the user taps "Connect Bank Account" on the empty state.
     let onConnectBank: () -> Void
-    
-    init(container: AppContainer, primaryAccount: SavingsAccountInfo, onConnectBank: @escaping () -> Void) {
-        _vm = StateObject(wrappedValue: container.makeACHViewModel())
+
+    init(container: AppContainer, vm: ACHViewModel, primaryAccount: SavingsAccountInfo, onConnectBank: @escaping () -> Void) {
+        self.vm = vm
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         self.primaryAccount = primaryAccount
         self.onConnectBank = onConnectBank
     }
-    
+
     @State private var selectedAccount: ACHAccount?
-    @State private var amount: String = ""
-    @State private var isAccountPickerExpanded: Bool = false
+    @State private var amount: String = "0"
     @State private var showConfirmSheet: Bool = false
-    
+    @State private var isFromExpanded: Bool = false
+    @FocusState private var isAmountFocused: Bool
+
     private var enteredAmount: Decimal { Decimal(string: amount) ?? 0 }
 
     private var amountExceedsBalance: Bool {
@@ -37,345 +37,483 @@ struct FundAccountView: View {
     }
 
     private var isFormValid: Bool {
-        selectedAccount != nil &&
-        enteredAmount > 0 &&
-        !amountExceedsBalance
+        selectedAccount != nil && enteredAmount > 0 && !amountExceedsBalance
     }
-    
+
+    private var sortedAccounts: [ACHAccount] {
+        vm.accounts.sorted { $0.isDefault && !$1.isDefault }
+    }
+
+    // MARK: - Body
+
     var body: some View {
-        NavigationStack {
-            Group {
+        ZStack(alignment: .bottom) {
+            MovoBackground()
+
+            if vm.state == .loading && vm.accounts.isEmpty {
+                SpinnerView()
+            } else {
+                VStack(spacing: 0) {
+                    navBar
+                    Spacer()
+                    
+                    amountDisplay
+                        .padding(.bottom, Spacing.lg)
+                    Spacer()
+                    
+                    transferPanel
+                        .padding(.bottom, Spacing.lg)
+                    Spacer()
+                    
+                    transferButton
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.xl)
+                }
+            }
+
+        }
+        .blur(radius: showConfirmSheet ? 6 : 0)
+        .background(Color.movo.background.ignoresSafeArea())
+        .preferredColorScheme(.dark)
+        .onAppear {
+            if selectedAccount == nil {
+                selectedAccount = vm.accounts.first(where: { $0.isDefault }) ?? vm.accounts.first
+            }
+        }
+        .onChange(of: vm.accounts) { accounts in
+            if selectedAccount == nil {
+                selectedAccount = accounts.first(where: { $0.isDefault }) ?? accounts.first
+            }
+        }
+        .onChange(of: isAmountFocused) { focused in
+            if focused && amount == "0" { amount = "" }
+            if !focused && amount.isEmpty { amount = "0" }
+        }
+        .sheet(isPresented: $showConfirmSheet) {
+            confirmationSheet
+                .padding(.top, 30)
+                .presentationDetents([.height(420)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(24)
+        }
+    }
+
+    // MARK: - Nav Bar
+
+    private var navBar: some View {
+        HStack {
+            Color.clear.frame(width: 32, height: 32)
+            Spacer()
+            Text("Funds Transfer")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+            Spacer()
+            CircularNavButton(systemName: "xmark") { dismiss() }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.sm)
+    }
+
+    // MARK: - Amount Display
+
+    private var amountDisplay: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("$")
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundColor(Color.movo.textSecondary)
+                .baselineOffset(25)
+
+            let parts = amount.split(separator: ".")
+            Text(parts.first.map(String.init) ?? "0")
+                .font(.system(size: 72, weight: .bold).monospacedDigit())
+                .foregroundColor(Color.movo.textPrimary)
+
+            Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
+                .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                .foregroundColor(Color.movo.textSecondary)
+                .baselineOffset(25)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { showAmountPad() }
+        .overlay(
+            TextField("", text: $amount)
+                .keyboardType(.decimalPad)
+                .focused($isAmountFocused)
+                .opacity(0)
+        )
+    }
+
+    // MARK: - Account Radio List
+
+    private var accountRadioList: some View {
+        VStack(spacing: 0) {
+            ForEach(sortedAccounts, id: \.achAccountId) { account in
+                Rectangle()
+                    .fill(Color.movo.border)
+                    .frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+                Button {
+                    selectedAccount = account
+                    withAnimation(.easeInOut(duration: 0.2)) { isFromExpanded = false }
+                } label: {
+                    bankAccountRadioRow(account)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Transfer Panel (From / To rows)
+
+    private var transferPanel: some View {
+        VStack(spacing: 0) {
+            // FROM — bank account(s)
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("From")
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(0.6)
+                    .foregroundColor(Color.movo.textTertiary)
+                    .padding(.horizontal, Spacing.lg)
+
                 if vm.state == .loading && vm.accounts.isEmpty {
-                    SpinnerView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    HStack {
+                        ProgressView().tint(Color.movo.textSecondary)
+                        Text("Loading accounts…")
+                            .font(.system(size: 13))
+                            .foregroundColor(Color.movo.textTertiary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.vertical, Spacing.md)
+                } else if vm.accounts.isEmpty {
+                    Text("No bank accounts linked")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.movo.textTertiary)
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.vertical, Spacing.md)
+                } else if vm.accounts.count == 1, let account = vm.accounts.first {
+                    accountRow(
+                        avatar: bankInitialsAvatar,
+                        title: account.accountName,
+                        subtitle: "\(account.formattedBalance) · ••\(account.accountNumber.suffix(4))",
+                        showChevron: false
+                    )
                 } else {
-                    fundForm
-                }
-            }
-            .task { await vm.fetchAccounts() }
-            .onChange(of: vm.accounts) { accounts in
-                if selectedAccount == nil {
-                    selectedAccount = accounts.first(where: { $0.isDefault }) ?? accounts.first
-                }
-            }
-            .sheet(isPresented: $showConfirmSheet) {
-                confirmationSheet
-                    .padding(.top, 30)
-                    .presentationDetents([.height(420)])
-                    .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(24)
-            }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Fund Account")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(Color.primary)
-                        .fontWeight(.semibold)
-                }
-            }
-        }
-    }
-    
-    
-    // MARK: - Fund Form
-    
-    private var fundForm: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
-                amountSection
-                accountSection
-                primaryAccountSection
-                confirmButton
-            }
-            .padding(16)
-        }
-    }
-    
-    // MARK: - Account Selection
-    
-    private var accountSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("From:")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.8)
-            
-            VStack(spacing: 0) {
-                // Selected / single account row
-                let display = selectedAccount ?? vm.accounts.first
-                if let display {
+                    // Collapsed header — shows selected account + expand toggle
+                    let displayed = selectedAccount ?? sortedAccounts.first
                     Button {
-                        if vm.accounts.count > 1 {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                isAccountPickerExpanded.toggle()
-                            }
-                        }
+                        withAnimation(.easeInOut(duration: 0.2)) { isFromExpanded.toggle() }
                     } label: {
-                        HStack(spacing: 14) {
-                            institutionLogoView(display)
+                        HStack(spacing: Spacing.md) {
+                            bankInitialsAvatar
+                                .frame(width: 52, height: 52)
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(display.accountName)
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(.primary)
-                                Text(display.institutionName)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.secondary)
-                                Text("\(display.accountNumber.suffix(4))")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.tertiary)
+                                Text(displayed?.accountName ?? "")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(Color.movo.textPrimary)
+                                Text("\(displayed?.formattedBalance ?? "") · ••\((displayed?.accountNumber ?? "").suffix(4))")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(Color.movo.textTertiary)
                             }
                             Spacer()
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(display.formattedBalance)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.primary)
-                                if vm.accounts.count > 1 {
-                                    Image(systemName: isAccountPickerExpanded ? "chevron.up" : "chevron.down")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
+                            Image(systemName: isFromExpanded ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Color.movo.textDisabled)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .contentShape(Rectangle())
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.vertical, Spacing.sm)
                     }
                     .buttonStyle(.plain)
-                }
-                
-                // Dropdown options (multiple accounts only)
-                if isAccountPickerExpanded {
-                    ForEach(vm.accounts, id: \.achAccountId) { account in
-                        Divider().padding(.horizontal, 16)
-                        dropdownRow(account)
+
+                    // Expanded radio list — scrollable when 3 or more accounts
+                    if isFromExpanded {
+                        if sortedAccounts.count >= 3 {
+                            ScrollView(.vertical, showsIndicators: false) {
+                                accountRadioList
+                            }
+                            .frame(maxHeight: 180)
+                        } else {
+                            accountRadioList
+                        }
                     }
                 }
             }
-            .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            // Swap divider
+            ZStack {
+                Rectangle()
+                    .fill(Color.movo.border)
+                    .frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+
+                Circle()
+                    .fill(Color.movo.elevated)
+                    .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(Color.movo.accent)
+                    )
+            }
+            .padding(.vertical, Spacing.md)
+
+            // TO — Movo primary
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("To")
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(0.6)
+                    .foregroundColor(Color.movo.textTertiary)
+                    .padding(.horizontal, Spacing.lg)
+
+                accountRow(
+                    avatar: movoAvatar,
+                    title: primaryAccount.displayName,
+                    subtitle: "\(primaryAccount.formattedBalance) · \(primaryAccount.maskedAccountNumber)",
+                    showChevron: false
+                )
+            }
         }
+        .padding(.vertical, Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.surface.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        )
+        .padding(.horizontal, Spacing.lg)
     }
-    
-    private func institutionLogoView(_ account: ACHAccount) -> some View {
+
+    // MARK: - Account Row
+
+    private func accountRow(
+        avatar: some View,
+        title: String,
+        subtitle: String,
+        showChevron: Bool
+    ) -> some View {
+        HStack(spacing: Spacing.md) {
+            AnyView(avatar)
+                .frame(width: 52, height: 52)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+                Text(subtitle)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(Color.movo.textTertiary)
+            }
+
+            Spacer()
+
+            if showChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color.movo.accent)
+            }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
+    }
+
+    // MARK: - Avatars
+
+    private var bankInitialsAvatar: some View {
         ZStack {
-            Circle()
-                .fill(Color.softBlue.opacity(0.1))
-                .frame(width: 44, height: 44)
-            if let uiImage = account.logoImage {
-                Image(uiImage: uiImage)
+            RoundedRectangle(cornerRadius: Radius.button)
+                .fill(Color.movo.elevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.button)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+
+            if let image = selectedAccount?.logoImage {
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 28, height: 28)
-                    .clipShape(Circle())
+                    .frame(width: 30, height: 30)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
             } else {
-                Image(systemName: "building.columns")
-                    .font(.system(size: 18))
-                    .foregroundStyle(Color.softBlue)
+                Text(selectedAccount?.accountName.prefix(2).uppercased() ?? "••")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
             }
         }
     }
-    
-    private func dropdownRow(_ account: ACHAccount) -> some View {
-        let isSelected = selectedAccount?.achAccountId == account.achAccountId
-        return Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                selectedAccount = account
-                isAccountPickerExpanded = false
-            }
-        } label: {
-            HStack(spacing: 14) {
-                institutionLogoView(account)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(account.accountName)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.primary)
-                    Text(account.institutionName)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                    Text("\(account.accountNumber.suffix(4))")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(account.formattedBalance)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Image(systemName: isSelected ? "circle.inset.filled" : "circle")
-                        .foregroundStyle(isSelected ? Color.softBlue : Color(.systemGray3))
-                        .font(.system(size: 20))
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-    
-    // MARK: - Primary Account (To)
-    
-    private var primaryAccountSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("To:")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.8)
-            
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(Color.softBlue.opacity(0.1))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "building.2")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.softBlue)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(primaryAccount.displayName)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.primary)
-                    Text(primaryAccount.maskedAccountNumber)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(primaryAccount.formattedBalance)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-    }
-    
-    // MARK: - Amount Input
-    
-    private var amountSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Amount:")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.8)
 
-            HStack {
-                Text("$")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.secondary)
-                TextField("0.00", text: $amount)
-                    .keyboardType(.decimalPad)
-                    .font(.system(size: 18, weight: .medium))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(amountExceedsBalance ? Color.red.opacity(0.6) : Color.clear, lineWidth: 1.5)
-            )
-
-            if amountExceedsBalance, let account = selectedAccount {
-                Text("Amount exceeds available balance of \(account.formattedBalance)")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.red)
-                    .padding(.horizontal, 4)
-            }
+    private var movoAvatar: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Radius.button)
+                .fill(Color.movo.elevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.button)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+            MLogo()
+                .frame(width: 28, height: 28)
         }
     }
-    
-    // MARK: - Confirm Button
 
-    private var confirmButton: some View {
-        PrimaryButton(
-            title: "Confirm Transfer",
-            backgroundColor: isFormValid ? Color.primary : Color(.systemGray4),
-            textColor: isFormValid ? .white : .gray
-        ) {
+    // MARK: - Transfer Button
+
+    private var transferButton: some View {
+        Button {
             guard isFormValid else { return }
             showConfirmSheet = true
+        } label: {
+            Group {
+                if vm.state == .loading {
+                    ProgressView().tint(Color.movo.background)
+                } else {
+                    Text("Transfer")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color.movo.background)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                Capsule()
+                    .fill(isFormValid ? Color.movo.accent : Color.movo.accent.opacity(0.8))
+            )
         }
+        .buttonStyle(.plain)
         .disabled(!isFormValid)
-        .frame(height: 52)
+    }
+
+    // MARK: - Bank Account Radio Row
+
+    private func bankAccountRadioRow(_ account: ACHAccount) -> some View {
+        let isSelected = selectedAccount?.achAccountId == account.achAccountId
+        return HStack(spacing: Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.button)
+                    .fill(Color.movo.elevated)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    )
+                if let image = account.logoImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 28, height: 28)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                } else {
+                    Text(account.accountName.prefix(2).uppercased())
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+            }
+            .frame(width: 44, height: 44)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(account.accountName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+                Text("••\(account.accountNumber.suffix(4)) · \(account.formattedBalance)")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(Color.movo.textTertiary)
+            }
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .strokeBorder(
+                        isSelected ? Color.movo.accent : Color.movo.border,
+                        lineWidth: 2
+                    )
+                    .frame(width: 22, height: 22)
+                if isSelected {
+                    Circle()
+                        .fill(Color.movo.accent)
+                        .frame(width: 12, height: 12)
+                }
+            }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
+    }
+
+    // MARK: - Amount Entry (number pad)
+
+    private func showAmountPad() {
+        isAmountFocused = true
     }
 
     // MARK: - Confirmation Sheet
 
     private var confirmationSheet: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Check the information")
-                .font(.system(size: 22, weight: .bold))
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
 
-            VStack(alignment: .leading, spacing: 16) {
-                // Amount
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Amount:")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
-                    amountDisplay
-                }
+            // Title
+            Text("Review Transfer")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(Color.movo.textPrimary)
+                .padding(.top, Spacing.lg)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, Spacing.sm)
 
-                Divider()
-
-                // Available
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Available:")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
-                    Text("1-3 business days")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-
-                Divider()
-
-                // From / To
-                HStack(spacing: 40) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("From:")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                        Text(selectedAccount?.accountName ?? "")
-                            .font(.system(size: 16, weight: .semibold))
-                        if let account = selectedAccount {
-                            Text("\(account.accountNumber.suffix(4))")
-                                .font(.system(size: 13))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("To:")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                        Text(primaryAccount.displayName)
-                            .font(.system(size: 16, weight: .semibold))
-                        Text(primaryAccount.maskedAccountNumber)
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-                    }
-                }
+            // Amount — mirrors main amountDisplay style
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("$")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
+                    .baselineOffset(14)
+                let parts = amount.split(separator: ".")
+                Text(parts.first.map(String.init) ?? "0")
+                    .font(.system(size: 48, weight: .bold).monospacedDigit())
+                    .foregroundColor(Color.movo.textPrimary)
+                Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
+                    .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                    .foregroundColor(Color.movo.textSecondary)
+                    .baselineOffset(14)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.bottom, Spacing.lg)
+
+            // Detail card — same surface + border style as transferPanel
+            VStack(spacing: 0) {
+                confDetailRow(label: "FROM",
+                              title: selectedAccount?.accountName ?? "—",
+                              subtitle: selectedAccount.map { "••\($0.accountNumber.suffix(4))" })
+
+                Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+
+                confDetailRow(label: "TO",
+                              title: primaryAccount.displayName,
+                              subtitle: primaryAccount.maskedAccountNumber)
+
+                Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+
+                confDetailRow(label: "AVAILABLE",
+                              title: "1–3 business days",
+                              subtitle: nil)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .fill(Color.movo.surface.opacity(0.85))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.heroCard)
+                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    )
+            )
+            .padding(.horizontal, Spacing.lg)
 
             Spacer()
-            
-            HStack(spacing: 12) {
-                PrimaryButton(title: "Cancel",
-                              backgroundColor: Color.secondary,
-                              textColor: Color.gray) {
+
+            HStack(spacing: Spacing.sm) {
+                PrimaryButton(title: "Cancel", backgroundColor: Color.movo.surface, textColor: Color.movo.textSecondary) {
                     showConfirmSheet = false
                 }
-                
-                PrimaryButton(
-                    title: "Confirm",
-                    backgroundColor: Color.primary,
-                    isLoading: vm.state == .loading
-                ) {
+                PrimaryButton(title: "Confirm", backgroundColor: Color.movo.accent, textColor: .black, isLoading: vm.state == .loading) {
                     guard let account = selectedAccount else { return }
                     Task {
                         let request = ACHRequest(
@@ -393,21 +531,32 @@ struct FundAccountView: View {
                 }
                 .frame(height: 52)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
-            .padding(.bottom, 28)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.xl)
         }
+        .preferredColorScheme(.dark)
     }
 
-    private var amountDisplay: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 1) {
-            Text("$")
-                .font(.system(size: 28, weight: .bold))
-            let parts = amount.split(separator: ".")
-            Text(String(parts.first ?? "0"))
-                .font(.system(size: 48, weight: .bold))
-            Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                .font(.system(size: 28, weight: .bold))
+    private func confDetailRow(label: String, title: String, subtitle: String?) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(0.6)
+                    .foregroundColor(Color.movo.textTertiary)
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
+                }
+            }
+            Spacer()
         }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
     }
 }

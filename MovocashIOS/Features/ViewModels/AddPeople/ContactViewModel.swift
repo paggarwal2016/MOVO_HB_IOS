@@ -29,6 +29,64 @@ final class ContactViewModel: BaseViewModel {
     private let network: NetworkServiceProtocol
     private let analytics: AnalyticsTracking
     
+    // MARK: - Sheet
+    
+    @Published var nickname: String = ""
+    @Published var phoneInput: String = "" // formatted for display, e.g. "(555) 123-4567"
+    @Published var helperIsError: Bool = false
+    
+    /// Digits-only national number extracted from `phoneInput`.
+    private var digits: String {
+        phoneInput.filter(\.isNumber)
+    }
+
+    /// Validates that nickname is present and phone has 10 digits.
+    var canSubmit: Bool {
+        !nickname.trimmingCharacters(in: .whitespaces).isEmpty
+            && digits.count == 10
+    }
+
+    var helperMessage: String {
+        if helperIsError && digits.count != 10 {
+            return "Enter a valid 10-digit phone number."
+        }
+        return "We'll text them to confirm before sending money."
+    }
+    
+    func clear() {
+        nickname = ""
+        phoneInput = ""
+        helperIsError = false
+    }
+    
+    func buildResult(countryCode: String) -> AddContactSheet.Result? {
+        let trimmedNickname = nickname.trimmingCharacters(in: .whitespaces)
+        guard !trimmedNickname.isEmpty, digits.count == 10 else { return nil }
+        let e164 = "\(countryCode)\(digits)"
+        return .init(
+            nickname: trimmedNickname,
+            phoneE164: e164,
+            countryCode: countryCode,
+            nationalNumber: digits
+        )
+    }
+
+    /// Formats raw user input into `(XXX) XXX-XXXX` US phone-style as they type.
+    /// Stops formatting at 10 digits.
+    static func formatPhone(_ raw: String) -> String {
+        let digits = raw.filter(\.isNumber).prefix(10)
+        var result = ""
+        for (idx, ch) in digits.enumerated() {
+            switch idx {
+            case 0:  result += "(\(ch)"
+            case 3:  result += ") \(ch)"
+            case 6:  result += "-\(ch)"
+            default: result.append(ch)
+            }
+        }
+        return result
+    }
+    
     // MARK: - Init
     
     init(
@@ -170,9 +228,10 @@ final class ContactViewModel: BaseViewModel {
     
     @discardableResult
     func createContact(nickname: String, phoneNumber: String) async -> Bool {
+        let normalizedPhone = phoneNumber.hasPrefix("+1") ? phoneNumber : "+1\(phoneNumber.filter(\.isNumber))"
         let request = ContactRequest.Create(
             nickname: nickname,
-            phoneNumber: phoneNumber,
+            phoneNumber: normalizedPhone,
             is_fav: false,
             addNewContact: true,
             userAction: "ADD-NEW-CONTACT"

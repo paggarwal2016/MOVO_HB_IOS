@@ -196,6 +196,67 @@ struct TabBarItem: View {
 
 // MARK: - AddContact
 
+// MARK: - Add Contact action card
+
+struct AddContactActionCard: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+                HStack(spacing: Spacing.md + 2) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Radius.lg)
+                            .fill(Color.movo.accentTint)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Radius.lg)
+                                    .strokeBorder(Color.movo.accentBorder,
+                                                  lineWidth: Stroke.hairline)
+                            )
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 18, weight: .regular))
+                            .foregroundColor(Color.movo.accent)
+                    }
+                    .frame(width: 44, height: 44)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Add new contact")
+                            .textStyle(Typography.cardTitle)
+                            .foregroundColor(Color.movo.textPrimary)
+                        Text("Save someone you pay often")
+                            .textStyle(Typography.captionSmall)
+                            .foregroundColor(Color.movo.textTertiary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color.movo.accent)
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.md + 2)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .fill(Color.movo.surface.opacity(0.85))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.heroCard)
+                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+
+
+
+
+
+
+
+
+
 struct AddContactCardView: View {
     
     @Binding var nickname: String

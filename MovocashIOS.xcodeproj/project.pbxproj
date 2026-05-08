@@ -177,6 +177,11 @@
 			path = Screen;
 			sourceTree = "<group>";
 		};
+		141CF0DD2FAE41E200D1D2E3 /* Confirmation */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Confirmation;
+			sourceTree = "<group>";
+		};
 		142337C92F5846870030B4E7 /* Launch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Launch;
@@ -417,6 +422,7 @@
 		1468196D2F4DE6CF00BED014 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				141CF0DD2FAE41E200D1D2E3 /* Confirmation */,
 				1404179D2FAB2E8600622003 /* Screen */,
 				14AC54BA2FA8952F0032574E /* Transaction */,
 				145EB9FC2F62ABA80072DE68 /* Models */,
@@ -567,6 +573,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				1404179D2FAB2E8600622003 /* Screen */,
+				141CF0DD2FAE41E200D1D2E3 /* Confirmation */,
 				142337C92F5846870030B4E7 /* Launch */,
 				142337CB2F584C010030B4E7 /* Home */,
 				145EB9F72F62A9560072DE68 /* API */,

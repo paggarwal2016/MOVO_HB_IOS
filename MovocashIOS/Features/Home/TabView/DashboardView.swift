@@ -131,13 +131,11 @@ struct DashboardView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showFundAccount) {
+        .fullScreenCover(isPresented: $showFundAccount) {
             if let account = displayAccount {
-                FundAccountView(container: container, primaryAccount: account) {
+                FundAccountView(container: container, vm: linkAccountVM, primaryAccount: account) {
                     Task { await achVM.startPlaidLink() }
                 }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showInternalTransfer) {

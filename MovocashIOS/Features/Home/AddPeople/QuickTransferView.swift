@@ -240,7 +240,9 @@ struct QuickTransferView: View {
     private func sendMoney() async {
         guard let fromAccount = selectedAccount else { return }
         
-        let sanitized = PhoneNumberValidator.sanitize(contact.phoneNumber ?? "")
+        let rawPhone = contact.phoneNumber ?? ""
+        let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
+        let sanitized = PhoneNumberValidator.sanitize(withCountry)
         guard PhoneNumberValidator.isValidUSNumber(sanitized) else {
             AlertManager.shared.showError("Enter a valid phone number")
             return
@@ -255,7 +257,8 @@ struct QuickTransferView: View {
             toClientId: 0,
             fromAccountId: fromAccount.id,
             phoneNumber: normalizedPhone,
-            userAction: "Internal-Transfer"
+            userAction: "Internal-Transfer",
+            nickname: contact.nickname ?? ""
         )
         guard await transVM.submitInternalTransfer(request: request) else { return }
         ToastManager.shared.show("Money sent successfully.", style: .success, position: .bottom)

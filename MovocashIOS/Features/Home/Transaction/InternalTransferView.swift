@@ -254,7 +254,8 @@ struct InternalTransferView: View {
             toClientId: toClientId,
             fromAccountId: from.id,
             phoneNumber: nil,
-            userAction: "Internal-Transfer"
+            userAction: "Internal-Transfer",
+            nickname: ""
         )
         guard await transVM.submitInternalTransfer(request: request) else { return }
         ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)

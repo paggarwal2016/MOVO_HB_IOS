@@ -151,7 +151,7 @@ struct CardDetailSheet: View {
     }
     
     // MARK: - Nav Bar
-    
+
     private var navBar: some View {
         HStack {
             CircularNavButton(systemName: "chevron.left") { dismiss() }
@@ -533,34 +533,3 @@ struct CardDetailSheet: View {
         isDeleting = false
     }
 }
-
-
-
-
-
-
-
-
-//////////////////////////////////////////
-//////////////////////////////////////////
-//////////////////////////////////////////
-///
-///
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//Task {
-//    guard let accountId = card.savingsAccountId else { return }
-//    await achVM.addVirtualCardToAppleWallet(accountId: accountId, localizedDescription: "Apple pay")
-//}

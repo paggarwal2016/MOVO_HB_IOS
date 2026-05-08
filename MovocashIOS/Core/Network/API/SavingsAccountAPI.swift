@@ -32,7 +32,7 @@ enum SavingsAccountAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .list:           return .PUT
-        case .details:        return .GET
+        case .details:        return .PUT
         case .create:         return .POST
         case .update:         return .PATCH
         case .delete:         return .DELETE
@@ -71,7 +71,7 @@ enum SavingsAccountAPI: Endpoint {
         case .list:
             return try JSONEncoder().encode(UserActionRequest(userAction: "FETCH-ACCOUNT-LIST"))
         case .details:
-            return nil
+            return try JSONEncoder().encode(UserActionRequest(userAction: "FETCH-ACCOUNT"))
         case .create(let request):
             return try JSONEncoder().encode(request)
         case .update(let request):

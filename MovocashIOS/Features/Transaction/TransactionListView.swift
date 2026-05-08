@@ -212,12 +212,6 @@ struct TransactionListView: View {
                     .padding(.horizontal, Spacing.lg)
                 }
             }
-            
-            Text("\(chipFilteredTransactions.count) transaction\(chipFilteredTransactions.count == 1 ? "" : "s")")
-                .font(Typography.caption.font)
-                .foregroundColor(Color.movo.textDisabled)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, Spacing.sm)
         }
         .padding(.bottom, Spacing.md)
     }
@@ -648,21 +642,20 @@ extension TransactionListView {
 // MARK: - Chip Filter
 
 enum TransactionChipFilter: String, CaseIterable, Identifiable, Sendable {
-    case all, moneyIn, moneyOut, cardPurchases, transfers, pending
-    
+    case all, moneyIn, moneyOut, pending, settled
+
     var id: String { rawValue }
-    
+
     var label: String {
         switch self {
-        case .all:           return "All"
-        case .moneyIn:       return "Money in"
-        case .moneyOut:      return "Money out"
-        case .cardPurchases: return "Card purchases"
-        case .transfers:     return "Transfers"
-        case .pending:       return "Pending"
+        case .all:     return "All"
+        case .moneyIn: return "Money in"
+        case .moneyOut: return "Money out"
+        case .pending:  return "Pending"
+        case .settled:  return "Settled"
         }
     }
-    
+
     var systemIcon: String? {
         switch self {
         case .moneyIn:  return "arrow.down.left"
@@ -670,15 +663,16 @@ enum TransactionChipFilter: String, CaseIterable, Identifiable, Sendable {
         default:        return nil
         }
     }
-    
+
     func matches(_ item: TransactionItem) -> Bool {
         switch self {
-        case .all:           return true
-        case .moneyIn:       return item.isCredit
-        case .moneyOut:      return !item.isCredit
-        case .cardPurchases: return item.type == .payment
-        case .transfers:     return item.type == .transfer
-        case .pending:       return item.status.lowercased() == "pending"
+        case .all:      return true
+        case .moneyIn:  return item.isCredit
+        case .moneyOut: return !item.isCredit
+        case .pending:  return item.status.lowercased() == "pending"
+        case .settled:
+            let s = item.status.lowercased()
+            return s != "pending" && s != "failed" && s != "declined"
         }
     }
 }
