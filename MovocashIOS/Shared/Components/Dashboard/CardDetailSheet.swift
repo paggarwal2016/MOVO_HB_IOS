@@ -160,7 +160,7 @@ struct CardDetailSheet: View {
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
-            CircularNavButton(systemName: "ellipsis") { }
+            Color.clear.frame(width: 32, height: 32)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)

@@ -127,7 +127,7 @@ nonisolated struct DashboardPayAnyone: Decodable, Sendable {
     let customerId: Int
     let title: String
     let description: String?
-    let favContactList: [String]
+    let favContactList: [RecordContact]
     let actions: [DashboardAction]
 }
 

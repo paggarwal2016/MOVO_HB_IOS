@@ -35,14 +35,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         // 4. Set delegate — permission is requested after login (RootView)
         // Re-register silently if already authorized (returning users)
-        UNUserNotificationCenter.current().delegate = self
-        Task { @MainActor in
-            let settings = await UNUserNotificationCenter.current().notificationSettings()
-            if settings.authorizationStatus == .authorized ||
-               settings.authorizationStatus == .provisional {
-                UIApplication.shared.registerForRemoteNotifications()
-            }
-        }
+        // FIREBASE PUSH:
+//        UNUserNotificationCenter.current().delegate = self
+//        Task { @MainActor in
+//            let settings = await UNUserNotificationCenter.current().notificationSettings()
+//            if settings.authorizationStatus == .authorized ||
+//               settings.authorizationStatus == .provisional {
+//                UIApplication.shared.registerForRemoteNotifications()
+//            }
+//        }
 
         // FIREBASE PUSH: Re-enable when push notifications are ready.
         // Step 2 — uncomment the line below to wire FCM delegate:

@@ -67,7 +67,7 @@ extension ContactRecord {
 // MARK: - Recent Transfer Response (flat shape: { "contacts": [...] })
 
 nonisolated struct RecentTransferResponse: Decodable, Sendable {
-    let contacts: [ContactRecord]
+    let contacts: [RecordContact]
 }
 
 // MARK: - Contact Action Response
@@ -83,4 +83,13 @@ nonisolated struct ContactActionResponse: Decodable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case message
     }
+}
+
+
+
+nonisolated struct RecordContact: Decodable, Sendable, Identifiable {
+    var id: String { phoneNumber ?? nickname ?? "" }
+    let nickname: String?
+    var lastSentAt: String?
+    var phoneNumber: String?
 }

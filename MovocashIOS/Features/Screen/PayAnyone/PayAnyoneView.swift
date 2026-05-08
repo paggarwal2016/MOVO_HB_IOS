@@ -18,15 +18,15 @@ struct PayAnyoneView: View {
     @EnvironmentObject private var lockManager: AppLockManager
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     @SwiftUI.Environment(\.openURL) private var openURL
-
+    
     @Binding var selectedTab: Tab
-
+    
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     @State private var showAddContact = false
     @State private var wentToSettings = false
-
+    
     init(container: AppContainer, selectedTab: Binding<Tab>) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
@@ -61,7 +61,7 @@ struct PayAnyoneView: View {
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    
+                    navBar
                     if hasAnyData {
                         balanceCard
                             .padding(.horizontal, Spacing.lg)
@@ -91,6 +91,9 @@ struct PayAnyoneView: View {
                             .padding(.bottom, 12)
                         introBlock
                             .padding(.bottom, 18)
+                        
+                        
+                        
                         addContactView
                             .padding(.horizontal, 14)
                             .padding(.bottom, 14)
@@ -209,7 +212,7 @@ struct PayAnyoneView: View {
     
     private var introBlock: some View {
         VStack(spacing: 8) {
-            Text("Send to anyone,\neven your nan")
+            Text("Send to spend")
                 .font(Typography.sectionTitle.font)
                 .foregroundColor(Color.movo.textPrimary)
                 .multilineTextAlignment(.center)
@@ -564,6 +567,19 @@ struct PayAnyoneView: View {
         default:      return "(\(digits.prefix(3))) \(digits.dropFirst(3).prefix(3))-\(digits.dropFirst(6))"
         }
     }
+    
+    private var navBar: some View {
+        HStack {
+            Spacer()
+            Text("Pay Anyone")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+            Spacer()
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.lg - 2)
+        .padding(.bottom, Spacing.md)
+    }
 }
 
 // MARK: - Hero Illustration (two figures + flying bill)
@@ -819,7 +835,7 @@ extension PayAnyoneView {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.sm + 2) {
-                    ForEach(contactVM.mergedContacts) { contact in
+                    ForEach(contactVM.frequents) { contact in
                         QuickContactCell(contact: contact) {
                             //vm.selectContact(contact)
                         }
@@ -832,7 +848,7 @@ extension PayAnyoneView {
     }
     
     private struct QuickContactCell: View {
-        let contact: ContactRecord
+        let contact: RecordContact
         let action: () -> Void
         
         var body: some View {
@@ -846,22 +862,14 @@ extension PayAnyoneView {
                                 endPoint: .bottomTrailing
                             ))
                         Circle()
-                            .strokeBorder(
-                                contact.isOnMovo ? Color.movo.accent : Color.movo.border,
-                                lineWidth: Stroke.hairline
+                            .strokeBorder( Color.movo.border,
+                                           lineWidth: Stroke.hairline
                             )
-                        Text(contact.initials)
+                        Text("\(contact.nickname?.prefix(1) ?? "")")
                             .font(.system(size: 18, weight: .medium))
                             .foregroundColor(Color.movo.textPrimary)
                     }
                     .frame(width: 56, height: 56)
-                    .overlay(
-                        contact.isOnMovo
-                        ? Circle()
-                            .strokeBorder(Color.movo.accentSoft, lineWidth: 3)
-                            .padding(-3)
-                        : nil
-                    )
                     
                     Text((contact.nickname?.split(separator: " ").first.map(String.init) ?? contact.nickname) ?? "")
                         .font(.system(size: 10, weight: .regular))

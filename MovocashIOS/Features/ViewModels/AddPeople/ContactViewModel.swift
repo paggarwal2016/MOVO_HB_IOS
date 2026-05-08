@@ -19,7 +19,7 @@ final class ContactViewModel: BaseViewModel {
     
     // MARK: - API Contacts
     
-    @Published private(set) var frequents: [ContactRecord] = []
+    @Published private(set) var frequents: [RecordContact] = []
     @Published private(set) var apiContacts: [ContactRecord] = []
     @Published private(set) var favourites: [ContactRecord] = []
     
