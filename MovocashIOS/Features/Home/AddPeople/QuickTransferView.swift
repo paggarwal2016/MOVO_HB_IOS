@@ -20,6 +20,7 @@ struct QuickTransferView: View {
     @State private var descriptionText = ""
     @State private var selectedAccount: SavingsAccountInfo?
     @State private var showConfirmSheet = false
+    @State private var showAccountSheet = false
     @State private var successData: SuccessConfirmation?
 
     init(contact: ContactRecord, container: AppContainer, accounts: [SavingsAccountInfo]) {
@@ -47,28 +48,38 @@ struct QuickTransferView: View {
     // MARK: - Body
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            MovoBackground()
-
-            VStack(spacing: 0) {
-                navBar
-
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: Spacing.xl) {
-                        recipientSection
-                        amountSection
-                        noteCard
-                        accountCard
-                        Spacer().frame(height: 100)
+        ZStack {
+            ZStack {
+                MovoBackground()
+                VStack(spacing: 0) {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: Spacing.xl) {
+                            navBar
+                            recipientSection
+                            amountSection
+                            noteCard
+                            accountCard
+                        }
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.top, Spacing.md)
+                        .padding(.bottom, Spacing.lg)
                     }
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
+                    .onTapGesture { amountFocused = false }
+                    .scrollDismissesKeyboard(.immediately)
+
+                    sendButton
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.top, Spacing.xs)
+                        .padding(.bottom, Spacing.xs)
                 }
             }
+            .blur(radius: showAccountSheet ? 6 : 0)
 
-            sendButton
-                .padding(.horizontal, Spacing.lg)
-                .padding(.bottom, 36)
+            if transVM.state == .loading {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                SpinnerView()
+            }
         }
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
@@ -86,9 +97,12 @@ struct QuickTransferView: View {
                 fromMask: selectedAccount?.maskedAccountNumber,
                 toName: contact.nickname ?? contact.phoneNumber ?? "—",
                 toMask: contact.phoneNumber.map { "••\($0.suffix(4))" },
-                isLoading: transVM.state == .loading,
+                isLoading: false,
                 onCancel: { showConfirmSheet = false },
-                onConfirm: { Task { await sendMoney() } }
+                onConfirm: {
+                    showConfirmSheet = false
+                    Task { await sendMoney() }
+                }
             )
             .padding(.top, 30)
             .presentationDetents([.height(420)])
@@ -102,6 +116,9 @@ struct QuickTransferView: View {
                     dismiss()
                 }
             )
+        }
+        .sheet(isPresented: $showAccountSheet) {
+            accountSelectionSheet
         }
     }
 
@@ -125,18 +142,12 @@ struct QuickTransferView: View {
                 .foregroundColor(Color.movo.textPrimary)
 
             Spacer()
+            
+            Color.clear.frame(width: 32, height: 32)
 
-            Button(action: { dismiss() }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color.movo.textPrimary)
-                    .frame(width: 36, height: 36)
-                    .background(Color.movo.elevated, in: Circle())
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, Spacing.lg)
-        .padding(.top, Spacing.lg - 2)
+        .padding(.top, Spacing.lg)
         .padding(.bottom, Spacing.md)
     }
 
@@ -169,25 +180,6 @@ struct QuickTransferView: View {
                 Text(contact.phoneNumber ?? "")
                     .font(Typography.caption.font)
                     .foregroundColor(Color.movo.textTertiary)
-
-                if contact.isAdded {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.movo.accent)
-                            .frame(width: 5, height: 5)
-                        Text("ON MOVO")
-                            .font(.system(size: 9, weight: .semibold))
-                            .tracking(0.5)
-                            .foregroundColor(Color.movo.accent)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(Color.movo.accentTint)
-                            .overlay(Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
-                    )
-                }
             }
         }
         .frame(maxWidth: .infinity)
@@ -321,16 +313,19 @@ struct QuickTransferView: View {
                 }
                 .padding(Spacing.lg)
                 .background(cardBackground)
+            } else if accounts.count == 1 {
+                accountCardContent
             } else {
-                Menu {
-                    ForEach(accounts) { account in
-                        Button { selectedAccount = account } label: {
-                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
-                        }
+                Button {
+                    amountFocused = false
+                    UIApplication.shared.dismissKeyboard()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showAccountSheet = true
                     }
                 } label: {
                     accountCardContent
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -378,13 +373,112 @@ struct QuickTransferView: View {
                 }
             }
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(Color.movo.textDisabled)
+            if accounts.count > 1 {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(Color.movo.textDisabled)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
         .background(cardBackground)
+    }
+
+    private var accountSelectionSheet: some View {
+        VStack(alignment: .leading, spacing: 0) {
+
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("From Account")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(Color.movo.textPrimary)
+                    Text("Choose which account to send from")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
+                }
+                Spacer()
+                Button { showAccountSheet = false } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                        .frame(width: 32, height: 32)
+                        .background(Color.movo.elevated, in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, Spacing.lg)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.bottom, Spacing.lg)
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: Spacing.sm) {
+                    ForEach(accounts) { account in
+                        Button {
+                            selectedAccount = account
+                        } label: {
+                            accountSheetRow(account: account, isSelected: selectedAccount?.id == account.id)
+                                .background(
+                                    RoundedRectangle(cornerRadius: Radius.xxl)
+                                        .fill(Color.movo.surface.opacity(0.85))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: Radius.xxl)
+                                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                                        )
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, Spacing.sm)
+            }
+            .padding(.horizontal, Spacing.lg)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.movo.background)
+        .preferredColorScheme(.dark)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(24)
+    }
+
+    private func accountSheetRow(account: SavingsAccountInfo, isSelected: Bool) -> some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(account.maskedAccountNumber)
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(0.6)
+                    .foregroundColor(Color.movo.textTertiary)
+                Text(account.nickname ?? account.clientName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("$\(account.availableBalance.toCurrencyString())")
+                    .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                    .foregroundColor(Color.movo.textPrimary)
+                Text("available")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(Color.movo.textTertiary)
+            }
+
+            ZStack {
+                Circle()
+                    .strokeBorder(isSelected ? Color.clear : Color.movo.border, lineWidth: Stroke.hairline * 2)
+                    .frame(width: 22, height: 22)
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(Color.movo.accent)
+                }
+            }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
     }
 
     private var cardBackground: some View {
@@ -452,9 +546,11 @@ struct QuickTransferView: View {
             userAction: "Internal-Transfer",
             nickname: contact.nickname ?? ""
         )
-        guard await transVM.submitInternalTransfer(request: request) else { return }
+        guard await transVM.submitInternalTransfer(request: request) else {
+            AlertManager.shared.showError("Transfer failed. Please try again.")
+            return
+        }
 
-        showConfirmSheet = false
         let dateText = Date.now.formatted(date: .long, time: .shortened)
         successData = SuccessConfirmation(
             channel: .peer,
