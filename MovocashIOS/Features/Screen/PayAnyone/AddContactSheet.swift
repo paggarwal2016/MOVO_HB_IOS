@@ -12,7 +12,7 @@ import Combine
 // MARK: - Public sheet view
 
 public struct AddContactSheet: View {
-
+    
     /// Returned to the caller's `onSave` closure when the user taps Add Contact.
     public struct Result: Sendable, Equatable {
         public let nickname: String
@@ -20,36 +20,36 @@ public struct AddContactSheet: View {
         public let countryCode: String // e.g. "+1"
         public let nationalNumber: String  // raw digits, no formatting
     }
-
+    
     // MARK: Public init
-
+    
     init(container: ContactViewModel,
-        countryCode: String = "+1",
-        onSave: @escaping (Result) -> Void,
-        onCancel: (() -> Void)? = nil
+         countryCode: String = "+1",
+         onSave: @escaping (Result) -> Void,
+         onCancel: (() -> Void)? = nil
     ) {
         self.countryCode = countryCode
         self.onSave = onSave
         self.onCancel = onCancel
         _vm = StateObject(wrappedValue: container)
     }
-
+    
     // MARK: Configuration
-
+    
     public let countryCode: String
     public let onSave: (Result) -> Void
     public let onCancel: (() -> Void)?
-
+    
     // MARK: State
-
+    
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var vm: ContactViewModel
     @FocusState private var focusedField: Field?
-
+    
     private enum Field { case nickname, phone }
-
+    
     // MARK: Body
-
+    
     public var body: some View {
         
         VStack(spacing: 0) {
@@ -67,9 +67,9 @@ public struct AddContactSheet: View {
             }
         }
     }
-
+    
     // MARK: Header
-
+    
     private func header() -> some View {
         HStack(spacing: Spacing.md) {
             // Icon tile
@@ -86,7 +86,7 @@ public struct AddContactSheet: View {
                     .foregroundColor(Color.movo.accent)
             }
             .frame(width: 38, height: 38)
-
+            
             VStack(alignment: .leading, spacing: 2) {
                 Text("Add new contact")
                     .textStyle(Typography.cardTitle)
@@ -95,9 +95,9 @@ public struct AddContactSheet: View {
                     .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.textTertiary)
             }
-
+            
             Spacer()
-
+            
             // Close button
             Button(action: cancelTapped) {
                 Image(systemName: "xmark")
@@ -120,12 +120,12 @@ public struct AddContactSheet: View {
         .padding(.top, Spacing.xxl)
         .padding(.bottom, Spacing.lg)
     }
-
+    
     // MARK: Form
-
+    
     private func form() -> some View {
         VStack(spacing: Spacing.sm + 2) {
-
+            
             // Nickname
             TextField(
                 "",
@@ -153,7 +153,7 @@ public struct AddContactSheet: View {
                             )
                     )
             )
-
+            
             // Phone with +1 prefix + helper text
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: Spacing.sm + 2) {
@@ -168,7 +168,7 @@ public struct AddContactSheet: View {
                                 .padding(.vertical, Spacing.xs),
                             alignment: .trailing
                         )
-
+                    
                     TextField(
                         "",
                         text: $vm.phoneInput,
@@ -199,7 +199,7 @@ public struct AddContactSheet: View {
                                 )
                         )
                 )
-
+                
                 // Helper text — fades to red if validation fails after first attempt
                 Text(vm.helperMessage)
                     .textStyle(Typography.caption)
@@ -213,9 +213,9 @@ public struct AddContactSheet: View {
         }
         .padding(.horizontal, Spacing.lg)
     }
-
+    
     // MARK: CTA
-
+    
     private var cta: some View {
         Button(action: addTapped) {
             Text("Add Contact")
@@ -226,9 +226,9 @@ public struct AddContactSheet: View {
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.xl)
     }
-
+    
     // MARK: Actions
-
+    
     private func addTapped() {
         guard let result = vm.buildResult(countryCode: countryCode) else {
             vm.helperIsError = true
@@ -238,7 +238,7 @@ public struct AddContactSheet: View {
         onSave(result)
         dismiss()
     }
-
+    
     private func cancelTapped() {
         focusedField = nil
         vm.clear()

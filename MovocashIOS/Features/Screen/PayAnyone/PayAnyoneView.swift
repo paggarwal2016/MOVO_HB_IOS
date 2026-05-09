@@ -26,6 +26,7 @@ struct PayAnyoneView: View {
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     @State private var showCreateContactScreen = false
     @State private var selectedFrequent: ContactRecord? = nil
+    @State private var showAllFrequents = false
     
     init(container: AppContainer, selectedTab: Binding<Tab>) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
@@ -106,7 +107,7 @@ struct PayAnyoneView: View {
                     Spacer().frame(height: 80)
                 }
             }
-                        
+            
             if contactVM.state == .loading && !hasAnyData {
                 SpinnerView()
             }
@@ -116,15 +117,21 @@ struct PayAnyoneView: View {
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
         .navigationDestination(for: ContactRecord.self) { contact in
-            QuickTransferView(contact: contact, container: container)
+            QuickTransferView(contact: contact, container: container,
+                              accounts: savingVM.accountList?.data.accounts ?? [])
         }
         .navigationDestination(isPresented: Binding(
             get: { selectedFrequent != nil },
             set: { if !$0 { selectedFrequent = nil } }
         )) {
             if let contact = selectedFrequent {
-                QuickTransferView(contact: contact, container: container)
+                QuickTransferView(contact: contact, container: container,
+                                  accounts: savingVM.accountList?.data.accounts ?? [])
             }
+        }
+        .navigationDestination(isPresented: $showAllFrequents) {
+            AllFrequentsView(contactVM: contactVM, container: container,
+                             accounts: savingVM.accountList?.data.accounts ?? [])
         }
         .onAppear {
             Task {
@@ -686,7 +693,7 @@ private struct FloatingAvatar: View {
 
 
 extension PayAnyoneView {
-
+    
     private var balanceCard: some View {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -728,11 +735,13 @@ extension PayAnyoneView {
             HStack {
                 Eyebrow("RECENT PAY")
                 Spacer()
-                Button(action: {}) {
+                // if contactVM.frequents.count >= 10 {
+                Button(action: { showAllFrequents = true }) {
                     Text("See all")
                         .font(.system(size: 10, weight: .regular))
                         .foregroundColor(Color.movo.textSecondary)
                 }
+                // }
             }
             .padding(.horizontal, Spacing.lg)
             
@@ -792,5 +801,4 @@ extension PayAnyoneView {
             .buttonStyle(.plain)
         }
     }
-    
 }

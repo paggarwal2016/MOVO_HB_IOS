@@ -127,9 +127,7 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showContactList) {
-            ContactView(isPresented: $showContactList)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+           
         }
         .fullScreenCover(isPresented: $showFundAccount) {
             if let account = displayAccount {

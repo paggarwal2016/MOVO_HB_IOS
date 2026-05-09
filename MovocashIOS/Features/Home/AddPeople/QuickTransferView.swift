@@ -10,65 +10,73 @@ import SwiftUI
 struct QuickTransferView: View {
 
     let contact: ContactRecord
+    let accounts: [SavingsAccountInfo]
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var transVM: TransactionViewModel
+    @FocusState private var amountFocused: Bool
 
-    @State private var amountText = ""
+    @State private var amountText = "0"
     @State private var descriptionText = ""
     @State private var selectedAccount: SavingsAccountInfo?
     @State private var showConfirmSheet = false
     @State private var successData: SuccessConfirmation?
 
-    init(
-        contact: ContactRecord,
-        container: AppContainer
-    ) {
+    init(contact: ContactRecord, container: AppContainer, accounts: [SavingsAccountInfo]) {
         self.contact = contact
-        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
+        self.accounts = accounts
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
+        let primary = accounts.first(where: { $0.isPrimary }) ?? accounts.first
+        _selectedAccount = State(wrappedValue: primary)
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
     private var isValid: Bool { amount > 0 && selectedAccount != nil }
-    private var accounts: [SavingsAccountInfo] {
-        savingVM.accountList?.data.accounts ?? []
+
+    // MARK: - Amount display helpers
+
+    private var availableBalanceDisplay: String {
+        selectedAccount.map { "$\($0.availableBalance.toCurrencyString())" } ?? "$0.00"
     }
+
+    private var availableBalanceDouble: Double {
+        guard let account = selectedAccount else { return 0 }
+        return NSDecimalNumber(decimal: account.availableBalance).doubleValue
+    }
+
+    // MARK: - Body
 
     var body: some View {
         ZStack(alignment: .bottom) {
             MovoBackground()
 
-            ScrollView {
-                VStack(spacing: 12) {
-                    contactCard
-                    accountCard
-                    amountCard
-                    descriptionCard
-                    sendButton
-                        .padding(.top, 15)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-            }
-        }
-        .navigationTitle("Send Money")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button { dismiss() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.primary)
-                        .frame(width: 36, height: 36)
-                        .background(Color(.systemBackground))
-                        .clipShape(Circle())
+            VStack(spacing: 0) {
+                navBar
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: Spacing.xl) {
+                        recipientSection
+                        amountSection
+                        noteCard
+                        accountCard
+                        Spacer().frame(height: 100)
+                    }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.md)
                 }
             }
+
+            sendButton
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, 36)
         }
-        .task { await loadAccounts() }
+        .background(Color.movo.background)
+        .preferredColorScheme(.dark)
+        .navigationBarHidden(true)
+        .onChange(of: amountFocused) { focused in
+            if focused && amountText == "0" { amountText = "" }
+            if !focused && amountText.isEmpty { amountText = "0" }
+        }
         .globalAlert()
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(
@@ -97,131 +105,295 @@ struct QuickTransferView: View {
         }
     }
 
-    // MARK: - Contact Card
+    // MARK: - Nav Bar
 
-    private var contactCard: some View {
-        HStack(spacing: 14) {
-            contactAvatar(initials: contact.initials, size: 52)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(contact.nickname ?? "")
-                    .font(.system(size: 16, weight: .semibold))
-                Text(contact.phoneNumber ?? "")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.gray)
+    private var navBar: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+                    .frame(width: 36, height: 36)
+                    .background(Color.movo.elevated, in: Circle())
             }
+            .buttonStyle(.plain)
+
             Spacer()
+
+            Text("Send money")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+
+            Spacer()
+
+            Button(action: { dismiss() }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+                    .frame(width: 36, height: 36)
+                    .background(Color.movo.elevated, in: Circle())
+            }
+            .buttonStyle(.plain)
         }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 0.5))
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.lg - 2)
+        .padding(.bottom, Spacing.md)
     }
 
-    // MARK: - Amount Card
+    // MARK: - Recipient
 
-    private var amountCard: some View {
-        VStack(spacing: 10) {
-            Text("AMOUNT")
-                .font(.system(size: 11, weight: .medium))
-                .tracking(0.8)
-                .foregroundStyle(.gray)
-            HStack(alignment: .top, spacing: 4) {
-                Text("$")
-                    .font(.system(size: 20, weight: .light))
-                    .foregroundStyle(.gray)
-                    .padding(.top, 6)
-                TextField("0", text: $amountText)
-                    .font(.system(size: 48, weight: .light))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.center)
-                    .fixedSize()
+    private var recipientSection: some View {
+        VStack(spacing: Spacing.sm) {
+            ZStack {
+                Circle().fill(Color.movo.elevated)
+                Circle().strokeBorder(Color.movo.accent, lineWidth: 1.5)
+                Text(contact.initials)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+            }
+            .frame(width: 72, height: 72)
+            .padding(.bottom, Spacing.xs)
+            
+            HStack(spacing: 8) {
+                Text("TO")
+                    .font(Typography.eyebrow.font)
+                    .tracking(1.2)
+                    .foregroundColor(Color.movo.textTertiary)
+
+                Text(contact.nickname ?? "")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Color.movo.textPrimary)
+            }
+
+            HStack(spacing: 8) {
+                Text(contact.phoneNumber ?? "")
+                    .font(Typography.caption.font)
+                    .foregroundColor(Color.movo.textTertiary)
+
+                if contact.isAdded {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.movo.accent)
+                            .frame(width: 5, height: 5)
+                        Text("ON MOVO")
+                            .font(.system(size: 9, weight: .semibold))
+                            .tracking(0.5)
+                            .foregroundColor(Color.movo.accent)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color.movo.accentTint)
+                            .overlay(Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
+                    )
+                }
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 0.5))
     }
 
-    // MARK: - Description Card
+    // MARK: - Amount Section
 
-    private var descriptionCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("DESCRIPTION")
-                .font(.system(size: 11, weight: .medium))
-                .tracking(0.8)
-                .foregroundStyle(.gray)
-            TextField("Add a note (optional)", text: $descriptionText)
-                .font(.system(size: 15))
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-                .background(Color(.systemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+    private var amountSection: some View {
+        VStack(spacing: Spacing.md) {
+            amountDisplay
+
+            Text("\(availableBalanceDisplay) available")
+                .font(Typography.caption.font)
+                .foregroundColor(Color.movo.textTertiary)
+
+            quickChips
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 0.5))
+    }
+
+    private var amountDisplay: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("$")
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundColor(Color.movo.textSecondary)
+                .baselineOffset(25)
+
+            let parts = amountText.split(separator: ".")
+            Text(parts.first.map(String.init) ?? "0")
+                .font(.system(size: 72, weight: .bold).monospacedDigit())
+                .foregroundColor(Color.movo.textPrimary)
+
+            Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
+                .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                .foregroundColor(Color.movo.textSecondary)
+                .baselineOffset(25)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { amountFocused = true }
+        .overlay(
+            TextField("", text: $amountText)
+                .keyboardType(.decimalPad)
+                .focused($amountFocused)
+                .opacity(0)
+        )
+    }
+
+    private let presets: [(String, Double?)] = [
+        ("$10", 10), ("$25", 25), ("$50", 50), ("$100", 100)
+    ]
+
+    private var quickChips: some View {
+        HStack(spacing: Spacing.sm) {
+            ForEach(presets, id: \.0) { label, value in
+                let selected = isPresetSelected(value)
+                Button { applyPreset(value) } label: {
+                    Text(label)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(selected ? Color.movo.accent : Color.movo.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(selected ? Color.movo.accentTint : Color.movo.elevated)
+                                .overlay(
+                                    Capsule().strokeBorder(
+                                        selected ? Color.movo.accentBorder : Color.clear,
+                                        lineWidth: Stroke.hairline
+                                    )
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func isPresetSelected(_ value: Double?) -> Bool {
+        guard amount > 0 else { return false }
+        if let v = value { return amount == v }
+        return amount == availableBalanceDouble && !amountText.isEmpty
+    }
+
+    private func applyPreset(_ value: Double?) {
+        amountFocused = false
+        if let v = value {
+            amountText = v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : "\(v)"
+        } else {
+            guard let account = selectedAccount else { return }
+            let raw = NSDecimalNumber(decimal: account.availableBalance).stringValue
+            amountText = raw
+        }
+    }
+
+    // MARK: - Note Card
+
+    private var noteCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "bubble.left")
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(Color.movo.textDisabled)
+
+            TextField("", text: $descriptionText,
+                      prompt: Text("What's it for? (optional)")
+                          .foregroundColor(Color.movo.textDisabled))
+                .font(Typography.body.font)
+                .foregroundColor(Color.movo.textPrimary)
+                .autocorrectionDisabled()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.lg)
+                .fill(Color.movo.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.lg)
+                        .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                )
+        )
     }
 
     // MARK: - Account Card
 
     private var accountCard: some View {
-        HStack(spacing: 0) {
-            Text("From account:")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Group {
-                if savingVM.state == .loading {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                        .frame(maxWidth: .infinity)
-                } else if accounts.isEmpty {
-                    Text("No accounts")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.gray)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Menu {
-                        ForEach(accounts) { account in
-                            Button {
-                                selectedAccount = account
-                            } label: {
-                                Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
-                            }
+        Group {
+            if accounts.isEmpty {
+                HStack {
+                    Text("No accounts available")
+                        .font(Typography.caption.font)
+                        .foregroundColor(Color.movo.textTertiary)
+                    Spacer()
+                }
+                .padding(Spacing.lg)
+                .background(cardBackground)
+            } else {
+                Menu {
+                    ForEach(accounts) { account in
+                        Button { selectedAccount = account } label: {
+                            Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
                         }
-                    } label: {
-                        HStack {
-                            if let account = selectedAccount {
-                                Text("\(account.nickname ?? account.clientName)  \(account.maskedAccountNumber)")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(.primary)
-                            } else {
-                                Text("Select")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.gray)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.gray)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .animation(.none, value: selectedAccount?.id)
                     }
+                } label: {
+                    accountCardContent
                 }
             }
         }
-        .animation(.none, value: savingVM.state)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 18)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 0.5))
+    }
+
+    private var accountCardContent: some View {
+        HStack(spacing: 14) {
+            // Movo logo square
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.sm)
+                    .fill(Color.movo.elevatedHigh)
+                Text("M")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(Color.movo.textPrimary)
+            }
+            .frame(width: 44, height: 44)
+
+            VStack(alignment: .leading, spacing: 3) {
+                if let account = selectedAccount {
+                    Text("FROM  ·  \(account.maskedAccountNumber)")
+                        .font(Typography.captionSmall.font)
+                        .foregroundColor(Color.movo.textTertiary)
+                    Text(account.nickname ?? account.clientName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                } else {
+                    Text("FROM")
+                        .font(Typography.captionSmall.font)
+                        .foregroundColor(Color.movo.textTertiary)
+                    Text("Select account")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color.movo.textDisabled)
+                }
+            }
+
+            Spacer()
+
+            if let account = selectedAccount {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("$\(account.availableBalance.toCurrencyString())")
+                        .font(.system(size: 16, weight: .semibold).monospacedDigit())
+                        .foregroundColor(Color.movo.textPrimary)
+                    Text("available")
+                        .font(Typography.captionSmall.font)
+                        .foregroundColor(Color.movo.textTertiary)
+                }
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Color.movo.textDisabled)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+        .background(cardBackground)
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: Radius.lg)
+            .fill(Color.movo.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.lg)
+                    .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+            )
     }
 
     // MARK: - Send Button
@@ -229,40 +401,27 @@ struct QuickTransferView: View {
     private var sendButton: some View {
         Button {
             UIApplication.shared.dismissKeyboard()
+            amountFocused = false
             showReview()
         } label: {
-            Text("Send Money")
-                .font(.system(size: 15, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(isValid ? Color.primary : Color(.systemGray5))
-                .foregroundStyle(isValid ? Color.white : Color(.tertiaryLabel))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.up.forward")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(amount > 0 ? "Send $\(String(format: "%.2f", amount))" : "Send")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(isValid ? Color.movo.onAccent : Color.movo.textDisabled)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                Capsule().fill(isValid ? Color.movo.accent : Color.movo.elevated)
+            )
         }
         .disabled(!isValid)
-    }
-
-    // MARK: - Avatar
-
-    private func contactAvatar(initials: String, size: CGFloat) -> some View {
-        ZStack {
-            Circle()
-                .fill(Color.blue.opacity(0.1))
-                .frame(width: size, height: size)
-            Text(initials)
-                .font(.system(size: size * 0.32, weight: .semibold))
-                .foregroundColor(Color.softBlue)
-        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Actions
-
-    private func loadAccounts() async {
-        await savingVM.loadAccounts()
-        if selectedAccount == nil {
-            selectedAccount = savingVM.accountList?.data.accounts.first(where: { $0.isPrimary })
-        }
-    }
 
     private func showReview() {
         let rawPhone = contact.phoneNumber ?? ""
