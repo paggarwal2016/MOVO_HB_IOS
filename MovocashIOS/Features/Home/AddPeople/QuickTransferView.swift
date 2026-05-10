@@ -49,31 +49,29 @@ struct QuickTransferView: View {
 
     var body: some View {
         ZStack {
-            ZStack {
-                MovoBackground()
-                VStack(spacing: 0) {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: Spacing.xl) {
-                            navBar
-                            recipientSection
-                            amountSection
-                            noteCard
-                            accountCard
-                        }
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.top, Spacing.md)
-                        .padding(.bottom, Spacing.lg)
+            MovoBackground()
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: Spacing.xl) {
+                        navBar
+                        recipientSection
+                        amountSection
+                        noteCard
+                        accountCard
                     }
-                    .onTapGesture { amountFocused = false }
-                    .scrollDismissesKeyboard(.immediately)
-
-                    sendButton
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.top, Spacing.xs)
-                        .padding(.bottom, Spacing.xs)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.md)
+                    .padding(.bottom, Spacing.lg)
                 }
+                .onTapGesture { amountFocused = false }
+                .scrollDismissesKeyboard(.immediately)
+
+                sendButton
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.xs)
+                    .padding(.bottom, Spacing.xs)
             }
-            .blur(radius: showAccountSheet ? 6 : 0)
+            .blur(radius: showAccountSheet ? 3 : 0)
 
             if transVM.state == .loading {
                 Color.black.opacity(0.5)
@@ -142,9 +140,8 @@ struct QuickTransferView: View {
                 .foregroundColor(Color.movo.textPrimary)
 
             Spacer()
-            
-            Color.clear.frame(width: 32, height: 32)
 
+            Color.clear.frame(width: 36, height: 36)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.lg)
@@ -276,7 +273,7 @@ struct QuickTransferView: View {
     // MARK: - Note Card
 
     private var noteCard: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             Image(systemName: "bubble.left")
                 .font(.system(size: 15, weight: .regular))
                 .foregroundColor(Color.movo.textDisabled)
@@ -284,12 +281,12 @@ struct QuickTransferView: View {
             TextField("", text: $descriptionText,
                       prompt: Text("What's it for? (optional)")
                           .foregroundColor(Color.movo.textDisabled))
-                .font(Typography.body.font)
+                .font(.system(size: 15, weight: .regular))
                 .foregroundColor(Color.movo.textPrimary)
                 .autocorrectionDisabled()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 16)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Radius.lg)
                 .fill(Color.movo.surface)
@@ -331,28 +328,27 @@ struct QuickTransferView: View {
     }
 
     private var accountCardContent: some View {
-        HStack(spacing: 14) {
-            // Movo logo square
+        HStack(spacing: Spacing.md) {
             ZStack {
-                RoundedRectangle(cornerRadius: Radius.sm)
+                RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.elevatedHigh)
-                Text("M")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(Color.movo.textPrimary)
+                MLogo().frame(width: 28, height: 28)
             }
-            .frame(width: 44, height: 44)
+            .frame(width: 52, height: 52)
 
             VStack(alignment: .leading, spacing: 3) {
                 if let account = selectedAccount {
                     Text("FROM  ·  \(account.maskedAccountNumber)")
-                        .font(Typography.captionSmall.font)
+                        .font(.system(size: 11, weight: .semibold))
+                        .tracking(0.4)
                         .foregroundColor(Color.movo.textTertiary)
                     Text(account.nickname ?? account.clientName)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
                 } else {
                     Text("FROM")
-                        .font(Typography.captionSmall.font)
+                        .font(.system(size: 11, weight: .semibold))
+                        .tracking(0.4)
                         .foregroundColor(Color.movo.textTertiary)
                     Text("Select account")
                         .font(.system(size: 15, weight: .semibold))
@@ -365,22 +361,22 @@ struct QuickTransferView: View {
             if let account = selectedAccount {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("$\(account.availableBalance.toCurrencyString())")
-                        .font(.system(size: 16, weight: .semibold).monospacedDigit())
+                        .font(.system(size: 15, weight: .semibold).monospacedDigit())
                         .foregroundColor(Color.movo.textPrimary)
                     Text("available")
-                        .font(Typography.captionSmall.font)
+                        .font(.system(size: 11, weight: .regular))
                         .foregroundColor(Color.movo.textTertiary)
                 }
             }
 
             if accounts.count > 1 {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.movo.textDisabled)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color.movo.accent)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
         .background(cardBackground)
     }
 
@@ -444,7 +440,7 @@ struct QuickTransferView: View {
     }
 
     private func accountSheetRow(account: SavingsAccountInfo, isSelected: Bool) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(account.maskedAccountNumber)
                     .font(.system(size: 11, weight: .semibold))

@@ -17,6 +17,7 @@ struct AllFrequentsView: View {
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var search: String = ""
     @State private var selectedContact: ContactRecord? = nil
+    @State private var isNavigating: Bool = false
     
     private var showSearch: Bool { contactVM.frequents.count > 15 }
     
@@ -54,6 +55,7 @@ struct AllFrequentsView: View {
                                     isAdded: false,
                                     updatedAt: Date()
                                 )
+                                isNavigating = true
                             } label: {
                                 frequentRow(contact)
                             }
@@ -66,13 +68,12 @@ struct AllFrequentsView: View {
                                     .padding(.horizontal, 14)
                             }
                         }
-                        Spacer().frame(height: 10)
                     }
                     .background(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: Radius.heroCard)
                             .fill(Color.movo.surface.opacity(0.85))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 14)
+                                RoundedRectangle(cornerRadius: Radius.heroCard)
                                     .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
                             )
                     )
@@ -88,10 +89,7 @@ struct AllFrequentsView: View {
         .onAppear {
             Task { await contactVM.loadFrequent() }
         }
-        .navigationDestination(isPresented: Binding(
-            get: { selectedContact != nil },
-            set: { if !$0 { selectedContact = nil } }
-        )) {
+        .navigationDestination(isPresented: $isNavigating) {
             if let contact = selectedContact {
                 QuickTransferView(contact: contact, container: container, accounts: accounts)
             }
@@ -126,9 +124,9 @@ struct AllFrequentsView: View {
                 .foregroundColor(Color.movo.textDisabled)
             TextField("", text: $search,
                       prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
-            .font(Typography.subtitle.font)
-            .foregroundColor(Color.movo.textPrimary)
-            .autocorrectionDisabled()
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(Color.movo.textPrimary)
+                .autocorrectionDisabled()
             if !search.isEmpty {
                 Button { search = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -137,20 +135,20 @@ struct AllFrequentsView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, 11)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.movo.surface)
+            RoundedRectangle(cornerRadius: Radius.md)
+                .fill(Color.movo.elevated)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                    RoundedRectangle(cornerRadius: Radius.md)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
         )
     }
     
     private func frequentRow(_ contact: RecordContact) -> some View {
-        HStack(spacing: 14) {
+        HStack(alignment: .center, spacing: Spacing.md) {
             ZStack {
                 Circle().fill(Color.movo.elevated)
                 Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
@@ -159,27 +157,27 @@ struct AllFrequentsView: View {
                     .foregroundColor(Color.movo.textPrimary)
             }
             .frame(width: 44, height: 44)
-            
+
             VStack(alignment: .leading, spacing: 3) {
                 Text(contact.nickname ?? "")
-                    .font(Typography.bodyCompact.font)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(Color.movo.textPrimary)
                     .lineLimit(1)
                 Text(contact.phoneNumber ?? "")
-                    .font(Typography.captionSmall.font)
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundColor(Color.movo.textTertiary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Color.movo.textDisabled)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 64)
         .contentShape(Rectangle())
     }
 }

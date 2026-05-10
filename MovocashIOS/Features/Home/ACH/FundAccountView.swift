@@ -26,7 +26,8 @@ struct FundAccountView: View {
     @State private var selectedAccount: ACHAccount?
     @State private var amount: String = "0"
     @State private var showConfirmSheet: Bool = false
-    @State private var isFromExpanded: Bool = false
+    @State private var showAccountSheet: Bool = false
+    @State private var isSubmitting: Bool = false
     @State private var successData: SuccessConfirmation?
     @FocusState private var isAmountFocused: Bool
 
@@ -57,23 +58,30 @@ struct FundAccountView: View {
                 VStack(spacing: 0) {
                     navBar
                     Spacer()
-                    
+
                     amountDisplay
                         .padding(.bottom, Spacing.lg)
                     Spacer()
-                    
+
                     transferPanel
                         .padding(.bottom, Spacing.lg)
                     Spacer()
-                    
+
                     transferButton
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.xl)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { isAmountFocused = false }
             }
 
+            if isSubmitting {
+                Color.black.opacity(0.45).ignoresSafeArea()
+                SpinnerView()
+            }
         }
-        .blur(radius: showConfirmSheet ? 6 : 0)
+        .blur(radius: showConfirmSheet ? 3 : 0)
+        .blur(radius: showAccountSheet ? 3 : 0)
         .background(Color.movo.background.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .onAppear {
@@ -102,6 +110,8 @@ struct FundAccountView: View {
                 onCancel: { showConfirmSheet = false },
                 onConfirm: {
                     guard let account = selectedAccount else { return }
+                    showConfirmSheet = false
+                    isSubmitting = true
                     Task {
                         let request = ACHRequest(
                             amount: Int(amount) ?? 0,
@@ -109,8 +119,8 @@ struct FundAccountView: View {
                             userAction: "SUBMITS-ACH-DEPOSIT"
                         )
                         let success = await vm.initiateTransfer(request: request)
+                        isSubmitting = false
                         if success {
-                            showConfirmSheet = false
                             let dateText = Date.now.formatted(date: .long, time: .shortened)
                             successData = SuccessConfirmation(
                                 channel: .external,
@@ -131,6 +141,14 @@ struct FundAccountView: View {
             .presentationDetents([.height(420)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(24)
+        }
+        .sheet(isPresented: $showAccountSheet) {
+            let rowHeight: CGFloat = 86
+            let fixedHeight = CGFloat(sortedAccounts.count) * rowHeight + 80
+            BankAccountPickerSheet(accounts: sortedAccounts, selected: $selectedAccount)
+                .presentationDetents(sortedAccounts.count > 5 ? [.medium, .large] : [.height(fixedHeight)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
         }
         .fullScreenCover(item: $successData) { data in
             SuccessConfirmationView(
@@ -188,26 +206,6 @@ struct FundAccountView: View {
         )
     }
 
-    // MARK: - Account Radio List
-
-    private var accountRadioList: some View {
-        VStack(spacing: 0) {
-            ForEach(sortedAccounts, id: \.achAccountId) { account in
-                Rectangle()
-                    .fill(Color.movo.border)
-                    .frame(height: Stroke.hairline)
-                    .padding(.horizontal, Spacing.lg)
-                Button {
-                    selectedAccount = account
-                    withAnimation(.easeInOut(duration: 0.2)) { isFromExpanded = false }
-                } label: {
-                    bankAccountRadioRow(account)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
     // MARK: - Transfer Panel (From / To rows)
 
     private var transferPanel: some View {
@@ -220,7 +218,7 @@ struct FundAccountView: View {
                     .foregroundColor(Color.movo.textTertiary)
                     .padding(.horizontal, Spacing.lg)
 
-                if vm.state == .loading && vm.accounts.isEmpty {
+                if vm.state == .loading && sortedAccounts.isEmpty {
                     HStack {
                         ProgressView().tint(Color.movo.textSecondary)
                         Text("Loading accounts…")
@@ -230,57 +228,50 @@ struct FundAccountView: View {
                     }
                     .padding(.horizontal, Spacing.lg)
                     .padding(.vertical, Spacing.md)
-                } else if vm.accounts.isEmpty {
-                    Text("No bank accounts linked")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color.movo.textTertiary)
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.vertical, Spacing.md)
-                } else if vm.accounts.count == 1, let account = vm.accounts.first {
-                    accountRow(
-                        avatar: bankInitialsAvatar,
-                        title: account.accountName,
-                        subtitle: "\(account.formattedBalance) · ••\(account.accountNumber.suffix(4))",
-                        showChevron: false
-                    )
-                } else {
-                    // Collapsed header — shows selected account + expand toggle
-                    let displayed = selectedAccount ?? sortedAccounts.first
+                } else if sortedAccounts.isEmpty {
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { isFromExpanded.toggle() }
-                    } label: {
-                        HStack(spacing: Spacing.md) {
-                            bankInitialsAvatar
-                                .frame(width: 52, height: 52)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(displayed?.accountName ?? "")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(Color.movo.textPrimary)
-                                Text("\(displayed?.formattedBalance ?? "") · ••\((displayed?.accountNumber ?? "").suffix(4))")
-                                    .font(.system(size: 13, weight: .regular))
-                                    .foregroundColor(Color.movo.textTertiary)
+                        Task {
+                            await achVM.startPlaidLink()
+                            if achVM.linkedAccount != nil {
+                                await vm.fetchAccounts()
                             }
-                            Spacer()
-                            Image(systemName: isFromExpanded ? "chevron.up" : "chevron.down")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(Color.movo.textDisabled)
                         }
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.movo.accentTint)
+                                    .frame(width: 46, height: 46)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(Color.movo.accent)
+                            }
+                            Text(achVM.state == .loading ? "Connecting..." : "Connect bank account")
+                                .font(Typography.body.font)
+                                .foregroundStyle(Color.movo.accent)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.movo.accent)
+                        }
+                        .padding(.vertical, 14)
                         .padding(.horizontal, Spacing.lg)
-                        .padding(.vertical, Spacing.sm)
                     }
                     .buttonStyle(.plain)
-
-                    // Expanded radio list — scrollable when 3 or more accounts
-                    if isFromExpanded {
-                        if sortedAccounts.count >= 3 {
-                            ScrollView(.vertical, showsIndicators: false) {
-                                accountRadioList
-                            }
-                            .frame(maxHeight: 180)
-                        } else {
-                            accountRadioList
-                        }
+                    .disabled(achVM.state == .loading)
+                } else {
+                    Button {
+                        isAmountFocused = false
+                        if sortedAccounts.count > 1 { showAccountSheet = true }
+                    } label: {
+                        accountRow(
+                            avatar: bankInitialsAvatar,
+                            title: selectedAccount?.accountName ?? "—",
+                            subtitle: "\(selectedAccount?.formattedBalance ?? "") · ••\((selectedAccount?.accountNumber ?? "").suffix(4))",
+                            showChevron: sortedAccounts.count > 1
+                        )
                     }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -407,6 +398,8 @@ struct FundAccountView: View {
     private var transferButton: some View {
         Button {
             guard isFormValid else { return }
+            isAmountFocused = false
+            UIApplication.shared.dismissKeyboard()
             showConfirmSheet = true
         } label: {
             Group {
@@ -429,65 +422,91 @@ struct FundAccountView: View {
         .disabled(!isFormValid)
     }
 
-    // MARK: - Bank Account Radio Row
-
-    private func bankAccountRadioRow(_ account: ACHAccount) -> some View {
-        let isSelected = selectedAccount?.achAccountId == account.achAccountId
-        return HStack(spacing: Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.elevated)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.button)
-                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                    )
-                if let image = account.logoImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 28, height: 28)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                } else {
-                    Text(account.accountName.prefix(2).uppercased())
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color.movo.textPrimary)
-                }
-            }
-            .frame(width: 44, height: 44)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(account.accountName)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color.movo.textPrimary)
-                Text("••\(account.accountNumber.suffix(4)) · \(account.formattedBalance)")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(Color.movo.textTertiary)
-            }
-
-            Spacer()
-
-            ZStack {
-                Circle()
-                    .strokeBorder(
-                        isSelected ? Color.movo.accent : Color.movo.border,
-                        lineWidth: 2
-                    )
-                    .frame(width: 22, height: 22)
-                if isSelected {
-                    Circle()
-                        .fill(Color.movo.accent)
-                        .frame(width: 12, height: 12)
-                }
-            }
-        }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.sm)
-    }
-
     // MARK: - Amount Entry (number pad)
 
     private func showAmountPad() {
         isAmountFocused = true
     }
 
+}
+
+// MARK: - Bank Account Picker Sheet
+
+private struct BankAccountPickerSheet: View {
+    let accounts: [ACHAccount]
+    @Binding var selected: ACHAccount?
+    @SwiftUI.Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: Spacing.sm) {
+                    ForEach(accounts, id: \.achAccountId) { account in
+                        let isSelected = selected?.achAccountId == account.achAccountId
+                        Button {
+                            selected = account
+                        } label: {
+                            HStack(spacing: Spacing.md) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: Radius.button)
+                                        .fill(Color.movo.elevatedHigh)
+                                    if let image = account.logoImage {
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 28, height: 28)
+                                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    } else {
+                                        Text(account.accountName.prefix(2).uppercased())
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(Color.movo.textPrimary)
+                                    }
+                                }
+                                .frame(width: 46, height: 46)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(account.accountName)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Color.movo.textPrimary)
+                                    Text("••\(account.accountNumber.suffix(4)) · \(account.formattedBalance)")
+                                        .font(.system(size: 13, weight: .regular))
+                                        .foregroundColor(Color.movo.textTertiary)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 22))
+                                    .foregroundColor(isSelected ? Color.movo.accent : Color.movo.textDisabled)
+                                    .animation(.spring(duration: 0.2), value: isSelected)
+                            }
+                            .padding(Spacing.md)
+                            .background(Color.movo.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Radius.lg)
+                                    .strokeBorder(
+                                        isSelected ? Color.movo.accentBorder : Color.movo.border,
+                                        lineWidth: Stroke.hairline
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(Spacing.lg)
+            }
+            .background(Color.movo.background.ignoresSafeArea())
+            .preferredColorScheme(.dark)
+            .navigationTitle("Select Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .font(Typography.buttonLarge.font)
+                        .foregroundColor(Color.movo.accent)
+                }
+            }
+        }
+    }
 }

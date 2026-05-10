@@ -112,7 +112,7 @@ struct PayAnyoneView: View {
                 SpinnerView()
             }
         }
-        .blur(radius: showCreateContactScreen ? 6 : 0)
+        .blur(radius: showCreateContactScreen ? 3 : 0)
         .animation(.easeInOut(duration: 0.25), value: showCreateContactScreen)
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
@@ -310,12 +310,13 @@ struct PayAnyoneView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Search bar
             HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass").foregroundColor(Color.movo.textDisabled)
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(Color.movo.textDisabled)
                 TextField("", text: $contactVM.search,
                           prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
-                .font(Typography.subtitle.font)
-                .foregroundColor(Color.movo.textPrimary)
-                .autocorrectionDisabled()
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(Color.movo.textPrimary)
+                    .autocorrectionDisabled()
                 if !contactVM.search.isEmpty {
                     Button { contactVM.search = "" } label: {
                         Image(systemName: "xmark.circle.fill").foregroundColor(Color.movo.textDisabled)
@@ -323,96 +324,99 @@ struct PayAnyoneView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 11)
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.movo.surface)
-                    .overlay(RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color.movo.elevated, lineWidth: 0.5))
+                RoundedRectangle(cornerRadius: Radius.md)
+                    .fill(Color.movo.elevated)
+                    .overlay(RoundedRectangle(cornerRadius: Radius.md)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
             )
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
-            
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.lg)
+            .padding(.bottom, Spacing.sm)
+
             // Favourites
             if !contactVM.filteredFavourites.isEmpty {
                 Text("FAVOURITES")
-                    .font(Typography.eyebrow.font)
+                    .font(.system(size: 11, weight: .semibold))
                     .tracking(0.8)
                     .foregroundColor(Color.movo.textTertiary)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.md)
+                    .padding(.bottom, Spacing.xs)
                 ForEach(contactVM.filteredFavourites) { contact in
                     NavigationLink(value: contact) { contactRow(contact) }
                         .buttonStyle(.plain)
                     if contact.id != contactVM.filteredFavourites.last?.id {
-                        Rectangle().fill(Color.movo.elevated).frame(height: 0.5).padding(.horizontal, 14)
+                        Rectangle().fill(Color.movo.elevated)
+                            .frame(height: Stroke.hairline)
+                            .padding(.horizontal, Spacing.lg)
                     }
                 }
-                Rectangle().fill(Color.movo.elevated).frame(height: 0.5).padding(.horizontal, 14)
+                Rectangle().fill(Color.movo.elevated)
+                    .frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
             }
-            
+
             // All contacts
             if !contactVM.filteredContacts.isEmpty {
                 Text("ALL CONTACTS")
-                    .font(Typography.eyebrow.font)
+                    .font(.system(size: 11, weight: .semibold))
                     .tracking(0.8)
                     .foregroundColor(Color.movo.textTertiary)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.md)
+                    .padding(.bottom, Spacing.xs)
                 ForEach(contactVM.filteredContacts) { contact in
                     NavigationLink(value: contact) { contactRow(contact) }
                         .buttonStyle(.plain)
                     if contact.id != contactVM.filteredContacts.last?.id {
-                        Rectangle().fill(Color.movo.elevated).frame(height: 0.5).padding(.horizontal, 14)
+                        Rectangle().fill(Color.movo.elevated)
+                            .frame(height: Stroke.hairline)
+                            .padding(.horizontal, Spacing.lg)
                     }
                 }
             }
-            Spacer().frame(height: 10)
+            Spacer().frame(height: Spacing.md)
         }
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: Radius.heroCard)
                 .fill(Color.movo.surface.opacity(0.85))
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(Color.movo.elevated, lineWidth: 0.5))
+                .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline))
         )
-        .padding(.leading, Spacing.lg)
-        .padding(.trailing, Spacing.lg)
+        .padding(.horizontal, Spacing.lg)
     }
     
     private func contactAvatar(initials: String, size: CGFloat) -> some View {
         Text(initials.isEmpty ? "?" : initials)
-            .font(.system(size: size * 0.35, weight: .semibold))
+            .font(.system(size: size * 0.38, weight: .semibold))
             .foregroundColor(Color.movo.textPrimary)
             .frame(width: size, height: size)
             .background(Color.movo.elevated, in: Circle())
-            .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: 0.5))
+            .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
     }
-    
+
     private func contactRow(_ contact: ContactRecord) -> some View {
-        HStack(spacing: 12) {
-            contactAvatar(initials: contact.initials, size: 38)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: Spacing.md) {
+            contactAvatar(initials: contact.initials, size: 44)
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(contact.nickname ?? "")
-                        .font(Typography.bodyCompact.font)
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
                     if contact.isAdded {
                         Text("MOVO")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundColor(Color.movo.accent)
-                            .padding(.horizontal, 5)
+                            .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(
-                                Capsule().fill(Color.movo.accent.opacity(0.15))
-                            )
+                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
                     }
                 }
                 Text(contact.phoneNumber ?? "")
-                    .font(Typography.captionSmall.font)
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
@@ -420,16 +424,16 @@ struct PayAnyoneView: View {
                 Task { await contactVM.toggleFavourite(contact) }
             } label: {
                 Image(systemName: contactVM.isFavorite(contact) ? "star.fill" : "star")
-                    .font(.system(size: 14, weight: .regular))
+                    .font(.system(size: 15, weight: .regular))
                     .foregroundColor(contactVM.isFavorite(contact) ? Color.movo.accent : Color.movo.textDisabled)
             }
             .buttonStyle(.plain)
             Image(systemName: "chevron.right")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Color.movo.textDisabled)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, 12)
     }
     
     // MARK: - Actions

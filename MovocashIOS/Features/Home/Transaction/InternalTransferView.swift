@@ -15,14 +15,43 @@ struct InternalTransferView: View {
 
     private let toClientId: Int
     private let preselectedFromCard: VCardListResponse?
+    private let initialCards: [VCardListResponse]
+    private let allAccounts: [SavingsAccountInfo]
 
-    @State private var amountText = ""
+    @State private var amountText = "0"
     @State private var descriptionText = ""
     @State private var selectedFromAccount: SavingsAccountInfo?
     @State private var selectedToCard: VCardListResponse?
-    @State private var primaryCard: VCardsList?
-    @State private var cardsList: [VCardListResponse] = []
     @State private var showCardSheet = false
+    @State private var showConfirmSheet = false
+
+    private var toCardAccount: SavingsAccountInfo? {
+        guard let id = selectedToCard?.savingsAccountId else { return nil }
+        return allAccounts.first { $0.id == id }
+    }
+
+    private var isLoadingCards: Bool {
+        initialCards.isEmpty && !vcardVM.hasLoadedCards
+    }
+
+    private var allCards: [VCardListResponse] {
+        vcardVM.hasLoadedCards ? vcardVM.apiCards : initialCards
+    }
+
+    private var primaryCard: VCardListResponse? {
+        guard preselectedFromCard == nil else { return nil }
+        let fromId = selectedFromAccount?.id
+        return allCards.first { $0.savingsAccountId == fromId }
+    }
+
+    private var cardsList: [VCardListResponse] {
+        let fromCardId = preselectedFromCard?.id ?? primaryCard?.id
+        return allCards.filter { card in
+            guard card.savingsAccountId != nil else { return false }
+            return card.id != fromCardId
+        }
+    }
+    @FocusState private var isAmountFocused: Bool
 
     var onDismiss: () -> Void
 
@@ -36,209 +65,333 @@ struct InternalTransferView: View {
         fromAccount: SavingsAccountInfo?,
         nonPrimaryAccounts: [SavingsAccountInfo],
         preselectedFromCard: VCardListResponse? = nil,
+        initialCards: [VCardListResponse] = [],
         container: AppContainer,
         onDismiss: @escaping () -> Void,
     ) {
         self.toClientId = toClientId
         self.preselectedFromCard = preselectedFromCard
+        self.initialCards = initialCards
+        var accounts = nonPrimaryAccounts
+        if let from = fromAccount { accounts.insert(from, at: 0) }
+        self.allAccounts = accounts
         _selectedFromAccount = State(initialValue: fromAccount)
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
         self.onDismiss = onDismiss
+        let fromCardId = preselectedFromCard?.id ?? initialCards.first(where: { $0.savingsAccountId == fromAccount?.id })?.id
+        let firstDestination = initialCards.first(where: { $0.savingsAccountId != nil && $0.id != fromCardId })
+        _selectedToCard = State(initialValue: firstDestination)
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                MovoBackground()
-                ScrollView {
-                    VStack(spacing: 12) {
+        ZStack {
+            MovoBackground()
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: Spacing.xl) {
+                        navBar
                         amountCard
-                        fieldsCard
-                        summaryCard
-                        confirmButton
+                            .padding(.horizontal, Spacing.lg)
+                        transferPanel
+                            .padding(.horizontal, Spacing.lg)
+                        noteCard
+                            .padding(.horizontal, Spacing.lg)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding(.top, Spacing.md)
+                    .padding(.bottom, Spacing.lg)
                 }
+                .scrollDismissesKeyboard(.immediately)
+                .simultaneousGesture(TapGesture().onEnded { isAmountFocused = false })
+
+                confirmButton
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.xs)
+                    .padding(.bottom, Spacing.xs)
             }
-            .navigationTitle("Transfer Money")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.primary)
-                            .frame(width: 36, height: 36)
-                            .background(Color(.systemBackground))
-                            .clipShape(Circle())
-                    }
+            if transVM.state == .loading {
+                Color.black.opacity(0.5).ignoresSafeArea()
+                SpinnerView()
+            }
+        }
+        .background(Color.movo.background.ignoresSafeArea())
+        .preferredColorScheme(.dark)
+        .navigationBarHidden(true)
+        .onChange(of: isAmountFocused) { focused in
+            if focused && amountText == "0" { amountText = "" }
+            if !focused && amountText.isEmpty { amountText = "0" }
+        }
+        .sheet(isPresented: $showCardSheet) {
+            CardPickerSheet(cards: cardsList, selected: $selectedToCard)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
+        }
+        .sheet(isPresented: $showConfirmSheet) {
+            ConfirmationBottomSheet(
+                channel: .internalTransfer,
+                amount: amountText,
+                fromName: preselectedFromCard?.name ?? primaryCard?.name ?? "Card",
+                fromMask: (preselectedFromCard?.lastFour ?? primaryCard?.lastFour).map { "•••• \($0)" },
+                toName: selectedToCard?.name ?? "Virtual Card",
+                toMask: selectedToCard?.lastFour.map { "•••• \($0)" },
+                note: descriptionText.isEmpty ? nil : descriptionText,
+                isLoading: transVM.state == .loading,
+                onCancel: { showConfirmSheet = false },
+                onConfirm: {
+                    showConfirmSheet = false
+                    Task { await submitTransfer() }
                 }
+            )
+            .padding(.top, 30)
+            .presentationDetents([.height(descriptionText.isEmpty ? 420 : 490)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(24)
+        }
+        .task {
+            if initialCards.isEmpty {
+                await vcardVM.loadCards()
             }
-            .overlay {
-                if transVM.state == .loading {
-                    SpinnerView()
-                }
+            if selectedToCard == nil {
+                selectedToCard = cardsList.first
             }
-            .sheet(isPresented: $showCardSheet) {
-                CardPickerSheet(cards: cardsList, selected: $selectedToCard)
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-            }
-            .task {
-                if preselectedFromCard == nil {
-                    primaryCard = try? await vcardVM.getVCardPrimary()?.data
-                }
-                let all = (try? await vcardVM.getVCardsAll()) ?? []
-                let excludeNumber = preselectedFromCard?.cardNumber ?? primaryCard?.cardNumber
-                cardsList = all.filter { $0.cardNumber != excludeNumber }
-            }
+        }
+        .onChange(of: vcardVM.hasLoadedCards) { loaded in
+            guard loaded, selectedToCard == nil else { return }
+            selectedToCard = cardsList.first
         }
     }
 
+    // MARK: - Nav Bar
+
+    private var navBar: some View {
+        HStack {
+            Color.clear.frame(width: 32, height: 32)
+            Spacer()
+            Text("Transfer Money")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+            Spacer()
+            CircularNavButton(systemName: "xmark") { dismiss() }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.bottom, Spacing.md)
+    }
+    
     // MARK: - Amount Card
 
     private var amountCard: some View {
-        VStack(spacing: 10) {
-            Text("TRANSFER AMOUNT")
-                .font(.system(size: 11, weight: .medium))
-                .tracking(0.8)
-                .foregroundStyle(.secondary)
-            HStack(alignment: .top, spacing: 4) {
+        VStack(spacing: Spacing.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("$")
-                    .font(.system(size: 20, weight: .light))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 6)
-                TextField("0", text: $amountText)
-                    .font(.system(size: 48, weight: .light))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.center)
-                    .fixedSize()
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
+                    .baselineOffset(25)
+
+                let parts = amountText.split(separator: ".")
+                Text(parts.first.map(String.init) ?? "0")
+                    .font(.system(size: 72, weight: .bold).monospacedDigit())
+                    .foregroundColor(Color.movo.textPrimary)
+
+                Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
+                    .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                    .foregroundColor(Color.movo.textSecondary)
+                    .baselineOffset(25)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { isAmountFocused = true }
+            .overlay(
+                TextField("", text: $amountText)
+                    .keyboardType(.decimalPad)
+                    .focused($isAmountFocused)
+                    .opacity(0)
+            )
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
-        .card()
+        .padding(.vertical, Spacing.xxl)
     }
 
-    // MARK: - Fields Card
+    // MARK: - Transfer Panel
 
-    private var fieldsCard: some View {
+    private var transferPanel: some View {
         VStack(spacing: 0) {
-            FieldRow(label: "From") {
-                fromAccountPicker
+            fromAccountRow
+
+            ZStack {
+                Rectangle()
+                    .fill(Color.movo.border)
+                    .frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+                Circle()
+                    .fill(Color.movo.elevated)
+                    .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(Color.movo.accent)
+                    )
             }
-            Divider()
-            FieldRow(label: "To") {
-                toAccountPicker
-            }
-            Divider()
-            FieldRow(label: "Description") {
-                TextField("Enter description", text: $descriptionText)
-                    .font(.system(size: 14, weight: .medium))
-                    .multilineTextAlignment(.trailing)
-            }
+            .padding(.vertical, Spacing.md)
+
+            toAccountRow
         }
-        .padding(.horizontal, 16)
-        .card()
+        .padding(.vertical, Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.surface.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        )
     }
 
-    // MARK: - From Picker
-
-    private var fromAccountPicker: some View {
-        Group {
-            if let card = preselectedFromCard {
-                CardChipRow(
-                    name: card.name ?? "Card",
-                    lastFour: card.lastFour ?? "••••",
-                    badge: nil,
-                    showIcon: false,
-                )
-            } else if let card = primaryCard {
-                CardChipRow(
-                    name: card.name ?? "Primary Card",
-                    lastFour: card.lastFour ?? "••••",
-                    badge: .cardPrimary,
-                    showIcon: false,
-                )
-            } else {
-                CardChipSkeleton(card: false)
+    private var fromAccountRow: some View {
+        let name = preselectedFromCard?.name ?? primaryCard?.name ?? "Card"
+        let lastFour = preselectedFromCard?.lastFour ?? primaryCard?.lastFour ?? "••••"
+        let balance = selectedFromAccount?.formattedBalance ?? ""
+        let subtitle = balance.isEmpty ? "•••• \(lastFour)" : "\(balance) · •••• \(lastFour)"
+        return HStack(spacing: Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.button)
+                    .fill(Color.movo.elevatedHigh)
+                MLogo().frame(width: 28, height: 28)
             }
+            .frame(width: 52, height: 52)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+                Text(subtitle)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(Color.movo.textTertiary)
+            }
+
+            Spacer()
         }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
     }
 
-    // MARK: - To Picker
-
-    private var toAccountPicker: some View {
+    private var toAccountRow: some View {
         Group {
-            if cardsList.isEmpty && primaryCard == nil {
-                CardChipSkeleton(card: false)
-            } else if cardsList.isEmpty {
-                Text("No other cards available")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+            if isLoadingCards {
+                HStack(spacing: Spacing.md) {
+                    RoundedRectangle(cornerRadius: Radius.button)
+                        .fill(Color.movo.elevatedHigh)
+                        .frame(width: 52, height: 52)
+                    ProgressView().tint(Color.movo.textSecondary)
+                    Text("Loading cards…")
+                        .font(.system(size: 13))
+                        .foregroundColor(Color.movo.textTertiary)
+                    Spacer()
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.sm)
             } else {
-                Button {
-                    showCardSheet = true
-                } label: {
-                    HStack {
-                        if let card = selectedToCard {
-                            CardChipRow(
-                                name: card.name ?? "Virtual Card",
-                                lastFour: card.lastFour ?? "••••",
-                                badge: nil,
-                                showIcon: false,
-                                showChevron: true
-                            )
-                        } else {
-                            Text("Select destination card")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+                Button { showCardSheet = true } label: {
+                    toAccountRowContent(showChevron: !cardsList.isEmpty)
                 }
                 .buttonStyle(.plain)
+                .disabled(cardsList.isEmpty)
             }
         }
     }
 
-    // MARK: - Summary Card
+    private func toAccountRowContent(showChevron: Bool) -> some View {
+        let cardName = selectedToCard?.name ?? "Select destination card"
+        let lastFour = selectedToCard?.lastFour ?? "••••"
+        let balance = toCardAccount?.formattedBalance ?? ""
+        let subtitle = balance.isEmpty ? "•••• \(lastFour)" : "\(balance) · •••• \(lastFour)"
+        return HStack(spacing: Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.button)
+                    .fill(Color.movo.elevatedHigh)
+                if selectedToCard != nil {
+                    MLogo().frame(width: 28, height: 28)
+                } else {
+                    Image(systemName: "creditcard")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Color.movo.textDisabled)
+                }
+            }
+            .frame(width: 52, height: 52)
 
-    private var summaryCard: some View {
-        let formatted = amount.formatted(.currency(code: "USD"))
-        return VStack(spacing: 0) {
-            SummaryRow(label: "Total deducted", value: formatted, bold: true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(cardName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(selectedToCard != nil ? Color.movo.textPrimary : Color.movo.textDisabled)
+                if selectedToCard != nil {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
+                }
+            }
+
+            Spacer()
+
+            if showChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color.movo.accent)
+            }
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
+    }
+
+    // MARK: - Note Card
+
+    private var noteCard: some View {
+        HStack(spacing: Spacing.md) {
+            Image(systemName: "bubble.left")
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(Color.movo.textDisabled)
+
+            TextField("", text: $descriptionText,
+                      prompt: Text("What's it for? (optional)")
+                          .foregroundColor(Color.movo.textDisabled))
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(Color.movo.textPrimary)
+                .autocorrectionDisabled()
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.lg)
+                .fill(Color.movo.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.lg)
+                        .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                )
+        )
     }
 
     // MARK: - Confirm Button
 
     private var confirmButton: some View {
-        VStack(spacing: 10) {
-            Button {
-                UIApplication.shared.dismissKeyboard()
-                Task { await submitTransfer() }
-            } label: {
-                Text("Confirm Transfer")
-                    .font(.system(size: 15, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(isValid ? Color.primary : Color(.systemGray5))
-                    .foregroundStyle(isValid ? Color(.systemBackground) : Color(.tertiaryLabel))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+        Button {
+            UIApplication.shared.dismissKeyboard()
+            isAmountFocused = false
+            showConfirmSheet = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.up.forward")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(amount > 0 ? "Transfer $\(String(format: "%.2f", amount))" : "Transfer")
+                    .font(.system(size: 16, weight: .semibold))
             }
-            .disabled(!isValid)
+            .foregroundColor(isValid ? Color.movo.onAccent : Color.movo.textDisabled)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                Capsule().fill(isValid ? Color.movo.accent : Color.movo.elevated)
+            )
         }
+        .disabled(!isValid)
+        .buttonStyle(.plain)
     }
 
     // MARK: - Submit
@@ -274,23 +427,22 @@ private struct CardChipRow: View {
     var showChevron: Bool = false
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.sm) {
             if showIcon {
                 Image(systemName: "creditcard")
-                    .font(.title2)
-                    .foregroundStyle(Color.primary)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(Color.movo.accent)
                     .frame(width: 44, height: 44)
-                    .background(Color.primary.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(Color.movo.elevated)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
             }
-            
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .font(Typography.bodyCompact.font)
+                    .foregroundColor(Color.movo.textPrimary)
                 Text("•••• \(lastFour)")
-                    .font(.system(size: 11, weight: .medium).monospaced())
-                    .foregroundStyle(.secondary)
+                    .font(Typography.mono.font)
+                    .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
             if let badge {
@@ -299,7 +451,7 @@ private struct CardChipRow: View {
             if showChevron {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundColor(Color.movo.textDisabled)
                     .padding(.leading, 2)
             }
         }
@@ -311,20 +463,20 @@ private struct CardChipRow: View {
 private struct CardChipSkeleton: View {
     var card: Bool = true
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.sm) {
             if card {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray5))
+                RoundedRectangle(cornerRadius: Radius.sm)
+                    .fill(Color.movo.elevated)
                     .frame(width: 36, height: 36)
                     .shimmer()
             }
             VStack(alignment: .leading, spacing: 5) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(.systemGray5))
+                RoundedRectangle(cornerRadius: Radius.xs)
+                    .fill(Color.movo.elevated)
                     .frame(width: 90, height: 11)
                     .shimmer()
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(.systemGray5))
+                RoundedRectangle(cornerRadius: Radius.xs)
+                    .fill(Color.movo.elevated)
                     .frame(width: 60, height: 9)
                     .shimmer()
             }
@@ -342,105 +494,78 @@ private struct CardPickerSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(cards, id: \.cardNumber) { card in
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: Spacing.sm) {
+                    ForEach(cards) { card in
+                        let isSelected = selected?.id == card.id
                         Button {
                             selected = card
-                            dismiss()
                         } label: {
-                            HStack(spacing: 12) {
-                                CardChipRow(
-                                    name: card.name ?? "Virtual Card",
-                                    lastFour: card.lastFour ?? "••••",
-                                    badge: nil
-                                )
-                                Image(systemName: selected?.cardNumber == card.cardNumber
-                                      ? "checkmark.circle.fill"
-                                      : "circle")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(selected?.cardNumber == card.cardNumber
-                                                     ? Color.primary
-                                                     : Color(.systemGray4))
-                                    .animation(.spring(duration: 0.2), value: selected?.cardNumber)
+                            HStack(spacing: Spacing.md) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: Radius.button)
+                                        .fill(Color.movo.elevatedHigh)
+                                    MLogo().frame(width: 26, height: 26)
+                                }
+                                .frame(width: 46, height: 46)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(card.name ?? "Virtual Card")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Color.movo.textPrimary)
+                                    Text("•••• \(card.lastFour ?? "••••")")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color.movo.textTertiary)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 22))
+                                    .foregroundColor(isSelected ? Color.movo.accent : Color.movo.textDisabled)
+                                    .animation(.spring(duration: 0.2), value: isSelected)
                             }
-                            .padding(14)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .padding(Spacing.md)
+                            .background(Color.movo.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(
-                                        selected?.cardNumber == card.cardNumber
-                                            ? Color.primary.opacity(0.25)
-                                            : Color.clear,
-                                        lineWidth: 1.5
+                                RoundedRectangle(cornerRadius: Radius.lg)
+                                    .strokeBorder(
+                                        isSelected ? Color.movo.accentBorder : Color.movo.border,
+                                        lineWidth: Stroke.hairline
                                     )
                             )
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(16)
+                .padding(Spacing.lg)
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .background(Color.movo.background.ignoresSafeArea())
+            .preferredColorScheme(.dark)
             .navigationTitle("Select Card")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .font(.system(size: 15, weight: .medium))
+                        .font(Typography.buttonLarge.font)
+                        .foregroundColor(Color.movo.accent)
                 }
             }
         }
     }
 }
 
-// MARK: - Shared Field Row
-
-private struct FieldRow<Trailing: View>: View {
-    let label: String
-    @ViewBuilder let trailing: () -> Trailing
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .frame(width: 70, alignment: .leading)
-            Spacer()
-            trailing()
-        }
-        .padding(.vertical, 14)
-    }
-}
-
-// MARK: - Summary Row
-
-private struct SummaryRow: View {
-    let label: String
-    let value: String
-    var bold: Bool = false
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .font(.system(size: bold ? 13 : 12, weight: bold ? .medium : .regular))
-                .foregroundStyle(bold ? .primary : .secondary)
-            Spacer()
-            Text(value)
-                .font(.system(size: bold ? 13 : 12, weight: .medium))
-        }
-        .padding(.vertical, 4)
-    }
-}
-
 // MARK: - Card Modifier
 
 private extension View {
-    func card() -> some View {
+    func movoCard() -> some View {
         self
-            .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color(.separator), lineWidth: 0.5))
+            .background(Color.movo.surface)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+            )
     }
 }

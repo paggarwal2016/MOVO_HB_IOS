@@ -113,17 +113,16 @@ struct DashboardView: View {
                     .presentationDragIndicator(.visible)
             }
         }
-        .sheet(isPresented: $showFunds) {
+        .fullScreenCover(isPresented: $showFunds) {
             if let account = displayAccount {
                 InternalTransferView(
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
+                    initialCards: vm.apiCards,
                     container: container,
                     onDismiss: { Task { await dashboardVM.refresh() } }
                 )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showContactList) {
@@ -136,17 +135,18 @@ struct DashboardView: View {
                 }
             }
         }
-        .sheet(isPresented: $showInternalTransfer) {
+        .fullScreenCover(isPresented: $showInternalTransfer) {
             if let account = displayAccount {
                 InternalTransferView(
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
+                    initialCards: vm.apiCards,
                     container: container,
                     onDismiss: { Task { await dashboardVM.refresh() } }
                 )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
             }
         }
         .sheet(isPresented: $showMoveMoney) {

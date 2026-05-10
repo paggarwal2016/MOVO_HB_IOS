@@ -15,6 +15,7 @@ struct ConfirmationBottomSheet: View {
     let fromMask: String?
     let toName: String
     let toMask: String?
+    var note: String? = nil
     var isLoading: Bool = false
     let onCancel: () -> Void
     let onConfirm: () -> Void
@@ -106,6 +107,10 @@ struct ConfirmationBottomSheet: View {
             detailRow(label: "TO", title: toName, subtitle: toMask)
             rowDivider
             detailRow(label: "ARRIVES", title: arrivesText, subtitle: nil)
+            if let note, !note.isEmpty {
+                rowDivider
+                detailRow(label: "NOTE", title: note, subtitle: nil)
+            }
         }
         .background(
             RoundedRectangle(cornerRadius: Radius.xxl)
