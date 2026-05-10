@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 struct ProfileScreen: View {
     
@@ -19,6 +20,7 @@ struct ProfileScreen: View {
     @ObservedObject var achVM: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
     
+    @State private var isBiometricOn             = false
     @State private var showDisableBiometricAlert = false
     @State private var showBiometricEnrollSheet  = false
     @State private var showSecuritySettings      = false
@@ -36,23 +38,6 @@ struct ProfileScreen: View {
         lockManager.isBiometricAvailable
         ? lockManager.biometricType
         : lockManager.hardwareBiometricType
-    }
-    
-    private var biometricToggleBinding: Binding<Bool> {
-        Binding<Bool>(
-            get: { lockManager.isBiometricEnabled },
-            set: { isOn in
-                if isOn {
-                    guard lockManager.isPasscodeSet else {
-                        lockManager.showTemporaryError("Set a passcode first to enable biometrics.")
-                        return
-                    }
-                    showBiometricEnrollSheet = true
-                } else {
-                    showDisableBiometricAlert = true
-                }
-            }
-        )
     }
     
     private var effectiveProfile: UserProfileResponse? {
@@ -80,6 +65,10 @@ struct ProfileScreen: View {
         .task {
             guard achVM.accounts.isEmpty else { return }
             await achVM.fetchAccounts()
+        }
+        .onAppear { isBiometricOn = lockManager.isBiometricEnabled }
+        .onReceive(lockManager.objectWillChange) {
+            Task { @MainActor in isBiometricOn = lockManager.isBiometricEnabled }
         }
     }
 }
@@ -126,19 +115,21 @@ private extension ProfileScreen {
             await userVM.refresh()
             await achVM.fetchAccounts()
         }
-        .sheet(isPresented: $showBiometricEnrollSheet) {
+        .sheet(isPresented: $showBiometricEnrollSheet, onDismiss: {
+            isBiometricOn = lockManager.isBiometricEnabled
+        }) {
             BiometricEnrollView(
                 lockManager: lockManager,
                 onEnable: { showBiometricEnrollSheet = false },
-                onSkip:   { showBiometricEnrollSheet = false }
+                onSkip:   { isBiometricOn = false; showBiometricEnrollSheet = false }
             )
         }
         .alert("Disable \(effectiveBiometricType.displayName)?",
                isPresented: $showDisableBiometricAlert) {
             Button("Disable", role: .destructive) { lockManager.revokeBiometricSafely() }
-            Button("Cancel",  role: .cancel) { }
+            Button("Cancel",  role: .cancel) { isBiometricOn = true }
         } message: {
-            Text("You'll need your passcode to unlock MovoCash.")
+            Text("You'll need to re-enroll to use \(effectiveBiometricType.displayName) again.")
         }
         .navigationDestination(isPresented: $showSecuritySettings) {
             SecuritySettingsView(lockManager: lockManager)
@@ -185,7 +176,7 @@ private extension ProfileScreen {
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
-                    .overlay(Circle().strokeBorder(Color.movo.accent, lineWidth: 0.5))
+                    .overlay(Circle().strokeBorder(Color.movo.accent, lineWidth: Stroke.hairline))
                 if let urlStr = profile.profilePicture,
                    !urlStr.isEmpty,
                    let url = URL(string: urlStr) {
@@ -245,7 +236,7 @@ private extension ProfileScreen {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(Color.movo.accentTint, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: 0.5))
+        .overlay(Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
     }
     
     // MARK: Info Card
@@ -260,22 +251,22 @@ private extension ProfileScreen {
             .background(Color.movo.surface)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Radius.card)
-                .strokeBorder(Color.movo.border, lineWidth: 0.5))
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         }
     }
     
     func infoRow(label: String, value: String) -> some View {
         HStack {
             Text(label)
-                .font(Typography.caption.font)
+                .font(Typography.subtitle.font)
                 .foregroundStyle(Color.movo.textTertiary)
             Spacer()
             Text(value)
-                .font(Typography.bodyCompact.font)
+                .font(Typography.body.font)
                 .foregroundStyle(Color.movo.textPrimary)
                 .multilineTextAlignment(.trailing)
         }
-        .padding(.vertical, 14)
+        .padding(.vertical, Spacing.rowPaddingVertical)
         .padding(.horizontal, Spacing.lg)
     }
     
@@ -289,7 +280,7 @@ private extension ProfileScreen {
         Text(text)
             .font(Typography.eyebrow.font)
             .foregroundStyle(Color.movo.textTertiary)
-            .padding(.leading, 4)
+            .padding(.leading, Spacing.xs)
     }
     
     // MARK: Security Card
@@ -299,13 +290,13 @@ private extension ProfileScreen {
             eyebrowLabel("SECURITY")
             HStack(spacing: Spacing.lg) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: Radius.sm)
                         .fill(lockManager.isBiometricHardwarePresent
                               ? (lockManager.isBiometricEnabled
                                  ? Color.movo.accent.opacity(0.18)
                                  : Color.movo.elevated)
                               : Color.movo.elevated)
-                        .frame(width: 48, height: 48)
+                        .frame(width: 44, height: 44)
                     Image(systemName: lockManager.isBiometricHardwarePresent
                           ? effectiveBiometricType.systemImageName
                           : "lock.shield.fill")
@@ -314,8 +305,8 @@ private extension ProfileScreen {
                                      ? Color.movo.accent
                                      : Color.movo.textSecondary)
                 }
-                
-                VStack(alignment: .leading, spacing: 3) {
+
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(lockManager.isBiometricHardwarePresent
                          ? effectiveBiometricType.displayName
                          : "Security Settings")
@@ -324,7 +315,7 @@ private extension ProfileScreen {
                     Text(lockManager.isBiometricHardwarePresent
                          ? "Use \(effectiveBiometricType.displayName) to log in and authorize payments"
                          : "Passcode & authentication")
-                    .font(Typography.caption.font)
+                    .font(Typography.subtitle.font)
                     .foregroundStyle(Color.movo.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 }
@@ -332,10 +323,18 @@ private extension ProfileScreen {
                 Spacer()
                 
                 if lockManager.isBiometricHardwarePresent {
-                    Toggle("", isOn: biometricToggleBinding)
+                    Toggle("", isOn: $isBiometricOn)
                         .labelsHidden()
                         .tint(Color.movo.accent)
                         .fixedSize()
+                        .onChange(of: isBiometricOn) { newValue in
+                            guard newValue != lockManager.isBiometricEnabled else { return }
+                            if newValue {
+                                showBiometricEnrollSheet = true
+                            } else {
+                                showDisableBiometricAlert = true
+                            }
+                        }
                 } else {
                     Button { showSecuritySettings = true } label: {
                         Image(systemName: "chevron.right")
@@ -349,7 +348,7 @@ private extension ProfileScreen {
             .background(Color.movo.surface)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Radius.card)
-                .strokeBorder(Color.movo.border, lineWidth: 0.5))
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         }
     }
     
@@ -384,32 +383,32 @@ private extension ProfileScreen {
             .background(Color.movo.surface)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Radius.card)
-                .strokeBorder(Color.movo.border, lineWidth: 0.5))
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         }
     }
     
     func bankAccountRow(_ account: ACHAccount) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: Radius.sm)
                     .fill(account.logoImage != nil ? Color(.systemBackground) : Color.movo.elevated)
-                    .frame(width: 46, height: 46)
+                    .frame(width: 44, height: 44)
                 if let logo = account.logoImage {
                     Image(uiImage: logo)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 40, height: 40)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                 } else {
                     Image(systemName: "building.columns")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(Color.movo.textSecondary)
                 }
             }
-            .overlay(RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.movo.border, lineWidth: account.logoImage != nil ? 1 : 0))
-            
-            VStack(alignment: .leading, spacing: 3) {
+            .overlay(RoundedRectangle(cornerRadius: Radius.sm)
+                .strokeBorder(Color.movo.border, lineWidth: account.logoImage != nil ? Stroke.hairline : 0))
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 HStack(spacing: Spacing.sm) {
                     Text(account.institutionName)
                         .font(Typography.body.font)
@@ -462,7 +461,7 @@ private extension ProfileScreen {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 14)
+        .padding(.vertical, Spacing.rowPaddingVertical)
         .padding(.horizontal, Spacing.lg)
     }
     
@@ -475,11 +474,11 @@ private extension ProfileScreen {
                 }
             }
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.md) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: Radius.sm)
                         .fill(Color.movo.accentTint)
-                        .frame(width: 46, height: 46)
+                        .frame(width: 44, height: 44)
                     Image(systemName: "plus")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.movo.accent)
@@ -489,10 +488,10 @@ private extension ProfileScreen {
                     .foregroundStyle(Color.movo.accent)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.movo.accent)
             }
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)
         }
         .buttonStyle(.plain)
@@ -520,7 +519,7 @@ private extension ProfileScreen {
             .background(Color.movo.surface)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Radius.card)
-                .strokeBorder(Color.movo.border, lineWidth: 0.5))
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         }
         .buttonStyle(.plain)
         .disabled(isLoggingOut)
@@ -541,7 +540,7 @@ private extension ProfileScreen {
             .background(Color.movo.surface)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Radius.card)
-                .strokeBorder(Color.movo.border, lineWidth: 0.5))
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         }
         .buttonStyle(.plain)
     }
@@ -591,7 +590,7 @@ private extension ProfileScreen {
                                     .frame(width: 120, height: 12)
                                     .shimmer()
                             }
-                            .padding(.vertical, 14)
+                            .padding(.vertical, Spacing.rowPaddingVertical)
                             .padding(.horizontal, Spacing.lg)
                             if i == 0 {
                                 Divider()
@@ -603,7 +602,7 @@ private extension ProfileScreen {
                     .background(Color.movo.surface)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card))
                     .overlay(RoundedRectangle(cornerRadius: Radius.card)
-                        .strokeBorder(Color.movo.border, lineWidth: 0.5))
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
                 }
             }
             .padding(.horizontal, Spacing.lg)
