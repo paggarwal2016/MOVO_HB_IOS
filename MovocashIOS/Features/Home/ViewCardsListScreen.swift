@@ -41,7 +41,6 @@ struct ViewCardsListScreen: View {
     }
     
     var body: some View {
-        MovoBackground()
         Group {
             if displayCards.isEmpty {
                 emptyState
