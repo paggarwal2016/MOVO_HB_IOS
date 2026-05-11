@@ -194,6 +194,10 @@ private extension HomeTabBarView {
         return mapped.isEmpty ? [.home, .accounts, .profile] : mapped
     }
 
+    func tabLabel(for tab: Tab) -> String {
+        dashboardVM.menuItems.first { Tab(action: $0.action) == tab }?.label ?? tab.label
+    }
+
     var realTabView: some View {
         TabView(selection: $selectedTab) {
             ForEach(resolvedTabs, id: \.self) { tab in
@@ -210,7 +214,7 @@ private extension HomeTabBarView {
             destination(for: tab)
         }
         .tabItem {
-            Label(tab.label, systemImage: tab.icon)
+            Label(tabLabel(for: tab), systemImage: tab.icon)
         }
         .tag(tab)
     }

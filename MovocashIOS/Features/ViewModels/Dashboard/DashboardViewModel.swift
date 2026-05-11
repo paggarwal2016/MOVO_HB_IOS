@@ -35,8 +35,25 @@ final class DashboardViewModel: BaseViewModel {
         guard !Task.isCancelled else { return }
         do {
             dashboard = try await perform { try await network.request(DashboardAPI.dashboard) }
+            await activatePrimaryVCardIfNeeded()
         } catch {
             // Error is already presented via ToastManager in perform(_:)
+        }
+    }
+
+    // Silently activates the primary vcard when `is_p_vcard_activated` is "Inactive".
+    // Only called from fetchDashboard — not exposed for general use.
+    private func activatePrimaryVCardIfNeeded() async {
+        guard let account = rawPrimaryAccount,
+              account.isPVCardActivated == "Inactive" else { return }
+
+        let pin = String(format: "%04d", Int.random(in: 0...9999))
+        let request = VCardsRequest(pin: pin, accountId: account.id, userAction: "VCARD-ACTIVATE")
+
+        do {
+            let _: CreateVCardEncryptedResponse = try await network.request(VCardAPI.postVCards(request: request))
+        } catch {
+            SecureLogger.debug("Primary vcard silent activation skipped: \(error.localizedDescription)", category: .general)
         }
     }
 
@@ -63,11 +80,15 @@ final class DashboardViewModel: BaseViewModel {
     }
 
     var primaryAccount: SavingsAccountInfo? {
-        guard let account = dashboard?.data.compactMap({ section -> DashboardAccount? in
+        guard let account = rawPrimaryAccount else { return nil }
+        return SavingsAccountInfo(dashboardAccount: account)
+    }
+
+    private var rawPrimaryAccount: DashboardAccount? {
+        dashboard?.data.compactMap { section -> DashboardAccount? in
             guard case .primaryAccount(let a) = section else { return nil }
             return a
-        }).first else { return nil }
-        return SavingsAccountInfo(dashboardAccount: account)
+        }.first
     }
 
     var payAnyone: DashboardPayAnyone? {

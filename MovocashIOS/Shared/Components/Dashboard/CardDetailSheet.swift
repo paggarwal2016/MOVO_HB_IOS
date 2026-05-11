@@ -119,7 +119,7 @@ struct CardDetailSheet: View {
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(Color.movo.textPrimary)
+                    .fill(Color.movo.accent)
             )
         }
         .buttonStyle(.plain)

@@ -41,6 +41,7 @@ struct ViewCardsListScreen: View {
     }
     
     var body: some View {
+        MovoBackground()
         Group {
             if displayCards.isEmpty {
                 emptyState
@@ -48,7 +49,6 @@ struct ViewCardsListScreen: View {
                 cardsList
             }
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Cards")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -95,20 +95,15 @@ struct ViewCardsListScreen: View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 14) {
                 ForEach(displayCards, id: \.id) { card in
-                    CardItemView(
-                        card: card,
-                        isSelected: false,
-                        onEyeTap: { tapped in
-                            selectedCard = tapped
-                            showCardDetail = true
-                        }
-                    )
-                    .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 5)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button {
                         selectedCard = card
                         showCardDetail = true
+                    } label: {
+                        CardItemView(card: card, isSelected: selectedCard?.id == card.id)
+                            .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 5)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 16)

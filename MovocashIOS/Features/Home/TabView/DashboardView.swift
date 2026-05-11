@@ -61,10 +61,8 @@ struct DashboardView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-//            Color(.systemGroupedBackground).ignoresSafeArea()
             MovoBackground()
             VStack(spacing: 0) {
-                headerView
                 scrollContent
             }
         }
@@ -209,21 +207,23 @@ struct DashboardView: View {
 
     private var headerView: some View {
         CustomHeaderView(
-            userName: dashboardVM.userDetails?.initials ?? "",
+            userName: dashboardVM.userDetails?.firstName ?? "",
             userImage: dashboardVM.userDetails?.profilePicture ?? ""
         ) {
-            sessionManager.logoutWithConfirmation(appState: appState) {
-                lockManager.logout()
-            }
+//            sessionManager.logoutWithConfirmation(appState: appState) {
+//                lockManager.logout()
+//            }
         }
     }
 
     private var scrollContent: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 20) {
+                headerView
                 savingsSection
             }
             .padding(.top, 16)
+            .padding(.bottom, 24)
             .frame(maxWidth: .infinity)
         }
         .refreshable {
@@ -277,9 +277,9 @@ struct DashboardView: View {
             }
         case .payAnyone(let data):
             ActionCard(
-                title: data.title,
-                description: data.description ?? "",
-                buttonLabel: data.actions.first?.label ?? "Send Money"
+                title: data.title ?? "Pay anyone, instantly",
+                description: data.description ?? "Tap to send. They get it the moment you do.",
+                buttonLabel: data.actions.first?.label ?? "Add people"
             ) {
                 showContactList = true
                 SecureLogger.debug("Quick transfer tapped", category: .general)
@@ -378,31 +378,48 @@ struct PrimaryAccountContent: View {
     var body: some View {
         BalanceCardView(
             account: account,
-            viewCardsLabel: accountData.actions.first(where: { $0.action == "VIEW-CARDS" })?.label,
             onCardTap: onCardTap,
             onPrimaryTap: onPrimaryTap,
             onViewCardTap: onViewCardTap
         )
+
         HStack(spacing: 10) {
-            PrimaryButton(
-                image: Image(systemName: "list.bullet.rectangle"),
-                title: "Transactions",
-                alignment: .center,
-                backgroundColor: .white,
-                textColor: .black
-            ) {
-                onQuickAction("TRANSACTIONS")
+            // Move Money — accent pill
+            Button { onQuickAction("MOVE-MONEY") } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("MOVE MONEY")
+                        .font(.system(size: 13, weight: .semibold))
+                        .tracking(0.4)
+                }
+                .foregroundColor(Color.movo.onAccent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(RoundedRectangle(cornerRadius: Radius.xl).fill(Color.movo.accent))
             }
-            PrimaryButton(
-                image: Image(systemName: "person.text.rectangle"),
-                title: "Move Money",
-                alignment: .center,
-                backgroundColor: .white,
-                textColor: .black
-            ) {
-                onQuickAction("MOVE-MONEY")
+            .buttonStyle(.plain)
+
+            // Activity — dark pill
+            Button { onQuickAction("TRANSACTIONS") } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("ACTIVITY")
+                        .font(.system(size: 13, weight: .semibold))
+                        .tracking(0.4)
+                }
+                .foregroundColor(Color.movo.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.xl)
+                        .fill(Color.movo.elevated)
+                        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                )
             }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Spacing.lg)
     }
 }

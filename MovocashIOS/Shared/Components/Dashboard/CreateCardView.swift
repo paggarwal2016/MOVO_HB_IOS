@@ -8,79 +8,110 @@
 import SwiftUI
 
 struct CreateCardView: View {
-    
-    var title: String = "Create Card"
-    var message: String = "Create a virtual card for instant payments."
+
+    var title: String   = "Get your first cash card"
+    var message: String = "Spend instantly · Apple Pay ready"
     var onTap: () -> Void
-    
+
     var body: some View {
-        GeometryReader { geo in
-            
-            let cardHeight = geo.size.width * 0.42
-            
-            Button(action: {
-                withAnimation(.easeInOut) {
-                    onTap()
-                }
-            }) {
-                VStack(spacing: 12) {
-                    
-                    Spacer(minLength: 8) // ✅ Top spacing
-                    
-                    // MARK: - Icon
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.primary, .secondary],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 50, height: 50) // ✅ fixed size (stable)
-                        
-                        Image(systemName: "plus")
-                            .font(.system(size: 18, weight: .bold)) // ✅ reduced
-                            .foregroundColor(.white)
+        HStack(alignment: .top, spacing: 12) {
+
+            // MARK: - Left column
+            VStack(alignment: .leading, spacing: 10) {
+
+                // Title
+                Text(title)
+                    .textStyle(Typography.cardHero)
+                    .foregroundStyle(Color.movo.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Subtitle
+                Text(message)
+                    .textStyle(Typography.subtitle)
+                    .foregroundStyle(Color.movo.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // CTA button
+                Button(action: onTap) {
+                    HStack(spacing: 7) {
+                        Text("Create card")
+                            .textStyle(Typography.button)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .semibold))
                     }
-                    
-                    // MARK: - Title
-                    Text(title)
-                        .font(.system(size: 20, weight: .semibold)) // ✅ reduced
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8) // ✅ prevents overflow
-                    
-                    // MARK: - Message
-                    Text(message)
-                        .font(.system(size: 14))
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .allowsTightening(true)              // ✅ better spacing
-                        .minimumScaleFactor(0.9)             // ✅ slight shrink only if needed
-                        .frame(maxWidth: .infinity)          // ✅ use full card width
-                        .fixedSize(horizontal: false, vertical: true) // ✅ prevents clipping
-                        .padding(.horizontal, 12)
-                    
-                    Spacer(minLength: 8) // ✅ bottom balance
+                    .foregroundStyle(Color.movo.onAccent)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.movo.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg))
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: cardHeight)
-                
-                // MARK: - Background
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.white)
-                        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.gray.opacity(0.15), lineWidth: 1)
-                )
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // MARK: - Right column: rotated card illustration
+            CardMockIllustration()
+                .frame(width: 138, height: 95)
+                .rotationEffect(.degrees(10), anchor: .center)
+                .padding(.top, 6)
         }
-        .frame(height: UIScreen.main.bounds.width * 0.42)
+        .padding(.horizontal, DesignTokens.Spacing.xl)
+        .padding(.vertical, DesignTokens.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.movo.elevated)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(Color.movo.borderStrong,
+                              lineWidth: DesignTokens.Stroke.hairline)
+        )
+    }
+}
+
+// MARK: - Card Mock Illustration
+
+private struct CardMockIllustration: View {
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg)
+                .fill(Color.movo.elevatedHigh)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.lg)
+                        .strokeBorder(Color.movo.borderStrong,
+                                      lineWidth: DesignTokens.Stroke.hairline)
+                )
+
+            VStack(alignment: .leading, spacing: 0) {
+
+                Text("CASH CARD")
+                    .textStyle(Typography.eyebrow)
+                    .foregroundStyle(Color.movo.textTertiary)
+
+                Spacer().frame(height: 6)
+
+                Text("Your name here")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.movo.textPrimary)
+
+                Spacer()
+
+                HStack(spacing: 8) {
+                    dotGroup(count: 4)
+                    dotGroup(count: 4)
+                }
+            }
+            .padding(12)
+        }
+    }
+
+    private func dotGroup(count: Int) -> some View {
+        HStack(spacing: 3) {
+            ForEach(0..<count, id: \.self) { _ in
+                Circle()
+                    .fill(Color.movo.textTertiary.opacity(0.7))
+                    .frame(width: 4, height: 4)
+            }
+        }
     }
 }

@@ -11,86 +11,73 @@ import SwiftUI
 struct BalanceCardView: View {
 
     let account: SavingsAccountInfo
-    var backgroundColor: Color = Color(#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1))
-    var viewCardsLabel: String? = nil
     var onCardTap: () -> Void
     var onPrimaryTap: () -> Void
     var onViewCardTap: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
+                .fill(Color.movo.elevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture { onCardTap() }
 
-            // ── Top section ───────────────────────────────────────────────
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 0) {
 
-                // Title + pencil
-                HStack(spacing: 8) {
-                    Text(account.nickname ?? "Primary Account")
-                        .font(.headline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1)))
+                // Eyebrow label
+                Text("AVAILABLE BALANCE")
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(1.2)
+                    .foregroundColor(Color.movo.textTertiary)
 
-                    Button { onPrimaryTap() } label: {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .padding(7)
-                            .background(Color(#colorLiteral(red: 0.9471818805, green: 0.9471818805, blue: 0.9471818805, alpha: 1)))
-                            .clipShape(RoundedRectangle(cornerRadius: 7))
-                    }
-                    .buttonStyle(.plain)
+                Spacer().frame(height: Spacing.sm)
+
+                // Balance amount
+                Text("$\(account.availableBalance.toCurrencyString())")
+                    .font(.system(size: 40, weight: .bold).monospacedDigit())
+                    .tracking(-1.0)
+                    .foregroundColor(Color.movo.textPrimary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+
+                Spacer().frame(height: Spacing.sm)
+
+                StatusPill(
+                    account.status == .active ? "Active" : account.status.rawValue,
+                    variant: account.status == .active ? .accent : .neutral
+                )
+
+                Spacer()
+
+                // Bottom row: account info + brand
+                HStack(alignment: .bottom) {
+                    Text("\(account.isPrimary ? "PRIMARY" : "ACCOUNT")  ·  ••\(account.accountNumber.suffix(4))")
+                        .font(.system(size: 11, weight: .medium))
+                        .tracking(0.5)
+                        .foregroundColor(Color.movo.textTertiary)
 
                     Spacer()
-                }
 
-                // Active status — plain green, no background
-                if account.status.rawValue == "Active" {
-                    HStack(spacing: 5) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 5, height: 5)
-                        Text("Active")
-                            .font(.caption)
-                            .foregroundStyle(Color.green)
+                    Button(action: onViewCardTap) {
+                        HStack(spacing: 4) {
+                            Text("View Card")
+                                .font(.system(size: 12, weight: .semibold))
+                                .tracking(0.3)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundColor(Color.movo.accent)
                     }
+                    .buttonStyle(.plain)
                 }
-
-                // Balance
-                Text(account.formattedBalance)
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(Color(#colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)))
-                    .padding(.top, 6)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 18)
-            .padding(.bottom, 16)
-
-            if let label = viewCardsLabel {
-                Divider()
-
-                // ── Bottom row ────────────────────────────────────────────────
-                Button { onViewCardTap() } label: {
-                    HStack {
-                        Text(label)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1)))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1)))
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
+            .padding(Spacing.lg)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(backgroundColor)
-                .onTapGesture { onCardTap() }
-        )
-        .padding(.horizontal, 15)
+        .frame(height: 160)
+        .padding(.horizontal, Spacing.lg)
     }
 }

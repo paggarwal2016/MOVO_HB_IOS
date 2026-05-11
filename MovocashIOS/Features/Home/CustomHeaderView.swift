@@ -8,47 +8,51 @@
 import SwiftUI
 
 struct CustomHeaderView: View {
-    
-    // MARK: - Properties
-    
-    var userName: String = "Test"
-    var userImage: String = "profile"
-    var onLogout: () -> Void
-    
-    // MARK: - Body
-    
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            Color.primary
-                .ignoresSafeArea(edges: .top)
-            
-            HStack(spacing: 12) {
-                
-                // MARK: - User Image
-                ProfileImageView(imageURL: userImage,
-                                 userName: userName,
-                                 width: 50,
-                                 height: 50)
 
-                Spacer()
-                
-                // MARK: - Logout Button
-                
-                Button {
-                    onLogout()
-                } label: {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.title3)
-                        .foregroundStyle(Color.primary)
+    // MARK: - Properties
+
+    var userName: String = ""
+    var userImage: String = ""
+    var onLogout: () -> Void
+
+    private let theme = MovoTheme.color
+
+    private var initial: String {
+        userName.first.map(String.init)?.uppercased() ?? "?"
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        HStack(alignment: .center) {
+            // Left — WELCOME + first name
+            VStack(alignment: .leading, spacing: 3) {
+                Text("WELCOME")
+                    .textStyle(Typography.eyebrow)
+                    .foregroundStyle(theme.textTertiary.color)
+
+                Text(userName)
+                    .textStyle(Typography.sectionTitle)
+                    .foregroundStyle(theme.textPrimary.color)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Right — initial avatar (taps to logout)
+            Button(action: onLogout) {
+                ZStack {
+                    Circle()
+                        .fill(theme.elevatedHigh.color)
                         .frame(width: 44, height: 44)
-                        .background(.white)
-                        .clipShape(Circle())
+
+                    Text(initial)
+                        .textStyle(Typography.cardTitle)
+                        .foregroundStyle(theme.textPrimary.color)
                 }
             }
-            .padding(.leading, 15)
-            .padding(.trailing, 16)
-            .padding(.bottom, 15)
+            .buttonStyle(.plain)
         }
-        .frame(height: 70)
+        .padding(.horizontal, 16)
     }
 }

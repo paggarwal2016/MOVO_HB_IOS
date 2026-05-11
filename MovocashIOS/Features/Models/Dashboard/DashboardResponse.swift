@@ -118,6 +118,13 @@ nonisolated struct DashboardAccount: Decodable, Sendable {
     var nickname: String?
     let isPrimary: Bool
     let actions: [DashboardAction]
+    let isPVCardActivated: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, accountNumber, clientName, status, accountBalance
+        case availableBalance, clientId, nickname, isPrimary, actions
+        case isPVCardActivated = "is_p_vcard_activated"
+    }
 }
 
 // MARK: - PAYANYONE
@@ -125,7 +132,7 @@ nonisolated struct DashboardAccount: Decodable, Sendable {
 nonisolated struct DashboardPayAnyone: Decodable, Sendable {
     let accountId: Int
     let customerId: Int
-    let title: String
+    let title: String?
     let description: String?
     let favContactList: [RecordContact]
     let actions: [DashboardAction]
