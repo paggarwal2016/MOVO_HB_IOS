@@ -105,8 +105,8 @@ struct ConfirmationBottomSheet: View {
             detailRow(label: "FROM", title: fromName, subtitle: fromMask)
             rowDivider
             detailRow(label: "TO", title: toName, subtitle: toMask)
-            rowDivider
-            detailRow(label: "ARRIVES", title: arrivesText, subtitle: nil)
+//            rowDivider
+//            detailRow(label: "ARRIVES", title: arrivesText, subtitle: nil)
             if let note, !note.isEmpty {
                 rowDivider
                 detailRow(label: "NOTE", title: note, subtitle: nil)

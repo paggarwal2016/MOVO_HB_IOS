@@ -17,7 +17,7 @@ struct DashboardView: View {
 
     // MARK: - ViewModels
 
-    @StateObject private var vm: VCardViewModel
+    @ObservedObject var vm: VCardViewModel
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var achVM: PlaidAchViewModel
     @ObservedObject var linkAccountVM: ACHViewModel
@@ -25,11 +25,11 @@ struct DashboardView: View {
 
     private let container: AppContainer
 
-    init(container: AppContainer, dashboardVM: DashboardViewModel, linkAccountVM: ACHViewModel) {
+    init(container: AppContainer, dashboardVM: DashboardViewModel, linkAccountVM: ACHViewModel, vm: VCardViewModel) {
         self.container = container
         self.dashboardVM = dashboardVM
         self.linkAccountVM = linkAccountVM
-        _vm = StateObject(wrappedValue: container.makeVCardViewModel())
+        self.vm = vm
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }

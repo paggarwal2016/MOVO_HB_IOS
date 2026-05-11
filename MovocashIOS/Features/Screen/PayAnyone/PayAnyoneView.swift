@@ -13,12 +13,14 @@ import Contacts
 struct PayAnyoneView: View {
     
     @StateObject private var contactVM: ContactViewModel
-    @StateObject private var savingVM: SavingsAccountViewModel
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     @SwiftUI.Environment(\.openURL) private var openURL
-    
+
+    let cards: [VCardListResponse]
+    let totalBalance: Decimal
+
     @Binding var selectedTab: Tab
     
     @State private var nickname: String = ""
@@ -28,10 +30,11 @@ struct PayAnyoneView: View {
     @State private var selectedFrequent: ContactRecord? = nil
     @State private var showAllFrequents = false
     
-    init(container: AppContainer, selectedTab: Binding<Tab>) {
+    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], totalBalance: Decimal) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
-        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _selectedTab = selectedTab
+        self.cards = cards
+        self.totalBalance = totalBalance
     }
     
     private var isFormValid: Bool {
@@ -117,25 +120,21 @@ struct PayAnyoneView: View {
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
         .navigationDestination(for: ContactRecord.self) { contact in
-            QuickTransferView(contact: contact, container: container,
-                              accounts: savingVM.accountList?.data.accounts ?? [])
+            QuickTransferView(contact: contact, container: container, cards: cards)
         }
         .navigationDestination(isPresented: Binding(
             get: { selectedFrequent != nil },
             set: { if !$0 { selectedFrequent = nil } }
         )) {
             if let contact = selectedFrequent {
-                QuickTransferView(contact: contact, container: container,
-                                  accounts: savingVM.accountList?.data.accounts ?? [])
+                QuickTransferView(contact: contact, container: container, cards: cards)
             }
         }
         .navigationDestination(isPresented: $showAllFrequents) {
-            AllFrequentsView(contactVM: contactVM, container: container,
-                             accounts: savingVM.accountList?.data.accounts ?? [])
+            AllFrequentsView(contactVM: contactVM, container: container, cards: cards)
         }
         .onAppear {
             Task {
-                await savingVM.loadAccounts()
                 await contactVM.loadApiContacts()
                 await contactVM.loadFavourites()
                 await contactVM.loadFrequent()
@@ -702,7 +701,7 @@ extension PayAnyoneView {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Eyebrow("Available to send")
-                Text(savingVM.accountList.map { "$\($0.data.totalAvailableBalance.toCurrencyString())" } ?? "$0.00")
+                Text("$\(totalBalance.toCurrencyString())")
                     .font(.system(size: 22, weight: .semibold).monospacedDigit())
                     .foregroundColor(Color.movo.textPrimary)
                     .tracking(-0.5)
@@ -739,13 +738,13 @@ extension PayAnyoneView {
             HStack {
                 Eyebrow("RECENT PAY")
                 Spacer()
-                // if contactVM.frequents.count >= 10 {
-                Button(action: { showAllFrequents = true }) {
-                    Text("See all")
-                        .font(.system(size: 10, weight: .regular))
-                        .foregroundColor(Color.movo.textSecondary)
-                }
-                // }
+        //        if contactVM.frequents.count >= 10 {
+                    Button(action: { showAllFrequents = true }) {
+                        Text("See all")
+                            .font(.system(size: 10, weight: .regular))
+                            .foregroundColor(Color.movo.textSecondary)
+                    }
+         //       }
             }
             .padding(.horizontal, Spacing.lg)
             

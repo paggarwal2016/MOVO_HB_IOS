@@ -12,7 +12,7 @@ import Combine
 struct AllFrequentsView: View {
     @ObservedObject var contactVM: ContactViewModel
     let container: AppContainer
-    let accounts: [SavingsAccountInfo]
+    let cards: [VCardListResponse]
     
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var search: String = ""
@@ -36,11 +36,11 @@ struct AllFrequentsView: View {
             VStack(spacing: 0) {
                 navBar
                 
-                if showSearch {
+               // if showSearch {
                     searchBar
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.md)
-                }
+               // }
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
@@ -91,7 +91,7 @@ struct AllFrequentsView: View {
         }
         .navigationDestination(isPresented: $isNavigating) {
             if let contact = selectedContact {
-                QuickTransferView(contact: contact, container: container, accounts: accounts)
+                QuickTransferView(contact: contact, container: container, cards: cards)
             }
         }
     }

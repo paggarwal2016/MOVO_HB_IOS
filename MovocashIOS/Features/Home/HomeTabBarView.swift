@@ -79,6 +79,7 @@ struct HomeTabBarView: View {
 
     @StateObject private var dashboardVM: DashboardViewModel
     @StateObject private var linkAccountVM: ACHViewModel
+    @StateObject private var vCardVM: VCardViewModel
 
     @State private var selectedTab: Tab = .home
     @State private var isLoggingOut = false
@@ -86,6 +87,7 @@ struct HomeTabBarView: View {
     init(container: AppContainer) {
         _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
         _linkAccountVM = StateObject(wrappedValue: container.makeACHViewModel())
+        _vCardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
 
     var body: some View {
@@ -216,8 +218,8 @@ private extension HomeTabBarView {
     @ViewBuilder
     func destination(for tab: Tab) -> some View {
         switch tab {
-        case .home:     DashboardView(container: container, dashboardVM: dashboardVM, linkAccountVM: linkAccountVM)
-        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab)
+        case .home:     DashboardView(container: container, dashboardVM: dashboardVM, linkAccountVM: linkAccountVM, vm: vCardVM)
+        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: vCardVM.apiCards, totalBalance: dashboardVM.primaryAccount?.availableBalance ?? 0)
         case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
         }
     }

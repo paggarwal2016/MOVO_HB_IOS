@@ -205,6 +205,20 @@ final class AuthViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Accept Agreements
+
+    func acceptAgreements() async throws {
+        guard state != .loading else { throw ModelError.alreadyLoading }
+        state = .loading
+        do {
+            let _: SuccessResponse = try await network.request(AuthAPI.acceptAgreements)
+            state = .idle
+        } catch {
+            state = .idle
+            throw error
+        }
+    }
+
     func reset() {
         phoneNumber = ""
         phoneDisplayText = ""

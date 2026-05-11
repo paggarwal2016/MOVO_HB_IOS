@@ -10,7 +10,7 @@ import SwiftUI
 struct QuickTransferView: View {
 
     let contact: ContactRecord
-    let accounts: [SavingsAccountInfo]
+    let cards: [VCardListResponse]
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var transVM: TransactionViewModel
@@ -18,31 +18,30 @@ struct QuickTransferView: View {
 
     @State private var amountText = "0"
     @State private var descriptionText = ""
-    @State private var selectedAccount: SavingsAccountInfo?
+    @State private var selectedCard: VCardListResponse?
     @State private var showConfirmSheet = false
     @State private var showAccountSheet = false
     @State private var successData: SuccessConfirmation?
 
-    init(contact: ContactRecord, container: AppContainer, accounts: [SavingsAccountInfo]) {
+    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse]) {
         self.contact = contact
-        self.accounts = accounts
+        self.cards = cards
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
-        let primary = accounts.first(where: { $0.isPrimary }) ?? accounts.first
-        _selectedAccount = State(wrappedValue: primary)
+        _selectedCard = State(wrappedValue: cards.first)
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
-    private var isValid: Bool { amount > 0 && selectedAccount != nil }
+    private var isValid: Bool { amount > 0 && selectedCard != nil }
 
     // MARK: - Amount display helpers
 
     private var availableBalanceDisplay: String {
-        selectedAccount.map { "$\($0.availableBalance.toCurrencyString())" } ?? "$0.00"
+        selectedCard.map { "$\($0.balance.toCurrencyString())" } ?? "$0.00"
     }
 
     private var availableBalanceDouble: Double {
-        guard let account = selectedAccount else { return 0 }
-        return NSDecimalNumber(decimal: account.availableBalance).doubleValue
+        guard let card = selectedCard else { return 0 }
+        return NSDecimalNumber(decimal: card.balance).doubleValue
     }
 
     // MARK: - Body
@@ -91,8 +90,8 @@ struct QuickTransferView: View {
             ConfirmationBottomSheet(
                 channel: .peer,
                 amount: amountText,
-                fromName: selectedAccount.map { $0.nickname ?? $0.clientName } ?? "—",
-                fromMask: selectedAccount?.maskedAccountNumber,
+                fromName: selectedCard.map { $0.displayName } ?? "—",
+                fromMask: selectedCard?.maskedNumber,
                 toName: contact.nickname ?? contact.phoneNumber ?? "—",
                 toMask: contact.phoneNumber.map { "••\($0.suffix(4))" },
                 isLoading: false,
@@ -135,7 +134,7 @@ struct QuickTransferView: View {
 
             Spacer()
 
-            Text("Send money")
+            Text("Pay")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
 
@@ -264,8 +263,8 @@ struct QuickTransferView: View {
         if let v = value {
             amountText = v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : "\(v)"
         } else {
-            guard let account = selectedAccount else { return }
-            let raw = NSDecimalNumber(decimal: account.availableBalance).stringValue
+            guard let card = selectedCard else { return }
+            let raw = NSDecimalNumber(decimal: card.balance).stringValue
             amountText = raw
         }
     }
@@ -301,16 +300,16 @@ struct QuickTransferView: View {
 
     private var accountCard: some View {
         Group {
-            if accounts.isEmpty {
+            if cards.isEmpty {
                 HStack {
-                    Text("No accounts available")
+                    Text("No cards available")
                         .font(Typography.caption.font)
                         .foregroundColor(Color.movo.textTertiary)
                     Spacer()
                 }
                 .padding(Spacing.lg)
                 .background(cardBackground)
-            } else if accounts.count == 1 {
+            } else if cards.count == 1 {
                 accountCardContent
             } else {
                 Button {
@@ -337,12 +336,12 @@ struct QuickTransferView: View {
             .frame(width: 52, height: 52)
 
             VStack(alignment: .leading, spacing: 3) {
-                if let account = selectedAccount {
-                    Text("FROM  ·  \(account.maskedAccountNumber)")
+                if let card = selectedCard {
+                    Text("FROM  ·  \(card.maskedNumber)")
                         .font(.system(size: 11, weight: .semibold))
                         .tracking(0.4)
                         .foregroundColor(Color.movo.textTertiary)
-                    Text(account.nickname ?? account.clientName)
+                    Text(card.displayName)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
                 } else {
@@ -350,7 +349,7 @@ struct QuickTransferView: View {
                         .font(.system(size: 11, weight: .semibold))
                         .tracking(0.4)
                         .foregroundColor(Color.movo.textTertiary)
-                    Text("Select account")
+                    Text("Select card")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(Color.movo.textDisabled)
                 }
@@ -358,18 +357,7 @@ struct QuickTransferView: View {
 
             Spacer()
 
-            if let account = selectedAccount {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("$\(account.availableBalance.toCurrencyString())")
-                        .font(.system(size: 15, weight: .semibold).monospacedDigit())
-                        .foregroundColor(Color.movo.textPrimary)
-                    Text("available")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(Color.movo.textTertiary)
-                }
-            }
-
-            if accounts.count > 1 {
+            if cards.count > 1 {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color.movo.accent)
@@ -408,11 +396,11 @@ struct QuickTransferView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: Spacing.sm) {
-                    ForEach(accounts) { account in
+                    ForEach(cards) { card in
                         Button {
-                            selectedAccount = account
+                            selectedCard = card
                         } label: {
-                            accountSheetRow(account: account, isSelected: selectedAccount?.id == account.id)
+                            accountSheetRow(card: card, isSelected: selectedCard?.id == card.id)
                                 .background(
                                     RoundedRectangle(cornerRadius: Radius.xxl)
                                         .fill(Color.movo.surface.opacity(0.85))
@@ -439,28 +427,19 @@ struct QuickTransferView: View {
         .presentationCornerRadius(24)
     }
 
-    private func accountSheetRow(account: SavingsAccountInfo, isSelected: Bool) -> some View {
+    private func accountSheetRow(card: VCardListResponse, isSelected: Bool) -> some View {
         HStack(spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(account.maskedAccountNumber)
+                Text(card.maskedNumber)
                     .font(.system(size: 11, weight: .semibold))
                     .tracking(0.6)
                     .foregroundColor(Color.movo.textTertiary)
-                Text(account.nickname ?? account.clientName)
+                Text(card.displayName)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(Color.movo.textPrimary)
             }
 
             Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("$\(account.availableBalance.toCurrencyString())")
-                    .font(.system(size: 15, weight: .semibold).monospacedDigit())
-                    .foregroundColor(Color.movo.textPrimary)
-                Text("available")
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundColor(Color.movo.textTertiary)
-            }
 
             ZStack {
                 Circle()
@@ -497,7 +476,7 @@ struct QuickTransferView: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.up.forward")
                     .font(.system(size: 13, weight: .semibold))
-                Text(amount > 0 ? "Send $\(String(format: "%.2f", amount))" : "Send")
+                Text(amount > 0 ? "Pay $\(String(format: "%.2f", amount))" : "Pay")
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundColor(isValid ? Color.movo.onAccent : Color.movo.textDisabled)
@@ -525,7 +504,7 @@ struct QuickTransferView: View {
     }
 
     private func sendMoney() async {
-        guard let fromAccount = selectedAccount else { return }
+        guard let fromCard = selectedCard else { return }
 
         let rawPhone = contact.phoneNumber ?? ""
         let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
@@ -537,7 +516,7 @@ struct QuickTransferView: View {
             amount: amount,
             toAccountId: 0,
             toClientId: 0,
-            fromAccountId: fromAccount.id,
+            fromAccountId: fromCard.savingsAccountId ?? 0,
             phoneNumber: normalizedPhone,
             userAction: "Internal-Transfer",
             nickname: contact.nickname ?? ""
@@ -551,8 +530,8 @@ struct QuickTransferView: View {
         successData = SuccessConfirmation(
             channel: .peer,
             amount: Decimal(string: amountText) ?? 0,
-            fromAccountName: fromAccount.nickname ?? fromAccount.clientName,
-            fromAccountMask: fromAccount.maskedAccountNumber,
+            fromAccountName: fromCard.displayName,
+            fromAccountMask: fromCard.maskedNumber,
             toAccountName: contact.nickname ?? contact.phoneNumber ?? "",
             toAccountMask: nil,
             arrivesText: "Instantly",

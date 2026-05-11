@@ -92,9 +92,6 @@ public struct SuccessConfirmationView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     
-                    navBar
-                        .padding(.bottom, Spacing.sm)
-                    
                     heroBlock
                         .padding(.top, Spacing.xxl)
                         .padding(.bottom, Spacing.sm)
@@ -119,15 +116,6 @@ public struct SuccessConfirmationView: View {
     }
     
     // MARK: - Subviews
-    
-    private var navBar: some View {
-        HStack {
-            Spacer()
-            CircularNavButton(systemName: "xmark") { vm.close() }
-        }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.top, Spacing.lg - 2)
-    }
     
     private var heroBlock: some View {
         VStack(spacing: Spacing.md + 4) {

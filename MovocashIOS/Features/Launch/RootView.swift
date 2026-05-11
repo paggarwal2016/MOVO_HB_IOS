@@ -120,7 +120,14 @@ struct RootView: View {
                 case .getStartedInfo:
                     GetStartedInfoScreen(
                         onReady: {
-                            appState.flow = .pickDocument
+                            Task {
+                                do {
+                                    try await authVM.acceptAgreements()
+                                    appState.flow = .pickDocument
+                                } catch {
+                                    AlertManager.shared.showError(error.localizedDescription)
+                                }
+                            }
                         },
                         onNotNow: {
                             Task {
@@ -139,6 +146,7 @@ struct RootView: View {
                             }
                         },
                         container: container,
+                        isLoading: authVM.state == .loading,
                         acceptedItems: $legalAcceptedItems
                     )
 

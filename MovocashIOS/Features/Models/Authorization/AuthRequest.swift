@@ -49,6 +49,8 @@ struct UserActionRequest: Encodable, Sendable {
     let userAction: String
 }
 
+// MARK: - Email
+
 struct EmailVerifyRequest: Encodable, Sendable {
     let email: String
     let userAction: String
@@ -57,4 +59,29 @@ struct EmailVerifyRequest: Encodable, Sendable {
 struct EmailOTPRequest: Encodable, Sendable {
     let code: String
     let userAction: String
+}
+
+
+// MARK: - Agreement
+
+struct AgreementRequest: Encodable, Sendable {
+    let accepted: Bool
+    let Agreement: [Agreement]
+    let userAction: String
+}
+
+struct Agreement: Encodable, Sendable {
+    let AgreementType: AgreementType
+    let action: AgreementActionType
+}
+
+enum AgreementType: String, Codable {
+    case ecc = "ECC"
+    case tos = "TOS"
+    case virtualCardTos = "virtual-card-tos"
+}
+
+enum AgreementActionType: String, Codable {
+    case accepted = "T"
+    case rejected = "F"
 }

@@ -14,6 +14,7 @@ enum AuthAPI: Endpoint {
     case emailOTP(request: EmailVerifyRequest)
     case emailVerify(request: EmailOTPRequest)
     case tokenAccess
+    case acceptAgreements
     case enrollRSA(request: RSAEnrollRequest)
     case tokenRSA(request: RSATokenRequest)
     case nonceRSA(request: RSANonceRequest)
@@ -25,15 +26,16 @@ enum AuthAPI: Endpoint {
     // MARK: - URL Path
     var path: String {
         switch self {
-        case .messengerOTP: return "/auth/messenger/otp"
-        case .tokenSMS:     return "/auth/token-sms"
-        case .emailOTP:     return "/auth/email/otp"
-        case .emailVerify:  return "/auth/email/verify"
-        case .tokenAccess:  return "/auth/token-access"
-        case .enrollRSA:    return "/rsa"
-        case .tokenRSA:     return "/auth/token-rsa"
-        case .nonceRSA:     return "/rsa/nonce"
-        case .logout:       return "/auth/logout"
+        case .messengerOTP:      return "/auth/messenger/otp"
+        case .tokenSMS:          return "/auth/token-sms"
+        case .emailOTP:          return "/auth/email/otp"
+        case .emailVerify:       return "/auth/email/verify"
+        case .tokenAccess:       return "/auth/token-access"
+        case .acceptAgreements:  return "/user/profile/accept-agreements"
+        case .enrollRSA:         return "/rsa"
+        case .tokenRSA:          return "/auth/token-rsa"
+        case .nonceRSA:          return "/rsa/nonce"
+        case .logout:            return "/auth/logout"
         }
     }
 
@@ -41,7 +43,7 @@ enum AuthAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .messengerOTP, .tokenSMS, .tokenAccess,
-                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify:
+                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements:
             return .POST
         }
     }
@@ -58,6 +60,8 @@ enum AuthAPI: Endpoint {
         case .emailVerify:
             return .movoAuthorized
         case .tokenAccess:
+            return .movoAuthorized
+        case .acceptAgreements:
             return .movoAuthorized
         case .enrollRSA:
             return .movoAuthorized
@@ -94,6 +98,9 @@ enum AuthAPI: Endpoint {
             let request = UserActionRequest(
                 userAction: "GET_ACCESS_TOKEN")
             return try JSONEncoder().encode(request)
+        case .acceptAgreements:
+            let request = AgreementRequest(accepted: true, Agreement: [Agreement(AgreementType: .ecc, action: .accepted), Agreement(AgreementType: .tos, action: .accepted), Agreement(AgreementType: .virtualCardTos, action: .accepted)], userAction: "AGREEMENT")
+            return try JSONEncoder().encode(request)
         case .enrollRSA(let request):
             return try JSONEncoder().encode(request)
         case .tokenRSA(let request):
@@ -106,5 +113,4 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
         }
     }
-
 }

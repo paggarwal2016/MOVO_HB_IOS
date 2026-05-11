@@ -27,6 +27,7 @@ struct GetStartedInfoScreen: View {
 
     // MARK: Dependencies
     let container: AppContainer
+    var isLoading: Bool = false
 
     // MARK: State
     @Binding var acceptedItems: Set<String>
@@ -237,7 +238,7 @@ private extension GetStartedInfoScreen {
         VStack(spacing: 0) {
             Divider()
             VStack(spacing: 10) {
-                PrimaryButton(title: "Accept All & Continue", isEnabled: allAccepted) {
+                PrimaryButton(title: "Accept All & Continue", isLoading: isLoading, isEnabled: allAccepted) {
                     onReady()
                 }
             }
