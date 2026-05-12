@@ -21,7 +21,7 @@ struct PrimaryButton: View {
     var alignment: ContentAlignment = .center
     
     var backgroundColor: Color = Color.movo.accent
-    var textColor: Color = .white
+    var textColor: Color = .black
     var isLoading: Bool = false
     var isEnabled: Bool = true
     var action: () -> Void
@@ -67,7 +67,10 @@ struct PrimaryButton: View {
                     }
                 }
             }
-            .foregroundStyle(textColor)
+            .foregroundStyle(
+                isEnabled
+                ? textColor
+                : textColor.opacity(0.4))
             .frame(maxWidth: .infinity)
             .frame(height: 54)
             .background(

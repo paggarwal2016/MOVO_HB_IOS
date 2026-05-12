@@ -49,7 +49,6 @@
 		14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */; };
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
-		14CDCDAF2F97A33A00BF1BDF /* SignUpScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
 		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
 		14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D52CBC2F9B908500CB648B /* EmptyStateView.swift */; };
@@ -142,7 +141,6 @@
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14C623DE2F6AC39100D0B719 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		14C623E02F6AC7AC00D0B719 /* StatusRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusRow.swift; sourceTree = "<group>"; };
-		14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpScreen.swift; sourceTree = "<group>"; };
 		14D36C582F7AAF150024760F /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
 		14D36C592F7AAF150024760F /* SkeletonViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonViews.swift; sourceTree = "<group>"; };
 		14D52CBC2F9B908500CB648B /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
@@ -399,7 +397,6 @@
 			children = (
 				140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */,
 				142029702F96256800A72366 /* GetStartedInfoScreen.swift */,
-				14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */,
 				14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */,
 				146819682F4DE6CF00BED014 /* Components */,
 			);
@@ -746,7 +743,6 @@
 				14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */,
 				14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */,
 				14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */,
-				14CDCDAF2F97A33A00BF1BDF /* SignUpScreen.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
 				146E02212FA4A9020000C193 /* LinkedAccountsSectionView.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,

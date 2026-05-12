@@ -736,3 +736,141 @@ private struct ErrorBangDotShape: Shape {
         return p
     }
 }
+
+
+
+/// Full lockup: monogram + "MOVOCASH" wordmark. Convenience view that
+/// wraps `MovoLogoMark` with the tracked wordmark — matches the brand
+/// SVG proportions. Pass `vertical: false` for a horizontal lockup.
+public struct MovoBrandLockup: View {
+    public var markSize: CGFloat = 120
+    public var wordmarkSize: CGFloat = 28
+    public var spacing: CGFloat = 28
+    public var color: Color = MovoLogoMark.brandSilver
+    public var vertical: Bool = true
+
+    public init(
+        markSize: CGFloat = 120,
+        wordmarkSize: CGFloat = 28,
+        spacing: CGFloat = 28,
+        color: Color = MovoLogoMark.brandSilver,
+        vertical: Bool = true
+    ) {
+        self.markSize = markSize
+        self.wordmarkSize = wordmarkSize
+        self.spacing = spacing
+        self.color = color
+        self.vertical = vertical
+    }
+
+    public var body: some View {
+        let layout: AnyLayout = vertical
+                ? AnyLayout(VStackLayout(spacing: spacing))
+                : AnyLayout(HStackLayout(spacing: spacing))
+        layout {
+            MovoLogoMark(size: markSize, color: color)
+            Text("MOVOCASH")
+                .font(.system(size: wordmarkSize, weight: .regular))
+                .tracking(8)
+                .foregroundStyle(color)
+                .padding(.leading, 8) // visually compensate for trailing tracking
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("MovoCash")
+    }
+}
+
+// MARK: - Brand mark
+//  =====================================================================
+//  MovoCash MV monogram. Authored on a 90×90 grid (matches the brand
+//  SVG). Use anywhere the logo appears: splash, nav bar, empty states,
+//  about page. The default color is the brand silver `#D9D9D9` — an
+//  explicit brand hex, intentionally NOT one of the palette tokens, so
+//  the mark reads as itself across both dark and light themes.
+
+
+public struct MovoLogoMark: View {
+    public var size: CGFloat = 90
+    public var color: Color = MovoLogoMark.brandSilver
+
+    /// MovoCash brand silver — #D9D9D9. Used for the monogram and wordmark.
+    public static let brandSilver = Color(red: 0.851, green: 0.851, blue: 0.851)
+
+    public init(size: CGFloat = 90, color: Color = MovoLogoMark.brandSilver) {
+        self.size = size
+        self.color = color
+    }
+
+    public var body: some View {
+        ZStack {
+            MovoMarkTopStrokeShape().fill(color)
+            MovoMarkMiddleStrokeShape().fill(color)
+            MovoMarkLeftLegShape().fill(color)
+            MovoMarkRightLegShape().fill(color)
+        }
+        .frame(width: size, height: size)
+        .accessibilityLabel("MovoCash")
+    }
+}
+
+private func mvScale(_ rect: CGRect) -> CGFloat { rect.width / 90.0 }
+
+/// Top V — "0,0 18,0 45,24 72,0 90,0 45,42"
+private struct MovoMarkTopStrokeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let u = mvScale(rect)
+        var p = Path()
+        p.move(to: CGPoint(x: 0,        y: 0))
+        p.addLine(to: CGPoint(x: 18 * u, y: 0))
+        p.addLine(to: CGPoint(x: 45 * u, y: 24 * u))
+        p.addLine(to: CGPoint(x: 72 * u, y: 0))
+        p.addLine(to: CGPoint(x: 90 * u, y: 0))
+        p.addLine(to: CGPoint(x: 45 * u, y: 42 * u))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Middle V — "0,34 18,34 45,58 72,34 90,34 45,76"
+private struct MovoMarkMiddleStrokeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let u = mvScale(rect)
+        var p = Path()
+        p.move(to: CGPoint(x: 0,        y: 34 * u))
+        p.addLine(to: CGPoint(x: 18 * u, y: 34 * u))
+        p.addLine(to: CGPoint(x: 45 * u, y: 58 * u))
+        p.addLine(to: CGPoint(x: 72 * u, y: 34 * u))
+        p.addLine(to: CGPoint(x: 90 * u, y: 34 * u))
+        p.addLine(to: CGPoint(x: 45 * u, y: 76 * u))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Left leg — "0,0 14,0 14,76 0,90"
+private struct MovoMarkLeftLegShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let u = mvScale(rect)
+        var p = Path()
+        p.move(to: CGPoint(x: 0,        y: 0))
+        p.addLine(to: CGPoint(x: 14 * u, y: 0))
+        p.addLine(to: CGPoint(x: 14 * u, y: 76 * u))
+        p.addLine(to: CGPoint(x: 0,      y: 90 * u))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Right leg — "76,0 90,0 90,90 76,76"
+private struct MovoMarkRightLegShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let u = mvScale(rect)
+        var p = Path()
+        p.move(to: CGPoint(x: 76 * u, y: 0))
+        p.addLine(to: CGPoint(x: 90 * u, y: 0))
+        p.addLine(to: CGPoint(x: 90 * u, y: 90 * u))
+        p.addLine(to: CGPoint(x: 76 * u, y: 76 * u))
+        p.closeSubpath()
+        return p
+    }
+}

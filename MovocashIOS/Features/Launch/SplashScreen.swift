@@ -8,27 +8,72 @@
 import SwiftUI
 
 struct SplashScreen: View {
-
+    
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject var sessionManager: SessionManager
-
+    
+    @State private var lockupVisible = false
+    @State private var attributionVisible = false
+    @State private var didTransition = false
+    
+    public var brandColor: Color
+    public var attributionText: String?
+    public var minimumDuration: TimeInterval
+    public var onContinue: () -> Void
+    
+    public init(
+        brandColor: Color = MovoLogoMark.brandSilver,
+        attributionText: String? = "Member FDIC · Powered by Herring Bank",
+        minimumDuration: TimeInterval = 1.2,
+        onContinue: @escaping () -> Void = {}
+    ) {
+        self.brandColor = brandColor
+        self.attributionText = attributionText
+        self.minimumDuration = minimumDuration
+        self.onContinue = onContinue
+    }
+    
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea()
-            Image("splash")
-                .resizable()
-                .scaledToFit()
+            MovoBackground()
+            AmbientGlowView()
+            
+            MovoBrandLockup(
+                markSize: 120,
+                wordmarkSize: 28,
+                spacing: 28,
+                color: .white,
+                vertical: true
+            )
+            .opacity(lockupVisible ? 1 : 0)
+            .scaleEffect(lockupVisible ? 1 : 0.96)
+            
+            if let attributionText {
+                VStack {
+                    Spacer()
+                    Text(attributionText)
+                        .font(.system(size: 11, weight: .regular))
+                        .tracking(0.4)
+                        .foregroundStyle(
+                            Color.movo.textTertiary.opacity(0.7)
+                        )
+                        .padding(.bottom, 32)
+                        .opacity(attributionVisible ? 1 : 0)
+                }
+            }
         }
+        .preferredColorScheme(.dark)
+        .onAppear(perform: handleAppear)
         .task {
             // Clear any stale mid-KYC flag from a previous session.
             UserDefaults.standard.removeObject(forKey: "kycInProgress")
-
+            
             try? await Task.sleep(nanoseconds: 2_000_000_000)
-
+            
             let result = await sessionManager.restoreSession(appState: appState)
-
+            
             switch result {
             case .restored:
                 // ── Mid-onboarding guard ───────────────────────────────────────
@@ -39,15 +84,15 @@ struct SplashScreen: View {
                 guard UserDefaults.standard.bool(forKey: "kycCompleted") else {
                     let bgAt = UserDefaults.standard.double(forKey: "onboardingBackgroundedAt")
                     let elapsed: TimeInterval = bgAt > 0
-                        ? Date().timeIntervalSince1970 - bgAt
-                        : 0
+                    ? Date().timeIntervalSince1970 - bgAt
+                    : 0
                     UserDefaults.standard.removeObject(forKey: "onboardingBackgroundedAt")
-
+                    
                     if elapsed >= AppState.onboardingInactivityTimeout {
                         await sessionManager.logout(appState: appState)
                         return
                     }
-
+                    
                     if let raw = UserDefaults.standard.string(forKey: "onboardingLastScreen"),
                        let savedFlow = AuthFlow(rawValue: raw) {
                         if let ctxRaw = UserDefaults.standard.string(forKey: "onboardingContext") {
@@ -65,11 +110,11 @@ struct SplashScreen: View {
                     }
                     return
                 }
-
+                
                 // ── Post-dashboard returning user ──────────────────────────────
                 // Passcode confirmed — sync UserDefaults in case it was wiped by a reinstall.
                 UserDefaults.standard.set(true, forKey: "kycCompleted")
-
+                
                 // Keychain-backed passcode is the authoritative "setup complete" indicator.
                 // UserDefaults (kycCompleted) is cleared on reinstall but the Keychain persists,
                 // so we trust the passcode presence over the UserDefaults flag.
@@ -83,33 +128,33 @@ struct SplashScreen: View {
                         appState.flow = .choice
                         return
                     }
-                    #if targetEnvironment(simulator)
+#if targetEnvironment(simulator)
                     // Simulator: loginWithBiometric blocks on a network call + a Face ID
                     // dialog that only responds to Hardware > Face ID menu.
                     // Go to ChoiceScreen without logging out — session is intact and
                     // the "Sign in with Face ID" button there lets the user trigger it manually.
                     appState.flow = .choice
-                    #else
+#else
                     let success = await authVM.loginWithBiometric(appState: appState)
                     if !success {
                         // Session preserved — user can retry biometric from Choice screen
                         appState.flow = .choice
                     }
                     // On success: loginWithBiometric already sets appState.flow = .home
-                    #endif
+#endif
                     return
                 }
-
+                
                 lockManager.evaluateOnLaunch()
-
-                #if targetEnvironment(simulator)
+                
+#if targetEnvironment(simulator)
                 // Simulator: skip automatic biometric during splash.
                 // loginWithBiometric requires a live network call + Face ID via the
                 // Hardware menu, which blocks splash indefinitely and prevents the
                 // PIN screen from appearing. Go straight to PIN; the biometric button
                 // in AppLockView lets the user trigger Face ID manually if desired.
                 appState.flow = .appLock
-                #else
+#else
                 // Trigger biometric while the splash is still on screen.
                 // Face ID prompt appears over the splash — no intermediate screen shown.
                 if lockManager.isBiometricEnabled || RSAKeyManager.shared.keysExist() {
@@ -120,12 +165,12 @@ struct SplashScreen: View {
                         return
                     }
                 }
-
+                
                 // Biometric not enrolled, failed, or cancelled → show PIN screen.
                 // autoTriggerBiometric is false so Face ID is not re-prompted automatically.
                 appState.flow = .appLock
-                #endif
-
+#endif
+                
             case .keychainLocked:
                 ToastManager.shared.show(
                     "Your session could not be restored. Please unlock your device and try again.",
@@ -133,10 +178,27 @@ struct SplashScreen: View {
                     position: .bottom
                 )
                 appState.flow = .choice
-
+                
             case .notLoggedIn:
                 appState.flow = .choice
             }
+        }
+    }
+    
+    // MARK: - Lifecycle
+    
+    private func handleAppear() {
+        withAnimation(.easeOut(duration: 0.6)) {
+            lockupVisible = true
+        }
+        withAnimation(.easeOut(duration: 0.4).delay(0.3)) {
+            attributionVisible = true
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + minimumDuration) {
+            guard !didTransition else { return }
+            didTransition = true
+            onContinue()
         }
     }
 }

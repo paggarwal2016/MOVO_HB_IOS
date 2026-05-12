@@ -9,57 +9,60 @@ import SwiftUI
 import UIKit
 
 struct BiometricEnrollView: View {
-
+    
     let lockManager: AppLockManager
     var onEnable: () -> Void     // user tapped "Enable"
-    var onSkip: () -> Void       // user tapped "Not Now"
-
+    var onSkip: () -> Void       // user tapped "Skip"
+    
     @EnvironmentObject var authVM: AuthViewModel
-
+    
     @State private var isEnrolling = false
     @State private var enrollmentSucceeded = false
     @State private var errorMessage: String? = nil
     @State private var showSettingsAlert = false
     @State private var wentToSettings = false
-
+    
     // Use hardware type so the icon/name is correct even when not yet OS-enrolled
     private var displayBiometricType: BiometricType {
         lockManager.isBiometricAvailable
-            ? lockManager.biometricType
-            : lockManager.hardwareBiometricType
+        ? lockManager.biometricType
+        : lockManager.hardwareBiometricType
     }
-
+    
     var body: some View {
         ZStack {
-            Color(uiColor: .systemBackground).ignoresSafeArea()
-
+            MovoBackground()
+            AmbientGlowView()
+            
             VStack(spacing: 0) {
-                Spacer()
-
-                // Icon — checkmark on success
-                Image(systemName: enrollmentSucceeded ? "checkmark.circle.fill" : displayBiometricType.systemImageName)
-                    .font(.system(size: 72, weight: .ultraLight))
-                    .foregroundStyle(enrollmentSucceeded ? .primary : Color.primary)
-                    .padding(.bottom, 32)
-                    .animation(.easeInOut(duration: 0.3), value: enrollmentSucceeded)
-
-                // Title
-                Text(enrollmentSucceeded
-                     ? "\(displayBiometricType.displayName) Enabled"
-                     : "Enable \(displayBiometricType.displayName)")
-                    .font(.title2.bold())
-                    .padding(.bottom, 12)
-                    .animation(.easeInOut(duration: 0.3), value: enrollmentSucceeded)
-
-                // Body
-                Text(enrollmentSucceeded
-                     ? "\(displayBiometricType.displayName) is now set up. You can use it to unlock MovoCash quickly and securely."
-                     : "Use \(displayBiometricType.displayName) to unlock MovoCash quickly and securely. Your biometric data never leaves this device.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Spacer().frame(height: 60)
+                
+                // Face Scan Icon
+                FaceScanView(enrollmentSucceeded: enrollmentSucceeded)
+                    .frame(height: 220)
+                
+                Spacer().frame(height: 32)
+                
+                // Title + Description
+                VStack(spacing: 12) {
+                    
+                    Text(enrollmentSucceeded
+                         ? "\(displayBiometricType.displayName) Enabled"
+                         : "Enable \(displayBiometricType.displayName)")
+                    .font(.system(size: 28, weight: .bold))
+                    .tracking(-0.56)
+                    .foregroundColor(Color.movo.textPrimary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-
+                    
+                    Text(enrollmentSucceeded
+                         ? "\(displayBiometricType.displayName) is now set up. You can use it to unlock MovoCash quickly and securely."
+                         : "Use \(displayBiometricType.displayName) to unlock MovoCash quickly and securely. Your biometric data never leaves this device.")
+                    .textStyle(Typography.subtitle)
+                    .foregroundColor(Color.movo.textTertiary)
+                    .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, Spacing.xxl + 8)
+                
                 // Error (hidden once enrolled)
                 if !enrollmentSucceeded, let err = errorMessage {
                     Text(err)
@@ -69,46 +72,38 @@ struct BiometricEnrollView: View {
                         .padding(.horizontal, 32)
                         .multilineTextAlignment(.center)
                 }
-
-                Spacer().frame(height: 56)
-
-                // Enable button — becomes a filled success indicator after enroll
-                Button {
-                    Task { await enroll() }
-                } label: {
-                    Group {
-                        if enrollmentSucceeded {
-                            Label("Enrolled", systemImage: "checkmark")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                        } else if isEnrolling {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text("Enable \(displayBiometricType.displayName)")
-                                .font(.headline)
-                                .foregroundStyle(.white)
+                
+                Spacer()
+                
+                VStack(spacing: Spacing.md) {
+                    Button(action: {
+                        Task { await enroll() }
+                    }) {
+                        Group {
+                            if enrollmentSucceeded {
+                                Label("Enrolled", systemImage: "checkmark")
+                            } else if isEnrolling {
+                                ProgressView()
+                            } else {
+                                Text("Enable \(displayBiometricType.displayName)")
+                            }
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(enrollmentSucceeded ? .primary : Color.primary)
-                    .clipShape(RoundedCorner(radius: 12))
-                    .animation(.easeInOut(duration: 0.3), value: enrollmentSucceeded)
-                }
-                .disabled(isEnrolling || enrollmentSucceeded)
-                .padding(.horizontal, 40)
-
-                // Skip — hidden once enrolled
-                if !enrollmentSucceeded {
-                    Button("Not Now") {
-                        onSkip()
+                    .buttonStyle(MovoPrimaryButtonStyle())
+                    .disabled(isEnrolling || enrollmentSucceeded)
+                    .padding(.horizontal, 24)
+                    
+                    // Skip — hidden once enrolled
+                    if !enrollmentSucceeded {
+                        Button(action: { onSkip() }) {
+                            Text("Skip")
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                        .padding(.horizontal, 24)
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 16)
                 }
-
-                Spacer()
+                
+                Spacer().frame(height: 24)
             }
         }
         // Two distinct alert cases:
@@ -121,8 +116,8 @@ struct BiometricEnrollView: View {
         //    to Face ID & Passcode manually (iOS does not allow a deeper link).
         .alert(
             lockManager.isBiometricPermissionDenied
-                ? "\(displayBiometricType.displayName) Permission Required"
-                : "\(displayBiometricType.displayName) Not Set Up",
+            ? "\(displayBiometricType.displayName) Permission Required"
+            : "\(displayBiometricType.displayName) Not Set Up",
             isPresented: $showSettingsAlert
         ) {
             Button("Open Settings") {
@@ -131,7 +126,7 @@ struct BiometricEnrollView: View {
                     UIApplication.shared.open(settingsURL)
                 }
             }
-            Button("Not Now", role: .cancel) { }
+            Button("Skip", role: .cancel) { }
         } message: {
             if lockManager.isBiometricPermissionDenied {
                 Text("MovoCash doesn't have permission to use \(displayBiometricType.displayName).\n\nTo enable it:\n1. Tap 'Open Settings'\n2. Enable \(displayBiometricType.displayName)\n3. Return to MovoCash")
@@ -148,29 +143,29 @@ struct BiometricEnrollView: View {
             Task { await enroll() }
         }
     }
-
+    
     // MARK: - Enroll
-
+    
     private func enroll() async {
         // Prevent double-execution during the 1.5 s success window or while a
         // previous attempt is in progress.
         guard !enrollmentSucceeded, !isEnrolling else { return }
-
+        
         // Guard: app permission was revoked in iOS Settings → Privacy → Face ID
         if lockManager.isBiometricPermissionDenied {
             showSettingsAlert = true
             return
         }
-
+        
         // Hardware present but iOS Settings enrollment is missing — redirect to Settings
         if lockManager.isBiometricHardwarePresent && !lockManager.isBiometricAvailable {
             showSettingsAlert = true
             return
         }
-
+        
         isEnrolling = true
         errorMessage = nil
-
+        
         // 1. Verify biometric works right now (shows system prompt)
         do {
             try await lockManager.biometricManager.evaluate(
@@ -196,7 +191,7 @@ struct BiometricEnrollView: View {
             errorMessage = error.localizedDescription
             return
         }
-
+        
         // 2. Store Secure Enclave key
         do {
             try lockManager.enrollBiometrics()
@@ -205,10 +200,10 @@ struct BiometricEnrollView: View {
             isEnrolling = false
             return
         }
-
+        
         // 3. Register RSA key pair with server (POST /rsa)
         await authVM.enrollRSA()
-
+        
         // enrollRSA() deletes the RSA key pair on any failure.
         // If keys are absent, roll back the local Secure Enclave key so both
         // sides stay in sync — the user will need to retry enrollment.
@@ -227,12 +222,131 @@ struct BiometricEnrollView: View {
             isEnrolling = false
             return
         }
-
+        
         // Show success confirmation on this screen before navigating forward.
         // Gives the user a clear signal that enrollment completed.
         enrollmentSucceeded = true
         isEnrolling = false
         try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 s
         onEnable()
+    }
+}
+
+
+// MARK: - Face Scan View
+
+struct FaceScanView: View {
+    
+    var enrollmentSucceeded: Bool
+    
+    var body: some View {
+        ZStack {
+            
+            // Dotted Circle (lighter + tighter)
+            Circle()
+                .stroke(style: StrokeStyle(lineWidth: 1, dash: [2, 6]))
+                .foregroundColor(circleColor.opacity(0.4))
+                .frame(width: 200, height: 200)
+            
+            // Corner Brackets (slightly bigger + rounded feel)
+            CornerBrackets()
+                .stroke(circleColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .frame(width: 140, height: 140)
+            
+            if enrollmentSucceeded {
+                successView
+            } else {
+                scanningView
+            }
+        }
+    }
+}
+
+// MARK: - Subviews
+
+extension FaceScanView {
+    
+    private var scanningView: some View {
+        VStack(spacing: 14) {
+            
+            // Eyes (smaller + better spacing)
+            HStack(spacing: 18) {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 5, height: 5)
+                
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 5, height: 5)
+            }
+            
+            // Scan Line (rounded ends like design)
+            Capsule()
+                .fill(Color.movo.accent)
+                .frame(width: 80, height: 4)
+            
+            // Smile (better curve)
+            SmileShape()
+                .stroke(Color.white, lineWidth: 2)
+                .frame(width: 34, height: 16)
+        }
+    }
+    
+    private var successView: some View {
+        Image(systemName: "checkmark")
+            .font(.system(size: 40, weight: .bold))
+            .foregroundColor(Color.movo.accent)
+    }
+    
+    private var circleColor: Color {
+        enrollmentSucceeded
+        ? Color.movo.accent
+        : Color.movo.accent.opacity(0.8)
+    }
+}
+
+// MARK: - Shapes
+
+struct CornerBrackets: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let l: CGFloat = 22
+        
+        // Top-left
+        p.move(to: CGPoint(x: 0, y: l))
+        p.addLine(to: CGPoint(x: 0, y: 0))
+        p.addLine(to: CGPoint(x: l, y: 0))
+        
+        // Top-right
+        p.move(to: CGPoint(x: rect.width - l, y: 0))
+        p.addLine(to: CGPoint(x: rect.width, y: 0))
+        p.addLine(to: CGPoint(x: rect.width, y: l))
+        
+        // Bottom-left
+        p.move(to: CGPoint(x: 0, y: rect.height - l))
+        p.addLine(to: CGPoint(x: 0, y: rect.height))
+        p.addLine(to: CGPoint(x: l, y: rect.height))
+        
+        // Bottom-right
+        p.move(to: CGPoint(x: rect.width - l, y: rect.height))
+        p.addLine(to: CGPoint(x: rect.width, y: rect.height))
+        p.addLine(to: CGPoint(x: rect.width, y: rect.height - l))
+        
+        return p
+    }
+}
+
+
+struct SmileShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        path.move(to: CGPoint(x: 0, y: rect.height * 0.4))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.width, y: rect.height * 0.4),
+            control: CGPoint(x: rect.width / 2, y: rect.height)
+        )
+        
+        return path
     }
 }
