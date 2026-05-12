@@ -16,17 +16,17 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="splash" translatesAutoresizingMaskIntoConstraints="NO" id="482-E1-iKI">
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="New" translatesAutoresizingMaskIntoConstraints="NO" id="u9s-Ub-1Hw">
                                 <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
-                            <constraint firstItem="482-E1-iKI" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" id="6Zl-W7-sew"/>
-                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" secondItem="482-E1-iKI" secondAttribute="trailing" id="Zmh-BB-VNO"/>
-                            <constraint firstItem="482-E1-iKI" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="muc-qq-6WB"/>
-                            <constraint firstAttribute="bottom" secondItem="482-E1-iKI" secondAttribute="bottom" id="pFP-Nb-mKI"/>
+                            <constraint firstAttribute="bottom" secondItem="u9s-Ub-1Hw" secondAttribute="bottom" id="Bp9-1U-xHM"/>
+                            <constraint firstItem="u9s-Ub-1Hw" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="OBH-QN-LXg"/>
+                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" secondItem="u9s-Ub-1Hw" secondAttribute="trailing" id="zAf-GA-JGc"/>
+                            <constraint firstItem="u9s-Ub-1Hw" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" id="zk7-yA-gFT"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -36,6 +36,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="splash" width="589.5" height="1278"/>
+        <image name="New" width="589.5" height="1278"/>
     </resources>
 </document>
