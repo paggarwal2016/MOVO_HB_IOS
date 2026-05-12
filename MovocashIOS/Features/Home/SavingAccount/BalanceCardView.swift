@@ -18,7 +18,7 @@ struct BalanceCardView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.elevated)
+                .fill(Color.movo.surface.opacity(0.85))
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
@@ -28,11 +28,25 @@ struct BalanceCardView: View {
 
             VStack(alignment: .leading, spacing: 0) {
 
-                // Eyebrow label
-                Text("AVAILABLE BALANCE")
-                    .font(.system(size: 10, weight: .semibold))
-                    .tracking(1.2)
-                    .foregroundColor(Color.movo.textTertiary)
+                // Eyebrow label + edit nickname
+                HStack(spacing: 6) {
+                    Text("AVAILABLE BALANCE")
+                        .font(.system(size: 10, weight: .semibold))
+                        .tracking(1.2)
+                        .foregroundColor(Color.movo.textTertiary)
+
+                    Button(action: onPrimaryTap) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color.movo.textTertiary)
+                            .frame(width: 22, height: 22)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.movo.textTertiary, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 Spacer().frame(height: Spacing.sm)
 

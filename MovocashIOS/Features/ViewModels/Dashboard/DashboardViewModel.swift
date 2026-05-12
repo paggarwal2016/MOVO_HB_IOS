@@ -48,12 +48,19 @@ final class DashboardViewModel: BaseViewModel {
               account.isPVCardActivated == "Inactive" else { return }
 
         let pin = String(format: "%04d", Int.random(in: 0...9999))
-        let request = VCardsRequest(pin: pin, accountId: account.id, userAction: "VCARD-ACTIVATE")
+        let request = VCardsRequest(pin: pin, accountId: account.id, userAction: "VCARD-ACTIVATE", isPrimary: true)
 
         do {
-            let _: CreateVCardEncryptedResponse = try await network.request(VCardAPI.postVCards(request: request))
+            let _: CreateVCardEncryptedResponse = try await network.request(
+                VCardAPI.postVCards(request: request)
+            )
+        } catch is CancellationError {
+            return
         } catch {
-            SecureLogger.debug("Primary vcard silent activation skipped: \(error.localizedDescription)", category: .general)
+            SecureLogger.debug(
+                "Primary vcard activation failed: \(error.localizedDescription)",
+                category: .general
+            )
         }
     }
 
@@ -63,6 +70,9 @@ final class DashboardViewModel: BaseViewModel {
         do {
             let result: DashboardResponse = try await network.request(DashboardAPI.dashboard)
             dashboard = result
+            Task.detached(priority: .background) {
+                await self.activatePrimaryVCardIfNeeded()
+            }
         } catch is CancellationError {
             // User dismissed the pull gesture — keep existing data silently
         } catch {

@@ -20,7 +20,7 @@ struct PrimaryButton: View {
     let title: String
     var alignment: ContentAlignment = .center
     
-    var backgroundColor: Color = Color.primary
+    var backgroundColor: Color = Color.movo.accent
     var textColor: Color = .white
     var isLoading: Bool = false
     var isEnabled: Bool = true

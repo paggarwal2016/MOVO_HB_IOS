@@ -16,11 +16,12 @@ struct OTPDigitBox: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10)
-                .stroke(isActive ? Color.blue : Color.gray.opacity(0.4), lineWidth: 1.5)
+                .stroke(isActive ? Color.movo.accent : Color.gray.opacity(0.4), lineWidth: 1.5)
                 .frame(height: 55)
 
             Text(digit)
                 .font(.title2)
+                .foregroundStyle(.white)
                 .fontWeight(.semibold)
         }
         .frame(maxWidth: .infinity)

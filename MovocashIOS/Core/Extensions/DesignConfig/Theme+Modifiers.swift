@@ -136,12 +136,34 @@ public struct MovoPrimaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 17)
             .background(
-                RoundedRectangle(cornerRadius: Radius.largeButton)
+                RoundedRectangle(cornerRadius: Radius.heroCard)
                     .fill(Color.movo.accent.opacity(configuration.isPressed ? 0.85 : 1))
             )
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .animation(.easeOut(duration: DesignTokens.Motion.fast),
                        value: configuration.isPressed)
+    }
+}
+
+// MARK: - Outline button style (Log In)
+
+public struct OutlineButtonStyle: ButtonStyle {
+    public init() {}
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(Color.movo.textPrimary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 17)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .fill(Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.heroCard)
+                            .stroke(Color.movo.borderStrong, lineWidth: Stroke.hairline) // border color & width
+                    )
+            )
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
 }
 

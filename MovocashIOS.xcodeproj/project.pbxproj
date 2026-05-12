@@ -14,10 +14,7 @@
 		1417849E2FA34CC9000E802C /* CreateCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1417849D2FA34CC9000E802C /* CreateCardView.swift */; };
 		141784A02FA34B8E000E802C /* CardDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 141784A12FA34B8E000E802C /* CardDetailSheet.swift */; };
 		1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296C2F9616D600A72366 /* SignUpViewModel.swift */; };
-		142029722F96256900A72366 /* OTPScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029712F96256800A72366 /* OTPScreen.swift */; };
 		142029732F96256900A72366 /* GetStartedInfoScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029702F96256800A72366 /* GetStartedInfoScreen.swift */; };
-		142337BA2F5807890030B4E7 /* ChoiceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337B92F5807890030B4E7 /* ChoiceScreen.swift */; };
-		142337BC2F5807C70030B4E7 /* PhoneNumberScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */; };
 		142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142864562F92251B006F8C39 /* TokenRefreshable.swift */; };
 		1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791A2F6D430500EADEA2 /* ProfileImageView.swift */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
@@ -112,9 +109,6 @@
 		141784A12FA34B8E000E802C /* CardDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDetailSheet.swift; sourceTree = "<group>"; };
 		1420296C2F9616D600A72366 /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewModel.swift; sourceTree = "<group>"; };
 		142029702F96256800A72366 /* GetStartedInfoScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedInfoScreen.swift; sourceTree = "<group>"; };
-		142029712F96256800A72366 /* OTPScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPScreen.swift; sourceTree = "<group>"; };
-		142337B92F5807890030B4E7 /* ChoiceScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceScreen.swift; sourceTree = "<group>"; };
-		142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberScreen.swift; sourceTree = "<group>"; };
 		142864562F92251B006F8C39 /* TokenRefreshable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefreshable.swift; sourceTree = "<group>"; };
 		1445791A2F6D430500EADEA2 /* ProfileImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageView.swift; sourceTree = "<group>"; };
 		1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinInputAlertPresenter.swift; sourceTree = "<group>"; };
@@ -235,6 +229,11 @@
 		14B2CB892FA8BF7B0068FC23 /* Font */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Font;
+			sourceTree = "<group>";
+		};
+		14D7CA742FB3165B0032E35B /* Components */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Components;
 			sourceTree = "<group>";
 		};
 		14DBC58E2F5014AD000D84FD /* Extensions */ = {
@@ -401,9 +400,6 @@
 				140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */,
 				142029702F96256800A72366 /* GetStartedInfoScreen.swift */,
 				14CDCDAE2F97A33A00BF1BDF /* SignUpScreen.swift */,
-				142029712F96256800A72366 /* OTPScreen.swift */,
-				142337B92F5807890030B4E7 /* ChoiceScreen.swift */,
-				142337BB2F5807C70030B4E7 /* PhoneNumberScreen.swift */,
 				14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */,
 				146819682F4DE6CF00BED014 /* Components */,
 			);
@@ -422,6 +418,7 @@
 		1468196D2F4DE6CF00BED014 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				14D7CA742FB3165B0032E35B /* Components */,
 				141CF0DD2FAE41E200D1D2E3 /* Confirmation */,
 				1404179D2FAB2E8600622003 /* Screen */,
 				14AC54BA2FA8952F0032574E /* Transaction */,
@@ -585,6 +582,7 @@
 				1489F26B2F67E0C20046FAD4 /* TextInputAlert */,
 				14AC54BA2FA8952F0032574E /* Transaction */,
 				14B2CB892FA8BF7B0068FC23 /* Font */,
+				14D7CA742FB3165B0032E35B /* Components */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,
@@ -729,12 +727,10 @@
 				1417849E2FA34CC9000E802C /* CreateCardView.swift in Sources */,
 				141784A02FA34B8E000E802C /* CardDetailSheet.swift in Sources */,
 				146819772F4DE6CF00BED014 /* Environment.swift in Sources */,
-				142029722F96256900A72366 /* OTPScreen.swift in Sources */,
 				142029732F96256900A72366 /* GetStartedInfoScreen.swift in Sources */,
 				146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */,
 				146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */,
 				1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */,
-				142337BA2F5807890030B4E7 /* ChoiceScreen.swift in Sources */,
 				14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */,
 				1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */,
 				14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */,
@@ -777,7 +773,6 @@
 				14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */,
 				14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */,
 				14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */,
-				142337BC2F5807C70030B4E7 /* PhoneNumberScreen.swift in Sources */,
 				1468198F2F4DE6CF00BED014 /* DeviceManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

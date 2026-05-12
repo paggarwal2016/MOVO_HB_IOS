@@ -17,6 +17,8 @@ struct SignUpScreen: View {
 
     var body: some View {
         ZStack {
+            MovoBackground()
+            AmbientGlowView()
             VStack(alignment: .leading, spacing: 24) {
                 HStack {
                     BackButton { onBack() }

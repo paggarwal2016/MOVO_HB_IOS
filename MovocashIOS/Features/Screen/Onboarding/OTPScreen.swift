@@ -39,8 +39,11 @@ struct OTPScreen: View {
 
     var body: some View {
         ZStack {
+            MovoBackground()
+            AmbientGlowView()
+            
             VStack(alignment: .leading, spacing: 24) {
-                headerView
+                topBar
                 titleView
                 otpSectionView
                 Spacer()
@@ -60,20 +63,34 @@ struct OTPScreen: View {
 // MARK: - Subviews
 private extension OTPScreen {
 
-    var headerView: some View {
+    private var topBar: some View {
         HStack {
-            BackButton {
+            Button(action: {
                 UIApplication.shared.dismissKeyboard()
                 onBack()
+            }) {
+                BackChevronIcon(tint: Color.movo.textTertiary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             Spacer()
         }
     }
 
+
     var titleView: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title).titleStyle()
-            Text(subtitle).subtitleStyle()
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            Text(title)
+                .font(.system(size: 26, weight: .semibold))
+                .tracking(-0.5)
+                .foregroundStyle(Color.movo.textPrimary)
+                .lineSpacing(2)
+            
+            Text(subtitle)
+                .font(.system(size: 14))
+                .foregroundStyle(Color.movo.textTertiary)
+                .lineSpacing(2)
         }
     }
 
@@ -115,8 +132,8 @@ private extension OTPScreen {
         switch otpVM.state {
         case .counting:
             Text("Resend OTP in 0:\(String(format: "%02d", otpVM.remainingSeconds))")
-                .font(.subheadline)
-                .foregroundColor(Color(.systemGray))
+                .textStyle(Typography.body)
+                .foregroundColor(Color.movo.textTertiary)
                 .frame(maxWidth: .infinity, alignment: .center)
 
         case .expired:
@@ -127,6 +144,7 @@ private extension OTPScreen {
                 }
             }
             .font(.subheadline.bold())
+            .foregroundColor(Color.movo.accent)
             .frame(maxWidth: .infinity, alignment: .center)
 
         case .idle:

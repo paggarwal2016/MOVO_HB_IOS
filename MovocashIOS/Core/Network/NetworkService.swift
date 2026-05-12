@@ -34,13 +34,17 @@ actor NetworkService: NetworkServiceProtocol {
         let config = URLSessionConfiguration.default
 
         // Fintech-safe timeout settings
-        config.timeoutIntervalForRequest = 15        // Per request timeout
-        config.timeoutIntervalForResource = 30       // Total resource timeout
+        config.timeoutIntervalForRequest = 60        // Per request timeout
+        config.timeoutIntervalForResource = 120       // Total resource timeout
 
         // Security best practices
         config.waitsForConnectivity = false          // Fail fast — noInternet error handled in URLError categorization
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.urlCache = nil
+        config.allowsCellularAccess = true
+        config.networkServiceType = .responsiveData
+        config.httpMaximumConnectionsPerHost = 5
+        config.multipathServiceType = .handover
 
         self.session = URLSession(
             configuration: config,
