@@ -25,10 +25,18 @@ struct PDFViewScreen: View {
 
     var body: some View {
         ZStack {
+            MovoBackground()
+            AmbientGlowView()
+
             VStack(spacing: 0) {
                 docHeader
-                Divider()
+                Rectangle()
+                    .fill(Color.movo.textTertiary.opacity(0.10))
+                    .frame(height: DesignTokens.Stroke.hairline)
                 contentArea
+                if viewModel.state != .loading {
+                    bottomBar
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
@@ -36,12 +44,7 @@ struct PDFViewScreen: View {
                 SpinnerView()
             }
         }
-        .overlay(alignment: .bottom) {
-            if viewModel.state != .loading {
-                bottomBar
-            }
-        }
-        .background(Color(.systemBackground))
+        .background(Color.clear)
         .task { await viewModel.loadPDF(for: documentType) }
     }
 }
@@ -51,43 +54,67 @@ struct PDFViewScreen: View {
 private extension PDFViewScreen {
 
     var docHeader: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(documentType.iconColor.opacity(0.12))
-                    .frame(width: 48, height: 48)
-                Image(systemName: documentType.icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(documentType.iconColor)
-            }
+        HStack(spacing: DesignTokens.Spacing.md) {
+            documentIllustration()
+                .frame(width: 44, height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                        .fill(Color.movo.textTertiary.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                        .strokeBorder(Color.movo.textTertiary.opacity(0.14), lineWidth: DesignTokens.Stroke.hairline)
+                )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(documentType.title)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.movo.textPrimary)
                 Text("Please read carefully before accepting")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.movo.textTertiary)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
             Button {
                 dismiss()
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Color(.secondarySystemBackground))
+                        .fill(Color.movo.surface)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.movo.borderStrong.opacity(0.18), lineWidth: DesignTokens.Stroke.hairline)
+                        )
                         .frame(width: 32, height: 32)
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.movo.textTertiary)
                 }
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.horizontal, DesignTokens.Spacing.lg)
+        .padding(.top, DesignTokens.Spacing.sm)
+        .padding(.bottom, DesignTokens.Spacing.md)
+    }
+
+    @ViewBuilder
+    func documentIllustration(
+        stroke: Color = Color.movo.textTertiary,
+        accent: Color = Color.movo.textPrimary
+    ) -> some View {
+        switch documentType {
+        case .privacy:
+            ShieldKeyholeIcon(stroke: stroke, accent: accent)
+        case .herringPrivacy:
+            HerringShieldIcon(stroke: stroke, accent: accent)
+        case .tos:
+            DocumentLinesIcon(stroke: stroke, accent: accent)
+        case .cardholderAgreement:
+            SignatureIcon(stroke: stroke, accent: accent)
+        }
     }
 }
 
@@ -97,19 +124,34 @@ private extension PDFViewScreen {
 
     var contentArea: some View {
         ZStack {
-            if let data = viewModel.data {
-                PDFKitView(data: data) {
+            if let pdfURL = viewModel.pdfURL {
+                PDFKitView(pdfURL: pdfURL) {
                     hasReachedEnd = true
                 }
             } else if viewModel.state != .loading {
-                EmptyStateView(
-                    image: "doc.fill",
-                    title: "Document Unavailable",
-                    description: "Unable to load this document.\nPlease try again later."
-                )
+                pdfUnavailableState
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    var pdfUnavailableState: some View {
+        VStack(spacing: DesignTokens.Spacing.lg) {
+            Image(systemName: "doc.fill")
+                .font(.system(size: 30, weight: .light))
+                .foregroundStyle(Color.movo.textTertiary)
+            VStack(spacing: 6) {
+                Text("Document Unavailable")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.movo.textPrimary)
+                Text("Unable to load this document.\nPlease try again later.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.movo.textTertiary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, DesignTokens.Spacing.lg)
     }
 }
 
@@ -120,46 +162,59 @@ private extension PDFViewScreen {
     var bottomBar: some View {
         VStack(spacing: 0) {
             LinearGradient(
-                colors: [Color(.systemBackground).opacity(0), Color(.systemBackground)],
+                colors: [Color.movo.background.opacity(0), Color.movo.background],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .frame(height: 32)
             .allowsHitTesting(false)
 
-            VStack(spacing: 10) {
+            VStack(spacing: DesignTokens.Spacing.sm + 2) {
                 Text(hasReachedEnd
                      ? "By tapping Accept, you agree to the above document."
                      : "Scroll to the end to accept this document.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.movo.textTertiary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                    .animation(.easeInOut, value: hasReachedEnd)
+                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: hasReachedEnd)
 
                 Button {
                     onAccept()
                     dismiss()
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: DesignTokens.Spacing.sm) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 16))
-                        Text("Accept & Continue")
-                            .font(.system(size: 16, weight: .semibold))
+                        Text("Accept & continue")
+                            .font(.system(size: 15, weight: .semibold))
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(
+                        hasReachedEnd
+                        ? Color.movo.background
+                        : Color.movo.accent.opacity(0.55)
+                    )
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(hasReachedEnd ? Color.primary : Color(.systemGray3))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .animation(.easeInOut, value: hasReachedEnd)
+                    .padding(.vertical, DesignTokens.Spacing.lg)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                            .fill(hasReachedEnd ? Color.movo.accent : Color.movo.accent.opacity(0.22))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                            .strokeBorder(
+                                hasReachedEnd ? Color.clear : Color.movo.accent.opacity(0.35),
+                                lineWidth: DesignTokens.Stroke.thin
+                            )
+                    )
+                    .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: hasReachedEnd)
                 }
                 .buttonStyle(.plain)
                 .disabled(!hasReachedEnd)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, DesignTokens.Spacing.lg)
             }
-            .padding(.bottom, 32)
-            .background(Color(.systemBackground))
+            .padding(.bottom, DesignTokens.Spacing.xxxl)
+            .background(Color.movo.background)
         }
     }
 }
@@ -168,7 +223,8 @@ private extension PDFViewScreen {
 
 private struct PDFKitView: UIViewRepresentable {
 
-    let data: Data
+    let pdfURL: URL?
+        
     let onReachEnd: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -180,7 +236,7 @@ private struct PDFKitView: UIViewRepresentable {
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
         pdfView.autoScales = true
-        pdfView.backgroundColor = UIColor.systemBackground
+        pdfView.backgroundColor = UIColor(Color.movo.background)
 
         NotificationCenter.default.addObserver(
             context.coordinator,
@@ -189,7 +245,7 @@ private struct PDFKitView: UIViewRepresentable {
             object: pdfView
         )
 
-        if let document = PDFDocument(data: data) {
+        if let document = PDFDocument(url: pdfURL!) {
             pdfView.document = document
             // Single-page docs never trigger PDFViewPageChangedNotification on scroll,
             // so signal end after the current render pass completes.

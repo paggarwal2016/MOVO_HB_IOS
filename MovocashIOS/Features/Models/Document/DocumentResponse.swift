@@ -57,9 +57,10 @@ enum DocumentType: Sendable, Hashable, Identifiable {
 
 nonisolated struct DocumentResponse: Decodable, Sendable {
     let success: Bool
-    let data: String
+    let document: String
+    let message: String
 
-    var pdfData: Data? {
-        Data(base64Encoded: data)
+    var documentURL: URL? {
+        URL(string: document)
     }
 }

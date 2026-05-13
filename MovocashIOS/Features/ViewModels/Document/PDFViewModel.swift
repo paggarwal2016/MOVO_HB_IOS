@@ -12,14 +12,11 @@ import Combine
 @MainActor
 final class PDFViewModel: BaseViewModel {
     
-    @Published var data: Data?
-    
-    // MARK: - Dependencies
+    @Published var pdfURL: URL?
+    @Published var isLoading = false
 
     private let network: NetworkServiceProtocol
     private let analytics: AnalyticsTracking
-
-    // MARK: - Init
 
     init(
         network: NetworkServiceProtocol,
@@ -33,12 +30,23 @@ final class PDFViewModel: BaseViewModel {
     
     func loadPDF(for documentType: DocumentType) async {
         guard !Task.isCancelled else { return }
+
+        isLoading = true
+        defer { isLoading = false }
+
         do {
-            data = try await perform {
-                try await network.requestData(documentType.endpoint)
+            let response: DocumentResponse = try await perform {
+                try await network.request(documentType.endpoint)
             }
+
+            guard let url = response.documentURL else {
+                throw NetworkError.invalidURL
+            }
+
+            self.pdfURL = url
+
         } catch {
-            // Error surfaced via ToastManager in perform(_:)
+            // handled in BaseViewModel
         }
     }
 }
