@@ -63,25 +63,35 @@ struct GetStartedInfoScreen: View {
     // MARK: Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            navBar
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    headerSection
-                    requirementsSection
-                    documentsSection
-                    Spacer().frame(height: 8)
+        ZStack {
+            MovoBackground()
+            AmbientGlowView()
+            
+            VStack(spacing: 0) {
+               
+                topBar
+                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .padding(.top, DesignTokens.Spacing.sm)
+                    .padding(.bottom, DesignTokens.Spacing.lg)
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        requirementsSection
+                            .padding(.bottom, DesignTokens.Spacing.xxl)
+                        documentsSection
+                    }
+                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .padding(.bottom, DesignTokens.Spacing.xxxl + 60)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
+                continueButton
+                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .padding(.bottom, DesignTokens.Spacing.lg)
             }
-            bottomBar
-        }
-        .background(Color(.systemBackground))
-        .sheet(item: $selectedItem) { item in
-            PDFViewScreen(documentType: item.documentType, container: container) {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                    _ = acceptedItems.insert(item.title)
+            .sheet(item: $selectedItem) { item in
+                PDFViewScreen(documentType: item.documentType, container: container) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        _ = acceptedItems.insert(item.title)
+                    }
                 }
             }
         }
@@ -91,37 +101,18 @@ struct GetStartedInfoScreen: View {
 // MARK: - Top Nav
 
 private extension GetStartedInfoScreen {
-
-    var navBar: some View {
+    
+    private var topBar: some View {
         HStack {
-            BackButton { onBack() }
+            Button(action: { onBack() }) {
+                BackChevronIcon(tint: Color.movo.textTertiary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            
             Spacer()
-            Text("\(acceptedItems.count)/\(legalItems.count) accepted")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(Capsule())
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-    }
-}
-
-// MARK: - Header
-
-private extension GetStartedInfoScreen {
-
-    var headerSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Legal Agreements")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.primary)
-            Text("Open each document, read it, and tap **Accept** inside to continue.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        
         }
     }
 }
@@ -131,30 +122,44 @@ private extension GetStartedInfoScreen {
 private extension GetStartedInfoScreen {
 
     var requirementsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionLabel("Eligibility", icon: "checkmark.seal.fill")
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                ShieldCheckIcon(size: 18, tint: Color.movo.accent)
+                Text("Eligibility")
+                    .font(.system(size: 12, weight: .medium))
+                    .tracking(0.6)
+                    .textCase(.uppercase)
+                    .foregroundStyle(Color.movo.textTertiary)
+            }
 
             VStack(spacing: 0) {
                 ForEach(Array(requirements.enumerated()), id: \.offset) { index, item in
-                    HStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color.primary)
+
+                    HStack(spacing: DesignTokens.Spacing.md) {
+                        EligibilityCheckIcon(size: 18, tint: Color.movo.accent)
                         Text(item)
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                        Spacer()
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.movo.textPrimary)
+                        Spacer(minLength: 0)
                     }
                     .padding(.vertical, 11)
-                    .padding(.horizontal, 16)
-
+                 
                     if index < requirements.count - 1 {
-                        Divider().padding(.leading, 44)
+                        Rectangle()
+                            .fill(Color.movo.textTertiary.opacity(0.10))
+                            .frame(height: DesignTokens.Stroke.hairline)
                     }
                 }
             }
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.horizontal, DesignTokens.Spacing.lg - 2)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                    .fill(Color.movo.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                    .strokeBorder(Color.movo.borderStrong, lineWidth: DesignTokens.Stroke.hairline)
+            )
         }
     }
 }
@@ -164,10 +169,17 @@ private extension GetStartedInfoScreen {
 private extension GetStartedInfoScreen {
 
     var documentsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionLabel("Documents to accept", icon: "doc.fill")
-
-            VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                DocumentBadgeIcon(size: 18, stroke: Color.movo.textTertiary)
+                Text("Documents to review")
+                    .font(.system(size: 12, weight: .medium))
+                    .tracking(0.6)
+                    .textCase(.uppercase)
+                    .foregroundStyle(Color.movo.textTertiary)
+            }
+            
+            VStack(spacing: DesignTokens.Spacing.sm + 2) {
                 ForEach(legalItems) { item in
                     documentCard(item)
                 }
@@ -175,58 +187,133 @@ private extension GetStartedInfoScreen {
         }
     }
 
+    
     func documentCard(_ item: LegalItem) -> some View {
         let isAccepted = acceptedItems.contains(item.title)
+
+        let iconStroke = isAccepted
+            ? Color.movo.accent
+            : Color.movo.textTertiary
+
+        let iconAccent = isAccepted
+            ? Color.movo.accent
+            : Color.movo.textPrimary
 
         return Button {
             selectedItem = item
         } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(item.documentType.iconColor.opacity(0.12))
-                        .frame(width: 46, height: 46)
-                    Image(systemName: item.documentType.icon)
-                        .font(.system(size: 19, weight: .medium))
-                        .foregroundStyle(item.documentType.iconColor)
+            HStack(spacing: DesignTokens.Spacing.md) {
+
+                // MARK: Illustration
+
+                Group {
+                    switch item.documentType {
+                    case .privacy:
+                        ShieldKeyholeIcon(
+                            stroke: iconStroke,
+                            accent: iconAccent
+                        )
+
+                    case .herringPrivacy:
+                        HerringShieldIcon(
+                            stroke: iconStroke,
+                            accent: iconAccent
+                        )
+
+                    case .tos:
+                        DocumentLinesIcon(
+                            stroke: iconStroke,
+                            accent: iconAccent
+                        )
+
+                    case .cardholderAgreement:
+                        SignatureIcon(
+                            stroke: iconStroke,
+                            accent: iconAccent
+                        )
+                    }
                 }
+                .frame(width: 44, height: 44)
+                .background(
+                    RoundedRectangle(
+                        cornerRadius: DesignTokens.Radius.lg,
+                        style: .continuous
+                    )
+                    .fill(iconStroke.opacity(isAccepted ? 0.10 : 0.06))
+                )
+                .overlay(
+                    RoundedRectangle(
+                        cornerRadius: DesignTokens.Radius.lg,
+                        style: .continuous
+                    )
+                    .strokeBorder(
+                        iconStroke.opacity(isAccepted ? 0.25 : 0.14),
+                        lineWidth: DesignTokens.Stroke.hairline
+                    )
+                )
+
+                // MARK: Title + Subtitle
 
                 VStack(alignment: .leading, spacing: 2) {
+
                     Text(item.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.movo.textPrimary)
+
                     Text(item.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.movo.textTertiary)
+                        .lineLimit(2)
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
+
+                // MARK: Selection State
 
                 if isAccepted {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(Color.primary)
-                        .transition(.scale.combined(with: .opacity))
+
+                    ReviewedCheckPill(
+                        size: 26,
+                        fill: Color.movo.accent,
+                        checkColor: Color.movo.background
+                    )
+
                 } else {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color(.tertiaryLabel))
-                        .transition(.scale.combined(with: .opacity))
+
+                    UnreadChevronIcon(
+                        size: 14,
+                        tint: Color.movo.textTertiary
+                    )
+                    .padding(.trailing, 4)
                 }
             }
-            .padding(16)
+            .padding(DesignTokens.Spacing.md + 2)
+            .background(
+                RoundedRectangle(
+                    cornerRadius: DesignTokens.Radius.xl,
+                    style: .continuous
+                )
+                .fill(Color.movo.surface)
+            )
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius: DesignTokens.Radius.xl,
+                    style: .continuous
+                )
+                .strokeBorder(
+                    isAccepted
+                    ? Color.movo.accent.opacity(0.30)
+                    : Color.movo.borderStrong.opacity(0.18),
+                    lineWidth: DesignTokens.Stroke.thin
+                )
+            )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(
-                    (isAccepted ? Color.primary : Color(UIColor.separator)).opacity(0.5),
-                    lineWidth: 1.5
-                )
+        .animation(
+            .easeInOut(duration: DesignTokens.Motion.fast),
+            value: isAccepted
         )
-        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isAccepted)
     }
 }
 
@@ -234,29 +321,33 @@ private extension GetStartedInfoScreen {
 
 private extension GetStartedInfoScreen {
 
-    var bottomBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-            VStack(spacing: 10) {
-                PrimaryButton(title: "Accept All & Continue", isLoading: isLoading, isEnabled: allAccepted) {
-                    onReady()
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 14)
-            .padding(.bottom, 24)
+
+    private var continueButton: some View {
+        Button(action: { onReady() }) {
+            Text("Accept & continue")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(
+                    allAccepted
+                    ? Color.movo.background
+                    : Color.movo.accent.opacity(0.55)
+                )
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DesignTokens.Spacing.lg)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                        .fill(allAccepted ? Color.movo.accent : Color.movo.accent.opacity(0.22))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                        .strokeBorder(
+                            allAccepted ? Color.clear : Color.movo.accent.opacity(0.35),
+                            lineWidth: DesignTokens.Stroke.thin
+                        )
+                )
         }
-        .background(Color(.systemBackground))
+        .buttonStyle(.plain)
+        .disabled(!allAccepted)
+        .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: allAccepted)
     }
-}
 
-// MARK: - Helpers
-
-private extension GetStartedInfoScreen {
-
-    func sectionLabel(_ text: String, icon: String) -> some View {
-        Label(text, systemImage: icon)
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.secondary)
-    }
 }

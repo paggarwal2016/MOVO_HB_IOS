@@ -11,142 +11,228 @@ struct PickDocumentView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
-
+    
     var onBack: () -> Void
     var onContinue: () -> Void
-
+    
     @State private var selectedDocument: String? = nil
-
-    private let options: [(icon: String, title: String)] = [
-        ("car",        "Driver's License"),
-        ("globe",      "Passport"),
-        ("creditcard", "National ID")
-    ]
-
+    
     var body: some View {
-        ZStack {
-            Color(.systemBackground).ignoresSafeArea()
-
+        ZStack(alignment: .bottom) {
+            MovoBackground()
+            AmbientGlowView()
+            
             VStack(spacing: 0) {
-                // ── Top bar ────────────────────────────────────────────────
-                HStack {
-                    BackButton { onBack() }
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top)
-
+                
+                topBar
+                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .padding(.top, DesignTokens.Spacing.sm)
+                    .padding(.bottom, DesignTokens.Spacing.xxl)
+                
+                VerifyIdentityIllustration()
+                    .frame(width: 84, height: 84)
+                    .padding(.top, Spacing.xl)
+                    .padding(.bottom, Spacing.xl)
+                
+                headerBlock
+                    .padding(.horizontal, Spacing.xxl + 4)
+                    .padding(.bottom, Spacing.xxxl)
+                
+                documentList
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.xl + 4)
+                
+                infoCard
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.lg)
+                
                 Spacer()
-
-                // ── Header ─────────────────────────────────────────────────
-                VStack(spacing: 16) {
-                    Image(systemName: "person.text.rectangle")
-                        .font(.system(size: 64, weight: .ultraLight))
-                        .foregroundStyle(Color.primary)
-
-                    Text("Verify Your Identity")
-                        .font(.title2.bold())
-
-                    Text("Pick a document to verify your identity.\nMake sure it's valid and clearly readable.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-
-                Spacer()
-
-                // ── Document options ───────────────────────────────────────
-                VStack(spacing: 12) {
-                    ForEach(options, id: \.title) { option in
-                        DocumentOptionRow(
-                            icon: option.icon,
-                            title: option.title,
-                            isSelected: selectedDocument == option.title
-                        ) {
-                            selectedDocument = option.title
-                        }
+                
+                ctaFooter
+            }
+        }
+        .background(Color.movo.background)
+    }
+    
+    
+    private var ctaFooter: some View {
+        VStack(spacing: 0) {
+            
+            Button(action: {
+                onContinue()
+            }) {
+                Text("Continue")
+            }
+            .buttonStyle(MovoPrimaryButtonStyle())
+            .disabled(selectedDocument == nil)
+            .opacity(selectedDocument != nil ? 1.0 : 0.45)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.xl + 4)
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    private var topBar: some View {
+        HStack {
+            Button(action: { onBack() }) {
+                BackChevronIcon(tint: Color.movo.textTertiary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+        }
+    }
+    
+    private var headerBlock: some View {
+        VStack(spacing: 12) {
+            
+            Text("Verify Your Identity")
+                .font(.system(size: 26, weight: .bold))
+                .tracking(-0.5)
+                .foregroundColor(Color.movo.textPrimary)
+                .multilineTextAlignment(.center)
+            
+            Text("Pick a document to verify your identity.\nMake sure it's valid and clearly readable.")
+                .textStyle(Typography.subtitle)
+                .foregroundColor(Color.movo.textTertiary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+        }
+    }
+    
+    private var documentList: some View {
+        VStack(spacing: Spacing.sm + 2) {
+            ForEach(IDDocumentType.allCases) { doc in
+                DocumentRow(
+                    document: doc,
+                    isSelected: selectedDocument == doc.label,
+                    action: {
+                        selectedDocument = doc.label
                     }
-                }
-                .padding(.horizontal)
-
-                Spacer()
-
-                // ── Info card ──────────────────────────────────────────────
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 18))
-                        .foregroundColor(.primary)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("You'll need photo ID")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.preTcolor)
-                        Text("Please have your passport, driver's license, or state ID handy.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secTcolor)
-                    }
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal)
-
-                Spacer()
-
-                // ── Continue ───────────────────────────────────────────────
-                PrimaryButton(title: "Continue", isEnabled: selectedDocument != nil) {
-                    onContinue()
-                }
-                .disabled(selectedDocument == nil)
-                .padding(.horizontal)
-                .padding(.bottom)
+                )
             }
         }
     }
 }
 
-// MARK: - DocumentOptionRow
 
-private struct DocumentOptionRow: View {
-    let icon: String
-    let title: String
-    let isSelected: Bool
-    let onTap: () -> Void
 
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: .light))
-                    .foregroundStyle(Color.primary)
-                    .frame(width: 32)
-
-                Text(title)
-                    .font(.body)
-                    .foregroundStyle(Color.primary)
-
-                Spacer()
-
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.25))
-                    .animation(.easeInOut(duration: 0.15), value: isSelected)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(
-                isSelected
-                    ? Color.primary.opacity(0.06)
-                    : Color(.secondarySystemBackground)
-            )
-            .clipShape(RoundedCorner(radius: 12))
+private var infoCard: some View {
+    HStack(alignment: .top, spacing: Spacing.md + 2) {
+        Image(systemName: "info.circle")
+            .font(.system(size: 16, weight: .regular))
+            .foregroundColor(Color.movo.accent)
+            .padding(.top, 1)
+        
+        VStack(alignment: .leading, spacing: 4) {
+            Text("You'll need photo ID")
+                .font(.system(size: 18, weight: .bold))
+                .tracking(-0.56)
+                .foregroundColor(Color.movo.textPrimary)
+                .multilineTextAlignment(.center)
+            
+            Text("Please have your passport, driver's license, or state ID handy.")
+                .textStyle(Typography.captionSmall)
+                .foregroundColor(Color.movo.textTertiary)
+                .lineSpacing(2)
+        }
+        
+        Spacer(minLength: 0)
+    }
+    .padding(Spacing.lg)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+        RoundedRectangle(cornerRadius: Radius.heroCard)
+            .fill(Color.movo.surface.opacity(0.85))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primary : Color.clear, lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
             )
-            .animation(.easeInOut(duration: 0.15), value: isSelected)
+    )
+}
+
+
+
+// MARK: - Document Row
+
+private struct DocumentRow: View {
+    let document: IDDocumentType
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.md + 2) {
+                // Leading icon
+                Image(systemName: document.systemIcon)
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(Color.movo.accent)
+                    .frame(width: 32, height: 32)
+                
+                Text(document.label)
+                    .textStyle(Typography.body)
+                    .foregroundColor(Color.movo.textPrimary)
+                
+                Spacer()
+                
+                // Radio
+                ZStack {
+                    Circle()
+                        .strokeBorder(
+                            isSelected ? Color.movo.accent : Color.movo.borderStrong,
+                            lineWidth: isSelected ? 1.5 : Stroke.thin
+                        )
+                        .frame(width: 22, height: 22)
+                    
+                    if isSelected {
+                        Circle()
+                            .fill(Color.movo.accent)
+                            .frame(width: 12, height: 12)
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.md + 4)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .fill(Color.movo.surface.opacity(0.85))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.heroCard)
+                            .strokeBorder(
+                                isSelected ? Color.movo.accentBorder : Color.movo.border,
+                                lineWidth: Stroke.hairline
+                            )
+                    )
+            )
         }
         .buttonStyle(.plain)
+    }
+}
+
+
+public enum IDDocumentType: String, CaseIterable, Identifiable, Sendable {
+    case driversLicense
+    case passport
+    case nationalID
+    
+    public var id: String { rawValue }
+    
+    public var label: String {
+        switch self {
+        case .driversLicense: return "Driver's License"
+        case .passport:       return "Passport"
+        case .nationalID:     return "National ID"
+        }
+    }
+    
+    public var systemIcon: String {
+        switch self {
+        case .driversLicense: return "car.fill"
+        case .passport:       return "globe"
+        case .nationalID:     return "creditcard.fill"
+        }
     }
 }

@@ -13,7 +13,8 @@ struct KYCSuccessView: View {
 
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea()
+            MovoBackground()
+            AmbientGlowView()
 
             sparkleDecorations
 
@@ -22,28 +23,41 @@ struct KYCSuccessView: View {
 
                 VStack(spacing: 20) {
                     Text("Congrats! You're officially registered.")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(Color.preTcolor)
+                        .font(.system(size: 26, weight: .bold))
+                        .tracking(-0.5)
+                        .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
 
                     Text("Your identity has been verified and your account is ready to use. Welcome to Movo!")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(Color.secTcolor)
+                        .textStyle(Typography.subtitle)
+                        .foregroundColor(Color.movo.textTertiary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
+                        .lineSpacing(2)
                 }
 
                 Spacer()
 
-                PrimaryButton(title: "Begin!") {
-                    onBegin()
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+                ctaFooter
             }
         }
+        .background(Color.movo.background)
         .navigationBarHidden(true)
+    }
+    
+    private var ctaFooter: some View {
+        VStack(spacing: 0) {
+            
+            Button(action: {
+                onBegin()
+            }) {
+                Text("Begin!")
+            }
+            .buttonStyle(MovoPrimaryButtonStyle())
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.xl + 4)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

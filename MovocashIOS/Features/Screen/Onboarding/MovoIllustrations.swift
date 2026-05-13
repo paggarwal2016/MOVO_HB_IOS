@@ -874,3 +874,61 @@ private struct MovoMarkRightLegShape: Shape {
         return p
     }
 }
+
+
+
+public struct VerifyIdentityIllustration: View {
+
+    public init() {}
+
+    public var body: some View {
+            Canvas { context, size in
+                // Design space: 84 × 84
+                let s = size.width / 84.0
+
+                // ----- Outer card outline -----
+                let cardRect = CGRect(x: 10 * s, y: 18 * s,
+                                      width: 64 * s, height: 48 * s)
+                let card = Path(roundedRect: cardRect, cornerRadius: 8 * s)
+                context.stroke(card,
+                               with: .color(Color.movo.accent),
+                               style: StrokeStyle(lineWidth: 2.0,
+                                                  lineJoin: .round))
+
+                // ----- Portrait area (left side) -----
+                // Avatar circle (head)
+                let head = Path(ellipseIn: CGRect(x: 18 * s, y: 28 * s,
+                                                  width: 14 * s, height: 14 * s))
+                context.fill(head, with: .color(Color.movo.accent))
+
+                // Body curve (shoulders)
+                var body = Path()
+                body.move(to: CGPoint(x: 14 * s, y: 58 * s))
+                body.addQuadCurve(
+                    to: CGPoint(x: 36 * s, y: 58 * s),
+                    control: CGPoint(x: 25 * s, y: 44 * s)
+                )
+                body.addLine(to: CGPoint(x: 36 * s, y: 62 * s))
+                body.addLine(to: CGPoint(x: 14 * s, y: 62 * s))
+                body.closeSubpath()
+                context.fill(body, with: .color(Color.movo.accent))
+
+                // ----- Info lines (right side of card) -----
+                let lineX: CGFloat = 44 * s
+                let lineWidths: [CGFloat] = [20, 24, 16] // varying widths
+                let lineYs: [CGFloat] = [32, 41, 50]
+
+                for (idx, y) in lineYs.enumerated() {
+                    let lineRect = CGRect(x: lineX,
+                                          y: y * s,
+                                          width: lineWidths[idx] * s,
+                                          height: 2.5 * s)
+                    let linePath = Path(roundedRect: lineRect,
+                                        cornerRadius: 1.25 * s)
+                    context.fill(linePath,
+                                 with: .color(Color.movo.accent))
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+    }
+}
