@@ -10,9 +10,8 @@ import SwiftUI
 // MARK: - Model
 
 private struct LegalItem: Identifiable {
-    let id           = UUID()
-    let title:         String
-    let subtitle:      String
+    let id             = UUID()
+    let subtitle:       String
     let documentType:  DocumentType
 }
 
@@ -42,22 +41,18 @@ struct GetStartedInfoScreen: View {
     ]
 
     private let legalItems: [LegalItem] = [
-        LegalItem(title: "Privacy Policy",
-                  subtitle: "How we handle your personal data",
+        LegalItem(subtitle: "How we handle your personal data",
                   documentType: .privacy),
-        LegalItem(title: "Herring Privacy Policy",
-                  subtitle: "Herring Bank's privacy practices",
+        LegalItem(subtitle: "Herring Bank's privacy practices",
                   documentType: .herringPrivacy),
-        LegalItem(title: "Terms of Use Agreement",
-                  subtitle: "Rules and conditions for using Movo",
+        LegalItem(subtitle: "Rules and conditions for using Movo",
                   documentType: .tos),
-        LegalItem(title: "Electronic Consent",
-                  subtitle: "Digital agreement and consent",
+        LegalItem(subtitle: "Digital agreement and consent",
                   documentType: .cardholderAgreement)
     ]
 
     private var allAccepted: Bool {
-        legalItems.allSatisfy { acceptedItems.contains($0.title) }
+        legalItems.allSatisfy { acceptedItems.contains($0.documentType.title) }
     }
 
     // MARK: Body
@@ -90,7 +85,7 @@ struct GetStartedInfoScreen: View {
             .sheet(item: $selectedItem) { item in
                 PDFViewScreen(documentType: item.documentType, container: container) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                        _ = acceptedItems.insert(item.title)
+                        _ = acceptedItems.insert(item.documentType.title)
                     }
                 }
             }
@@ -189,7 +184,7 @@ private extension GetStartedInfoScreen {
 
     
     func documentCard(_ item: LegalItem) -> some View {
-        let isAccepted = acceptedItems.contains(item.title)
+        let isAccepted = acceptedItems.contains(item.documentType.title)
 
         let iconStroke = isAccepted
             ? Color.movo.accent
@@ -256,7 +251,7 @@ private extension GetStartedInfoScreen {
 
                 VStack(alignment: .leading, spacing: 2) {
 
-                    Text(item.title)
+                    Text(item.documentType.title)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.movo.textPrimary)
 
