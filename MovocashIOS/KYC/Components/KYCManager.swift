@@ -149,35 +149,32 @@ extension KYCManager {
 
 // MARK: - KYCManager: Theme
 
-
-
 private extension KYCManager {
 
     func makeKYCTheme() -> Theme {
         Theme(
-            backgroundGradient: [UIColor(.appBackground),
-                                 UIColor(.appBackground)], // Back theme
-            
-            accentColor: .black, // Try againing and icon Disclaimer
+            backgroundGradient: [UIColor(Color(red: 0.10, green: 0.12, blue: 0.16)), UIColor(Color.movo.background)], // Back theme
+                        
+            accentColor: UIColor(Color.movo.textTertiary), // Try againing and icon Disclaimer
             
             labelProps: LabelProps(
-                primaryTextColor: .black, // look correct, first , last , let's confirm
-                secondaryTextColor: Color.secondaryText,// first, last, title color
+                primaryTextColor:  UIColor(Color.movo.textPrimary), // look correct, first , last , let's confirm
+                secondaryTextColor: UIColor(Color.movo.textDisabled),// first, last, title color
                 titleFont: .monospacedSystemFont(ofSize: 28, weight: .bold),
                 bodyFont:  .monospacedSystemFont(ofSize: 17, weight: .regular),
                 inputLabelFont: .monospacedSystemFont(ofSize: 14, weight: .medium)
             ),
             buttonProps: ButtonProps(
-                color: Color.accent1,
-                textColor: .white,
+                color: UIColor(Color.movo.accent),
+                textColor: UIColor(Color.movo.onAccent),
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 18, weight: .bold)
             ),
             inputProps: InputProps(
-                backgroundColor: UIColor(.inputBackground), // input field background color
-                textColor: .black, // input field text color
-                placeholderColor: Color.inputPlaceholder, // SSN placeholder color
-                borderColor: .black, // corner border color
+                backgroundColor: UIColor(Color.movo.surface), // input field background color
+                textColor: UIColor(Color.movo.textPrimary), // input field text color
+                placeholderColor: UIColor(Color.movo.textDisabled), // SSN placeholder color
+                borderColor: UIColor(Color.movo.borderStrong), // corner border color
                 borderWidth: 1.5,
                 cornerRadius: 8,
                 font: .monospacedSystemFont(ofSize: 16, weight: .regular)

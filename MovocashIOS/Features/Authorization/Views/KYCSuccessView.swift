@@ -19,26 +19,33 @@ struct KYCSuccessView: View {
             sparkleDecorations
 
             VStack(spacing: 0) {
-                Spacer()
+                Spacer(minLength: Spacing.xxl)
 
-                VStack(spacing: 20) {
+                VStack(spacing: Spacing.xl) {
                     Text("Congrats! You're officially registered.")
                         .font(.system(size: 26, weight: .bold))
                         .tracking(-0.5)
                         .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
 
                     Text("Your identity has been verified and your account is ready to use. Welcome to Movo!")
                         .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                         .multilineTextAlignment(.center)
-                        .lineSpacing(2)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Spacing.screenHorizontal)
+                .padding(.bottom, Spacing.lg)
 
-                Spacer()
+                Spacer(minLength: Spacing.xxl)
 
                 ctaFooter
             }
+            .padding(.top, Spacing.md)
         }
         .background(Color.movo.background)
         .navigationBarHidden(true)
