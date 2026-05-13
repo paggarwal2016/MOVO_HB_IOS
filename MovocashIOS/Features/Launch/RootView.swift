@@ -32,7 +32,13 @@ struct RootView: View {
 
             // ── Main flow ──────────────────────────────────────────────────
             NavigationStack {
-                switch appState.flow {
+                ZStack {
+                    // Opaque base so flow switches never reveal the UIKit/NavigationStack
+                    // default light backing (avoids white glass flashes with blurred layers).
+                    Color.movo.background
+                        .ignoresSafeArea()
+
+                    switch appState.flow {
                 case .splash:
                     SplashScreen()
 
@@ -203,12 +209,17 @@ struct RootView: View {
                     //PayAnyoneView()
                     HomeTabBarView(container: container)
                 }
+                }
             }
+            // Do not apply implicit animation to `appState.flow` here. Each onboarding
+            // screen uses `AmbientGlowView` (heavy blur). Animating flow changes cross-
+            // fades those layers against the stack's default background and reads as a
+            // white, glass-like flash. Use `withAnimation` only where a transition is
+            // intentionally required.
             .environmentObject(authVM)
             .environmentObject(userVM)
             .environmentObject(lockManager)
             .environmentObject(sessionManager)
-            .animation(.easeInOut, value: appState.flow)
 
             // ── Lock overlay (returning users / background lock) ───────────
             // Suppressed during:
