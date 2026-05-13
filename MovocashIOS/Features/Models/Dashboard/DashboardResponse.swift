@@ -51,11 +51,9 @@ extension DashboardSection: Decodable {
         case "PAYANYONE":
             self = .payAnyone(try c.decode(DashboardPayAnyone.self, forKey: .data))
         case "REWARDS":
-            let wrapper = try c.decode(NestedWrapper<DashboardRewards>.self, forKey: .data)
-            self = .rewards(wrapper.data)
+            self = .rewards(try c.decode(DashboardRewards.self, forKey: .data))
         case "LINKEDACCOUNTS":
-            let wrapper = try c.decode(NestedWrapper<DashboardLinkedAccounts>.self, forKey: .data)
-            self = .linkedAccounts(wrapper.data)
+            self = .linkedAccounts(try c.decode(DashboardLinkedAccounts.self, forKey: .data))
         case "MYCARDS":
             self = .myCards(try c.decode(DashboardMyCards.self, forKey: .data))
         case "MENU":
@@ -64,11 +62,6 @@ extension DashboardSection: Decodable {
             self = .unknown
         }
     }
-}
-
-// Unwraps the double-nested { "name": ..., "data": { ... } } structure
-private struct NestedWrapper<T: Decodable>: Decodable {
-    let data: T
 }
 
 // MARK: - USERDETAILS
@@ -136,6 +129,20 @@ nonisolated struct DashboardPayAnyone: Decodable, Sendable {
     let description: String?
     let favContactList: [RecordContact]
     let actions: [DashboardAction]
+
+    private enum CodingKeys: String, CodingKey {
+        case accountId, customerId, title, description, favContactList, actions
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        accountId = try c.decode(Int.self, forKey: .accountId)
+        customerId = try c.decode(Int.self, forKey: .customerId)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        favContactList = try c.decodeIfPresent([RecordContact].self, forKey: .favContactList) ?? []
+        actions = try c.decodeIfPresent([DashboardAction].self, forKey: .actions) ?? []
+    }
 }
 
 // MARK: - REWARDS
