@@ -11,21 +11,21 @@ import SwiftUI
 
 struct TextInputAlertConfig {
     // Header
-    var headerBackground: Color  = Color.primary
-    var titleColor: Color        = .white
-    var messageColor: Color      = .white.opacity(0.85)
+    var headerBackground: Color  = Color.movo.accent
+    var titleColor: Color        = Color.movo.onAccent
+    var messageColor: Color      = Color.movo.onAccent.opacity(0.8)
     var headerIcon: String?      = nil
 
     // Primary (Create) button
-    var primaryColor: Color      = Color.primary
+    var primaryColor: Color      = Color.movo.accent
     var primaryLabel: String     = "Create"
 
     // Secondary (Cancel) button
-    var secondaryColor: Color    = .gray
+    var secondaryColor: Color    = Color.movo.textTertiary
     var secondaryLabel: String   = "Cancel"
 
     // Card
-    var cornerRadius: CGFloat    = 20
+    var cornerRadius: CGFloat    = Radius.sheet
 }
 
 // MARK: - TextInputAlertView
@@ -44,7 +44,7 @@ struct TextInputAlertView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.35).ignoresSafeArea()
+            Color.black.opacity(0.55).ignoresSafeArea()
 
             VStack(spacing: 0) {
 
@@ -79,16 +79,28 @@ struct TextInputAlertView: View {
                 // MARK: TextField Body
                 VStack(spacing: 16) {
                     TextField(placeholder, text: $text)
-                        .textFieldStyle(.roundedBorder)
+                        .foregroundStyle(Color.movo.textPrimary)
+                        .tint(Color.movo.accent)
                         .autocorrectionDisabled()
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: Radius.sm)
+                                .fill(Color.movo.elevatedHigh)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Radius.sm)
+                                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                                )
+                        )
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 20)
-                .background(Color(.systemBackground))
+                .background(Color.movo.elevated)
 
                 // MARK: Buttons
-                Divider()
+                Rectangle()
+                    .fill(Color.movo.border)
+                    .frame(height: Stroke.hairline)
                 HStack(spacing: 0) {
 
                     // Cancel
@@ -100,7 +112,9 @@ struct TextInputAlertView: View {
                             .foregroundStyle(config.secondaryColor)
                     }
 
-                    Divider().frame(height: 44)
+                    Rectangle()
+                        .fill(Color.movo.border)
+                        .frame(width: Stroke.hairline, height: 44)
 
                     // Create
                     Button {
@@ -114,7 +128,7 @@ struct TextInputAlertView: View {
                             .foregroundStyle(isEmpty ? config.primaryColor.opacity(0.4) : config.primaryColor)
                     }
                 }
-                .background(Color.secondary)
+                .background(Color.movo.elevated)
                 // bottom two corners only
                 .clipShape(UnevenRoundedRectangle(
                     topLeadingRadius: 0,

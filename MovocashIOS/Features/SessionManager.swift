@@ -183,14 +183,32 @@ final class SessionManager: ObservableObject {
         resetAppState(appState)
     }
 
+    // MARK: - Session Expiry (token invalid — zero API calls)
+    /// The server returned 401: the token is already invalid so sending a logout
+    /// request would fail or trigger another expiry event. Instead we wipe local
+    /// credentials synchronously, navigate to the welcome screen immediately, and
+    /// show a non-blocking toast. The full `logout()` API path is intentionally
+    /// bypassed here.
+    func sessionExpiry(appState: AppState) {
+        guard !isLoggingOut else { return }
+        analytics.trackSessionExpired()
+        analytics.clearIdentity()
+        kycManager.clearSession()
+        resetAppState(appState)
+        ToastManager.shared.show(
+            "Your session has expired. Please sign in again.",
+            style: .error,
+            position: .bottom
+        )
+        Task {
+            try? await keychain.delete("access_token")
+            try? await keychain.delete("auth_session_id")
+        }
+    }
+
     // MARK: - Force Logout
     func forceLogout(appState: AppState) async {
-        analytics.trackSessionExpired()
-        await logout(appState: appState)
-
-        alertManager.showError(
-            "Session expired. Please login again."
-        )
+        sessionExpiry(appState: appState)
     }
 
     // MARK: - Reset App State

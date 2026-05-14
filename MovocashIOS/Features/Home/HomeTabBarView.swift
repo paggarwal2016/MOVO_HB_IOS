@@ -113,74 +113,190 @@ struct HomeTabBarView: View {
 private extension HomeTabBarView {
 
     var skeletonScreen: some View {
-        VStack(spacing: 0) {
-            skeletonHeader
-            skeletonContent
-            Spacer()
+        ZStack(alignment: .bottom) {
+            MovoBackground()
+
+            VStack(spacing: 0) {
+                skeletonHeader
+                ScrollView(showsIndicators: false) {
+                    skeletonBody
+                        .padding(.bottom, 88)
+                }
+            }
+
             skeletonTabBar
         }
         .ignoresSafeArea(edges: .bottom)
-        .background(Color(.systemGroupedBackground))
     }
+
+    // MARK: Header
 
     var skeletonHeader: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             Circle()
-                .fill(Color.gray.opacity(0.2))
+                .fill(Color.movo.elevated)
                 .frame(width: 38, height: 38)
                 .shimmer()
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.gray.opacity(0.2))
-                .frame(width: 120, height: 14)
-                .shimmer()
+
+            VStack(alignment: .leading, spacing: 5) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.movo.elevated)
+                    .frame(width: 72, height: 10)
+                    .shimmer()
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.movo.elevated)
+                    .frame(width: 128, height: 14)
+                    .shimmer()
+            }
+
             Spacer()
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.gray.opacity(0.2))
-                .frame(width: 60, height: 14)
+
+            RoundedRectangle(cornerRadius: Radius.sm)
+                .fill(Color.movo.elevated)
+                .frame(width: 36, height: 36)
                 .shimmer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(Color(.systemBackground))
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.lg)
+        .padding(.bottom, Spacing.md)
     }
 
-    var skeletonContent: some View {
-        VStack(spacing: 16) {
-            CardSkeletonView()
-                .padding(.top, 16)
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.gray.opacity(0.2))
-                .frame(height: 52)
-                .shimmer()
-                .padding(.horizontal, 15)
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.gray.opacity(0.2))
-                .frame(height: 90)
-                .shimmer()
-                .padding(.horizontal, 15)
+    // MARK: Body
+
+    var skeletonBody: some View {
+        VStack(spacing: Spacing.lg) {
+            skeletonBalanceCard
+                .padding(.horizontal, Spacing.lg)
+
+            skeletonQuickActions
+                .padding(.horizontal, Spacing.lg)
+
+            skeletonFeatureCard(height: 88)
+                .padding(.horizontal, Spacing.lg)
+
+            skeletonFeatureCard(height: 88)
+                .padding(.horizontal, Spacing.lg)
+
+            skeletonMyCards
+        }
+        .padding(.top, Spacing.lg)
+    }
+
+    // MARK: Balance card
+
+    var skeletonBalanceCard: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.elevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+                .frame(height: 180)
+
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.movo.elevatedHigh)
+                    .frame(width: 96, height: 10)
+
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.movo.elevatedHigh)
+                    .frame(width: 152, height: 28)
+
+                Spacer()
+
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.movo.elevatedHigh)
+                    .frame(width: 136, height: 11)
+            }
+            .padding(Spacing.xl)
+            .frame(height: 180, alignment: .leading)
+        }
+        .shimmer()
+        .shadow(color: Color.movo.accentSoft, radius: 24, x: 0, y: 10)
+    }
+
+    // MARK: Quick actions
+
+    var skeletonQuickActions: some View {
+        HStack(spacing: Spacing.md) {
+            ForEach(0..<2, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: Radius.xl)
+                    .fill(Color.movo.elevated)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.xl)
+                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    )
+                    .frame(height: 52)
+                    .shimmer()
+            }
         }
     }
+
+    // MARK: Feature cards (Pay Anyone, Linked Accounts)
+
+    func skeletonFeatureCard(height: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: Radius.heroCard)
+            .fill(Color.movo.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+            )
+            .frame(height: height)
+            .shimmer()
+    }
+
+    // MARK: My Cards section
+
+    var skeletonMyCards: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.movo.elevated)
+                    .frame(width: 68, height: 10)
+                    .shimmer()
+                Spacer()
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.movo.elevated)
+                    .frame(width: 40, height: 10)
+                    .shimmer()
+            }
+            .padding(.horizontal, Spacing.lg)
+
+            CardSkeletonView()
+        }
+    }
+
+    // MARK: Tab bar
 
     var skeletonTabBar: some View {
-        HStack {
+        HStack(spacing: 0) {
             ForEach(0..<3, id: \.self) { _ in
                 Spacer()
-                VStack(spacing: 6) {
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(Color.gray.opacity(0.2))
+                VStack(spacing: 5) {
+                    RoundedRectangle(cornerRadius: Radius.xs)
+                        .fill(Color.movo.elevated)
                         .frame(width: 24, height: 24)
                         .shimmer()
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(width: 44, height: 10)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.movo.elevated)
+                        .frame(width: 44, height: 9)
                         .shimmer()
                 }
                 Spacer()
             }
         }
-        .padding(.vertical, 10)
-        .background(Color(.systemBackground))
-        .overlay(Divider(), alignment: .top)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.lg)
+        .background(
+            Color.movo.surface
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(Color.movo.border)
+                        .frame(height: Stroke.hairline)
+                }
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 }
 

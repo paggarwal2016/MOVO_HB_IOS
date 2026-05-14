@@ -37,10 +37,10 @@ enum ToastStyle {
 
     var iconColor: Color {
         switch self {
-        case .success:              return .green
-        case .error:                return .red
-        case .warning:              return .orange
-        case .info:                 return .blue
+        case .success:              return Color.movo.success
+        case .error:                return Color.movo.danger
+        case .warning:              return Color.movo.warning
+        case .info:                 return Color.movo.onAccent
         case .custom(_, let c, _):  return c
         }
     }

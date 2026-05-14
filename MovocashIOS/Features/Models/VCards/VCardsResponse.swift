@@ -100,7 +100,7 @@ extension VCardListResponse {
     }
     
     var balance: Decimal {
-        10.0
+        0
     }
     
     var isActive: Bool {

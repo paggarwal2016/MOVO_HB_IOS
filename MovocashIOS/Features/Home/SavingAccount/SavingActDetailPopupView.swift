@@ -30,10 +30,13 @@ struct SavingActDetailPopupView: View {
                 value: account.accountNumber,
                 copiedField: $copiedField,
                 fullWidth: true,
-                accentColor: Color.primary
+                accentColor: Color.movo.accent
             )
 
-            Divider().padding(.horizontal, 20)
+            Rectangle()
+                .fill(Color.movo.border)
+                .frame(height: Stroke.hairline)
+                .padding(.horizontal, 20)
 
             HStack(alignment: .top, spacing: 0) {
                 PlainField(label: "STATUS",  value: account.status.displayTitle, fullWidth: true)

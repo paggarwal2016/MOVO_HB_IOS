@@ -8,70 +8,99 @@
 import SwiftUI
 
 struct SpinnerConfiguration {
-    var spinnerColor: Color = .white
-    var spinnerBackgroundColor: Color = .white.opacity(0.15)
-    var backgroundCornerRadius: CGFloat = 30
-    var width: CGFloat = 50
-    var height: CGFloat = 50
-    var speed: Double = 1
+    var arcColor: Color        = Color.movo.accent
+    var trackColor: Color      = Color.movo.accentSoft
+    var backdropOpacity: Double = 0.60
+    var cornerRadius: CGFloat  = Radius.xxl
+    var arcWidth: CGFloat      = 40
+    var arcHeight: CGFloat     = 40
+    var strokeWidth: CGFloat   = 3.0
+    var speed: Double          = 1.1
+
+    static let `default` = SpinnerConfiguration()
 }
 
 struct SpinnerView: View {
-    var configuration: SpinnerConfiguration = SpinnerConfiguration()
+    var configuration: SpinnerConfiguration = .default
     @State private var isAnimating = false
-    
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                
-                // Optional dim layer for better glass visibility
-                Color.black.opacity(0.25)
+
+                // Backdrop — dims content beneath without obscuring context
+                Color.movo.background
+                    .opacity(configuration.backdropOpacity)
                     .ignoresSafeArea()
-                
-                // Spinner Container
+
+                // Spinner container
                 ZStack {
-                    configuration.spinnerBackgroundColor
-                    
+
+                    // Glass surface
+                    Color.movo.elevated
+                        .opacity(0.90)
+
+                    // Track ring — guides the eye around the arc path
                     Circle()
-                        .trim(from: 0.2, to: 1)
                         .stroke(
-                            configuration.spinnerColor,
+                            configuration.trackColor,
                             style: StrokeStyle(
-                                lineWidth: 5,
+                                lineWidth: configuration.strokeWidth,
                                 lineCap: .round
                             )
                         )
-                        .frame(width: configuration.width,
-                               height: configuration.height)
+                        .frame(
+                            width: configuration.arcWidth,
+                            height: configuration.arcHeight
+                        )
+
+                    // Spinning accent arc
+                    Circle()
+                        .trim(from: 0.16, to: 1)
+                        .stroke(
+                            configuration.arcColor,
+                            style: StrokeStyle(
+                                lineWidth: configuration.strokeWidth,
+                                lineCap: .round
+                            )
+                        )
+                        .frame(
+                            width: configuration.arcWidth,
+                            height: configuration.arcHeight
+                        )
                         .rotationEffect(.degrees(isAnimating ? 360 : 0))
                         .animation(
                             .linear(duration: configuration.speed)
-                            .repeatForever(autoreverses: false),
+                                .repeatForever(autoreverses: false),
                             value: isAnimating
                         )
+                        .shadow(
+                            color: configuration.arcColor.opacity(0.45),
+                            radius: 8, x: 0, y: 0
+                        )
                 }
-                .frame(width: 90, height: 90)
+                .frame(width: 88, height: 88)
                 .background(.ultraThinMaterial)
                 .clipShape(
                     RoundedRectangle(
-                        cornerRadius: configuration.backgroundCornerRadius,
+                        cornerRadius: configuration.cornerRadius,
                         style: .continuous
                     )
                 )
                 .overlay(
                     RoundedRectangle(
-                        cornerRadius: configuration.backgroundCornerRadius,
+                        cornerRadius: configuration.cornerRadius,
                         style: .continuous
                     )
-                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
                 )
-                .shadow(radius: 20)
+                .shadow(color: Color.movo.accentSoft, radius: 24, x: 0, y: 0)
             }
-            .frame(width: geometry.size.width,
-                   height: geometry.size.height)
-            .onAppear {
-                isAnimating = true
-            }
+            .frame(
+                width: geometry.size.width,
+                height: geometry.size.height
+            )
+            .onAppear { isAnimating = true }
         }
     }
 }

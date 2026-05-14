@@ -56,10 +56,12 @@ struct MovocashIOSApp: App {
                     guard !isHandlingSessionExpiry,
                           !container.sessionManager.isLoggingOut else { return }
                     isHandlingSessionExpiry = true
-                    Task { @MainActor in
-                        await container.sessionManager.forceLogout(appState: appState)
-                        isHandlingSessionExpiry = false
-                    }
+                    // Reset lock state so the AppLock overlay does not re-fire after
+                    // the user successfully re-authenticates on the welcome screen.
+                    container.lockManager.resetToUnlocked()
+                    // Zero-API-call expiry — clears local state and navigates immediately.
+                    container.sessionManager.sessionExpiry(appState: appState)
+                    isHandlingSessionExpiry = false
                 }
         }
     }

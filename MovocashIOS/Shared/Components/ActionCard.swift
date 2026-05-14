@@ -70,36 +70,6 @@ struct ActionCard: View {
 }
 
 // MARK: - Illustration
-
-//private struct PayAnyoneIllustration: View {
-//    private let theme = MovoTheme.color
-//
-//    var body: some View {
-//        ZStack {
-//            // Sender — back-left person
-//            Image(systemName: "person")
-//                .font(.system(size: 36, weight: .thin))
-//                .foregroundStyle(theme.textTertiary.color)
-//                .offset(x: -16, y: 8)
-//
-//            // Money note flying between the two
-//            Image(systemName: "banknote")
-//                .font(.system(size: 18, weight: .thin))
-//                .foregroundStyle(theme.accent.color)
-//                .rotationEffect(.degrees(-25))
-//                .offset(x: 2, y: -16)
-//
-//            // Recipient — front-right person
-//            Image(systemName: "person")
-//                .font(.system(size: 42, weight: .thin))
-//                .foregroundStyle(theme.textSecondary.color)
-//                .offset(x: 18, y: 2)
-//        }
-//    }
-//}
-
-
-
 public struct PayAnyoneIllustration: View {
 
     public init() {}
@@ -194,5 +164,70 @@ public struct PayAnyoneIllustration: View {
                                lineCap: .round,
                                lineJoin: .round)
         )
+    }
+}
+
+
+
+
+
+
+
+
+
+struct PayAnyoneAddContactView: View {
+
+    let title: String
+    let contacts: [RecordContact]
+    var onAddTap: () -> Void
+    var onContactTap: (RecordContact) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(1.2)
+                .foregroundColor(Color.movo.textTertiary)
+                .padding(.horizontal, Spacing.lg)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.lg) {
+                    ForEach(contacts) { contact in
+                        let initial = String(
+                            contact.nickname?.first ?? contact.phoneNumber?.first ?? "?"
+                        ).uppercased()
+                        let label = contact.nickname ?? contact.phoneNumber ?? ""
+                        bubble(initial: initial, label: label) { onContactTap(contact) }
+                    }
+                    bubble(initial: "+", label: "Add", action: onAddTap)
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.xs)
+            }
+        }
+        .padding(.vertical, Spacing.sm)
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    private func bubble(initial: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: Spacing.xs) {
+                ZStack {
+                    Circle()
+                        .fill(Color.movo.elevated)
+                        .frame(width: 52, height: 52)
+                    Text(initial)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(Color.movo.textTertiary)
+                    .lineLimit(1)
+            }
+            .frame(width: 56)
+        }
+        .buttonStyle(.plain)
     }
 }

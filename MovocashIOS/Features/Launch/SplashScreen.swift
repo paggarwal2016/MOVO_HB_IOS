@@ -19,18 +19,15 @@ struct SplashScreen: View {
     @State private var didTransition = false
     
     public var brandColor: Color
-    public var attributionText: String?
     public var minimumDuration: TimeInterval
     public var onContinue: () -> Void
     
     public init(
         brandColor: Color = MovoLogoMark.brandSilver,
-        attributionText: String? = "Member FDIC · Powered by Herring Bank",
         minimumDuration: TimeInterval = 1.2,
         onContinue: @escaping () -> Void = {}
     ) {
         self.brandColor = brandColor
-        self.attributionText = attributionText
         self.minimumDuration = minimumDuration
         self.onContinue = onContinue
     }
@@ -49,20 +46,6 @@ struct SplashScreen: View {
             )
             .opacity(lockupVisible ? 1 : 0)
             .scaleEffect(lockupVisible ? 1 : 0.96)
-            
-            if let attributionText {
-                VStack {
-                    Spacer()
-                    Text(attributionText)
-                        .font(.system(size: 11, weight: .regular))
-                        .tracking(0.4)
-                        .foregroundStyle(
-                            Color.movo.textTertiary.opacity(0.7)
-                        )
-                        .padding(.bottom, 32)
-                        .opacity(attributionVisible ? 1 : 0)
-                }
-            }
         }
         .preferredColorScheme(.dark)
         .onAppear(perform: handleAppear)

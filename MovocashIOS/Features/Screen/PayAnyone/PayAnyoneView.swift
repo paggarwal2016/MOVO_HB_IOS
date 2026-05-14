@@ -17,10 +17,10 @@ struct PayAnyoneView: View {
     @EnvironmentObject private var lockManager: AppLockManager
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     @SwiftUI.Environment(\.openURL) private var openURL
-
+    
     let cards: [VCardListResponse]
     let totalBalance: Decimal
-
+    
     @Binding var selectedTab: Tab
     
     @State private var nickname: String = ""
@@ -29,6 +29,7 @@ struct PayAnyoneView: View {
     @State private var showCreateContactScreen = false
     @State private var selectedFrequent: ContactRecord? = nil
     @State private var showAllFrequents = false
+    @State private var isInitialLoading = true
     
     init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], totalBalance: Decimal) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
@@ -65,53 +66,56 @@ struct PayAnyoneView: View {
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    navBar
-                        .padding(.bottom, Spacing.lg)
-                    if hasAnyData {
-                        balanceCard
-                            .padding(.horizontal, Spacing.lg)
+                    if !isInitialLoading {
+                        navBar
                             .padding(.bottom, Spacing.lg)
-                        
-                        if contactVM.frequents.count > 0 {
-                            frequentContactsSection
+                        if hasAnyData {
+                            balanceCard
+                                .padding(.horizontal, Spacing.lg)
                                 .padding(.bottom, Spacing.lg)
-                        }
-                        
-                        contactsListCard
-                            .padding(.bottom, Spacing.lg)
-                        
-                        if !isAuthorized {
+                            
+                            if contactVM.frequents.count > 0 {
+                                frequentContactsSection
+                                    .padding(.bottom, Spacing.lg)
+                            }
+                            
+                            contactsListCard
+                                .padding(.bottom, Spacing.lg)
+                            
+                            if !isAuthorized {
+                                orDivider
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 18)
+                                
+                                permissionCompactCard
+                                    .padding(.horizontal, 14)
+                                    .padding(.bottom, 18)
+                            }
+                            
+                        } else {
+                            heroIllustration
+                                .padding(.top, 18)
+                                .padding(.bottom, 12)
+                            introBlock
+                                .padding(.bottom, 18)
+                            
+                            addContactView
+                                .padding(.horizontal, 14)
+                                .padding(.bottom, 14)
                             orDivider
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 18)
-                            
-                            permissionCompactCard
+                            contactsSection
                                 .padding(.horizontal, 14)
                                 .padding(.bottom, 18)
                         }
-                        
-                    } else {
-                        heroIllustration
-                            .padding(.top, 18)
-                            .padding(.bottom, 12)
-                        introBlock
-                            .padding(.bottom, 18)
-                        
-                        addContactView
-                            .padding(.horizontal, 14)
-                            .padding(.bottom, 14)
-                        orDivider
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 18)
-                        contactsSection
-                            .padding(.horizontal, 14)
-                            .padding(.bottom, 18)
                     }
+                    
                     Spacer().frame(height: 80)
                 }
             }
             
-            if contactVM.state == .loading && !hasAnyData {
+            if isInitialLoading {
                 SpinnerView()
             }
         }
@@ -134,6 +138,8 @@ struct PayAnyoneView: View {
             AllFrequentsView(contactVM: contactVM, container: container, cards: cards)
         }
         .onAppear {
+            // Resolve permission status synchronously before async work begins
+            authStatus = CNContactStore.authorizationStatus(for: .contacts)
             Task {
                 await contactVM.loadApiContacts()
                 await contactVM.loadFavourites()
@@ -141,6 +147,7 @@ struct PayAnyoneView: View {
                 if isAuthorized {
                     await contactVM.load()
                 }
+                isInitialLoading = false
             }
         }
         .onChange(of: scenePhase) { newPhase in
@@ -313,9 +320,9 @@ struct PayAnyoneView: View {
                     .foregroundColor(Color.movo.textDisabled)
                 TextField("", text: $contactVM.search,
                           prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(Color.movo.textPrimary)
-                    .autocorrectionDisabled()
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(Color.movo.textPrimary)
+                .autocorrectionDisabled()
                 if !contactVM.search.isEmpty {
                     Button { contactVM.search = "" } label: {
                         Image(systemName: "xmark.circle.fill").foregroundColor(Color.movo.textDisabled)
@@ -334,7 +341,7 @@ struct PayAnyoneView: View {
             .padding(.horizontal, Spacing.lg)
             .padding(.top, Spacing.lg)
             .padding(.bottom, Spacing.sm)
-
+            
             // Favourites
             if !contactVM.filteredFavourites.isEmpty {
                 Text("FAVOURITES")
@@ -357,7 +364,7 @@ struct PayAnyoneView: View {
                     .frame(height: Stroke.hairline)
                     .padding(.horizontal, Spacing.lg)
             }
-
+            
             // All contacts
             if !contactVM.filteredContacts.isEmpty {
                 Text("ALL CONTACTS")
@@ -396,7 +403,7 @@ struct PayAnyoneView: View {
             .background(Color.movo.elevated, in: Circle())
             .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
     }
-
+    
     private func contactRow(_ contact: ContactRecord) -> some View {
         HStack(spacing: Spacing.md) {
             contactAvatar(initials: contact.initials, size: 44)
@@ -738,13 +745,13 @@ extension PayAnyoneView {
             HStack {
                 Eyebrow("RECENT PAY")
                 Spacer()
-        //        if contactVM.frequents.count >= 10 {
-                    Button(action: { showAllFrequents = true }) {
-                        Text("See all")
-                            .font(.system(size: 10, weight: .regular))
-                            .foregroundColor(Color.movo.textSecondary)
-                    }
-         //       }
+                //        if contactVM.frequents.count >= 10 {
+                Button(action: { showAllFrequents = true }) {
+                    Text("See all")
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundColor(Color.movo.textSecondary)
+                }
+                //       }
             }
             .padding(.horizontal, Spacing.lg)
             

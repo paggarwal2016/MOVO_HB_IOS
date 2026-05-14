@@ -60,7 +60,7 @@ struct BasePopupView<Content: View, HeaderTrailing: View>: View {
                         Spacer()
                         HStack(spacing: 8) {
                             headerTrailing
-                            closeButton(foreground: Color(.label), background: Color(.systemGray5))
+                            closeButton(foreground: Color.movo.textPrimary, background: Color.movo.elevatedHigh)
                         }
                     }
                     .padding(16)
@@ -70,8 +70,8 @@ struct BasePopupView<Content: View, HeaderTrailing: View>: View {
                 VStack(spacing: 0) { content }
                     .padding(.bottom, 8)
             }
-            .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .background(Color.movo.elevated)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.sheet))
             .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)
             .padding(.horizontal, 15)
         }
@@ -93,7 +93,7 @@ struct BasePopupView<Content: View, HeaderTrailing: View>: View {
     // MARK: - Header Curve
 
     private func headerCurve(nickName: String, formattedBalance: String, balanceLabel: String) -> some View {
-        Color.primary
+        Color.movo.accent
             .overlay {
                 VStack(spacing: 6) {
                     if !nickName.isEmpty {
@@ -141,19 +141,19 @@ struct DetailField: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(value)
                         .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.primary)
-                    
+                        .foregroundStyle(Color.movo.textPrimary)
+
                     Text(label)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.movo.textTertiary)
                         .tracking(1.2)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
                     .font(.system(size: 18))
-                    .foregroundStyle(isCopied ? .green : accentColor)
+                    .foregroundStyle(isCopied ? Color.movo.success : accentColor)
                     .animation(.spring, value: isCopied)
             }
             .padding(.horizontal, 20)
@@ -176,11 +176,11 @@ struct PlainField: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(value)
                 .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.primary)
-            
+                .foregroundStyle(Color.movo.textPrimary)
+
             Text(label)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.movo.textTertiary)
                 .tracking(1.2)
         }
         .padding(.horizontal, 20)

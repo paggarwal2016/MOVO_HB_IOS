@@ -69,7 +69,6 @@ struct RootView: View {
                                     } else {
                                         appState.flow = .home
                                     }
-                                    Task { await pushManager.requestPermission() }
                                 }
                             }
                         },
@@ -309,7 +308,6 @@ struct RootView: View {
                 } else {
                     appState.flow = .home
                 }
-                Task { await pushManager.requestPermission() }
             }
         }
         .onChangeCompat(of: lockManager.state) { newState in
@@ -361,7 +359,6 @@ struct RootView: View {
         lockManager.resetToUnlocked()
         switch appState.context {
         case .getStarted:
-            Task { await pushManager.requestPermission() }
             appState.flow = .getStartedInfo
         default:
             // Login user re-establishing passcode after logout — KYC already done.

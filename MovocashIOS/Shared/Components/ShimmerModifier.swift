@@ -16,11 +16,11 @@ struct ShimmerModifier: ViewModifier {
         content
             .overlay(
                 LinearGradient(
-                    colors: [.clear, .white.opacity(0.35), .clear],
+                    colors: [.clear, .white.opacity(0.08), .clear],
                     startPoint: shimmer ? .topLeading : .bottomTrailing,
                     endPoint:   shimmer ? .bottomTrailing : .topLeading
                 )
-                .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: false), value: shimmer)
+                .animation(.easeInOut(duration: 1.4).repeatForever(autoreverses: false), value: shimmer)
             )
             .onAppear { shimmer = true }
     }

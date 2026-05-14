@@ -11,6 +11,7 @@ struct QuickTransferView: View {
 
     let contact: ContactRecord
     let cards: [VCardListResponse]
+    let accountBalance: Decimal
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var transVM: TransactionViewModel
@@ -23,9 +24,13 @@ struct QuickTransferView: View {
     @State private var showAccountSheet = false
     @State private var successData: SuccessConfirmation?
 
-    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse]) {
+    var onSuccess: () -> Void = {}
+
+    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal = 0, onSuccess: @escaping () -> Void = {}) {
         self.contact = contact
         self.cards = cards
+        self.accountBalance = accountBalance
+        self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _selectedCard = State(wrappedValue: cards.first)
     }
@@ -36,12 +41,11 @@ struct QuickTransferView: View {
     // MARK: - Amount display helpers
 
     private var availableBalanceDisplay: String {
-        selectedCard.map { "$\($0.balance.toCurrencyString())" } ?? "$0.00"
+        "$\(accountBalance.toCurrencyString())"
     }
 
     private var availableBalanceDouble: Double {
-        guard let card = selectedCard else { return 0 }
-        return NSDecimalNumber(decimal: card.balance).doubleValue
+        NSDecimalNumber(decimal: accountBalance).doubleValue
     }
 
     // MARK: - Body
@@ -110,6 +114,7 @@ struct QuickTransferView: View {
             SuccessConfirmationView(
                 viewModel: SuccessConfirmationViewModel(success: data) {
                     successData = nil
+                    onSuccess()
                     dismiss()
                 }
             )

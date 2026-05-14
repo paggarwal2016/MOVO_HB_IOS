@@ -50,6 +50,7 @@ struct DashboardView: View {
     @State private var showViewCardList = false
     @State private var showAccountList = false
     @State private var hasLoadedData = false
+    @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
     @State private var showCardDetail = false
 
@@ -124,7 +125,25 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showContactList) {
-           
+            PayAnyoneContactPickerView(
+                container: container,
+                cards: vm.cards,
+                accountBalance: displayAccount?.availableBalance ?? 0,
+                onTransferSuccess: { Task { await dashboardVM.refresh() } }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $quickTransferContact) { contact in
+            QuickTransferView(
+                contact: contact,
+                container: container,
+                cards: vm.cards,
+                accountBalance: displayAccount?.availableBalance ?? 0,
+                onSuccess: { Task { await dashboardVM.refresh() } }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showFundAccount) {
             if let account = displayAccount {
@@ -271,18 +290,42 @@ struct DashboardView: View {
                     accountData: accountData,
                     onCardTap: { showPrimaryAccountDetails = true },
                     onPrimaryTap: { showEditNickname = true },
-                    onViewCardTap: { showViewCard = true },
+                    onViewCardTap: {
+                        if let card = vm.cards.first(where: { $0.savingsAccountId == account.id }) {
+                            selectedCard = card
+                            showCardDetail = true
+                        }
+                    },
                     onQuickAction: handleQuickAction
                 )
             }
         case .payAnyone(let data):
-            ActionCard(
-                title: data.title ?? "Pay anyone, instantly",
-                description: data.description ?? "Tap to send. They get it the moment you do.",
-                buttonLabel: data.actions.first?.label ?? "Add people"
-            ) {
-                showContactList = true
-                SecureLogger.debug("Quick transfer tapped", category: .general)
+            if data.favContactList.isEmpty {
+                ActionCard(
+                    title: data.title ?? "Pay anyone, instantly",
+                    description: data.description ?? "Tap to send. They get it the moment you do.",
+                    buttonLabel: data.actions.first?.label ?? "Add people"
+                ) {
+                    showContactList = true
+                    SecureLogger.debug("Quick transfer tapped", category: .general)
+                }
+            } else {
+                PayAnyoneAddContactView(
+                    title: data.title ?? "Pay Anyone",
+                    contacts: data.favContactList,
+                    onAddTap: { showContactList = true },
+                    onContactTap: { record in
+                        quickTransferContact = ContactRecord(
+                            id: record.id,
+                            isFav: false,
+                            nickname: record.nickname,
+                            createdAt: Date(),
+                            phoneNumber: record.phoneNumber,
+                            isAdded: false,
+                            updatedAt: Date()
+                        )
+                    }
+                )
             }
         case .linkedAccounts(let data):
             LinkedAccountsSectionView(
@@ -378,6 +421,7 @@ struct PrimaryAccountContent: View {
     var body: some View {
         BalanceCardView(
             account: account,
+            showViewCard: accountData.isPVCardActivated == "Active",
             onCardTap: onCardTap,
             onPrimaryTap: onPrimaryTap,
             onViewCardTap: onViewCardTap

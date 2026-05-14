@@ -189,49 +189,44 @@ struct ChoiceScreen: View {
         .frame(maxWidth: .infinity)
     }
     
+    
     private func disclaimerText() -> some View {
-        let body =
         (
-            Text("Banking services provided by ")
+            Text("MovoCash, ")
+                .foregroundColor(Color.movo.textSecondary)
+            + Text("Inc. is a financial technology company, ")
                 .foregroundColor(Color.movo.textTertiary)
-            + Text("Coastal Community Bank")
+            + Text("Fin-Tech")
                 .foregroundColor(Color.movo.textSecondary)
                 .fontWeight(.semibold)
-            + Text(", Member ")
+            + Text(", not a bank. Depository Banking Services provided by Herring Bank, Member ")
                 .foregroundColor(Color.movo.textTertiary)
             + Text("FDIC")
                 .foregroundColor(Color.movo.textSecondary)
                 .fontWeight(.semibold)
-            + Text(". MovoCash Mastercard® Debit Card is issued by Coastal Community Bank pursuant to license by Mastercard International Inc.")
+            + Text(". Learn more by visiting ")
+                .foregroundColor(Color.movo.textTertiary)
+            + Text("Herring Bank")
+                .foregroundColor(Color.movo.textSecondary)
+                .underline(true, color: Color.movo.borderStrong)
+            + Text(". The MOVO Debit Mastercard®️ is issued by Herring Bank, pursuant to licensing by Mastercard International.")
                 .foregroundColor(Color.movo.textTertiary)
         )
         .font(.system(size: 9.5, weight: .regular))
-        
-        return body
-            .multilineTextAlignment(.center)
-            .lineSpacing(2)
+        .multilineTextAlignment(.center)
+        .lineSpacing(2)
+        .onTapGesture {
+            if let url = URL(string: "https://www.herringbank.com") {
+                UIApplication.shared.open(url)
+            }
+        }
     }
+    
     
     private func legalLine() -> some View {
         HStack(spacing: 0) {
-            Text("By continuing, you agree to our ")
-                .foregroundColor(Color.movo.textDisabled)
-            Button(action: {}) {
-                Text("Terms of Service")
-                    .foregroundColor(Color.movo.textTertiary)
-                    .underline(true, color: Color.movo.borderStrong)
-            }
-            .buttonStyle(.plain)
-            Text(" and ")
-                .foregroundColor(Color.movo.textDisabled)
-            Button(action: {}) {
-                Text("Privacy Policy")
-                    .foregroundColor(Color.movo.textTertiary)
-                    .underline(true, color: Color.movo.borderStrong)
-            }
-            .buttonStyle(.plain)
-            Text(".")
-                .foregroundColor(Color.movo.textDisabled)
+            Text("Certain terms and conditions may apply. Terms may vary by applicant and are subject to change.")
+                .foregroundColor(Color.movo.textSecondary)
         }
         .font(.system(size: 9, weight: .regular))
         .multilineTextAlignment(.center)
