@@ -24,7 +24,7 @@ struct SplashScreen: View {
     
     public init(
         brandColor: Color = MovoLogoMark.brandSilver,
-        minimumDuration: TimeInterval = 1.2,
+        minimumDuration: TimeInterval = 0.6,
         onContinue: @escaping () -> Void = {}
     ) {
         self.brandColor = brandColor

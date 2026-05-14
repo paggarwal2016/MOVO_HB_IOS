@@ -20,6 +20,7 @@ struct DashboardView: View {
     @ObservedObject var vm: VCardViewModel
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var achVM: PlaidAchViewModel
+    @StateObject private var contactVM: ContactViewModel
     @ObservedObject var linkAccountVM: ACHViewModel
     @ObservedObject var dashboardVM: DashboardViewModel
 
@@ -32,6 +33,7 @@ struct DashboardView: View {
         self.vm = vm
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+        _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
     }
 
     // MARK: - Navigation State
@@ -46,6 +48,7 @@ struct DashboardView: View {
     @State private var showMoveMoney = false
     @State private var showFundAccount = false
     @State private var showContactList = false
+    @State private var showAllFrequents = false
     @State private var showInternalTransfer = false
     @State private var showViewCardList = false
     @State private var showAccountList = false
@@ -130,6 +133,16 @@ struct DashboardView: View {
                 cards: vm.cards,
                 accountBalance: displayAccount?.availableBalance ?? 0,
                 onTransferSuccess: { Task { await dashboardVM.refresh() } }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showAllFrequents) {
+            AllFrequentsView(
+                contactVM: contactVM,
+                container: container,
+                cards: vm.cards,
+                accountBalance: displayAccount?.availableBalance ?? 0
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -324,7 +337,8 @@ struct DashboardView: View {
                             isAdded: false,
                             updatedAt: Date()
                         )
-                    }
+                    },
+                    onSeeAllTap: { showAllFrequents = true }
                 )
             }
         case .linkedAccounts(let data):

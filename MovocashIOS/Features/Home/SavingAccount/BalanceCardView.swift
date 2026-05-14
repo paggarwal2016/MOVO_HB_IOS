@@ -66,7 +66,7 @@ struct BalanceCardView: View {
                         Button(action: onPrimaryTap) {
                             Image(systemName: "info.circle")
                                 .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(Color.movo.textTertiary)
+                                .foregroundColor(Color.movo.accent)
                         }
                         .buttonStyle(.plain)
                     }

@@ -154,6 +154,7 @@ struct PayAnyoneContactPickerView: View {
                 Task {
                     await contactVM.loadApiContacts()
                     await contactVM.loadFrequent()
+                    await contactVM.loadFavourites()
                     if isAuthorized { await contactVM.load() }
                     isInitialLoading = false
                 }
@@ -258,6 +259,16 @@ struct PayAnyoneContactPickerView: View {
             .padding(.top, Spacing.lg)
             .padding(.bottom, Spacing.sm)
 
+            // Favourites section
+            if !contactVM.filteredFavourites.isEmpty {
+                sectionLabel("FAVOURITES")
+                ForEach(contactVM.filteredFavourites) { contact in
+                    NavigationLink(value: contact) { favouriteRow(contact) }
+                        .buttonStyle(.plain)
+                    rowDivider(isLast: contact.id == contactVM.filteredFavourites.last?.id)
+                }
+            }
+
             // apiContacts + device contacts
             if !contactVM.filteredContacts.isEmpty {
                 sectionLabel("CONTACTS")
@@ -266,7 +277,7 @@ struct PayAnyoneContactPickerView: View {
                         .buttonStyle(.plain)
                     rowDivider(isLast: contact.id == contactVM.filteredContacts.last?.id)
                 }
-            } else {
+            } else if contactVM.filteredFavourites.isEmpty {
                 Text(contactVM.search.isEmpty ? "No contacts found" : "No results for \"\(contactVM.search)\"")
                     .font(.system(size: 13))
                     .foregroundColor(Color.movo.textTertiary)
@@ -306,6 +317,36 @@ struct PayAnyoneContactPickerView: View {
     }
 
     private func contactRow(_ contact: ContactRecord) -> some View {
+        HStack(spacing: Spacing.md) {
+            contactAvatar(initials: contact.initials, size: 44)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(contact.nickname ?? "")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                    if contact.isAdded {
+                        Text("MOVO")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(Color.movo.accent)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
+                    }
+                }
+                Text(contact.phoneNumber ?? "")
+                    .font(.system(size: 13))
+                    .foregroundColor(Color.movo.textTertiary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Color.movo.textDisabled)
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, 12)
+    }
+
+    private func favouriteRow(_ contact: ContactRecord) -> some View {
         HStack(spacing: Spacing.md) {
             contactAvatar(initials: contact.initials, size: 44)
             VStack(alignment: .leading, spacing: 3) {

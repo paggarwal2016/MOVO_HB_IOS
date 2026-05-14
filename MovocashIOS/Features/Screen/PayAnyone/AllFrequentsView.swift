@@ -13,11 +13,13 @@ struct AllFrequentsView: View {
     @ObservedObject var contactVM: ContactViewModel
     let container: AppContainer
     let cards: [VCardListResponse]
+    var accountBalance: Decimal = 0
     
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var search: String = ""
     @State private var selectedContact: ContactRecord? = nil
     @State private var isNavigating: Bool = false
+    @State private var isLoading: Bool = true
     
     private var showSearch: Bool { contactVM.frequents.count > 15 }
     
@@ -30,68 +32,81 @@ struct AllFrequentsView: View {
     }
     
     var body: some View {
-        ZStack {
-            MovoBackground()
-            
-            VStack(spacing: 0) {
-                navBar
-                
-               // if showSearch {
+        NavigationStack {
+            ZStack {
+                MovoBackground()
+
+                VStack(spacing: 0) {
+                    navBar
+
+                    if isLoading {
+                        Spacer()
+                        SpinnerView()
+                        Spacer()
+                    } else {
                     searchBar
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.md)
-               // }
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        ForEach(filteredFrequents) { contact in
-                            Button {
-                                selectedContact = ContactRecord(
-                                    id: contact.id,
-                                    isFav: false,
-                                    nickname: contact.nickname,
-                                    createdAt: Date(),
-                                    phoneNumber: contact.phoneNumber,
-                                    isAdded: false,
-                                    updatedAt: Date()
-                                )
-                                isNavigating = true
-                            } label: {
-                                frequentRow(contact)
-                            }
-                            .buttonStyle(.plain)
-                            
-                            if contact.id != filteredFrequents.last?.id {
-                                Rectangle()
-                                    .fill(Color.movo.elevated)
-                                    .frame(height: Stroke.hairline)
-                                    .padding(.horizontal, 14)
+
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            ForEach(filteredFrequents) { contact in
+                                Button {
+                                    selectedContact = ContactRecord(
+                                        id: contact.id,
+                                        isFav: false,
+                                        nickname: contact.nickname,
+                                        createdAt: Date(),
+                                        phoneNumber: contact.phoneNumber,
+                                        isAdded: false,
+                                        updatedAt: Date()
+                                    )
+                                    isNavigating = true
+                                } label: {
+                                    frequentRow(contact)
+                                }
+                                .buttonStyle(.plain)
+
+                                if contact.id != filteredFrequents.last?.id {
+                                    Rectangle()
+                                        .fill(Color.movo.elevated)
+                                        .frame(height: Stroke.hairline)
+                                        .padding(.horizontal, 14)
+                                }
                             }
                         }
+                        .background(
+                            RoundedRectangle(cornerRadius: Radius.heroCard)
+                                .fill(Color.movo.surface.opacity(0.85))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                                        .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                                )
+                        )
+                        .padding(.horizontal, Spacing.lg)
+
+                        Spacer().frame(height: 80)
                     }
-                    .background(
-                        RoundedRectangle(cornerRadius: Radius.heroCard)
-                            .fill(Color.movo.surface.opacity(0.85))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Radius.heroCard)
-                                    .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
-                            )
-                    )
-                    .padding(.horizontal, Spacing.lg)
-                    
-                    Spacer().frame(height: 80)
+                    } // end else
                 }
             }
-        }
-        .background(Color.movo.background)
-        .preferredColorScheme(.dark)
-        .navigationBarHidden(true)
-        .onAppear {
-            Task { await contactVM.loadFrequent() }
-        }
-        .navigationDestination(isPresented: $isNavigating) {
-            if let contact = selectedContact {
-                QuickTransferView(contact: contact, container: container, cards: cards)
+            .background(Color.movo.background)
+            .preferredColorScheme(.dark)
+            .navigationBarHidden(true)
+            .onAppear {
+                if contactVM.frequents.isEmpty {
+                    Task {
+                        await contactVM.loadFrequent()
+                        isLoading = false
+                    }
+                } else {
+                    isLoading = false
+                }
+            }
+            .navigationDestination(isPresented: $isNavigating) {
+                if let contact = selectedContact {
+                    QuickTransferView(contact: contact, container: container, cards: cards, accountBalance: accountBalance)
+                }
             }
         }
     }

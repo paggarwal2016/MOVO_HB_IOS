@@ -86,7 +86,7 @@ struct CardDetailSheet: View {
             let needsAccounts = savingVM.accountList == nil
             async let transactions: () = {
                 guard let accountId else { return }
-                await txVM.loadTransactions(max: 10, accountId: accountId)
+                await txVM.loadTransactions(max: 500, accountId: accountId)
             }()
             async let accounts: () = {
                 guard needsAccounts else { return }
@@ -192,8 +192,12 @@ struct CardDetailSheet: View {
                 // Top: brand lockup + status pill
                 HStack(alignment: .center) {
                     HStack(spacing: 6) {
-                        MLogo()
+                        
+                        MovoMVSymbol()
                             .frame(width: 22, height: 22)
+                        
+//                        MLogo()
+//                            .frame(width: 22, height: 22)
                         Text("MOVOCASH")
                             .font(.system(size: 10, weight: .bold))
                             .tracking(1.8)
@@ -410,9 +414,9 @@ struct CardDetailSheet: View {
             HStack {
                 Eyebrow("Recent activity")
                 Spacer()
-                Button("See all") { /* navigate */ }
-                    .font(Typography.captionSmall.font)
-                    .foregroundColor(Color.movo.accent)
+//                Button("See all") { /* navigate */ }
+//                    .font(Typography.captionSmall.font)
+//                    .foregroundColor(Color.movo.accent)
             }
             .padding(.horizontal, 4)
             

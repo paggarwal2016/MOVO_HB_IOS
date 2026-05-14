@@ -83,7 +83,7 @@ struct SavingAccountDetailView: View {
     // MARK: - Load
 
     private func loadDetail() async {
-        await transVM.loadTransactions(max: 100, accountId: accountId)
+        await transVM.loadTransactions(max: 500, accountId: accountId)
     }
 }
 

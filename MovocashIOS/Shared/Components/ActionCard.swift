@@ -181,52 +181,65 @@ struct PayAnyoneAddContactView: View {
     let contacts: [RecordContact]
     var onAddTap: () -> Void
     var onContactTap: (RecordContact) -> Void
+    var onSeeAllTap: (() -> Void)? = nil
+
+    private var showSeeAll: Bool { contacts.count >= 4 }
+    private var displayedContacts: [RecordContact] { Array(contacts.prefix(4)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
 
-            Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.2)
-                .foregroundColor(Color.movo.textTertiary)
-                .padding(.horizontal, Spacing.lg)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.lg) {
-                    ForEach(contacts) { contact in
-                        let initial = String(
-                            contact.nickname?.first ?? contact.phoneNumber?.first ?? "?"
-                        ).uppercased()
-                        let label = contact.nickname ?? contact.phoneNumber ?? ""
-                        bubble(initial: initial, label: label) { onContactTap(contact) }
+            // Header
+            HStack {
+                Text(title.uppercased())
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(1.2)
+                    .foregroundColor(Color.movo.textTertiary)
+                Spacer()
+                if showSeeAll {
+                    Button(action: { onSeeAllTap?() }) {
+                        Text("See all")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(Color.movo.accent)
                     }
-                    bubble(initial: "+", label: "Add", action: onAddTap)
+                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.xs)
+            }
+
+            // Bubbles — equal width when ≥4 contacts, fixed width otherwise
+            HStack(spacing: 8) {
+                ForEach(displayedContacts) { contact in
+                    let initial = String(
+                        contact.nickname?.first ?? contact.phoneNumber?.first ?? "?"
+                    ).uppercased()
+                    let label = contact.nickname?.split(separator: " ").first.map(String.init)
+                                ?? contact.nickname ?? ""
+                    bubble(initial: initial, label: label, expand: showSeeAll) { onContactTap(contact) }
+                }
+                bubble(initial: "+", label: "Add", expand: showSeeAll, action: onAddTap)
             }
         }
-        .padding(.vertical, Spacing.sm)
         .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
     }
 
-    private func bubble(initial: String, label: String, action: @escaping () -> Void) -> some View {
+    private func bubble(initial: String, label: String, expand: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: Spacing.xs) {
                 ZStack {
                     Circle()
                         .fill(Color.movo.elevated)
-                        .frame(width: 52, height: 52)
                     Text(initial)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
                 }
+                .frame(width: 52, height: 52)
                 Text(label)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(Color.movo.textTertiary)
                     .lineLimit(1)
             }
-            .frame(width: 56)
+            .frame(maxWidth: expand ? .infinity : 56)
         }
         .buttonStyle(.plain)
     }
