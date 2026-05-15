@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct SpinnerConfiguration {
     var arcColor: Color        = Color.movo.accent
@@ -104,3 +107,40 @@ struct SpinnerView: View {
         }
     }
 }
+
+// MARK: - Full-screen overlay (UIKit window level)
+// Call SpinnerView.showFullScreen() / SpinnerView.hideFullScreen() from any screen
+// to present the spinner above sheets, modals, and navigation layers.
+
+#if canImport(UIKit)
+extension SpinnerView {
+
+    private static var overlayWindow: UIWindow?
+
+    /// Presents a full-screen spinner above all UI layers (sheets, navigation, etc).
+    static func showFullScreen(configuration: SpinnerConfiguration = .default) {
+        guard overlayWindow == nil,
+              let scene = UIApplication.shared.connectedScenes
+                  .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+        else { return }
+
+        let window = UIWindow(windowScene: scene)
+        window.windowLevel = .alert + 1
+        window.backgroundColor = .clear
+        window.isUserInteractionEnabled = true
+
+        let host = UIHostingController(rootView: SpinnerView(configuration: configuration))
+        host.view.backgroundColor = .clear
+        window.rootViewController = host
+        window.isHidden = false
+
+        overlayWindow = window
+    }
+
+    /// Removes the full-screen spinner.
+    static func hideFullScreen() {
+        overlayWindow?.isHidden = true
+        overlayWindow = nil
+    }
+}
+#endif

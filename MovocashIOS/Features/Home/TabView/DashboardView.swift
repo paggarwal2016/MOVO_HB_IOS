@@ -63,6 +63,10 @@ struct DashboardView: View {
 
     // MARK: - Body
 
+    private var isSheetActive: Bool {
+        showCreateCashCard || showMoveMoney || showPrimaryAccountDetails
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             MovoBackground()
@@ -70,7 +74,7 @@ struct DashboardView: View {
                 scrollContent
             }
         }
-        .overlay { combinedOverlay }
+        .dimmingOverlay(isActive: isSheetActive)
         .sheet(isPresented: $showCreateCashCard) {
             CreateCashCardView(
                 onCancel: { showCreateCashCard = false },
@@ -78,8 +82,10 @@ struct DashboardView: View {
                     await createCashCard(nickname: nickname, pin: pin)
                 }
             )
-            .presentationDetents([.large])
+            .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
+            .presentationCornerRadius(15)
+            .presentationBackground(Color.movo.surface)
         }
         .textInputAlert(
             isPresented: $showEditNickname,
@@ -222,6 +228,21 @@ struct DashboardView: View {
                 )
             }
         }
+        .sheet(isPresented: $showPrimaryAccountDetails) {
+            if let account = displayAccount {
+                AccountDetailsView(account: account, onNicknameUpdated: { name in
+                    Task {
+                        await savingVM.updateNickname(name: name, accountId: account.id)
+                        dashboardVM.optimisticallyUpdateNickname(name)
+                        await dashboardVM.refresh()
+                    }
+                })
+                .presentationDetents([.height(260)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(15)
+                .presentationBackground(Color.movo.surface)
+            }
+        }
         .task(id: lockManager.state) {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
             guard !hasLoadedData else { return }
@@ -274,22 +295,22 @@ struct DashboardView: View {
         }
     }
 
-    @ViewBuilder
-    private var combinedOverlay: some View {
-        if dashboardVM.state == .loading && !showCreateCashCard && dashboardVM.primaryAccount == nil {
-            SpinnerView()
-        }
-        if showPrimaryAccountDetails, let display = displayAccount {
-            dimmedOverlay { showPrimaryAccountDetails = false } content: {
-                SavingActDetailPopupView(
-                    account: display,
-                    isPresented: $showPrimaryAccountDetails,
-                    showEditNickname: $showEditNickname
-                )
-                .padding(.horizontal, 15)
-            }
-        }
-    }
+//    @ViewBuilder
+//    private var combinedOverlay: some View {
+//        if dashboardVM.state == .loading && !showCreateCashCard && dashboardVM.primaryAccount == nil {
+//            SpinnerView()
+//        }
+//        if showPrimaryAccountDetails, let display = displayAccount {
+//            dimmedOverlay { showPrimaryAccountDetails = false } content: {
+//                SavingActDetailPopupView(
+//                    account: display,
+//                    isPresented: $showPrimaryAccountDetails,
+//                    showEditNickname: $showEditNickname
+//                )
+//                .padding(.horizontal, 15)
+//            }
+//        }
+//    }
 
     // MARK: - Section Views
 

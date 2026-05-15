@@ -21,6 +21,7 @@ struct MoveMoneyMenuView: View {
     let onInternalTransfer: () -> Void
 
     @State private var detentHeight: CGFloat = 160
+    @SwiftUI.Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,27 +32,38 @@ struct MoveMoneyMenuView: View {
                 action: onFundAccount
             )
 
-            Divider().padding(.horizontal, 24)
+            Divider()
+                .background(Color.movo.border)
+                .padding(.horizontal, Spacing.xxl)
 
             optionRow(
                 icon: "person.2",
                 title: "Pay Anyone",
-                subtitle: "Send money to a contact",
+                subtitle: "Send to spend",
                 action: onTransferMoney
             )
 
-            Divider().padding(.horizontal, 24)
+            Divider()
+                .background(Color.movo.border)
+                .padding(.horizontal, Spacing.xxl)
 
             optionRow(
                 icon: "arrow.left.arrow.right",
                 title: "Transfer Money",
                 subtitle: "Move money between your accounts",
                 action: onInternalTransfer,
-                bottomPadding: 8
+                isLast: true
             )
+            
+            Button(action: { dismiss() }) {
+                Text("Cancel")
+            }
+            .buttonStyle(OutlineButtonStyle())
+            .padding(.horizontal, Spacing.xxl)
+            .padding(.bottom, Spacing.sm)
         }
-        .padding(.top, 25)
-        .background(Color.white)
+        .padding(.top, Spacing.xxl)
+        .background(Color.movo.surface.ignoresSafeArea())
         .background(
             GeometryReader { geo in
                 Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
@@ -62,6 +74,7 @@ struct MoveMoneyMenuView: View {
         }
         .presentationDetents([.height(detentHeight)])
         .presentationDragIndicator(.visible)
+        .presentationBackground(Color.movo.surface)
     }
 
     private func optionRow(
@@ -69,34 +82,38 @@ struct MoveMoneyMenuView: View {
         title: String,
         subtitle: String,
         action: @escaping () -> Void,
-        bottomPadding: CGFloat = 16
+        isLast: Bool = false
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 16) {
+            HStack(spacing: Spacing.lg) {
                 ZStack {
-                    Circle()
-                        .fill(Color.softBlue.opacity(0.1))
-                        .frame(width: 48, height: 48)
+                    RoundedRectangle(cornerRadius: Radius.button)
+                        .fill(Color.movo.accentTint)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
+                        )
+                        .frame(width: 44, height: 44)
                     Image(systemName: icon)
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.softBlue)
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(Color.movo.accent)
                 }
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(title)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .textStyle(Typography.cardTitle)
+                        .foregroundStyle(Color.movo.textPrimary)
                     Text(subtitle)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
+                        .textStyle(Typography.subtitle)
+                        .foregroundStyle(Color.movo.textSecondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color(.systemGray3))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.movo.accent)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-            .padding(.bottom, bottomPadding)
+            .padding(.horizontal, Spacing.xxl)
+            .padding(.vertical, Spacing.lg)
+            .padding(.bottom, isLast ? Spacing.sm : 0)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

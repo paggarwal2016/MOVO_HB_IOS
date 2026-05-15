@@ -17,146 +17,230 @@ struct CreateCashCardView: View {
     @State private var nickname = ""
     @State private var pin = ""
     @State private var confirmPin = ""
+    @State private var showPin = false
+    @State private var showConfirmPin = false
     @State private var isLoading = false
     @FocusState private var focusedField: Field?
 
-    private enum Field { case nickname, pin, confirmPin }
+    fileprivate enum Field { case nickname, pin, confirmPin }
 
     private var pinsMatch: Bool { pin == confirmPin }
+    private var pinMismatch: Bool { confirmPin.count == 4 && !pinsMatch }
+    private var isPinWeak: Bool { pin.count == 4 && Self.weakPins.contains(pin) }
+
+    /// PINs that are too easily guessed — block submission.
+    private static let weakPins: Set<String> = [
+        "0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999",
+        "0123", "1234", "2345", "3456", "4567", "5678", "6789", "7890",
+        "9876", "8765", "7654", "6543", "5432", "4321", "3210", "0987",
+        "1212", "2121", "0101", "1010", "1122", "2211", "0011", "1100",
+        "2580", "1357", "1470", "2469",
+    ]
 
     private var isValid: Bool {
         !nickname.trimmingCharacters(in: .whitespaces).isEmpty &&
-        pin.count == 4 &&
-        pin.allSatisfy(\.isNumber) &&
-        confirmPin.count == 4 &&
-        pinsMatch
+        pin.count == 4 && pin.allSatisfy(\.isNumber) && !isPinWeak &&
+        confirmPin.count == 4 && pinsMatch
     }
 
     // MARK: - Body
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            headerSection
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
-                .padding(.bottom, 20)
-
-            fieldsSection
-                .padding(.horizontal, 20)
-
-            Spacer()
-
-            actionButtons
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
-        }
-        .background(Color(.systemBackground))
-        .overlay {
-            if isLoading {
-                SpinnerView()
+        VStack(spacing: 0) {
+            header
+            VStack(spacing: Spacing.xl) {
+                nicknameField
+                pinSection
+                confirmPinSection
             }
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.xl)
+            Spacer()
+            actionButtons
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.lg)
+                .padding(.bottom, Spacing.xxxl)
+        }
+        .padding(.top, Spacing.xxl)
+        .background(Color.movo.surface.ignoresSafeArea())
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                focusedField = .nickname
+            }
+        }
+        .onDisappear {
+            SpinnerView.hideFullScreen()
         }
     }
 }
 
-// MARK: - Subviews
+// MARK: - Header
 
 private extension CreateCashCardView {
 
-    var headerSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Create Card")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.primary)
-            Text("Give your card a nickname and set a secure PIN.")
-                .font(.system(size: 14))
-                .foregroundColor(.gray)
-        }
-    }
-
-    var fieldsSection: some View {
-        VStack(spacing: 14) {
-            labeledField(label: "Nickname") {
-                TextField("e.g. Enter the card name", text: $nickname)
-                    .focused($focusedField, equals: .nickname)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .pin }
-                    .disabled(isLoading)
-            }
-
-            labeledField(label: "PIN") {
-                SecureField("4-digit PIN", text: $pin)
-                    .keyboardType(.numberPad)
-                    .focused($focusedField, equals: .pin)
-                    .disabled(isLoading)
-                    .onChange(of: pin) { newValue in
-                        pin = String(newValue.filter(\.isNumber).prefix(4))
-                    }
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Confirm PIN")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.gray)
-                SecureField("Re-enter 4-digit PIN", text: $confirmPin)
-                    .keyboardType(.numberPad)
-                    .focused($focusedField, equals: .confirmPin)
-                    .disabled(isLoading)
-                    .onChange(of: confirmPin) { newValue in
-                        confirmPin = String(newValue.filter(\.isNumber).prefix(4))
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+    var header: some View {
+        HStack(spacing: Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.button)
+                    .fill(Color.movo.accentTint)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(
-                                confirmPin.count == 4 && !pinsMatch
-                                    ? Color.red.opacity(0.7)
-                                    : Color(.systemGray4),
-                                lineWidth: 1
-                            )
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
                     )
-
-                if confirmPin.count == 4 && !pinsMatch {
-                    Text("PINs do not match.")
-                        .font(.system(size: 12))
-                        .foregroundColor(.red)
-                }
+                Image(systemName: "creditcard")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(Color.movo.accent)
             }
+            .frame(width: 38, height: 38)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text("Create cash card")
+                    .textStyle(Typography.cardTitle)
+                    .foregroundStyle(Color.movo.textPrimary)
+                Text("Pick a type, name it, set a PIN")
+                    .textStyle(Typography.subtitle)
+                    .foregroundStyle(Color.movo.textSecondary)
+            }
+
+            Spacer()
+
+            Button(action: onCancel) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.movo.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        Circle()
+                            .fill(Color.movo.elevated.opacity(0.8))
+                            .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+        }
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.xl)
+        .padding(.bottom, Spacing.xl)
+    }
+}
+
+// MARK: - Fields
+
+private extension CreateCashCardView {
+
+    var nicknameField: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            fieldLabel("CARD NAME")
+            TextField(
+                "",
+                text: $nickname,
+                prompt: Text("e.g. My Cash Card").foregroundColor(Color.movo.textDisabled)
+            )
+            .textStyle(Typography.body)
+            .foregroundStyle(Color.movo.textPrimary)
+            .tint(Color.movo.accent)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .pin }
+            .focused($focusedField, equals: .nickname)
+            .disabled(isLoading)
+            .padding(.horizontal, Spacing.md)
+            .frame(height: 48)
+            .background(Color.movo.background, in: RoundedRectangle(cornerRadius: Radius.card))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.card).stroke(
+                    focusedField == .nickname ? Color.movo.accentBorder : Color.movo.borderStrong,
+                    lineWidth: focusedField == .nickname ? Stroke.medium : Stroke.thin
+                )
+            )
+            .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: focusedField == .nickname)
         }
     }
 
-    func labeledField<F: View>(label: String, @ViewBuilder field: () -> F) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.gray)
-            field()
-                .padding(.horizontal, 14)
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(.systemGray4), lineWidth: 1))
+    var pinSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack {
+                fieldLabel("PIN")
+                Spacer()
+                eyeToggle(isOn: $showPin)
+            }
+            PinBoxRow(
+                pin: $pin,
+                isVisible: showPin,
+                isFocused: focusedField == .pin,
+                isError: isPinWeak,
+                isLoading: isLoading,
+                focusField: { focusedField = .pin },
+                field: .pin,
+                focusedField: $focusedField,
+                onComplete: { focusedField = .confirmPin }
+            )
+            if isPinWeak {
+                errorLabel("PIN is too simple. Choose something less predictable.")
+            }
         }
+        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: isPinWeak)
+    }
+
+    var confirmPinSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack {
+                fieldLabel("CONFIRM PIN")
+                Spacer()
+                eyeToggle(isOn: $showConfirmPin)
+            }
+            PinBoxRow(
+                pin: $confirmPin,
+                isVisible: showConfirmPin,
+                isFocused: focusedField == .confirmPin,
+                isError: pinMismatch,
+                isLoading: isLoading,
+                focusField: { focusedField = .confirmPin },
+                field: .confirmPin,
+                focusedField: $focusedField,
+                onComplete: { focusedField = nil }
+            )
+            if pinMismatch {
+                errorLabel("PINs do not match")
+            }
+        }
+        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: pinMismatch)
     }
 
     var actionButtons: some View {
-        VStack(spacing: 10) {
-            PrimaryButton(title: "Create", isLoading: isLoading, isEnabled: isValid && !isLoading) {
-                submit()
-            }
-            Button("Cancel") {
-                onCancel()
-            }
-            .font(.system(size: 16, weight: .medium))
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+        Button(action: submit) {
+            Text("Create Card")
         }
+        .buttonStyle(MovoPrimaryButtonStyle())
+        .disabled(!isValid || isLoading)
+        .opacity(isValid && !isLoading ? 1.0 : 0.4)
+        .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: isValid)
+    }
+
+    // MARK: - Small helpers
+
+    func fieldLabel(_ text: String) -> some View {
+        Text(text)
+            .textStyle(Typography.eyebrow)
+            .foregroundStyle(Color.movo.textSecondary)
+    }
+
+    func errorLabel(_ text: String) -> some View {
+        Text(text)
+            .textStyle(Typography.caption)
+            .foregroundStyle(Color.movo.danger)
+            .padding(.leading, Spacing.xs)
+            .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    func eyeToggle(isOn: Binding<Bool>) -> some View {
+        Button { isOn.wrappedValue.toggle() } label: {
+            Image(systemName: isOn.wrappedValue ? "eye.slash" : "eye")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(Color.movo.textTertiary)
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -168,9 +252,116 @@ private extension CreateCashCardView {
         guard isValid else { return }
         focusedField = nil
         isLoading = true
+        SpinnerView.showFullScreen()
         Task {
             await onCreate(nickname.trimmingCharacters(in: .whitespaces), pin)
-            isLoading = false
+            await MainActor.run {
+                isLoading = false
+                SpinnerView.hideFullScreen()
+            }
         }
+    }
+}
+
+// MARK: - PinBoxRow
+
+/// 4-digit PIN row: transparent TextField captures keystrokes;
+/// PinCell renders the visual state. Eye toggle is display-only —
+/// underlying field is always a TextField so .numberPad is guaranteed.
+private struct PinBoxRow: View {
+
+    @Binding var pin: String
+    let isVisible: Bool
+    let isFocused: Bool
+    let isError: Bool
+    let isLoading: Bool
+    let focusField: () -> Void
+    let field: CreateCashCardView.Field
+    @FocusState.Binding var focusedField: CreateCashCardView.Field?
+    let onComplete: () -> Void
+
+    var body: some View {
+        ZStack {
+            HStack(spacing: Spacing.sm + 2) {
+                ForEach(0..<4, id: \.self) { i in
+                    PinCell(
+                        char: char(at: i),
+                        isVisible: isVisible,
+                        isActive: isFocused && activeIndex == i,
+                        isError: isError
+                    )
+                }
+            }
+            .allowsHitTesting(false)
+
+            TextField("", text: $pin)
+                .keyboardType(.numberPad)
+                .focused($focusedField, equals: field)
+                .tint(.clear)
+                .foregroundStyle(.clear)
+                .disabled(isLoading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .opacity(0.011)
+                .onChange(of: pin) { v in
+                    let filtered = String(v.filter(\.isNumber).prefix(4))
+                    if filtered != v { pin = filtered }
+                    if filtered.count == 4 { onComplete() }
+                }
+        }
+        .frame(height: 58)
+        .contentShape(Rectangle())
+        .onTapGesture { focusField() }
+    }
+
+    private func char(at i: Int) -> String? {
+        guard pin.count > i else { return nil }
+        return String(pin[pin.index(pin.startIndex, offsetBy: i)])
+    }
+
+    private var activeIndex: Int { min(pin.count, 3) }
+}
+
+// MARK: - PinCell
+
+private struct PinCell: View {
+    let char: String?
+    let isVisible: Bool
+    let isActive: Bool
+    let isError: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Radius.card)
+                .fill(Color.movo.background)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.card)
+                        .stroke(borderColor, lineWidth: isActive ? Stroke.medium : Stroke.thin)
+                )
+
+            if let char {
+                Text(isVisible ? char : "•")
+                    .font(.system(
+                        size: isVisible ? Typography.cardHero.size : 26,
+                        weight: .semibold
+                    ))
+                    .foregroundStyle(Color.movo.textPrimary)
+                    .transition(.opacity)
+            } else if isActive {
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.movo.accent)
+                    .frame(width: Stroke.thick, height: 22)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 58)
+        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: char)
+        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: isActive)
+    }
+
+    private var borderColor: Color {
+        if isError     { return Color.movo.danger.opacity(0.7) }
+        if isActive    { return Color.movo.accentBorder }
+        if char != nil { return Color.movo.borderStrong }
+        return Color.movo.border
     }
 }

@@ -151,19 +151,22 @@ public struct OutlineButtonStyle: ButtonStyle {
     public init() {}
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .medium))
+            .textStyle(Typography.buttonLarge)
             .foregroundColor(Color.movo.textPrimary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 17)
             .background(
                 RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .fill(Color.clear)
+                    .fill(Color.movo.elevated.opacity(0.4))
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.heroCard)
-                            .stroke(Color.movo.borderStrong, lineWidth: Stroke.hairline) // border color & width
+                            .stroke(Color.movo.borderStrong, lineWidth: Stroke.hairline)
                     )
             )
+            .contentShape(RoundedRectangle(cornerRadius: Radius.heroCard))
             .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeOut(duration: DesignTokens.Motion.fast), value: configuration.isPressed)
     }
 }
 
@@ -284,6 +287,42 @@ public struct StatusPill: View {
         case .danger:  return Color.movo.danger
         case .warning: return Color.movo.warning
         }
+    }
+}
+
+// MARK: - Sheet dim scrim
+
+/// Darkens the background when a sheet or overlay is presented.
+/// Apply once on the root content view; pass `isActive` from any Bool state binding.
+///
+/// Usage:
+///   ```swift
+///   ContentView()
+///       .dimmingOverlay(isActive: showSheet)
+///       .sheet(isPresented: $showSheet) { ... }
+///   ```
+public struct DimmingOverlay: ViewModifier {
+    let isActive: Bool
+
+    public func body(content: Content) -> some View {
+        ZStack {
+            content
+            if isActive {
+                Color.black.opacity(0.8)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: isActive)
+    }
+}
+
+extension View {
+    /// Fades a dark scrim over this view when `isActive` is true.
+    /// Chain before `.sheet()` / `.fullScreenCover()` modifiers.
+    public func dimmingOverlay(isActive: Bool) -> some View {
+        modifier(DimmingOverlay(isActive: isActive))
     }
 }
 
