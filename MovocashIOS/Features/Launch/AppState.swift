@@ -48,7 +48,15 @@ final class AppState: ObservableObject {
     /// first time. Cleared by HomeTabBarView.onAppear once the home screen is live.
     @Published var isNewRegistration: Bool = false
 
+    /// Changes whenever protected navigation (home tabs, nested stacks, sheets) must be
+    /// torn down — e.g. session expiry — so SwiftUI rebuilds a fresh shell.
+    @Published private(set) var protectedShellID = UUID()
+
     /// Fintech-standard inactivity window for the pre-dashboard onboarding flow.
     /// Exceeding this triggers a full logout so no partial session can be resumed.
     static let onboardingInactivityTimeout: TimeInterval = 600 // 10 minutes
+
+    func invalidateProtectedShell() {
+        protectedShellID = UUID()
+    }
 }

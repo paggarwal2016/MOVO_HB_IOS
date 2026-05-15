@@ -24,6 +24,7 @@ struct InternalTransferView: View {
     @State private var selectedToCard: VCardListResponse?
     @State private var showCardSheet = false
     @State private var showConfirmSheet = false
+    @State private var submitTask: Task<Void, Never>?
 
     private var toCardAccount: SavingsAccountInfo? {
         guard let id = selectedToCard?.savingsAccountId else { return nil }
@@ -140,7 +141,7 @@ struct InternalTransferView: View {
                 onCancel: { showConfirmSheet = false },
                 onConfirm: {
                     showConfirmSheet = false
-                    Task { await submitTransfer() }
+                    submitTask = Task { await submitTransfer() }
                 }
             )
             .padding(.top, 30)
@@ -159,6 +160,13 @@ struct InternalTransferView: View {
         .onChange(of: vcardVM.hasLoadedCards) { loaded in
             guard loaded, selectedToCard == nil else { return }
             selectedToCard = cardsList.first
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            submitTask?.cancel()
+            submitTask = nil
+            showConfirmSheet = false
+            showCardSheet = false
+            dismiss()
         }
     }
 
@@ -410,7 +418,13 @@ struct InternalTransferView: View {
             userAction: "Internal-Transfer",
             nickname: ""
         )
-        guard await transVM.submitInternalTransfer(request: request) else { return }
+        let success = await transVM.submitInternalTransfer(request: request)
+
+        // If the task was cancelled mid-flight (session expired), do nothing —
+        // the .onReceive handler already dismissed this view.
+        guard !Task.isCancelled else { return }
+        guard success else { return }
+
         ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)
         dismiss()
         onDismiss()

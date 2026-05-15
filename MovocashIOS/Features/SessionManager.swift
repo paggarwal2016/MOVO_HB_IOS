@@ -9,6 +9,32 @@ import Foundation
 import SwiftUI
 import Combine
 
+// MARK: - Session Gate
+
+/// Thread-safe flag that NetworkService checks before every outbound request.
+/// Marked expired when the server returns 401; reset when a fresh session starts.
+actor SessionGate {
+    static let shared = SessionGate()
+    private(set) var isExpired = false
+    /// True while the user is intentionally signing out. Distinguishes gate blocks
+    /// caused by logout from those caused by server-side session expiry.
+    private(set) var isLoggingOut = false
+
+    func markLoggingOut() {
+        isLoggingOut = true
+        isExpired = true
+    }
+
+    func markExpired() { isExpired = true }
+
+    func clearLoggingOut() { isLoggingOut = false }
+
+    func reset() {
+        isExpired = false
+        isLoggingOut = false
+    }
+}
+
 // MARK: - Session Restore Result
 
 enum SessionRestoreResult {
@@ -45,11 +71,20 @@ final class SessionManager: ObservableObject {
         self.network = network
     }
 
+    // MARK: - Session Expired Flag
+    /// Becomes true the moment a server 401 triggers sessionExpiry().
+    /// Prevents duplicate handling and allows the session gate in NetworkService
+    /// to block all outbound API calls until a fresh login resets this flag.
+    private(set) var isSessionExpired = false
+
     // MARK: - Start Session
     func startSession(
         accessToken: String,
         appState: AppState
     ) async throws {
+
+        isSessionExpired = false
+        await SessionGate.shared.reset()
 
         // Store securely — Keychain is the single source of truth
         try await storeTokens(
@@ -166,7 +201,16 @@ final class SessionManager: ObservableObject {
 
     func logout(appState: AppState) async {
         isLoggingOut = true
-        defer { isLoggingOut = false }
+        isSessionExpired = false
+        // Arm the gate before anything else. AuthAPI.isAuth = true so the logout
+        // API call below bypasses this check. Every other background task is blocked
+        // immediately — no stale request can reach the server and produce a 401
+        // that would trigger a spurious "Session Expired" toast.
+        await SessionGate.shared.markLoggingOut()
+        defer {
+            isLoggingOut = false
+            Task { await SessionGate.shared.clearLoggingOut() }
+        }
         _ = try? await network.request(AuthAPI.logout) as SuccessResponse
         analytics.trackLogout()
         analytics.clearIdentity()
@@ -183,21 +227,20 @@ final class SessionManager: ObservableObject {
         resetAppState(appState)
     }
 
-    // MARK: - Session Expiry (token invalid — zero API calls)
-    /// The server returned 401: the token is already invalid so sending a logout
-    /// request would fail or trigger another expiry event. Instead we wipe local
-    /// credentials synchronously, navigate to the welcome screen immediately, and
-    /// show a non-blocking toast. The full `logout()` API path is intentionally
-    /// bypassed here.
-    func sessionExpiry(appState: AppState) {
-        guard !isLoggingOut else { return }
+    // MARK: - Soft Session Expiry (biometric re-auth — overlay, no navigation)
+    /// Token expired and the user has biometrics enrolled. Blocks new API calls and
+    /// wipes credentials, but does NOT change appState.flow or isAuthenticated.
+    /// The AppLock overlay appears over the current screen; successful biometric
+    /// re-auth (server round-trip) restores the session in place.
+    func softExpiry() {
+        guard !isLoggingOut, !isSessionExpired else { return }
+        isSessionExpired = true
         analytics.trackSessionExpired()
         analytics.clearIdentity()
         kycManager.clearSession()
-        resetAppState(appState)
         ToastManager.shared.show(
-            "Your session has expired. Please sign in again.",
-            style: .error,
+            "Your session has expired. Please authenticate to continue.",
+            style: .warning,
             position: .bottom
         )
         Task {
@@ -206,9 +249,42 @@ final class SessionManager: ObservableObject {
         }
     }
 
+    // MARK: - Session Expiry (token invalid — zero API calls)
+    /// Server reported session loss (401 / session-timeout message). Wipes credentials,
+    /// blocks further API calls, invalidates all protected navigation, and lands on Choice.
+    @MainActor
+    func handleSessionExpired(appState: AppState, message: String? = nil) async {
+        guard !isLoggingOut, !isSessionExpired else { return }
+        isSessionExpired = true
+        await SessionGate.shared.markExpired()
+
+        analytics.trackSessionExpired()
+        analytics.clearIdentity()
+        kycManager.clearSession()
+
+        try? await keychain.delete("access_token")
+        try? await keychain.delete("auth_session_id")
+
+        UserDefaults.standard.removeObject(forKey: "kycInProgress")
+        appState.isNewRegistration = false
+
+        resetAppState(appState)
+
+        let toastMessage = message?.isEmpty == false
+            ? message!
+            : "Your session has expired. Please sign in again."
+        ToastManager.shared.show(toastMessage, style: .error, position: .bottom)
+    }
+
+    /// Backward-compatible entry point for callers still using the old name.
+    @MainActor
+    func sessionExpiry(appState: AppState) async {
+        await handleSessionExpired(appState: appState)
+    }
+
     // MARK: - Force Logout
     func forceLogout(appState: AppState) async {
-        sessionExpiry(appState: appState)
+        await handleSessionExpired(appState: appState)
     }
 
     // MARK: - Reset App State
@@ -217,6 +293,7 @@ final class SessionManager: ObservableObject {
         appState.otpVerified = false
         appState.isAuthenticated = false
         appState.flow = .choice
+        appState.invalidateProtectedShell()
         // RSA keys are intentionally kept across logout so the biometric login
         // button re-appears on ChoiceScreen. Keys are only cleared when the user
         // explicitly disables biometrics in Settings or the server rejects the key.

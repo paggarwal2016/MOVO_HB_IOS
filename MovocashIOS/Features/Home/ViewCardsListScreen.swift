@@ -41,15 +41,20 @@ struct ViewCardsListScreen: View {
     }
     
     var body: some View {
-        Group {
-            if displayCards.isEmpty {
-                emptyState
-            } else {
-                cardsList
+        ZStack {
+            MovoBackground()
+            Group {
+                if displayCards.isEmpty {
+                    emptyState
+                } else {
+                    cardsList
+                }
             }
         }
         .navigationTitle("Cards")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.movo.background, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -57,7 +62,7 @@ struct ViewCardsListScreen: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.primary)
+                        .foregroundStyle(Color.movo.accent)
                 }
             }
         }
@@ -99,7 +104,6 @@ struct ViewCardsListScreen: View {
                         showCardDetail = true
                     } label: {
                         CardItemView(card: card, isSelected: selectedCard?.id == card.id)
-                            .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 5)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -133,18 +137,18 @@ struct ViewCardsListScreen: View {
         VStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(Color(.systemGray5))
+                    .fill(Color.movo.elevated)
                     .frame(width: 80, height: 80)
                 Image(systemName: "creditcard.slash")
                     .font(.system(size: 32, weight: .medium))
-                    .foregroundStyle(Color.secTcolor)
+                    .foregroundStyle(Color.movo.textTertiary)
             }
             Text("No Cards Yet")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.preTcolor)
+                .textStyle(Typography.cardHero)
+                .foregroundStyle(Color.movo.textPrimary)
             Text("Cards you create will appear here.")
-                .font(.system(size: 14))
-                .foregroundStyle(Color.secTcolor)
+                .textStyle(Typography.body)
+                .foregroundStyle(Color.movo.textTertiary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

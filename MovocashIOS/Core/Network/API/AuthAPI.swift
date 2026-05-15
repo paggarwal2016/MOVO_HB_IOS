@@ -20,6 +20,8 @@ enum AuthAPI: Endpoint {
     case nonceRSA(request: RSANonceRequest)
     case logout
     
+    var isAuth: Bool { true }
+
     // MARK: - API Version
     var version: APIVersion { .v1 }
 

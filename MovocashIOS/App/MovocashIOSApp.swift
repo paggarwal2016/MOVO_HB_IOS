@@ -19,8 +19,6 @@ struct MovocashIOSApp: App {
     @StateObject private var passcodeSetupVM: AppLockViewModel
     @StateObject private var kycVM: KYCViewModel
     @StateObject private var pushManager: PushManager
-    @State private var isHandlingSessionExpiry = false
-
     init() {
         let c = AppContainer()
         let setupVM = AppLockViewModel(lockManager: c.lockManager)
@@ -35,6 +33,7 @@ struct MovocashIOSApp: App {
         _kycVM            = StateObject(wrappedValue: c.makeKYCViewModel())
         _pushManager      = StateObject(wrappedValue: PushManager.shared)
         TabBarAppearance.configure()
+        UIRefreshControl.appearance().tintColor = DesignTokens.Palette.accent.uiColor
     }
 
     var body: some Scene {
@@ -52,17 +51,6 @@ struct MovocashIOSApp: App {
                 .networkMonitor(state: appState)
                 .globalToast()
                 .globalAlert()
-                .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-                    guard !isHandlingSessionExpiry,
-                          !container.sessionManager.isLoggingOut else { return }
-                    isHandlingSessionExpiry = true
-                    // Reset lock state so the AppLock overlay does not re-fire after
-                    // the user successfully re-authenticates on the welcome screen.
-                    container.lockManager.resetToUnlocked()
-                    // Zero-API-call expiry — clears local state and navigates immediately.
-                    container.sessionManager.sessionExpiry(appState: appState)
-                    isHandlingSessionExpiry = false
-                }
         }
     }
 }

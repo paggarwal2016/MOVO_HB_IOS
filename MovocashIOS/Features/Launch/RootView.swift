@@ -194,7 +194,7 @@ struct RootView: View {
                     )
 
                 case .appLock:
-                    AppLockView(vm: lockVM, autoTriggerBiometric: false)
+                    AppLockView(vm: lockVM, autoTriggerBiometric: lockManager.isBiometricEnabled)
 
                 case .kyc:
                     EmptyView()
@@ -205,11 +205,12 @@ struct RootView: View {
                     }
 
                 case .home:
-                    //PayAnyoneView()
                     HomeTabBarView(container: container)
+                        .id(appState.protectedShellID)
                 }
                 }
             }
+            .id(appState.protectedShellID)
             // Do not apply implicit animation to `appState.flow` here. Each onboarding
             // screen uses `AmbientGlowView` (heavy blur). Animating flow changes cross-
             // fades those layers against the stack's default background and reads as a
@@ -312,7 +313,7 @@ struct RootView: View {
         }
         .onChangeCompat(of: lockManager.state) { newState in
             guard newState == .unlocked, appState.flow == .appLock else { return }
-            appState.flow = .home
+            appState.flow = appState.isAuthenticated ? .home : .loginPhone
         }
         .onChangeCompat(of: lockManager.requiresPhoneLogin) { required in
             guard required else { return }
@@ -343,6 +344,19 @@ struct RootView: View {
             // Returns true so submitBiometric unlocks silently after success.
             lockVM.onBiometricSuccess = {
                 await authVM.loginWithBiometric(appState: appState)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
+            guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
+            let message = notification.userInfo?["message"] as? String
+            Task { @MainActor in
+                UIApplication.shared.dismissKeyboard()
+                AlertManager.shared.dismiss()
+                lockManager.logout()
+                lockVM.clearInput()
+                authVM.reset()
+                userVM.cancelAllTasks()
+                await sessionManager.handleSessionExpired(appState: appState, message: message)
             }
         }
     }

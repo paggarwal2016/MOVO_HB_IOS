@@ -58,6 +58,15 @@ actor NetworkService: NetworkServiceProtocol {
     // MARK: - Public Request
     func request<T: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> T {
 
+        // Session gate — block all outbound calls once the session has expired,
+        // except auth endpoints (OTP, token exchange) so re-login is always possible.
+        if await SessionGate.shared.isExpired, await !endpoint.isAuth {
+            if await SessionGate.shared.isLoggingOut {
+                throw CancellationError()
+            }
+            throw NetworkError.unauthorized
+        }
+
         // Security check
         if await JailbreakDetector.shared.isJailbroken {
             throw NetworkError.securityViolation
@@ -108,6 +117,14 @@ actor NetworkService: NetworkServiceProtocol {
 
     // MARK: - Raw Data Request
     func requestData(_ endpoint: Endpoint) async throws -> Data {
+
+        // Session gate — same guard as request()
+        if await SessionGate.shared.isExpired, await !endpoint.isAuth {
+            if await SessionGate.shared.isLoggingOut {
+                throw CancellationError()
+            }
+            throw NetworkError.unauthorized
+        }
 
         if await JailbreakDetector.shared.isJailbroken {
             throw NetworkError.securityViolation
@@ -259,19 +276,14 @@ actor NetworkService: NetworkServiceProtocol {
                 
         SecureLogger.info("API Success.", category: .network)
         
-        if http.statusCode == 401 {
-            let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data))?.message
-                ?? "Session expired. Please login again."
+        if SessionExpiryNotifier.shouldTerminateSession(statusCode: http.statusCode, data: data) {
+            let message = SessionExpiryNotifier.displayMessage(statusCode: http.statusCode, data: data)
             Task { @MainActor in
-                NotificationCenter.default.post(
-                    name: .sessionExpired,
-                    object: nil,
-                    userInfo: ["message": message]
-                )
+                await SessionExpiryNotifier.postIfNeeded(message: message)
             }
             throw NetworkError.unauthorized
         }
-        
+
         if http.statusCode == 429 {
             throw NetworkError.rateLimited
         }
@@ -351,12 +363,10 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.invalidResponse
         }
 
-        if http.statusCode == 401 {
-            let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data))?.message
-                ?? "Session expired. Please login again."
+        if SessionExpiryNotifier.shouldTerminateSession(statusCode: http.statusCode, data: data) {
+            let message = SessionExpiryNotifier.displayMessage(statusCode: http.statusCode, data: data)
             Task { @MainActor in
-                NotificationCenter.default.post(name: .sessionExpired, object: nil,
-                                                userInfo: ["message": message])
+                await SessionExpiryNotifier.postIfNeeded(message: message)
             }
             throw NetworkError.unauthorized
         }

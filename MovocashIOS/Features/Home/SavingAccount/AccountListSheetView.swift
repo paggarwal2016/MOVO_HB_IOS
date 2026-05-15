@@ -35,7 +35,8 @@ struct AccountListSheetView: View {
     @State private var showCreateCashCard = false
     @State private var showEditNickname = false
     @State private var accountToEdit: SavingsAccountInfo?
-    
+    @State private var activeTask: Task<Void, Never>?
+
     @State private var sortBy: SavingsSortBy = .id
     @State private var sortDirection: SavingsSortDirection = .asc
     
@@ -86,7 +87,7 @@ struct AccountListSheetView: View {
             placeholder: "Type here...",
             config: TextInputAlertConfig(primaryLabel: "Save"),
             onCreate: { name in
-                Task { await updateNickname(name: name) }
+                activeTask = Task { await updateNickname(name: name) }
             }
         )
         .sheet(item: $selectedDetailAccount) { account in
@@ -95,6 +96,14 @@ struct AccountListSheetView: View {
                 .presentationDragIndicator(.visible)
         }
         .globalAlert()
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            activeTask?.cancel()
+            activeTask = nil
+            showCreateCashCard = false
+            showEditNickname = false
+            selectedDetailAccount = nil
+            isPresented = false
+        }
         .task { await loadAccounts() }
         .onChange(of: sortBy) { _ in Task { await loadAccounts() } }
         .onChange(of: sortDirection) { _ in Task { await loadAccounts() } }
@@ -197,9 +206,11 @@ struct AccountListSheetView: View {
             _ = try await savingVM.updateSavingAccount(
                 request: SavingsAccountRequest.UpdateAccount(nickname: name, accountId: account.id, userAction: "")
             )
+            guard !Task.isCancelled else { return }
             ToastManager.shared.show("Nickname updated!", style: .success, position: .bottom)
-            backgroundSync()                                   // silent server sync
+            backgroundSync()
         } catch {
+            guard !Task.isCancelled else { return }
             ToastManager.shared.show("Failed to update nickname.", style: .error, position: .bottom)
         }
     }
@@ -211,7 +222,7 @@ struct AccountListSheetView: View {
             title: "Delete Account",
             message: "Are you sure you want to delete \"\(account.nickname ?? account.maskedAccountNumber) Account\"?",
             onConfirm: {
-                Task { await deleteAccount(account) }
+                activeTask = Task { await deleteAccount(account) }
             }
         )
     }
@@ -228,10 +239,12 @@ struct AccountListSheetView: View {
                     accountId: account.id, userAction: ""
                 )
             )
-            accounts.removeAll { $0.id == account.id }         // instant UI update
+            guard !Task.isCancelled else { return }
+            accounts.removeAll { $0.id == account.id }
             ToastManager.shared.show("Account deleted.", style: .success, position: .bottom)
-            backgroundSync()                                   // silent server sync
+            backgroundSync()
         } catch {
+            guard !Task.isCancelled else { return }
             ToastManager.shared.show("Failed to delete account.", style: .error, position: .bottom)
         }
     }

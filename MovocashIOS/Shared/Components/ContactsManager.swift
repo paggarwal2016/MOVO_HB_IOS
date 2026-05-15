@@ -47,7 +47,7 @@ final class ContactsService: ContactsServiceProtocol {
                 let name = "\(contact.givenName) \(contact.familyName)"
                     .trimmingCharacters(in: .whitespaces)
                 let phone = contact.phoneNumbers.first?.value.stringValue ?? ""
-                let initials = "\(contact.givenName.prefix(1))\(contact.familyName.prefix(1))"
+                _ = "\(contact.givenName.prefix(1))\(contact.familyName.prefix(1))"
                 guard !name.isEmpty else { return }
                 result.append(ContactRecord(id: contact.identifier, isFav: false, nickname: name, createdAt: Date(), phoneNumber: phone, isAdded: false, updatedAt: Date()))
             }

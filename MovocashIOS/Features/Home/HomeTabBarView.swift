@@ -103,6 +103,12 @@ struct HomeTabBarView: View {
             await dashboardVM.fetchDashboard()
         }
         .onAppear(perform: handleOnAppear)
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            dashboardVM.cancelAllTasks()
+            linkAccountVM.cancelAllTasks()
+            vCardVM.cancelAllTasks()
+            selectedTab = .home
+        }
     }
 }
 

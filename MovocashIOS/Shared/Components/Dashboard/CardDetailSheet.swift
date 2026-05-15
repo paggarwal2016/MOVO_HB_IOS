@@ -18,6 +18,9 @@ struct CardDetailSheet: View {
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
     @State private var showTransfer = false
+    @State private var isLoading = false
+    @State private var walletTask: Task<Void, Never>?
+    @State private var deleteTask: Task<Void, Never>?
     @StateObject private var txVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
     
@@ -40,7 +43,7 @@ struct CardDetailSheet: View {
     var body: some View {
         ZStack {
             MovoBackground()
-            
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     navBar
@@ -53,15 +56,30 @@ struct CardDetailSheet: View {
                     Spacer().frame(height: Spacing.xxl)
                 }
             }
+
+            if isLoading {
+                SpinnerView()
+            }
         }
         .navigationBarBackButtonHidden(true)
         .alert("Delete Card", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
-                Task { await deleteCard() }
+                deleteTask = Task { await deleteCard() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete this card? This action cannot be undone.")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            walletTask?.cancel()
+            walletTask = nil
+            deleteTask?.cancel()
+            deleteTask = nil
+            showDeleteConfirm = false
+            showTransfer = false
+            isLoading = false
+            isDeleting = false
+            dismiss()
         }
         .sheet(isPresented: $showTransfer) {
             let accounts = savingVM.accountList?.data.accounts ?? []
@@ -82,6 +100,7 @@ struct CardDetailSheet: View {
             }
         }
         .task {
+            isLoading = true
             let accountId = card.savingsAccountId
             let needsAccounts = savingVM.accountList == nil
             async let transactions: () = {
@@ -93,13 +112,14 @@ struct CardDetailSheet: View {
                 await savingVM.loadAccounts()
             }()
             _ = await (transactions, accounts)
+            isLoading = false
         }
     }
     
     
     private var appleWalletButton: some View {
         Button(action: {
-            Task {
+            walletTask = Task {
                 guard let accountId = card.savingsAccountId else { return }
                 await achVM.addVirtualCardToAppleWallet(
                     accountId: accountId,
@@ -528,10 +548,12 @@ struct CardDetailSheet: View {
                     userAction: "VCARD-DELETE"
                 )
             )
+            guard !Task.isCancelled else { return }
             ToastManager.shared.show("Card deleted.", style: .success, position: .bottom)
             dismiss()
             onDeleted()
         } catch {
+            guard !Task.isCancelled else { return }
             ToastManager.shared.show("Failed to delete card.", style: .error, position: .bottom)
         }
         isDeleting = false

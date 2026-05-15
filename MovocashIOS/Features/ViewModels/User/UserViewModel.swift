@@ -66,7 +66,9 @@ final class UserViewModel: BaseViewModel {
         } catch is CancellationError {
             // User dismissed the pull gesture — keep existing data silently
         } catch {
-            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
+            if error.shouldShowUserFacingToast {
+                ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
+            }
         }
     }
 

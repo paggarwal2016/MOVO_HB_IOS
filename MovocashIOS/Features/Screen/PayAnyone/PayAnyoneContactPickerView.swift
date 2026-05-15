@@ -22,6 +22,8 @@ struct PayAnyoneContactPickerView: View {
     @State private var selectedFrequent: ContactRecord? = nil
     @State private var showCreateContact = false
     @State private var isInitialLoading = true
+    @State private var loadTask: Task<Void, Never>?
+    @State private var createContactTask: Task<Void, Never>?
 
     init(container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal, onTransferSuccess: @escaping () -> Void = {}) {
         self.container = container
@@ -128,11 +130,12 @@ struct PayAnyoneContactPickerView: View {
             }
             .sheet(isPresented: $showCreateContact) {
                 AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
-                    Task {
+                    createContactTask = Task {
                         let success = await contactVM.createContact(
                             nickname: data.nickname,
                             phoneNumber: data.phoneE164
                         )
+                        guard !Task.isCancelled else { return }
                         contactVM.clear()
                         showCreateContact = false
                         if success {
@@ -149,13 +152,24 @@ struct PayAnyoneContactPickerView: View {
                 .presentationBackground(Color.movo.surface)
             }
             .blur(radius: showCreateContact ? 3 : 0)
+            .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+                loadTask?.cancel()
+                loadTask = nil
+                createContactTask?.cancel()
+                createContactTask = nil
+                isInitialLoading = false
+                showCreateContact = false
+                selectedFrequent = nil
+                dismiss()
+            }
             .onAppear {
                 authStatus = CNContactStore.authorizationStatus(for: .contacts)
-                Task {
+                loadTask = Task {
                     await contactVM.loadApiContacts()
                     await contactVM.loadFrequent()
                     await contactVM.loadFavourites()
                     if isAuthorized { await contactVM.load() }
+                    guard !Task.isCancelled else { return }
                     isInitialLoading = false
                 }
             }

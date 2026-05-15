@@ -115,6 +115,7 @@ private extension ProfileScreen {
             await userVM.refresh()
             await achVM.fetchAccounts()
         }
+        .tint(Color.movo.accent)
         .sheet(isPresented: $showBiometricEnrollSheet, onDismiss: {
             isBiometricOn = lockManager.isBiometricEnabled
         }) {

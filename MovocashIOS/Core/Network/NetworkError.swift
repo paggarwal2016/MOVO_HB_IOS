@@ -79,3 +79,74 @@ enum NetworkError: LocalizedError, Sendable {
         }
     }
 }
+
+extension Error {
+    /// Session expiry and intentional logout are handled centrally; callers must not
+    /// surface duplicate toasts for these errors.
+    var shouldShowUserFacingToast: Bool {
+        if self is CancellationError { return false }
+        if let error = self as? NetworkError, case .unauthorized = error { return false }
+        return true
+    }
+}
+
+// MARK: - Session Expiry Detection
+
+/// Central detection and broadcast for server-driven session termination.
+enum SessionExpiryNotifier {
+
+    /// Response parsing only — safe to call from `NetworkService`'s nonisolated request path.
+    nonisolated static func shouldTerminateSession(statusCode: Int, data: Data) -> Bool {
+        if statusCode == 401 { return true }
+        // Literal — avoids module-level storage that Swift 6 may isolate to @MainActor.
+        guard [403, 419, 440].contains(statusCode),
+              let message = apiMessage(from: data) else { return false }
+        return isSessionExpiredMessage(message)
+    }
+
+    nonisolated static func displayMessage(statusCode: Int, data: Data) -> String {
+        if let message = apiMessage(from: data), !message.isEmpty {
+            return message
+        }
+        return "Your session has expired. Please sign in again."
+    }
+
+    @MainActor
+    static func postIfNeeded(message: String) async {
+        let gateExpired = await SessionGate.shared.isExpired
+        let loggingOut = await SessionGate.shared.isLoggingOut
+        guard !gateExpired, !loggingOut else { return }
+        NotificationCenter.default.post(
+            name: .sessionExpired,
+            object: nil,
+            userInfo: ["message": message]
+        )
+    }
+
+    nonisolated static func isSessionExpiredMessage(_ message: String) -> Bool {
+        let normalized = message.lowercased()
+        let patterns = [
+            "session expired",
+            "session timeout",
+            "session timed out",
+            "session has expired",
+            "session is expired",
+            "session invalid",
+            "session not found",
+            "invalid session",
+            "token expired",
+            "token invalid",
+            "jwt expired",
+            "please login again",
+            "please log in again",
+            "please sign in again",
+            "sign in again",
+            "log in again"
+        ]
+        return patterns.contains { normalized.contains($0) }
+    }
+
+    nonisolated private static func apiMessage(from data: Data) -> String? {
+        try? JSONDecoder().decode(APIErrorResponse.self, from: data).message
+    }
+}

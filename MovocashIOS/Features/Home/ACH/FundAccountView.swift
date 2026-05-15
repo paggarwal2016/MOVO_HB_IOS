@@ -29,6 +29,7 @@ struct FundAccountView: View {
     @State private var showAccountSheet: Bool = false
     @State private var isSubmitting: Bool = false
     @State private var successData: SuccessConfirmation?
+    @State private var transferTask: Task<Void, Never>?
     @FocusState private var isAmountFocused: Bool
 
     private var enteredAmount: Decimal { Decimal(string: amount) ?? 0 }
@@ -98,6 +99,14 @@ struct FundAccountView: View {
             if focused && amount == "0" { amount = "" }
             if !focused && amount.isEmpty { amount = "0" }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            transferTask?.cancel()
+            transferTask = nil
+            isSubmitting = false
+            showConfirmSheet = false
+            showAccountSheet = false
+            dismiss()
+        }
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(
                 channel: .external,
@@ -112,13 +121,14 @@ struct FundAccountView: View {
                     guard let account = selectedAccount else { return }
                     showConfirmSheet = false
                     isSubmitting = true
-                    Task {
+                    transferTask = Task {
                         let request = ACHRequest(
                             amount: Int(amount) ?? 0,
                             achAccountId: account.achAccountId,
                             userAction: "SUBMITS-ACH-DEPOSIT"
                         )
                         let success = await vm.initiateTransfer(request: request)
+                        guard !Task.isCancelled else { return }
                         isSubmitting = false
                         if success {
                             let dateText = Date.now.formatted(date: .long, time: .shortened)

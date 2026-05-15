@@ -59,7 +59,9 @@ class BaseViewModel: ObservableObject {
             throw CancellationError()
         } catch {
             state = .idle
-            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
+            if error.shouldShowUserFacingToast {
+                ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
+            }
             throw error
         }
     }

@@ -59,6 +59,11 @@ struct ViewCardScreen: View {
             }
         )
         .overlay { overlayContent }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            showAddCard = false
+            showCardDetail = false
+            isPresented = false
+        }
         .task {
             await loadCard()
         }

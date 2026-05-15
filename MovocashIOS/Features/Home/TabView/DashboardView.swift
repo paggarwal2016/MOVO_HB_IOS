@@ -250,9 +250,28 @@ struct DashboardView: View {
             guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
             guard !hasLoadedData else { return }
             hasLoadedData = true
-            async let cards: () = vm.loadCards()
-            async let linkedAccounts: () = linkAccountVM.fetchAccounts()
-            _ = await (cards, linkedAccounts)
+            await dashboardVM.refresh()
+            await vm.loadCards()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            // Reset every navigation flag so the inner NavigationStack has no active
+            // destinations to animate away when the flow changes to .choice.
+            // This fires in the same notification cycle as MovocashIOSApp.onReceive
+            // (which is deferred by one Task), so these dismissals happen first.
+            showCardDetail = false
+            selectedCard = nil
+            showTransactions = false
+            showViewCardList = false
+            showViewCard = false
+            showMoveMoney = false
+            showContactList = false
+            showAllFrequents = false
+            showFundAccount = false
+            showInternalTransfer = false
+            showAccountDetail = false
+            showAccountList = false
+            showCreateCashCard = false
+            quickTransferContact = nil
         }
         .onAppear {
             showCreateCashCard = false
@@ -284,6 +303,7 @@ struct DashboardView: View {
         }
         .refreshable {
             await dashboardVM.refresh()
+            await vm.loadCards()
         }
     }
 

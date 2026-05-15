@@ -23,6 +23,7 @@ struct QuickTransferView: View {
     @State private var showConfirmSheet = false
     @State private var showAccountSheet = false
     @State private var successData: SuccessConfirmation?
+    @State private var sendTask: Task<Void, Never>?
 
     var onSuccess: () -> Void = {}
 
@@ -90,6 +91,13 @@ struct QuickTransferView: View {
             if !focused && amountText.isEmpty { amountText = "0" }
         }
         .globalAlert()
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            sendTask?.cancel()
+            sendTask = nil
+            showConfirmSheet = false
+            showAccountSheet = false
+            dismiss()
+        }
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(
                 channel: .peer,
@@ -102,7 +110,7 @@ struct QuickTransferView: View {
                 onCancel: { showConfirmSheet = false },
                 onConfirm: {
                     showConfirmSheet = false
-                    Task { await sendMoney() }
+                    sendTask = Task { await sendMoney() }
                 }
             )
             .padding(.top, 30)
@@ -526,7 +534,13 @@ struct QuickTransferView: View {
             userAction: "Internal-Transfer",
             nickname: contact.nickname ?? ""
         )
-        guard await transVM.submitInternalTransfer(request: request) else {
+        let success = await transVM.submitInternalTransfer(request: request)
+
+        // If the task was cancelled mid-flight (session expired), do nothing —
+        // the .onReceive handler already dismissed this view.
+        guard !Task.isCancelled else { return }
+
+        guard success else {
             AlertManager.shared.showError("Transfer failed. Please try again.")
             return
         }
