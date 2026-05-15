@@ -49,17 +49,16 @@ enum Tab: Hashable {
 enum TabBarAppearance {
     static func configure() {
         let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = MovoTheme.color.background.uiColor
-        appearance.shadowColor = MovoTheme.color.accent.uiColor.withAlphaComponent(0.5)
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = .clear
+        appearance.shadowColor = .clear
 
-        let selected   = MovoTheme.color.accent.uiColor
-        let unselected = MovoTheme.color.textTertiary.uiColor
-
-        appearance.stackedLayoutAppearance.selected.iconColor = selected
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: selected]
-        appearance.stackedLayoutAppearance.normal.iconColor   = unselected
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes   = [.foregroundColor: unselected]
+        // Hide native items — custom SwiftUI bar renders on top
+        let invisible: [NSAttributedString.Key: Any] = [.foregroundColor: UIColor.clear]
+        appearance.stackedLayoutAppearance.selected.iconColor   = .clear
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = invisible
+        appearance.stackedLayoutAppearance.normal.iconColor     = .clear
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes   = invisible
 
         UITabBar.appearance().standardAppearance   = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
@@ -315,13 +314,16 @@ private extension HomeTabBarView {
     }
 
     var realTabView: some View {
-        TabView(selection: $selectedTab) {
-            ForEach(resolvedTabs, id: \.self) { tab in
-                tabContent(for: tab)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                ForEach(resolvedTabs, id: \.self) { tab in
+                    tabContent(for: tab)
+                }
             }
+            .tint(Color.movo.accent)
+
+            customTabBar
         }
-        .tint(Color.movo.accent)
-        .onAppear { TabBarAppearance.configure() }
     }
 
     @ViewBuilder
@@ -333,6 +335,38 @@ private extension HomeTabBarView {
             Label(tabLabel(for: tab), systemImage: tab.icon)
         }
         .tag(tab)
+    }
+
+    private var customTabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(resolvedTabs, id: \.self) { tab in
+                Button {
+                    selectedTab = tab
+                } label: {
+                    VStack(spacing: 5) {
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 22, weight: selectedTab == tab ? .semibold : .regular))
+                        Text(tabLabel(for: tab))
+                            .textStyle(Typography.micro)
+                    }
+                    .foregroundStyle(selectedTab == tab ? Color.movo.accent : Color.movo.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.md)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: selectedTab == tab)
+            }
+        }
+        .background(
+            Color.movo.background
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(Color.movo.border)
+                        .frame(height: Stroke.hairline)
+                }
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 
     @ViewBuilder

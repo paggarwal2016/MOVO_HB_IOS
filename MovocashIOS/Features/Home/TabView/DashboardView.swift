@@ -84,7 +84,7 @@ struct DashboardView: View {
             )
             .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
-            .presentationCornerRadius(15)
+            .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.surface)
         }
         .textInputAlert(
@@ -200,6 +200,9 @@ struct DashboardView: View {
                     Task { try? await Task.sleep(nanoseconds: 350_000_000); showInternalTransfer = true }
                 }
             )
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.surface)
         }
         .navigationDestination(isPresented: $showViewCardList) {
             ViewCardsListScreen(
@@ -239,7 +242,7 @@ struct DashboardView: View {
                 })
                 .presentationDetents([.height(260)])
                 .presentationDragIndicator(.visible)
-                .presentationCornerRadius(15)
+                .presentationCornerRadius(Radius.sheet)
                 .presentationBackground(Color.movo.surface)
             }
         }
@@ -294,23 +297,6 @@ struct DashboardView: View {
             DashboardSkeletonView()
         }
     }
-
-//    @ViewBuilder
-//    private var combinedOverlay: some View {
-//        if dashboardVM.state == .loading && !showCreateCashCard && dashboardVM.primaryAccount == nil {
-//            SpinnerView()
-//        }
-//        if showPrimaryAccountDetails, let display = displayAccount {
-//            dimmedOverlay { showPrimaryAccountDetails = false } content: {
-//                SavingActDetailPopupView(
-//                    account: display,
-//                    isPresented: $showPrimaryAccountDetails,
-//                    showEditNickname: $showEditNickname
-//                )
-//                .padding(.horizontal, 15)
-//            }
-//        }
-//    }
 
     // MARK: - Section Views
 

@@ -50,7 +50,7 @@ final class ContactViewModel: BaseViewModel {
         if helperIsError && digits.count != 10 {
             return "Enter a valid 10-digit phone number."
         }
-        return "We'll text them to confirm before sending money."
+        return ""
     }
     
     func clear() {

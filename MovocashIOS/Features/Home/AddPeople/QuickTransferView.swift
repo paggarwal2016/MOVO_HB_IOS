@@ -108,7 +108,7 @@ struct QuickTransferView: View {
             .padding(.top, 30)
             .presentationDetents([.height(420)])
             .presentationDragIndicator(.visible)
-            .presentationCornerRadius(24)
+            .presentationCornerRadius(Radius.sheet)
         }
         .fullScreenCover(item: $successData) { data in
             SuccessConfirmationView(
@@ -429,7 +429,7 @@ struct QuickTransferView: View {
         .preferredColorScheme(.dark)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(24)
+        .presentationCornerRadius(Radius.sheet)
     }
 
     private func accountSheetRow(card: VCardListResponse, isSelected: Bool) -> some View {

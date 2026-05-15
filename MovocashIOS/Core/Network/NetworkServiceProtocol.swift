@@ -10,4 +10,5 @@ import Foundation
 protocol NetworkServiceProtocol {
     func request<T: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> T
     func requestData(_ endpoint: Endpoint) async throws -> Data
+    func resetSession() async
 }

@@ -146,7 +146,7 @@ struct InternalTransferView: View {
             .padding(.top, 30)
             .presentationDetents([.height(descriptionText.isEmpty ? 420 : 490)])
             .presentationDragIndicator(.visible)
-            .presentationCornerRadius(24)
+            .presentationCornerRadius(Radius.sheet)
         }
         .task {
             if initialCards.isEmpty {

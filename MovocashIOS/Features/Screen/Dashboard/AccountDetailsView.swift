@@ -47,7 +47,7 @@ struct AccountDetailsView: View {
             .presentationDetents([.height(320)])
             .presentationDragIndicator(.visible)
             .presentationBackground(Color.movo.surface)
-            .presentationCornerRadius(24)
+            .presentationCornerRadius(Radius.sheet)
         }
 
     }

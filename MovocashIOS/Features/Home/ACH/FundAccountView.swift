@@ -140,7 +140,7 @@ struct FundAccountView: View {
             .padding(.top, 30)
             .presentationDetents([.height(420)])
             .presentationDragIndicator(.visible)
-            .presentationCornerRadius(24)
+            .presentationCornerRadius(Radius.sheet)
         }
         .sheet(isPresented: $showAccountSheet) {
             let rowHeight: CGFloat = 86
