@@ -23,9 +23,6 @@ actor NetworkService: NetworkServiceProtocol {
     private var refreshWaiters: [CheckedContinuation<Void, Error>] = []
     private let maxAttempts = 3  // 1 initial attempt + 2 retries
 
-    /// Set to true on the first 401 — all subsequent requests are blocked immediately
-    /// without hitting the network. Reset to false when a new session starts (login).
-    private var sessionInvalidated = false
 
     // Custom session for security
     private let session: URLSession
@@ -58,18 +55,8 @@ actor NetworkService: NetworkServiceProtocol {
         self.builder = RequestBuilder()
     }
     
-    // MARK: - Session Gate
-
-    /// Called by SessionManager on successful login to allow requests again.
-    func resetSession() {
-        sessionInvalidated = false
-    }
-
     // MARK: - Public Request
     func request<T: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> T {
-
-        // Block immediately if session was invalidated by a previous 401
-        guard !sessionInvalidated else { throw NetworkError.unauthorized }
 
         // Security check
         if await JailbreakDetector.shared.isJailbroken {
@@ -99,19 +86,18 @@ actor NetworkService: NetworkServiceProtocol {
             } catch let error as NetworkError {
                 lastError = error
 
-                if case .unauthorized = error {
-                    sessionInvalidated = true  // gate all future requests
-                    throw error
-                }
-
                 // Only retry on specific recoverable errors.
+                // All other errors throw immediately — no retry.
                 switch error {
                 case .rateLimited, .serverError, .timeout, .noInternet:
+                    // 429 / 5xx / timeout / no connectivity — retry with exponential backoff
                     guard attempt < maxAttempts - 1 else { throw error }
-                    let backoff = UInt64(500_000_000) * UInt64(attempt + 1)
-                    let jitter  = UInt64.random(in: 0..<100_000_000)
+                    let backoff = UInt64(500_000_000) * UInt64(attempt + 1) // 500ms, 1000ms
+                    let jitter  = UInt64.random(in: 0..<100_000_000)        // up to 100ms
                     try await Task.sleep(nanoseconds: backoff + jitter)
+
                 default:
+                    // 401, decode error, any other client error — throw immediately, no retry
                     throw error
                 }
             }
@@ -122,8 +108,6 @@ actor NetworkService: NetworkServiceProtocol {
 
     // MARK: - Raw Data Request
     func requestData(_ endpoint: Endpoint) async throws -> Data {
-
-        guard !sessionInvalidated else { throw NetworkError.unauthorized }
 
         if await JailbreakDetector.shared.isJailbroken {
             throw NetworkError.securityViolation
@@ -149,12 +133,6 @@ actor NetworkService: NetworkServiceProtocol {
                 }
             } catch let error as NetworkError {
                 lastError = error
-
-                if case .unauthorized = error {
-                    sessionInvalidated = true
-                    throw error
-                }
-
                 switch error {
                 case .rateLimited, .serverError, .timeout, .noInternet:
                     guard attempt < maxAttempts - 1 else { throw error }

@@ -51,9 +51,6 @@ final class SessionManager: ObservableObject {
         appState: AppState
     ) async throws {
 
-        // Lift the 401 gate so new requests can proceed
-        await network.resetSession()
-
         // Store securely — Keychain is the single source of truth
         try await storeTokens(
             accessToken: accessToken
