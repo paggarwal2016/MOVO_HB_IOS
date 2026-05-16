@@ -27,6 +27,7 @@ struct ProfileScreen: View {
     @State private var isLoggingOut              = false
     @State private var showSignOutAlert          = false
     @State private var showDeleteAlert           = false
+    @State private var isLinkedAccountLoading    = false
     
     init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel) {
         self.dashboardVM = dashboardVM
@@ -45,8 +46,10 @@ struct ProfileScreen: View {
     }
     
     private var effectiveAccounts: [ACHAccount] {
-        if !achVM.accounts.isEmpty { return achVM.accounts }
-        return dashboardVM.linkedAccounts?.linkedAccounts?.map { ACHAccount(from: $0) } ?? []
+        if let accounts = dashboardVM.linkedAccounts?.linkedAccounts, !accounts.isEmpty {
+            return accounts
+        }
+        return achVM.accounts
     }
     
     var body: some View {
@@ -60,6 +63,10 @@ struct ProfileScreen: View {
                 } else {
                     emptyState
                 }
+            }
+            if isLinkedAccountLoading {
+                Color.black.opacity(0.45).ignoresSafeArea()
+                SpinnerView()
             }
         }
         .task {
@@ -112,8 +119,10 @@ private extension ProfileScreen {
         }
         .scrollContentBackground(.hidden)
         .refreshable {
-            await userVM.refresh()
-            await achVM.fetchAccounts()
+            async let profile: () = userVM.refresh()
+            async let accounts: () = achVM.refresh()
+            async let dashboard: () = dashboardVM.refresh()
+            _ = await (profile, accounts, dashboard)
         }
         .tint(Color.movo.accent)
         .sheet(isPresented: $showBiometricEnrollSheet, onDismiss: {
@@ -430,7 +439,8 @@ private extension ProfileScreen {
                     Button {
                         Task {
                             await achVM.updateAccount(id: account.achAccountId)
-                            await achVM.fetchAccounts()
+                            //await achVM.fetchAccounts()
+                            await dashboardVM.refresh()
                         }
                     } label: {
                         Image(systemName: "star")
@@ -448,7 +458,12 @@ private extension ProfileScreen {
                         title: "Remove Account",
                         message: "Are you sure you want to remove \(account.institutionName) - \(account.accountName)?",
                         onConfirm: {
-                            Task { await achVM.deleteAccount(id: account.achAccountId) }
+                            Task {
+                                isLinkedAccountLoading = true
+                                await achVM.deleteAccount(id: account.achAccountId)
+                                await dashboardVM.refresh()
+                                isLinkedAccountLoading = false
+                            }
                         }
                     )
                 } label: {
@@ -471,7 +486,9 @@ private extension ProfileScreen {
             Task {
                 await plaidVM.startPlaidLink()
                 if plaidVM.linkedAccount != nil {
-                    await achVM.fetchAccounts()
+                    isLinkedAccountLoading = true
+                    await dashboardVM.refresh()
+                    isLinkedAccountLoading = false
                 }
             }
         } label: {

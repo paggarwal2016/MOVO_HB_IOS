@@ -35,22 +35,14 @@ nonisolated struct ACHAccount: Codable, Sendable, Equatable {
         accountName          = try c.decodeIfPresent(String.self, forKey: .accountName) ?? ""
         institutionName      = try c.decodeIfPresent(String.self, forKey: .institutionName) ?? ""
         achAccountId         = try c.decodeIfPresent(Int.self,    forKey: .achAccountId) ?? 0
-        let balStr           = try c.decodeIfPresent(String.self, forKey: .plaidAccountBalance) ?? "0"
-        plaidAccountBalance  = Decimal(string: balStr) ?? 0
-    }
-
-    // MARK: - Dashboard Pre-population Init
-
-    init(from linked: DashboardLinkedAccount) {
-        plaidAccountId       = linked.plaidAccountId
-        plaidAccountBalance  = Decimal(string: linked.plaidAccountBalance) ?? 0
-        isPlaidLoginRequired = linked.isPlaidLoginRequired
-        isDefault            = linked.isDefault
-        institutionLogo      = linked.institutionLogo
-        accountNumber        = linked.accountNumber
-        accountName          = linked.accountName
-        institutionName      = linked.institutionName
-        achAccountId         = linked.achAccountId
+        // Balance arrives as a String from ACH API and as a number from the dashboard — handle both.
+        if let balStr = try? c.decodeIfPresent(String.self, forKey: .plaidAccountBalance), !balStr.isEmpty {
+            plaidAccountBalance = Decimal(string: balStr) ?? 0
+        } else if let balDouble = try? c.decodeIfPresent(Double.self, forKey: .plaidAccountBalance) {
+            plaidAccountBalance = Decimal(balDouble)
+        } else {
+            plaidAccountBalance = 0
+        }
     }
 
     // MARK: - Memberwise Init (used in ACHViewModel.updateAccount)

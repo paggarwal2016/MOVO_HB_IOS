@@ -10,14 +10,16 @@ import SwiftUI
 struct FundAccountView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @ObservedObject private var vm: ACHViewModel
+    @StateObject private var vm: ACHViewModel
     @StateObject private var achVM: PlaidAchViewModel
 
     let primaryAccount: SavingsAccountInfo
     let onConnectBank: () -> Void
+    private let initialAccounts: [ACHAccount]
 
-    init(container: AppContainer, vm: ACHViewModel, primaryAccount: SavingsAccountInfo, onConnectBank: @escaping () -> Void) {
-        self.vm = vm
+    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, onConnectBank: @escaping () -> Void) {
+        self.initialAccounts = initialAccounts
+        _vm = StateObject(wrappedValue: container.makeACHViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         self.primaryAccount = primaryAccount
         self.onConnectBank = onConnectBank
@@ -86,9 +88,13 @@ struct FundAccountView: View {
         .background(Color.movo.background.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .onAppear {
+            vm.seed(accounts: initialAccounts)
             if selectedAccount == nil {
                 selectedAccount = vm.accounts.first(where: { $0.isDefault }) ?? vm.accounts.first
             }
+        }
+        .task {
+            await vm.fetchAccounts()
         }
         .onChange(of: vm.accounts) { accounts in
             if selectedAccount == nil {

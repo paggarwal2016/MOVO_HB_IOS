@@ -415,7 +415,7 @@ nonisolated struct DashboardLinkedAccounts: Decodable, Sendable {
     let customerId: Int?
     let title: String
     let description: String
-    let linkedAccounts: [DashboardLinkedAccount]?
+    let linkedAccounts: [ACHAccount]?
     let actions: [DashboardAction]
 
     private enum CodingKeys: String, CodingKey {
@@ -430,37 +430,6 @@ nonisolated struct DashboardLinkedAccounts: Decodable, Sendable {
         description = c.decodeLossyString(forKey: .description)
         linkedAccounts = try c.decodeLossyOptionalLinkedAccountArray(forKey: .linkedAccounts)
         actions = try c.decodeLossyDashboardActionArray(forKey: .actions)
-    }
-}
-
-nonisolated struct DashboardLinkedAccount: Decodable, Sendable {
-    let achAccountId: Int
-    let institutionName: String
-    let institutionLogo: String
-    let accountName: String
-    let accountNumber: String
-    let plaidAccountId: String
-    let plaidAccountBalance: String
-    let isDefault: Bool
-    let isPlaidLoginRequired: Bool
-
-    private enum CodingKeys: String, CodingKey {
-        case achAccountId, institutionName, institutionLogo
-        case accountName, accountNumber, plaidAccountId
-        case plaidAccountBalance, isDefault, isPlaidLoginRequired
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        achAccountId = c.decodeLossyInt(forKey: .achAccountId)
-        institutionName = c.decodeLossyString(forKey: .institutionName)
-        institutionLogo = c.decodeLossyString(forKey: .institutionLogo)
-        accountName = c.decodeLossyString(forKey: .accountName)
-        accountNumber = c.decodeLossyString(forKey: .accountNumber)
-        plaidAccountId = c.decodeLossyString(forKey: .plaidAccountId)
-        plaidAccountBalance = c.decodeLossyString(forKey: .plaidAccountBalance)
-        isDefault = c.decodeLossyBool(forKey: .isDefault)
-        isPlaidLoginRequired = c.decodeLossyBool(forKey: .isPlaidLoginRequired)
     }
 }
 
@@ -572,10 +541,10 @@ nonisolated fileprivate extension KeyedDecodingContainer {
         try decodeLossyElementArray(forKey: key)
     }
 
-    func decodeLossyOptionalLinkedAccountArray(forKey key: Key) throws -> [DashboardLinkedAccount]? {
+    func decodeLossyOptionalLinkedAccountArray(forKey key: Key) throws -> [ACHAccount]? {
         guard contains(key) else { return nil }
         if try decodeNil(forKey: key) { return nil }
-        let array: [DashboardLinkedAccount] = try decodeLossyElementArray(forKey: key)
+        let array: [ACHAccount] = try decodeLossyElementArray(forKey: key)
         return array
     }
 

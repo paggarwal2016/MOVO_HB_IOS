@@ -21,15 +21,13 @@ struct DashboardView: View {
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var achVM: PlaidAchViewModel
     @StateObject private var contactVM: ContactViewModel
-    @ObservedObject var linkAccountVM: ACHViewModel
     @ObservedObject var dashboardVM: DashboardViewModel
 
     private let container: AppContainer
 
-    init(container: AppContainer, dashboardVM: DashboardViewModel, linkAccountVM: ACHViewModel, vm: VCardViewModel) {
+    init(container: AppContainer, dashboardVM: DashboardViewModel, vm: VCardViewModel) {
         self.container = container
         self.dashboardVM = dashboardVM
-        self.linkAccountVM = linkAccountVM
         self.vm = vm
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
@@ -166,7 +164,11 @@ struct DashboardView: View {
         }
         .fullScreenCover(isPresented: $showFundAccount) {
             if let account = displayAccount {
-                FundAccountView(container: container, vm: linkAccountVM, primaryAccount: account) {
+                FundAccountView(
+                    container: container,
+                    initialAccounts: dashboardVM.linkedAccounts?.linkedAccounts ?? [],
+                    primaryAccount: account
+                ) {
                     Task { await achVM.startPlaidLink() }
                 }
             }
@@ -373,20 +375,19 @@ struct DashboardView: View {
                 title: data.title,
                 description: data.description,
                 buttonLabel: data.actions.first?.label ?? "Link an account",
-                accounts: linkAccountVM.accounts,
+                accounts: data.linkedAccounts ?? [],
                 isLoading: achVM.state == .loading,
-                isLoadingAccounts: linkAccountVM.state == .loading,
                 onLinkAccount: {
                     Task {
                         await achVM.startPlaidLink()
-                        if achVM.linkedAccount != nil { await linkAccountVM.fetchAccounts() }
+                        if achVM.linkedAccount != nil { await dashboardVM.refresh() }
                     }
                     SecureLogger.debug("Link your bank tapped", category: .general)
                 },
                 onConnectAnother: {
                     Task {
                         await achVM.startPlaidLink()
-                        if achVM.linkedAccount != nil { await linkAccountVM.fetchAccounts() }
+                        if achVM.linkedAccount != nil { await dashboardVM.refresh() }
                     }
                     SecureLogger.debug("Connect another bank tapped", category: .general)
                 }

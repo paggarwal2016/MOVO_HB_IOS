@@ -31,6 +31,13 @@ final class ACHViewModel: BaseViewModel {
         super.init(alertManager: alertManager)
     }
 
+    // MARK: - Seed from Dashboard (avoids empty-state flash on first open)
+
+    func seed(accounts initialAccounts: [ACHAccount]) {
+        guard accounts.isEmpty else { return }
+        accounts = initialAccounts
+    }
+
     // MARK: - Fetch ACH Accounts
 
     func fetchAccounts() async {
@@ -44,6 +51,21 @@ final class ACHViewModel: BaseViewModel {
             // Task cancelled — no action needed
         } catch {
             analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+        }
+    }
+
+    // Pull-to-refresh — bypasses perform() so state stays idle,
+    // preventing ProfileScreen from re-rendering and cancelling the refreshable task.
+    func refresh() async {
+        do {
+            let response: ACHResponse = try await network.request(AchAPI.getAccounts)
+            accounts = response.achAccounts
+        } catch is CancellationError {
+            // User dismissed the pull gesture — keep existing data silently
+        } catch {
+            if error.shouldShowUserFacingToast {
+                ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
+            }
         }
     }
 
