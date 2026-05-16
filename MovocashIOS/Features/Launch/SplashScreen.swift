@@ -44,10 +44,10 @@ struct SplashScreen: View {
                 color: .white,
                 vertical: true
             )
-            .opacity(lockupVisible ? 1 : 0)
             .scaleEffect(lockupVisible ? 1 : 0.96)
         }
         .preferredColorScheme(.dark)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear(perform: handleAppear)
         .task {
             // Clear any stale mid-KYC flag from a previous session.

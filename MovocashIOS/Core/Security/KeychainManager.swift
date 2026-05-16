@@ -17,6 +17,12 @@ protocol KeychainManagerProtocol: Sendable {
     func get(_ key: String, biometricPrompt: String?) async throws -> String
 
     func delete(_ key: String) async throws
+
+    /// Synchronous read for app-launch routing. Does NOT prompt biometrics.
+    func getSync(_ key: String) -> KeychainSyncResult
+
+    /// Synchronous wipe of auth tokens. Safe to call at launch.
+    func clearAuthTokens()
 }
 
 
@@ -138,6 +144,33 @@ final class KeychainManager: KeychainManagerProtocol {
         }
     }
     
+    // MARK: SYNC GET
+
+    func getSync(_ key: String) -> KeychainSyncResult {
+        var query = baseQuery(for: key)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        switch status {
+        case errSecSuccess:
+            guard let data = result as? Data,
+                  let string = String(data: data, encoding: .utf8) else {
+                return .missing
+            }
+            return .found(string)
+        case errSecItemNotFound:
+            return .missing
+        case errSecInteractionNotAllowed:
+            return .locked
+        default:
+            SecureLogger.error("getSync('\(key)') failed OSStatus: \(status)", category: .auth)
+            return .missing
+        }
+    }
+
     // MARK: DELETE
     
     func delete(_ key: String) async throws {
@@ -187,6 +220,14 @@ final class KeychainManager: KeychainManagerProtocol {
 
 
 
+
+// MARK: - Sync Result
+
+enum KeychainSyncResult {
+    case found(String)
+    case missing
+    case locked   // device not unlocked since reboot
+}
 
 // MARK: - Errors
 

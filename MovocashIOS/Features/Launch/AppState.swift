@@ -56,6 +56,13 @@ final class AppState: ObservableObject {
     /// Exceeding this triggers a full logout so no partial session can be resumed.
     static let onboardingInactivityTimeout: TimeInterval = 600 // 10 minutes
 
+    /// Matches server-side API idle timeout. Used by StartupRouter in PR 2 to skip
+    /// AppLock for PIN-only users when the server session is certainly dead.
+    static let apiIdleTimeout: TimeInterval = 15 * 60
+
+    /// One-shot guard so post-bootstrap warmup (PR 2) cannot re-run if RootView's .task re-fires.
+    var hasCompletedBootstrap = false
+
     func invalidateProtectedShell() {
         protectedShellID = UUID()
     }
