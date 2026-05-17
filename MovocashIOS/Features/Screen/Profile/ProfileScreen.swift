@@ -46,10 +46,10 @@ struct ProfileScreen: View {
     }
     
     private var effectiveAccounts: [ACHAccount] {
-        if let accounts = dashboardVM.linkedAccounts?.linkedAccounts, !accounts.isEmpty {
-            return accounts
+        if !achVM.accounts.isEmpty {
+            return achVM.accounts
         }
-        return achVM.accounts
+        return dashboardVM.linkedAccounts?.linkedAccounts ?? []
     }
     
     var body: some View {
@@ -70,6 +70,7 @@ struct ProfileScreen: View {
             }
         }
         .task {
+            achVM.seed(accounts: dashboardVM.linkedAccounts?.linkedAccounts ?? [])
             guard achVM.accounts.isEmpty else { return }
             await achVM.fetchAccounts()
         }
@@ -119,10 +120,11 @@ private extension ProfileScreen {
         }
         .scrollContentBackground(.hidden)
         .refreshable {
-            async let profile: () = userVM.refresh()
-            async let accounts: () = achVM.refresh()
-            async let dashboard: () = dashboardVM.refresh()
-            _ = await (profile, accounts, dashboard)
+            await Task {
+                async let profile: () = userVM.refresh()
+                async let accounts: () = achVM.refresh()
+                _ = await (profile, accounts)
+            }.value
         }
         .tint(Color.movo.accent)
         .sheet(isPresented: $showBiometricEnrollSheet, onDismiss: {
@@ -439,8 +441,7 @@ private extension ProfileScreen {
                     Button {
                         Task {
                             await achVM.updateAccount(id: account.achAccountId)
-                            //await achVM.fetchAccounts()
-                            await dashboardVM.refresh()
+                            await achVM.fetchAccounts()
                         }
                     } label: {
                         Image(systemName: "star")
@@ -461,7 +462,7 @@ private extension ProfileScreen {
                             Task {
                                 isLinkedAccountLoading = true
                                 await achVM.deleteAccount(id: account.achAccountId)
-                                await dashboardVM.refresh()
+                                await achVM.fetchAccounts()
                                 isLinkedAccountLoading = false
                             }
                         }
@@ -487,7 +488,7 @@ private extension ProfileScreen {
                 await plaidVM.startPlaidLink()
                 if plaidVM.linkedAccount != nil {
                     isLinkedAccountLoading = true
-                    await dashboardVM.refresh()
+                    await achVM.fetchAccounts()
                     isLinkedAccountLoading = false
                 }
             }

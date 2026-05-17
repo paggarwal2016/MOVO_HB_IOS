@@ -53,7 +53,6 @@ struct CardItemView: View {
             .padding(Spacing.lg)
         }
         .frame(height: 145)
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
 
@@ -65,7 +64,7 @@ struct CardSelectorView: View {
     
     @State private var selectedIndex: Int = 0
     @State private var dragOffset: CGFloat = 0
-    @State private var peekInset: CGFloat = 0
+    @State private var targetOffset: CGFloat = 0
     
     let cards: [VCardListResponse]
     var sectionTitle: String = "CASH CARDS"
@@ -115,10 +114,10 @@ struct CardSelectorView: View {
                             if selectedIndex == index {
                                 onEyeTap?(visibleCards[index])
                             } else {
+                                let peek: CGFloat = index == 0 ? 0 : 28
+                                selectedIndex = index
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                    selectedIndex = index
-                                    dragOffset = 0
-                                    peekInset = index == 0 ? 0 : 28
+                                    targetOffset = CGFloat(-index) * cardStride + peek
                                 }
                             }
                         }
@@ -131,16 +130,15 @@ struct CardSelectorView: View {
                                 if selectedIndex == visibleCards.count {
                                     onShowMore?()
                                 } else {
+                                    selectedIndex = visibleCards.count
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                        selectedIndex = visibleCards.count
-                                        dragOffset = 0
-                                        peekInset = viewAllPeek
+                                        targetOffset = CGFloat(-visibleCards.count) * cardStride + viewAllPeek
                                     }
                                 }
                             }
                     }
                 }
-                .offset(x: CGFloat(-selectedIndex) * cardStride + peekInset + dragOffset)
+                .offset(x: targetOffset + dragOffset)
                 .frame(height: 145, alignment: .leading)
                 .clipped()
                 .simultaneousGesture(
@@ -150,8 +148,9 @@ struct CardSelectorView: View {
                             let dy = abs(value.translation.height)
                             guard dx > dy else { return }
                             let raw = value.translation.width
+                            let maxIndex = hasMore ? visibleCards.count : visibleCards.count - 1
                             if (selectedIndex == 0 && raw > 0) ||
-                               (selectedIndex == visibleCards.count && raw < 0) {
+                               (selectedIndex == maxIndex && raw < 0) {
                                 dragOffset = raw / 3
                             } else {
                                 dragOffset = raw
@@ -161,23 +160,24 @@ struct CardSelectorView: View {
                             let dx = abs(value.translation.width)
                             let dy = abs(value.translation.height)
                             guard dx > dy else {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                    dragOffset = 0
-                                }
+                                dragOffset = 0
                                 return
                             }
                             let translation = value.translation.width
                             let predicted  = value.predictedEndTranslation.width
                             var newIndex = selectedIndex
+                            let maxIndex = hasMore ? visibleCards.count : visibleCards.count - 1
                             if translation < -(cardStride / 4) || predicted < -(cardStride / 2) {
-                                newIndex = min(selectedIndex + 1, visibleCards.count)
+                                newIndex = min(selectedIndex + 1, maxIndex)
                             } else if translation > (cardStride / 4) || predicted > (cardStride / 2) {
                                 newIndex = max(selectedIndex - 1, 0)
                             }
+                            let peek: CGFloat = newIndex == 0 ? 0 : (newIndex == visibleCards.count ? viewAllPeek : 28)
+                            selectedIndex = newIndex
+                            targetOffset += dragOffset
+                            dragOffset = 0
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                selectedIndex = newIndex
-                                dragOffset = 0
-                                peekInset = newIndex == 0 ? 0 : (newIndex == visibleCards.count ? viewAllPeek : 28)
+                                targetOffset = CGFloat(-newIndex) * cardStride + peek
                             }
                         }
                 )
@@ -192,10 +192,10 @@ struct CardSelectorView: View {
                                 .frame(width: 5, height: 5)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
                                 .onTapGesture {
+                                    let peek: CGFloat = index == 0 ? 0 : 28
+                                    selectedIndex = index
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                        selectedIndex = index
-                                        dragOffset = 0
-                                        peekInset = index == 0 ? 0 : 28
+                                        targetOffset = CGFloat(-index) * cardStride + peek
                                     }
                                 }
                         }
@@ -207,10 +207,9 @@ struct CardSelectorView: View {
                                 .frame(width: 5, height: 5)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
                                 .onTapGesture {
+                                    selectedIndex = visibleCards.count
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                        selectedIndex = visibleCards.count
-                                        dragOffset = 0
-                                        peekInset = viewAllPeek
+                                        targetOffset = CGFloat(-visibleCards.count) * cardStride + viewAllPeek
                                     }
                                 }
                         }

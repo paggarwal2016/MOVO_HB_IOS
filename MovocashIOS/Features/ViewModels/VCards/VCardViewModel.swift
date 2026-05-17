@@ -27,11 +27,19 @@ final class VCardViewModel: BaseViewModel {
     // MARK: - State
 
     @Published var apiCards: [VCardListResponse] = []
+    @Published var primaryLinkedCard: VCardListResponse? = nil
     @Published var hasLoadedCards: Bool = false
 
-    func loadCards() async {
+    func loadCards(primaryAccountId: Int? = nil) async {
         do {
-            apiCards = try await getVCardsAll()
+            let all = try await getVCardsAll()
+            if let accountId = primaryAccountId {
+                primaryLinkedCard = all.first { $0.savingsAccountId == accountId }
+                apiCards = all.filter { $0.savingsAccountId != accountId }
+            } else {
+                primaryLinkedCard = nil
+                apiCards = all
+            }
         } catch {
             // Error already surfaced by perform(_:) in getVCardsAll
         }

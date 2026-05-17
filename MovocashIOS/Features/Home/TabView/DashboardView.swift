@@ -211,7 +211,7 @@ struct DashboardView: View {
                 cards: vm.cards,
                 primaryAccountId: dashboardVM.primaryAccount?.id,
                 container: container,
-                onDeleted: { Task { await vm.loadCards() } }
+                onDeleted: { Task { await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id) } }
             )
         }
         .navigationDestination(isPresented: $showTransactions) {
@@ -229,7 +229,7 @@ struct DashboardView: View {
                                 primaryAccountId: dashboardVM.primaryAccount?.id,
                                 savingVM: savingVM,
                                 container: container,
-                                onDeleted: { Task { await vm.loadCards() } }
+                                onDeleted: { Task { await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id) } }
                 )
             }
         }
@@ -253,7 +253,7 @@ struct DashboardView: View {
             guard !hasLoadedData else { return }
             hasLoadedData = true
             await dashboardVM.refresh()
-            await vm.loadCards()
+            await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             // Reset every navigation flag so the inner NavigationStack has no active
@@ -304,8 +304,10 @@ struct DashboardView: View {
             .frame(maxWidth: .infinity)
         }
         .refreshable {
-            await dashboardVM.refresh()
-            await vm.loadCards()
+            await Task {
+                await dashboardVM.refresh()
+                await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+            }.value
         }
     }
 
@@ -334,10 +336,8 @@ struct DashboardView: View {
                     onCardTap: { showPrimaryAccountDetails = true },
                     onPrimaryTap: { showEditNickname = true },
                     onViewCardTap: {
-                        if let card = vm.cards.first(where: { $0.savingsAccountId == account.id }) {
-                            selectedCard = card
-                            showCardDetail = true
-                        }
+                        selectedCard = vm.primaryLinkedCard
+                        showCardDetail = true
                     },
                     onQuickAction: handleQuickAction
                 )
@@ -437,7 +437,7 @@ struct DashboardView: View {
             _ = try await vm.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
             showCreateCashCard = false
             ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
-            await vm.loadCards()
+            await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
         } catch {
             ToastManager.shared.show("Failed to create cash card. Please try again.", style: .error, position: .bottom)
         }

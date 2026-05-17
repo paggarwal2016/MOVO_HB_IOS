@@ -61,7 +61,7 @@ final class ACHViewModel: BaseViewModel {
             let response: ACHResponse = try await network.request(AchAPI.getAccounts)
             accounts = response.achAccounts
         } catch is CancellationError {
-            // User dismissed the pull gesture — keep existing data silently
+            SecureLogger.warning("ACH refresh cancelled — task cancelled before response", category: .network)
         } catch {
             if error.shouldShowUserFacingToast {
                 ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)

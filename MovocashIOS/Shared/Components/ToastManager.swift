@@ -40,7 +40,7 @@ enum ToastStyle {
         case .success:              return Color.movo.success
         case .error:                return Color.movo.danger
         case .warning:              return Color.movo.warning
-        case .info:                 return Color.movo.onAccent
+        case .info:                 return Color.movo.accent
         case .custom(_, let c, _):  return c
         }
     }
@@ -48,7 +48,7 @@ enum ToastStyle {
     var background: Color {
         switch self {
         case .custom(_, _, let bg): return bg
-        default:                    return Color.black.opacity(0.82)
+        default:                    return Color.movo.elevatedHigh
         }
     }
 }
@@ -164,9 +164,9 @@ private struct ToastOverlayView: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: entryOffset)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: appeared)
+        .animation(.spring(response: 0.35, dampingFraction: 0.72), value: appeared)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Spacing.xxl)
         .onAppear { appeared = true }
     }
 }
@@ -177,26 +177,27 @@ struct ToastView: View {
     let config: ToastConfig
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.sm) {
             Image(systemName: config.style.icon)
-                .foregroundStyle(config.style.iconColor)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(config.style.iconColor)
             Text(config.message)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle(.white)
+                .textStyle(Typography.bodyCompact)
+                .foregroundColor(Color.movo.textPrimary)
                 .multilineTextAlignment(.leading)
             if config.onTap != nil {
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.caption.bold())
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(Color.movo.textTertiary)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.vertical, Spacing.md)
         .background(config.style.background)
         .clipShape(Capsule())
-        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+        .overlay(Capsule().strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline))
+        .shadow(color: Color.movo.background.opacity(0.6), radius: 12, x: 0, y: 4)
         .contentShape(Capsule())
         .onTapGesture { config.onTap?() }
     }
