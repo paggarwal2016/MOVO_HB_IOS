@@ -324,7 +324,8 @@ struct DashboardView: View {
 
     @ViewBuilder
     private func dashboardSectionView(_ section: DashboardSection) -> some View {
-        switch section {
+        Group {
+            switch section {
         case .primaryAccount(let accountData):
             if let account = displayAccount {
                 PrimaryAccountContent(
@@ -397,6 +398,8 @@ struct DashboardView: View {
         case .userDetails, .rewards, .menu, .unknown:
             EmptyView()
         }
+        }
+        .padding(.horizontal, 15)
     }
 
     @ViewBuilder
@@ -425,7 +428,6 @@ struct DashboardView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 15)
     }
 
     // MARK: - Actions
@@ -506,6 +508,5 @@ struct PrimaryAccountContent: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, Spacing.lg)
     }
 }

@@ -59,11 +59,10 @@ struct CreateCardView: View {
         .padding(.vertical, DesignTokens.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.movo.elevated)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(Color.movo.borderStrong,
-                              lineWidth: DesignTokens.Stroke.hairline)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                .strokeBorder(Color.movo.border, lineWidth: DesignTokens.Stroke.hairline)
         )
     }
 }

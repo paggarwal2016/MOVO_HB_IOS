@@ -57,15 +57,14 @@ struct ActionCard: View {
                 .disabled(isLoading)
             }
         }
-        .padding(20)
+        .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(theme.elevated.color)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(theme.borderStrong.color, lineWidth: DesignTokens.Stroke.hairline)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
         )
-        .padding(.horizontal, 15)
     }
 }
 
@@ -220,7 +219,16 @@ struct PayAnyoneAddContactView: View {
             }
         }
         .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.sm)
+        .padding(.vertical, Spacing.lg)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
+                .fill(Color.movo.elevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        )
     }
 
     private func bubble(initial: String, label: String, expand: Bool, action: @escaping () -> Void) -> some View {
@@ -228,7 +236,8 @@ struct PayAnyoneAddContactView: View {
             VStack(spacing: Spacing.xs) {
                 ZStack {
                     Circle()
-                        .fill(Color.movo.elevated)
+                        .fill(Color.movo.elevatedHigh)
+                        .overlay(Circle().strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline))
                     Text(initial)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
@@ -236,7 +245,7 @@ struct PayAnyoneAddContactView: View {
                 .frame(width: 52, height: 52)
                 Text(label)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(Color.movo.textTertiary)
+                    .foregroundColor(Color.movo.textSecondary)
                     .lineLimit(1)
             }
             .frame(maxWidth: expand ? .infinity : 56)

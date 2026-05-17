@@ -404,18 +404,18 @@ private extension HomeTabBarView {
 
     @ViewBuilder
     func supportScreen(message: String) -> some View {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.xxl) {
             Spacer()
 
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 52))
-                .foregroundStyle(.primary)
+                .font(.system(size: 52, weight: .semibold))
+                .foregroundColor(Color.movo.warning)
 
             Text(message)
-                .font(.system(size: 15))
-                .foregroundStyle(.secondary)
+                .textStyle(Typography.subtitle)
+                .foregroundColor(Color.movo.textSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, Spacing.xxxl)
 
             PrimaryButton(
                 title: "Log Out",
@@ -430,11 +430,11 @@ private extension HomeTabBarView {
                     isLoggingOut = false
                 }
             }
-            .padding(.horizontal, 32)
+            .padding(.horizontal, Spacing.xxxl)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.movo.background.ignoresSafeArea())
     }
 }

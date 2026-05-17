@@ -77,6 +77,8 @@ struct CardSelectorView: View {
         GeometryReader { geo in
 
             let cardWidth = geo.size.width - 56
+            let viewAllWidth = cardWidth / 3
+            let viewAllPeek = geo.size.width - viewAllWidth - Spacing.sm
             let cardStride = cardWidth + 8
             let visibleCards = Array(cards.prefix(CardSelectorView.maxVisible))
             let hasMore = cards.count > CardSelectorView.maxVisible
@@ -85,21 +87,20 @@ struct CardSelectorView: View {
 
                 // Header
                 HStack {
-                    Text(sectionTitle)
+                    Text(sectionTitle.uppercased())
                         .font(.system(size: 11, weight: .semibold))
                         .tracking(1.2)
                         .foregroundColor(Color.movo.textTertiary)
-                    Spacer()
-                    Button(action: { onTap() }) {
-                        HStack(spacing: 3) {
-                            Text("+")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text("Issue physical")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundColor(Color.movo.accent)
+                    
+                    Button(action: onTap) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color.movo.accent)
+                            .frame(width: 18, height: 18)
+                            .background(Circle().fill(Color.movo.accentTint))
                     }
                     .buttonStyle(.plain)
+                    Spacer()
                 }
 
                 // Carousel: existing cards + create card slot at end
@@ -114,7 +115,7 @@ struct CardSelectorView: View {
                             if selectedIndex == index {
                                 onEyeTap?(visibleCards[index])
                             } else {
-                                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
                                     selectedIndex = index
                                     dragOffset = 0
                                     peekInset = index == 0 ? 0 : 28
@@ -123,23 +124,24 @@ struct CardSelectorView: View {
                         }
                     }
 
-                    // Create card slot — first tap scrolls to it, second tap opens create
-                    createCardSlot
-                        .frame(width: cardWidth, height: 145)
-                        .onTapGesture {
-                            if selectedIndex == visibleCards.count {
-                                onTap()
-                            } else {
-                                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                                    selectedIndex = visibleCards.count
-                                    dragOffset = 0
-                                    peekInset = 28
+                    if hasMore {
+                        createCardSlot
+                            .frame(width: viewAllWidth, height: 145)
+                            .onTapGesture {
+                                if selectedIndex == visibleCards.count {
+                                    onShowMore?()
+                                } else {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                        selectedIndex = visibleCards.count
+                                        dragOffset = 0
+                                        peekInset = viewAllPeek
+                                    }
                                 }
                             }
-                        }
+                    }
                 }
                 .offset(x: CGFloat(-selectedIndex) * cardStride + peekInset + dragOffset)
-                .frame(height: 150, alignment: .leading)
+                .frame(height: 145, alignment: .leading)
                 .clipped()
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 10)
@@ -159,7 +161,7 @@ struct CardSelectorView: View {
                             let dx = abs(value.translation.width)
                             let dy = abs(value.translation.height)
                             guard dx > dy else {
-                                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
                                     dragOffset = 0
                                 }
                                 return
@@ -172,16 +174,15 @@ struct CardSelectorView: View {
                             } else if translation > (cardStride / 4) || predicted > (cardStride / 2) {
                                 newIndex = max(selectedIndex - 1, 0)
                             }
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
                                 selectedIndex = newIndex
                                 dragOffset = 0
-                                peekInset = newIndex == 0 ? 0 : 28
+                                peekInset = newIndex == 0 ? 0 : (newIndex == visibleCards.count ? viewAllPeek : 28)
                             }
                         }
                 )
 
-                // Dot pagination (cards only) + show more
-                VStack(spacing: 10) {
+                if cards.count > 1 {
                     HStack(spacing: 6) {
                         ForEach(visibleCards.indices, id: \.self) { index in
                             Circle()
@@ -191,59 +192,35 @@ struct CardSelectorView: View {
                                 .frame(width: 5, height: 5)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
                                 .onTapGesture {
-                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
                                         selectedIndex = index
                                         dragOffset = 0
                                         peekInset = index == 0 ? 0 : 28
                                     }
                                 }
                         }
-                        // Dot for create card slot
-                        Circle()
-                            .fill(selectedIndex == visibleCards.count
-                                  ? Color.movo.accent
-                                  : Color.movo.textDisabled.opacity(0.5))
-                            .frame(width: 5, height: 5)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                                    selectedIndex = visibleCards.count
-                                    dragOffset = 0
-                                    peekInset = 28
+                        if hasMore {
+                            Circle()
+                                .fill(selectedIndex == visibleCards.count
+                                      ? Color.movo.accent
+                                      : Color.movo.textDisabled.opacity(0.5))
+                                .frame(width: 5, height: 5)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
+                                .onTapGesture {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                        selectedIndex = visibleCards.count
+                                        dragOffset = 0
+                                        peekInset = viewAllPeek
+                                    }
                                 }
-                            }
+                        }
                     }
                     .frame(maxWidth: .infinity)
-
-                    if hasMore {
-                        Button { onShowMore?() } label: {
-                            HStack(spacing: 7) {
-                                Image(systemName: "square.stack.3d.up")
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text("Show all")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .tracking(0.1)
-                            }
-                            .foregroundStyle(Color.movo.accent)
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: Radius.xxl)
-                                    .fill(Color.movo.accentTint)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: Radius.xxl)
-                                            .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    .padding(.bottom, 8)
                 }
-                .padding(.top, 8)
-                .padding(.bottom, 8)
             }
         }
-        .frame(height: cards.count > CardSelectorView.maxVisible ? 245 : 210)
+        .frame(height: cards.count > 1 ? 210 : 200)
         .clipped()
         .contentShape(Rectangle())
     }
@@ -255,25 +232,30 @@ struct CardSelectorView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                         .strokeBorder(
-                            Color.movo.border,
+                            Color.movo.accentBorder,
                             style: StrokeStyle(lineWidth: 1, dash: [5, 4])
                         )
                 )
 
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: Spacing.lg) {
                 ZStack {
-                    Circle()
-                        .fill(Color.movo.accentTint)
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
+                    RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                        .fill(Color.movo.elevatedHigh)
+                        .frame(width: 56, height: 56)
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 22, weight: .regular))
                         .foregroundColor(Color.movo.accent)
                 }
-                Text("New Card")
-                    .font(.system(size: 12, weight: .semibold))
-                    .tracking(0.3)
-                    .foregroundColor(Color.movo.textSecondary)
+                VStack(spacing: Spacing.xs) {
+                    Text("View all")
+                        .textStyle(Typography.cardTitle)
+                        .foregroundColor(Color.movo.textPrimary)
+                    Text("\(cards.count) cards")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.accent)
+                }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

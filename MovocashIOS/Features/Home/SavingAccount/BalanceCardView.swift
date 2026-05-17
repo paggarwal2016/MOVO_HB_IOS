@@ -19,7 +19,7 @@ struct BalanceCardView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.surface.opacity(0.85))
+                .fill(Color.movo.elevated)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
@@ -91,6 +91,5 @@ struct BalanceCardView: View {
             .padding(Spacing.lg)
         }
         .frame(height: 160)
-        .padding(.horizontal, Spacing.lg)
     }
 }

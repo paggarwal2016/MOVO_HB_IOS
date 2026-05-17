@@ -75,12 +75,11 @@ struct LinkedAccountsSectionView: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(theme.elevated.color)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(theme.borderStrong.color, lineWidth: DesignTokens.Stroke.hairline)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
         )
-        .padding(.horizontal, 15)
     }
 
     // MARK: - List State
@@ -129,13 +128,11 @@ struct LinkedAccountsSectionView: View {
         }
         .padding(DesignTokens.Spacing.lg)
         .background(Color.movo.elevated)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
                 .strokeBorder(Color.movo.border, lineWidth: DesignTokens.Stroke.hairline)
         )
-        .shadow(color: Color.movo.background.opacity(0.8), radius: 8, x: 0, y: 2)
-        .padding(.horizontal, 15)
     }
 }
 
