@@ -15,13 +15,15 @@ struct FundAccountView: View {
 
     let primaryAccount: SavingsAccountInfo
     let onConnectBank: () -> Void
+    let onSuccess: () -> Void
     private let initialAccounts: [ACHAccount]
 
-    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, onConnectBank: @escaping () -> Void) {
+    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, onSuccess: @escaping () -> Void = {}, onConnectBank: @escaping () -> Void) {
         self.initialAccounts = initialAccounts
         _vm = StateObject(wrappedValue: container.makeACHViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         self.primaryAccount = primaryAccount
+        self.onSuccess = onSuccess
         self.onConnectBank = onConnectBank
     }
 
@@ -170,6 +172,7 @@ struct FundAccountView: View {
             SuccessConfirmationView(
                 viewModel: SuccessConfirmationViewModel(success: data) {
                     successData = nil
+                    onSuccess()
                     dismiss()
                 }
             )
@@ -404,7 +407,7 @@ struct FundAccountView: View {
                     RoundedRectangle(cornerRadius: Radius.button)
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
-            MLogo()
+            MovoMVSymbol()
                 .frame(width: 28, height: 28)
         }
     }

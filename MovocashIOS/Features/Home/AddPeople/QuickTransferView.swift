@@ -12,6 +12,13 @@ struct QuickTransferView: View {
     let contact: ContactRecord
     let cards: [VCardListResponse]
     let accountBalance: Decimal
+    let primaryLinkedCard: VCardListResponse?
+
+    // Primary card prepended so it is the first option in the selection sheet.
+    private var displayCards: [VCardListResponse] {
+        guard let primary = primaryLinkedCard else { return cards }
+        return [primary] + cards
+    }
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var transVM: TransactionViewModel
@@ -27,13 +34,14 @@ struct QuickTransferView: View {
 
     var onSuccess: () -> Void = {}
 
-    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal = 0, onSuccess: @escaping () -> Void = {}) {
+    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal = 0, primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
         self.contact = contact
         self.cards = cards
         self.accountBalance = accountBalance
+        self.primaryLinkedCard = primaryLinkedCard
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
-        _selectedCard = State(wrappedValue: cards.first)
+        _selectedCard = State(wrappedValue: primaryLinkedCard ?? cards.first)
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
@@ -313,7 +321,7 @@ struct QuickTransferView: View {
 
     private var accountCard: some View {
         Group {
-            if cards.isEmpty {
+            if displayCards.isEmpty {
                 HStack {
                     Text("No cards available")
                         .font(Typography.caption.font)
@@ -322,19 +330,20 @@ struct QuickTransferView: View {
                 }
                 .padding(Spacing.lg)
                 .background(cardBackground)
-            } else if cards.count == 1 {
+            } else if displayCards.count == 1 {
                 accountCardContent
             } else {
-                Button {
-                    amountFocused = false
-                    UIApplication.shared.dismissKeyboard()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showAccountSheet = true
-                    }
-                } label: {
-                    accountCardContent
-                }
-                .buttonStyle(.plain)
+//                Button {
+//                    amountFocused = false
+//                    UIApplication.shared.dismissKeyboard()
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+//                        showAccountSheet = true
+//                    }
+//                } label: {
+//                    accountCardContent
+//                }
+//                .buttonStyle(.plain)
+                accountCardContent
             }
         }
     }
@@ -344,7 +353,7 @@ struct QuickTransferView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.elevatedHigh)
-                MLogo().frame(width: 28, height: 28)
+                MovoMVSymbol().frame(width: 28, height: 28)
             }
             .frame(width: 52, height: 52)
 
@@ -370,11 +379,11 @@ struct QuickTransferView: View {
 
             Spacer()
 
-            if cards.count > 1 {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color.movo.accent)
-            }
+//            if displayCards.count > 1 {
+//                Image(systemName: "chevron.right")
+//                    .font(.system(size: 12, weight: .semibold))
+//                    .foregroundColor(Color.movo.accent)
+//            }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
@@ -409,7 +418,7 @@ struct QuickTransferView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: Spacing.sm) {
-                    ForEach(cards) { card in
+                    ForEach(displayCards) { card in
                         Button {
                             selectedCard = card
                         } label: {

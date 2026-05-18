@@ -21,8 +21,11 @@ struct InternalTransferView: View {
     @State private var amountText = "0"
     @State private var descriptionText = ""
     @State private var selectedFromAccount: SavingsAccountInfo?
+    @State private var selectedFromCard: VCardListResponse?
     @State private var selectedToCard: VCardListResponse?
+    @State private var isSwapped = false
     @State private var showCardSheet = false
+    @State private var showFromCardSheet = false
     @State private var showConfirmSheet = false
     @State private var submitTask: Task<Void, Never>?
 
@@ -39,26 +42,31 @@ struct InternalTransferView: View {
         vcardVM.hasLoadedCards ? vcardVM.apiCards : initialCards
     }
 
-    private var primaryCard: VCardListResponse? {
-        guard preselectedFromCard == nil else { return nil }
-        let fromId = selectedFromAccount?.id
-        return allCards.first { $0.savingsAccountId == fromId }
-    }
-
-    private var cardsList: [VCardListResponse] {
-        let fromCardId = preselectedFromCard?.id ?? primaryCard?.id
-        return allCards.filter { card in
+    // Cards available to select as "to" destination (excludes current from-card)
+    private var toCardsList: [VCardListResponse] {
+        allCards.filter { card in
             guard card.savingsAccountId != nil else { return false }
-            return card.id != fromCardId
+            return card.id != selectedFromCard?.id
         }
     }
+
+    // Cards available to select as "from" source (excludes current to-card)
+    private var fromCardsList: [VCardListResponse] {
+        allCards.filter { card in
+            guard card.savingsAccountId != nil else { return false }
+            return card.id != selectedToCard?.id
+        }
+    }
+
     @FocusState private var isAmountFocused: Bool
 
     var onDismiss: () -> Void
 
     private var amount: Double { Double(amountText) ?? 0 }
     private var isValid: Bool {
-        amount > 0 && selectedFromAccount != nil && selectedToCard?.savingsAccountId != nil
+        amount > 0
+            && selectedFromCard?.savingsAccountId != nil
+            && selectedToCard?.savingsAccountId != nil
     }
 
     init(
@@ -80,8 +88,8 @@ struct InternalTransferView: View {
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
         self.onDismiss = onDismiss
-        let fromCardId = preselectedFromCard?.id ?? initialCards.first(where: { $0.savingsAccountId == fromAccount?.id })?.id
-        let firstDestination = initialCards.first(where: { $0.savingsAccountId != nil && $0.id != fromCardId })
+        let firstDestination = initialCards.first(where: { $0.savingsAccountId != nil && $0.id != preselectedFromCard?.id })
+        _selectedFromCard = State(initialValue: preselectedFromCard)
         _selectedToCard = State(initialValue: firstDestination)
     }
 
@@ -122,8 +130,20 @@ struct InternalTransferView: View {
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
         }
+        .onChange(of: selectedFromCard?.id) { _ in
+            guard let accountId = selectedFromCard?.savingsAccountId else { return }
+            selectedFromAccount = allAccounts.first { $0.id == accountId }
+        }
+        // To-card picker (bottom slot / top slot when swapped back)
         .sheet(isPresented: $showCardSheet) {
-            CardPickerSheet(cards: cardsList, selected: $selectedToCard)
+            CardPickerSheet(cards: toCardsList, selected: $selectedToCard)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
+        }
+        // From-card picker (top slot when swapped)
+        .sheet(isPresented: $showFromCardSheet) {
+            CardPickerSheet(cards: fromCardsList, selected: $selectedFromCard)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
@@ -132,8 +152,8 @@ struct InternalTransferView: View {
             ConfirmationBottomSheet(
                 channel: .internalTransfer,
                 amount: amountText,
-                fromName: preselectedFromCard?.name ?? primaryCard?.name ?? "Card",
-                fromMask: (preselectedFromCard?.lastFour ?? primaryCard?.lastFour).map { "•••• \($0)" },
+                fromName: selectedFromCard?.name ?? "Card",
+                fromMask: selectedFromCard?.lastFour.map { "•••• \($0)" },
                 toName: selectedToCard?.name ?? "Virtual Card",
                 toMask: selectedToCard?.lastFour.map { "•••• \($0)" },
                 note: descriptionText.isEmpty ? nil : descriptionText,
@@ -153,19 +173,18 @@ struct InternalTransferView: View {
             if initialCards.isEmpty {
                 await vcardVM.loadCards()
             }
-            if selectedToCard == nil {
-                selectedToCard = cardsList.first
-            }
+            resolveCardSelection()
         }
         .onChange(of: vcardVM.hasLoadedCards) { loaded in
-            guard loaded, selectedToCard == nil else { return }
-            selectedToCard = cardsList.first
+            guard loaded else { return }
+            resolveCardSelection()
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             submitTask?.cancel()
             submitTask = nil
             showConfirmSheet = false
             showCardSheet = false
+            showFromCardSheet = false
             dismiss()
         }
     }
@@ -185,7 +204,7 @@ struct InternalTransferView: View {
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.md)
     }
-    
+
     // MARK: - Amount Card
 
     private var amountCard: some View {
@@ -223,26 +242,66 @@ struct InternalTransferView: View {
 
     private var transferPanel: some View {
         VStack(spacing: 0) {
-            fromAccountRow
+            // Top slot: fixed design before swap, pickable design after swap
+            if isSwapped {
+                pickableSlot(
+                    card: selectedFromCard,
+                    balance: selectedFromAccount?.formattedBalance ?? "",
+                    showChevron: !fromCardsList.isEmpty,
+                    onTap: { showFromCardSheet = true }
+                )
+            } else {
+                fixedSlot(
+                    card: selectedFromCard,
+                    balance: selectedFromAccount?.formattedBalance ?? ""
+                )
+            }
 
             ZStack {
                 Rectangle()
                     .fill(Color.movo.border)
                     .frame(height: Stroke.hairline)
                     .padding(.horizontal, Spacing.lg)
-                Circle()
-                    .fill(Color.movo.elevated)
-                    .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-                    .frame(width: 36, height: 36)
-                    .overlay(
-                        Image(systemName: "arrow.up.arrow.down")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Color.movo.accent)
-                    )
+                    .allowsHitTesting(false)
+                Button {
+                    swapAccounts()
+                } label: {
+                    Circle()
+                        .fill(Color.movo.elevated)
+                        .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(Color.movo.accent)
+                        )
+                }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
             }
             .padding(.vertical, Spacing.md)
 
-            toAccountRow
+            // Bottom slot: pickable design before swap, fixed design after swap
+            if isSwapped {
+                fixedSlot(
+                    card: selectedToCard,
+                    balance: toCardAccount?.formattedBalance ?? ""
+                )
+            } else {
+                if isLoadingCards {
+                    cardLoadingRow
+                } else {
+                    Button { showCardSheet = true } label: {
+                        pickableRowContent(
+                            card: selectedToCard,
+                            balance: toCardAccount?.formattedBalance ?? "",
+                            showChevron: !toCardsList.isEmpty
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(toCardsList.isEmpty)
+                }
+            }
         }
         .padding(.vertical, Spacing.lg)
         .background(
@@ -255,10 +314,12 @@ struct InternalTransferView: View {
         )
     }
 
-    private var fromAccountRow: some View {
-        let name = preselectedFromCard?.name ?? primaryCard?.name ?? "Card"
-        let lastFour = preselectedFromCard?.lastFour ?? primaryCard?.lastFour ?? "••••"
-        let balance = selectedFromAccount?.formattedBalance ?? ""
+    // MARK: - Row Helpers
+
+    // Fixed row: no chevron, not tappable (primary card design)
+    private func fixedSlot(card: VCardListResponse?, balance: String) -> some View {
+        let name = card?.name ?? "Card"
+        let lastFour = card?.lastFour ?? "••••"
         let subtitle = balance.isEmpty ? "•••• \(lastFour)" : "\(balance) · •••• \(lastFour)"
         return HStack(spacing: Spacing.md) {
             ZStack {
@@ -283,41 +344,33 @@ struct InternalTransferView: View {
         .padding(.vertical, Spacing.sm)
     }
 
-    private var toAccountRow: some View {
-        Group {
-            if isLoadingCards {
-                HStack(spacing: Spacing.md) {
-                    RoundedRectangle(cornerRadius: Radius.button)
-                        .fill(Color.movo.elevatedHigh)
-                        .frame(width: 52, height: 52)
-                    ProgressView().tint(Color.movo.textSecondary)
-                    Text("Loading cards…")
-                        .font(.system(size: 13))
-                        .foregroundColor(Color.movo.textTertiary)
-                    Spacer()
-                }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.sm)
-            } else {
-                Button { showCardSheet = true } label: {
-                    toAccountRowContent(showChevron: !cardsList.isEmpty)
-                }
-                .buttonStyle(.plain)
-                .disabled(cardsList.isEmpty)
+    // Pickable slot: chevron + tappable (secondary card design)
+    @ViewBuilder
+    private func pickableSlot(
+        card: VCardListResponse?,
+        balance: String,
+        showChevron: Bool,
+        onTap: @escaping () -> Void
+    ) -> some View {
+        if isLoadingCards {
+            cardLoadingRow
+        } else {
+            Button { onTap() } label: {
+                pickableRowContent(card: card, balance: balance, showChevron: showChevron)
             }
+            .buttonStyle(.plain)
         }
     }
 
-    private func toAccountRowContent(showChevron: Bool) -> some View {
-        let cardName = selectedToCard?.name ?? "Select destination card"
-        let lastFour = selectedToCard?.lastFour ?? "••••"
-        let balance = toCardAccount?.formattedBalance ?? ""
+    private func pickableRowContent(card: VCardListResponse?, balance: String, showChevron: Bool) -> some View {
+        let cardName = card?.name ?? "Select destination card"
+        let lastFour = card?.lastFour ?? "••••"
         let subtitle = balance.isEmpty ? "•••• \(lastFour)" : "\(balance) · •••• \(lastFour)"
         return HStack(spacing: Spacing.md) {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.elevatedHigh)
-                if selectedToCard != nil {
+                if card != nil {
                     MLogo().frame(width: 28, height: 28)
                 } else {
                     Image(systemName: "creditcard")
@@ -330,8 +383,8 @@ struct InternalTransferView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(cardName)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(selectedToCard != nil ? Color.movo.textPrimary : Color.movo.textDisabled)
-                if selectedToCard != nil {
+                    .foregroundColor(card != nil ? Color.movo.textPrimary : Color.movo.textDisabled)
+                if card != nil {
                     Text(subtitle)
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(Color.movo.textTertiary)
@@ -345,6 +398,21 @@ struct InternalTransferView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color.movo.accent)
             }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
+    }
+
+    private var cardLoadingRow: some View {
+        HStack(spacing: Spacing.md) {
+            RoundedRectangle(cornerRadius: Radius.button)
+                .fill(Color.movo.elevatedHigh)
+                .frame(width: 52, height: 52)
+            ProgressView().tint(Color.movo.textSecondary)
+            Text("Loading cards…")
+                .font(.system(size: 13))
+                .foregroundColor(Color.movo.textTertiary)
+            Spacer()
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.sm)
@@ -402,10 +470,33 @@ struct InternalTransferView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Card Selection
+
+    private func resolveCardSelection() {
+        if selectedFromCard == nil {
+            // Try to match by savings account ID, else take first available card
+            selectedFromCard = allCards.first { $0.savingsAccountId == selectedFromAccount?.id }
+                ?? allCards.first { $0.savingsAccountId != nil && $0.id != selectedToCard?.id }
+        }
+        if selectedToCard == nil {
+            selectedToCard = toCardsList.first
+        }
+    }
+
+    // MARK: - Swap
+
+    private func swapAccounts() {
+        guard let oldFrom = selectedFromCard, let oldTo = selectedToCard else { return }
+        selectedFromCard = oldTo
+        selectedToCard = oldFrom
+        selectedFromAccount = allAccounts.first { $0.id == oldTo.savingsAccountId }
+        isSwapped.toggle()
+    }
+
     // MARK: - Submit
 
     private func submitTransfer() async {
-        guard let from = selectedFromAccount,
+        guard let fromAccountId = selectedFromCard?.savingsAccountId,
               let toCard = selectedToCard,
               let toAccountId = toCard.savingsAccountId else { return }
         let request = TransactionRequest.Internal(
@@ -413,7 +504,7 @@ struct InternalTransferView: View {
             amount: amount,
             toAccountId: toAccountId,
             toClientId: toClientId,
-            fromAccountId: from.id,
+            fromAccountId: fromAccountId,
             phoneNumber: nil,
             userAction: "Internal-Transfer",
             nickname: ""

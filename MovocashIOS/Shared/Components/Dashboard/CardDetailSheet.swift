@@ -216,8 +216,6 @@ struct CardDetailSheet: View {
                         MovoMVSymbol()
                             .frame(width: 22, height: 22)
                         
-//                        MLogo()
-//                            .frame(width: 22, height: 22)
                         Text("MOVOCASH")
                             .font(.system(size: 10, weight: .bold))
                             .tracking(1.8)

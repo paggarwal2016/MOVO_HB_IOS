@@ -15,15 +15,18 @@ struct AccountListSheetView: View {
     @StateObject private var vcardVM: VCardViewModel
 
     private let container: AppContainer
+    private let onDataChanged: () -> Void
 
     init(
         savingsList: Binding<SavingsAccountListResponse?>,
         isPresented: Binding<Bool>,
-        container: AppContainer
+        container: AppContainer,
+        onDataChanged: @escaping () -> Void = {}
     ) {
         _savingsList = savingsList
         _isPresented = isPresented
         self.container = container
+        self.onDataChanged = onDataChanged
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
@@ -191,6 +194,7 @@ struct AccountListSheetView: View {
             //accounts.append(newAccount)
             showCreateCashCard = false
             ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
+            onDataChanged()
             backgroundSync()
         } catch {
             ToastManager.shared.show("Failed to create cash card. Please try again.", style: .error, position: .bottom)
@@ -208,13 +212,14 @@ struct AccountListSheetView: View {
             )
             guard !Task.isCancelled else { return }
             ToastManager.shared.show("Nickname updated!", style: .success, position: .bottom)
+            onDataChanged()
             backgroundSync()
         } catch {
             guard !Task.isCancelled else { return }
             ToastManager.shared.show("Failed to update nickname.", style: .error, position: .bottom)
         }
     }
-    
+
     // MARK: - Delete
     
     private func confirmDelete(account: SavingsAccountInfo) {
@@ -242,6 +247,7 @@ struct AccountListSheetView: View {
             guard !Task.isCancelled else { return }
             accounts.removeAll { $0.id == account.id }
             ToastManager.shared.show("Account deleted.", style: .success, position: .bottom)
+            onDataChanged()
             backgroundSync()
         } catch {
             guard !Task.isCancelled else { return }

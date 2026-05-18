@@ -50,7 +50,6 @@ struct DashboardView: View {
     @State private var showInternalTransfer = false
     @State private var showViewCardList = false
     @State private var showAccountList = false
-    @State private var hasLoadedData = false
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
     @State private var showCardDetail = false
@@ -70,6 +69,11 @@ struct DashboardView: View {
             MovoBackground()
             VStack(spacing: 0) {
                 scrollContent
+            }
+            if dashboardVM.isRefreshing {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                SpinnerView()
             }
         }
         .dimmingOverlay(isActive: isSheetActive)
@@ -108,9 +112,18 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showAccountList) {
-            AccountListSheetView(savingsList: $savingVM.accountList, isPresented: $showAccountList, container: container)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+            AccountListSheetView(
+                savingsList: $savingVM.accountList,
+                isPresented: $showAccountList,
+                container: container,
+                onDataChanged: {}
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .onChange(of: showAccountList) { isShowing in
+            guard !isShowing else { return }
+            Task { await dashboardVM.refresh() }
         }
         .sheet(isPresented: $showViewCard) {
             if let account = displayAccount {
@@ -125,31 +138,45 @@ struct DashboardView: View {
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
+                    preselectedFromCard: vm.primaryLinkedCard,
                     initialCards: vm.apiCards,
                     container: container,
-                    onDismiss: { Task { await dashboardVM.refresh() } }
+                    onDismiss: {}
                 )
             }
+        }
+        .onChange(of: showFunds) { isShowing in
+            guard !isShowing else { return }
+            Task { await dashboardVM.refresh() }
         }
         .sheet(isPresented: $showContactList) {
             PayAnyoneContactPickerView(
                 container: container,
                 cards: vm.cards,
                 accountBalance: displayAccount?.availableBalance ?? 0,
-                onTransferSuccess: { Task { await dashboardVM.refresh() } }
+                primaryLinkedCard: dashboardVM.primaryLinkedCard
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .onChange(of: showContactList) { isShowing in
+            guard !isShowing else { return }
+            Task { await dashboardVM.refresh() }
         }
         .sheet(isPresented: $showAllFrequents) {
             AllFrequentsView(
                 contactVM: contactVM,
                 container: container,
                 cards: vm.cards,
-                accountBalance: displayAccount?.availableBalance ?? 0
+                accountBalance: displayAccount?.availableBalance ?? 0,
+                primaryLinkedCard: dashboardVM.primaryLinkedCard
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .onChange(of: showAllFrequents) { isShowing in
+            guard !isShowing else { return }
+            Task { await dashboardVM.refresh() }
         }
         .sheet(item: $quickTransferContact) { contact in
             QuickTransferView(
@@ -157,21 +184,30 @@ struct DashboardView: View {
                 container: container,
                 cards: vm.cards,
                 accountBalance: displayAccount?.availableBalance ?? 0,
-                onSuccess: { Task { await dashboardVM.refresh() } }
+                primaryLinkedCard: dashboardVM.primaryLinkedCard
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .onChange(of: quickTransferContact) { contact in
+            guard contact == nil else { return }
+            Task { await dashboardVM.refresh() }
         }
         .fullScreenCover(isPresented: $showFundAccount) {
             if let account = displayAccount {
                 FundAccountView(
                     container: container,
                     initialAccounts: dashboardVM.linkedAccounts?.linkedAccounts ?? [],
-                    primaryAccount: account
+                    primaryAccount: account,
+                    onSuccess: {}
                 ) {
                     Task { await achVM.startPlaidLink() }
                 }
             }
+        }
+        .onChange(of: showFundAccount) { isShowing in
+            guard !isShowing else { return }
+            Task { await dashboardVM.refresh() }
         }
         .fullScreenCover(isPresented: $showInternalTransfer) {
             if let account = displayAccount {
@@ -179,13 +215,18 @@ struct DashboardView: View {
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
+                    preselectedFromCard: vm.primaryLinkedCard,
                     initialCards: vm.apiCards,
                     container: container,
-                    onDismiss: { Task { await dashboardVM.refresh() } }
+                    onDismiss: {}
                 )
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationBarBackButtonHidden(true)
             }
+        }
+        .onChange(of: showInternalTransfer) { isShowing in
+            guard !isShowing else { return }
+            Task { await dashboardVM.refresh() }
         }
         .sheet(isPresented: $showMoveMoney) {
             MoveMoneyMenuView(
@@ -211,7 +252,7 @@ struct DashboardView: View {
                 cards: vm.cards,
                 primaryAccountId: dashboardVM.primaryAccount?.id,
                 container: container,
-                onDeleted: { Task { await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id) } }
+                onDeleted: {}
             )
         }
         .navigationDestination(isPresented: $showTransactions) {
@@ -229,7 +270,7 @@ struct DashboardView: View {
                                 primaryAccountId: dashboardVM.primaryAccount?.id,
                                 savingVM: savingVM,
                                 container: container,
-                                onDeleted: { Task { await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id) } }
+                                onDeleted: {}
                 )
             }
         }
@@ -248,12 +289,8 @@ struct DashboardView: View {
                 .presentationBackground(Color.movo.surface)
             }
         }
-        .task(id: lockManager.state) {
-            guard lockManager.state == .unlocked, appState.isAuthenticated else { return }
-            guard !hasLoadedData else { return }
-            hasLoadedData = true
-            await dashboardVM.refresh()
-            await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+        .onChange(of: vm.primaryLinkedCard?.id) { _ in
+            dashboardVM.primaryLinkedCard = vm.primaryLinkedCard
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             // Reset every navigation flag so the inner NavigationStack has no active
@@ -438,6 +475,7 @@ struct DashboardView: View {
             showCreateCashCard = false
             ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
             await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+            await dashboardVM.refresh()
         } catch {
             ToastManager.shared.show("Failed to create cash card. Please try again.", style: .error, position: .bottom)
         }

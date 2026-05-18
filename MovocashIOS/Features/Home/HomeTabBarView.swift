@@ -83,6 +83,8 @@ struct HomeTabBarView: View {
     @State private var selectedTab: Tab = .home
     @State private var isLoggingOut = false
 
+    @SwiftUI.Environment(\.scenePhase) private var scenePhase
+
     init(container: AppContainer) {
         _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
         _linkAccountVM = StateObject(wrappedValue: container.makeACHViewModel())
@@ -101,6 +103,7 @@ struct HomeTabBarView: View {
         }
         .task {
             await dashboardVM.fetchDashboard()
+            await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
         }
         .onAppear(perform: handleOnAppear)
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
@@ -108,6 +111,14 @@ struct HomeTabBarView: View {
             linkAccountVM.cancelAllTasks()
             vCardVM.cancelAllTasks()
             selectedTab = .home
+        }
+        .onChange(of: selectedTab) { newTab in
+            guard newTab == .home else { return }
+            Task { await dashboardVM.refreshIfStale(within: 15) }
+        }
+        .onChange(of: scenePhase) { phase in
+            guard phase == .active, dashboardVM.dashboard != nil else { return }
+            Task { await dashboardVM.refreshIfStale(within: 60) }
         }
     }
 }
@@ -416,25 +427,23 @@ private extension HomeTabBarView {
                 .foregroundColor(Color.movo.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.xxxl)
-
-            PrimaryButton(
-                title: "Log Out",
-                backgroundColor: .primary,
-                textColor: .white,
-                isLoading: isLoggingOut
-            ) {
+            
+            Button(action: {
                 isLoggingOut = true
                 Task {
                     await sessionManager.logout(appState: appState)
                     lockManager.logout()
                     isLoggingOut = false
                 }
+            } ) {
+                Text("Log Out")
             }
+            .buttonStyle(MovoPrimaryButtonStyle())
             .padding(.horizontal, Spacing.xxxl)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.movo.background.ignoresSafeArea())
+        .background(MovoBackground())
     }
 }

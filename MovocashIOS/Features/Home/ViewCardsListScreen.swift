@@ -34,10 +34,11 @@ struct ViewCardsListScreen: View {
     @State private var selectedCard: VCardListResponse?
     @State private var showCardDetail = false
     @State private var showCreateCard = false
-    
-    // Use VM cards after first load, otherwise show what DashboardView passed in.
+    @State private var deletedCardIds: Set<String> = []
+
+    // Use VM cards after first load, filtered by optimistic deletes.
     private var displayCards: [VCardListResponse] {
-        cardVM.hasLoadedCards ? cardVM.cards : cards
+        (cardVM.hasLoadedCards ? cardVM.cards : cards).filter { !deletedCardIds.contains($0.id) }
     }
     
     var body: some View {
@@ -84,8 +85,10 @@ struct ViewCardsListScreen: View {
                     savingVM: savingVM,
                     container: container,
                     onDeleted: {
+                        if let id = selectedCard?.id {
+                            deletedCardIds.insert(id)
+                        }
                         onDeleted?()
-                        Task { await cardVM.loadCards() }
                     }
                 )
             }

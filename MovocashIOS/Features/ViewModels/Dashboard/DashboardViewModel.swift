@@ -14,6 +14,12 @@ final class DashboardViewModel: BaseViewModel {
     // MARK: - Published State
 
     @Published var dashboard: DashboardResponse?
+    @Published var primaryLinkedCard: VCardListResponse? = nil
+    @Published var isRefreshing: Bool = false
+
+    // MARK: - Refresh Staleness Tracking
+
+    private(set) var lastRefreshedAt: Date = .distantPast
 
     // MARK: - Dependencies
 
@@ -64,12 +70,19 @@ final class DashboardViewModel: BaseViewModel {
         }
     }
 
-    // Pull-to-refresh — does NOT call perform() so state stays idle,
+    // Pull-to-refresh and on-return refresh.
+    // Does NOT call perform() so state stays idle,
     // preventing HomeTabBarView from re-rendering and cancelling the refreshable task.
+    // isRefreshing guard ensures only one call runs at a time even when multiple
+    // onChange handlers fire in the same dismissal cycle.
     func refresh() async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
         do {
             let result: DashboardResponse = try await network.request(DashboardAPI.dashboard)
             dashboard = result
+            lastRefreshedAt = Date()
             Task.detached(priority: .background) {
                 await self.activatePrimaryVCardIfNeeded()
             }
@@ -80,6 +93,14 @@ final class DashboardViewModel: BaseViewModel {
                 ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
             }
         }
+    }
+
+    // Refresh only when data is older than `interval` seconds.
+    // Prevents API hammering when multiple triggers fire near-simultaneously
+    // (e.g., tab switch + notification both fire after a payment).
+    func refreshIfStale(within interval: TimeInterval = 30) async {
+        guard Date().timeIntervalSince(lastRefreshedAt) > interval else { return }
+        await refresh()
     }
 
     // MARK: - Section Accessors

@@ -9,6 +9,7 @@ import Foundation
 
 extension Notification.Name {
     static let sessionExpired = Notification.Name("sessionExpired")
+    static let dashboardShouldRefresh = Notification.Name("dashboardShouldRefresh")
 }
 
 enum NetworkError: LocalizedError, Sendable {
