@@ -304,3 +304,4 @@ final class SessionManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "onboardingBackgroundedAt")
     }
 }
+

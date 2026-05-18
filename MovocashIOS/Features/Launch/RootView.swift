@@ -13,14 +13,10 @@ struct RootView: View {
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var authVM: AuthViewModel
     @EnvironmentObject private var lockManager: AppLockManager
-    @EnvironmentObject private var lockVM: AppLockViewModel
     @EnvironmentObject private var userVM: UserViewModel
     @EnvironmentObject private var sessionManager: SessionManager
     @EnvironmentObject private var pushManager: PushManager
 
-    /// Passed directly — NOT via environment — to avoid AppLockViewModel type
-    /// collision with lockVM which would cause SwiftUI to serve the wrong instance.
-    @ObservedObject var passcodeSetupVM: AppLockViewModel
     @ObservedObject var kycVM: KYCViewModel
 
     @State private var legalAcceptedItems: Set<String> = []
@@ -155,27 +151,7 @@ struct RootView: View {
                         acceptedItems: $legalAcceptedItems
                     )
 
-                    // ── Step 1: set + confirm passcode ─────────────────────────
-                case .setupPasscode:
-                    PasscodeSetupView(
-                        vm: passcodeSetupVM,
-                        onSuccess: {
-                            // Show enrollment when the device has biometric hardware and the
-                            // user has not yet enrolled. isBiometricHardwarePresent (not
-                            // isBiometricAvailable) is used so the screen appears even when
-                            // app permission is currently off — BiometricEnrollView handles
-                            // the permission-denied path internally via the Settings redirect.
-                            if lockManager.isBiometricHardwarePresent
-                                && !lockManager.isBiometricEnabled
-                                && !RSAKeyManager.shared.keysExist() {
-                                appState.flow = .enableBiometrics
-                            } else {
-                                advanceAfterSecurity()
-                            }
-                        }
-                    )
-
-                    // ── Step 2: biometric opt-in ───────────────────────────────
+                    // ── Biometric opt-in ──────────────────────────────────────
                 case .enableBiometrics:
                     BiometricEnrollView(
                         lockManager: lockManager,
@@ -194,7 +170,23 @@ struct RootView: View {
                     )
 
                 case .appLock:
-                    AppLockView(vm: lockVM, autoTriggerBiometric: lockManager.isBiometricEnabled)
+                    BiometricGateView(
+                        biometricIcon: lockManager.biometricType.systemImageName,
+                        biometricLabel: lockManager.biometricType.displayName,
+                        authenticate: {
+                            await authVM.loginWithBiometric(appState: appState)
+                        },
+                        onAuthenticated: {
+                            appState.flow = .home
+                        },
+                        onUsePhoneNumber: {
+                            Task {
+                                await sessionManager.logout(appState: appState)
+                                lockManager.logout()
+                                appState.flow = .choice
+                            }
+                        }
+                    )
 
                 case .kyc:
                     EmptyView()
@@ -221,46 +213,9 @@ struct RootView: View {
             .environmentObject(lockManager)
             .environmentObject(sessionManager)
 
-            // ── Lock overlay (returning users / background lock) ───────────
-            // Suppressed during:
-            //  • splash screen
-            //  • first-time setup flows — user set a passcode moments ago and
-            //    has not yet reached home, so locking mid-enrollment is wrong
-            //  • new-user KYC arrival (prevents spurious lock from UIViewController teardown)
-            //  • active KYC scan
-            let isInSetupFlow = appState.flow == .splash
-                || appState.flow == .setupPasscode
-                || appState.flow == .enableBiometrics
-                || appState.flow == .kycSuccess
-                || appState.flow == .appLock
-            if lockManager.state == .locked
-                && lockManager.isPasscodeSet
-                && appState.isAuthenticated
-                && !isInSetupFlow
-                && !appState.isNewRegistration
-                && !UserDefaults.standard.bool(forKey: "kycInProgress")
-                && UserDefaults.standard.bool(forKey: "kycCompleted") {
-                AppLockView(vm: lockVM, autoTriggerBiometric: true)
-                    .transition(.opacity)
-                    .zIndex(10)
-                    .ignoresSafeArea()
-            }
         }
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
-            if newPhase == .active, lockManager.state == .locked {
-                lockVM.clearInput()
-                if !lockManager.isPasscodeSet {
-                    if RSAKeyManager.shared.keysExist() {
-                        Task {
-                            let ok = await authVM.loginWithBiometric(appState: appState)
-                            if !ok { appState.flow = .choice }
-                        }
-                    } else {
-                        appState.flow = .choice
-                    }
-                }
-            }
             // Onboarding inactivity tracking — only active before the dashboard is reached.
             // Post-dashboard users are governed by AppLockManager's background timeout.
             guard !UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
@@ -285,6 +240,22 @@ struct RootView: View {
         }
         .task(id: appState.flow) {
             guard appState.flow == .kyc else { return }
+
+            // Safety net — if postBootstrap warmup failed (transient network, etc.),
+            // retry SDK configuration here before the scanner starts. No-op if
+            // configureSDK already succeeded at boot.
+            if !container.kycManager.isConfigured {
+                do {
+                    try await container.kycManager.configureSDK(officeId: AppConfig.officeId)
+                } catch {
+                    AlertManager.shared.showError(
+                        "Failed to initialize KYC: \(error.localizedDescription)"
+                    )
+                    appState.flow = .pickDocument
+                    return
+                }
+            }
+
             UserDefaults.standard.set(true, forKey: "kycInProgress")
             await kycVM.startVerification {
                 UserDefaults.standard.removeObject(forKey: "kycInProgress")
@@ -311,18 +282,6 @@ struct RootView: View {
                 }
             }
         }
-        .onChangeCompat(of: lockManager.state) { newState in
-            guard newState == .unlocked, appState.flow == .appLock else { return }
-            appState.flow = appState.isAuthenticated ? .home : .loginPhone
-        }
-        .onChangeCompat(of: lockManager.requiresPhoneLogin) { required in
-            guard required else { return }
-            Task {
-                await sessionManager.logout(appState: appState)
-                lockManager.logout()
-                appState.flow = .loginPhone
-            }
-        }
         .onChangeCompat(of: appState.flow) { newFlow in
             if UserDefaults.standard.bool(forKey: "kycCompleted") {
                 // Post-dashboard — clear any stale onboarding persistence keys.
@@ -339,13 +298,6 @@ struct RootView: View {
                 }
             }
         }
-        .onAppear {
-            // APIs execute first (GET /rsa/nonce → sign → POST /auth/token-rsa).
-            // Returns true so submitBiometric unlocks silently after success.
-            lockVM.onBiometricSuccess = {
-                await authVM.loginWithBiometric(appState: appState)
-            }
-        }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
             guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
             let message = notification.userInfo?["message"] as? String
@@ -353,7 +305,6 @@ struct RootView: View {
                 UIApplication.shared.dismissKeyboard()
                 AlertManager.shared.dismiss()
                 lockManager.logout()
-                lockVM.clearInput()
                 authVM.reset()
                 userVM.cancelAllTasks()
                 await sessionManager.handleSessionExpired(appState: appState, message: message)

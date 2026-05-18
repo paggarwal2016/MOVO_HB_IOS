@@ -14,6 +14,9 @@ import SwiftUI
 
 @MainActor
 protocol KYCManagerProtocol {
+    /// True once configureSDK has completed successfully since launch (or last clearSession).
+    /// Allows callers to skip redundant SDK initialization.
+    var isConfigured: Bool { get }
     func configureSDK(officeId: String) async throws
     func start() async throws -> User
     func clearSession()
@@ -39,6 +42,8 @@ final class KYCManager: KYCManagerProtocol {
     /// Isolates the SDK from the SwiftUI UIHostingController so the SDK's
     /// internal alerts never conflict with the main app window hierarchy.
     private var kycWindow: UIWindow?
+
+    private(set) var isConfigured: Bool = false
 
     // MARK: Init
     init(network: NetworkServiceProtocol, keychain: KeychainManagerProtocol, analytics: AnalyticsTracking? = nil) {
@@ -79,6 +84,7 @@ extension KYCManager {
         )
 
         SecureLogger.info("KYC SDK configured successfully", category: .kyc)
+        isConfigured = true
     }
 
     func updateToken(_ token: String) {
@@ -88,6 +94,7 @@ extension KYCManager {
 
     func clearSession() {
         MobileBankingSDK.clearSession()
+        isConfigured = false
         SecureLogger.info("KYC session cleared", category: .kyc)
     }
 }

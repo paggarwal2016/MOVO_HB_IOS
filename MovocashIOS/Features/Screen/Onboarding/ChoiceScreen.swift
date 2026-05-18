@@ -72,9 +72,7 @@ struct ChoiceScreen: View {
                 Task {
                     let success = await authVM.loginWithBiometric(appState: appState)
                     isBiometricLoading = false
-                    if success {
-                        lockManager.unlockAfterRSAAuth()
-                    } else {
+                    if !success {
                         showBiometricError = true
                     }
                 }
@@ -140,11 +138,7 @@ struct ChoiceScreen: View {
                     Task {
                         let success = await authVM.loginWithBiometric(appState: appState)
                         isBiometricLoading = false
-                        if success {
-                            // Biometric server auth succeeded — unlock locally so the
-                            // AppLock overlay does not immediately re-prompt Face ID.
-                            lockManager.unlockAfterRSAAuth()
-                        } else {
+                        if !success {
                             showBiometricError = true
                         }
                     }

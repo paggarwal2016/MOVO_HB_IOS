@@ -9,15 +9,14 @@ import SwiftUI
 import Combine
 
 enum AuthFlow: String {
-    case splash, choice, loginPhone, getStartedPhone, otp, signupDetails, emailOTP, getStartedInfo, setupPasscode, enableBiometrics, pickDocument, kyc, kycSuccess, appLock, home
+    case splash, choice, loginPhone, getStartedPhone, otp, signupDetails, emailOTP, getStartedInfo, enableBiometrics, pickDocument, kyc, kycSuccess, appLock, home
 
     /// The screen to persist for kill→relaunch restoration during onboarding.
-    /// Returns nil for screens that must not be restored (OTPs expire, home/lock are post-dashboard).
+    /// Returns nil for screens that must not be restored (OTPs expire, home is post-dashboard).
     var restorationTarget: AuthFlow? {
         switch self {
         case .signupDetails:    return .signupDetails
         case .emailOTP:         return .signupDetails   // email OTP expires — back to form
-        case .setupPasscode:    return .setupPasscode
         case .enableBiometrics: return .enableBiometrics
         case .getStartedInfo:   return .getStartedInfo
         case .pickDocument:     return .pickDocument
@@ -52,9 +51,23 @@ final class AppState: ObservableObject {
     /// torn down — e.g. session expiry — so SwiftUI rebuilds a fresh shell.
     @Published private(set) var protectedShellID = UUID()
 
+    // NEW — destination decided at boot, applied after splash min-duration
+    var pendingDestination: AuthFlow?
+    var pendingContext: PhoneFlowType?
+
     /// Fintech-standard inactivity window for the pre-dashboard onboarding flow.
     /// Exceeding this triggers a full logout so no partial session can be resumed.
     static let onboardingInactivityTimeout: TimeInterval = 600 // 10 minutes
+
+    /// Matches server-side API idle timeout. Used by StartupRouter to skip
+    /// AppLock for PIN-only users when the server session is certainly dead.
+    static let apiIdleTimeout: TimeInterval = 15 * 60
+
+    // NEW — minimum splash duration for visual stability
+    static let splashMinDuration: TimeInterval = 0.8
+
+    /// One-shot guard so post-bootstrap warmup cannot re-run if RootView's .task re-fires.
+    var hasCompletedBootstrap = false
 
     func invalidateProtectedShell() {
         protectedShellID = UUID()

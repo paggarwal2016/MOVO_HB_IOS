@@ -309,7 +309,9 @@ actor NetworkService: NetworkServiceProtocol {
         // Decode successful response — treat empty body on other 2xx as `{}`
         let decodableData = data.isEmpty ? Data("{}".utf8) : data
         do {
-            return try await JSONDecoder.fintechDecoder.decode(T.self, from: decodableData)
+            let decoded = try await JSONDecoder.fintechDecoder.decode(T.self, from: decodableData)
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastActivityAt")
+            return decoded
         } catch {
             SecureLogger.error("Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)", category: .network)
             throw NetworkError.decodingError
@@ -381,6 +383,7 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         SecureLogger.info("API Success.", category: .network)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastActivityAt")
         return data
     }
 }

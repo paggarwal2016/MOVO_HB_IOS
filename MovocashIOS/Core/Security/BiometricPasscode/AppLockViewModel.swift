@@ -122,10 +122,9 @@ final class AppLockViewModel: ObservableObject {
             // Snapshot key presence BEFORE the async call so we know whether
             // Face ID was actually shown to the user during the RSA signing step.
             let rsaKeysPresent = RSAKeyManager.shared.keysExist()
-            let success = await rsaAuth()
-            if success {
-                lockManager.unlockAfterRSAAuth()
-            }
+            // Unlock is handled centrally inside AuthViewModel.loginWithBiometric
+            // on success — no need to call unlockAfterRSAAuth() here.
+            _ = await rsaAuth()
             if rsaKeysPresent {
                 // Face ID was already shown for RSA signing — do not prompt again
                 // via the local path. PIN pad is the correct fallback.

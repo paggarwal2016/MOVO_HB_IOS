@@ -16,17 +16,16 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="New" translatesAutoresizingMaskIntoConstraints="NO" id="mN3-QX-brh">
-                                <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="logo-image-view" image="LaunchLogo">
+                                <rect key="frame" x="136.5" y="366.0" width="120" height="120"/>
                             </imageView>
                         </subviews>
-                        <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
-                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <color key="backgroundColor" red="0.02353" green="0.02353" blue="0.03137" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" secondItem="mN3-QX-brh" secondAttribute="trailing" id="btZ-RI-c4X"/>
-                            <constraint firstAttribute="bottom" secondItem="mN3-QX-brh" secondAttribute="bottom" id="pHD-ZK-7cR"/>
-                            <constraint firstItem="mN3-QX-brh" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" id="rGk-Kn-Vvm"/>
-                            <constraint firstItem="mN3-QX-brh" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="rHp-Rg-QfJ"/>
+                            <constraint firstItem="logo-image-view" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cx-constraint"/>
+                            <constraint firstItem="logo-image-view" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cy-constraint"/>
+                            <constraint firstItem="logo-image-view" firstAttribute="width" constant="120" id="w-constraint"/>
+                            <constraint firstItem="logo-image-view" firstAttribute="height" constant="120" id="h-constraint"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -36,6 +35,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="New" width="585" height="1266"/>
+        <image name="LaunchLogo" width="360" height="360"/>
     </resources>
 </document>
