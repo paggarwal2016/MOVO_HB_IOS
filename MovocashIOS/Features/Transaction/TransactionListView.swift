@@ -29,11 +29,12 @@ struct TransactionListView: View {
     @State private var showFilterSheet  = false
     @State private var activeChipFilter: TransactionChipFilter = .all
     
-    init(container: AppContainer, accountId: Int, mode: TransactionMode = .common) {
+    init(container: AppContainer, accountId: Int, mode: TransactionMode = .common, initialMax: Int = 100) {
         self.accountId = accountId
         self.mode = mode
         _transactionVM = StateObject(wrappedValue: container.makeTransactionViewModel())
-        let base = TransactionFilter(accountId: accountId)
+        var base = TransactionFilter(accountId: accountId)
+        base.max = initialMax
         _activeFilter  = State(initialValue: base)
         _pendingFilter = State(initialValue: base)
     }

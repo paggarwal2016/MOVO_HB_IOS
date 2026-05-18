@@ -18,6 +18,5 @@ struct CardSkeletonView: View {
             )
             .frame(height: 150)
             .shimmer()
-            .padding(.horizontal, Spacing.lg)
     }
 }

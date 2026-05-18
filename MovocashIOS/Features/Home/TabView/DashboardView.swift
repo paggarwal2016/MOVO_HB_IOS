@@ -55,7 +55,6 @@ struct DashboardView: View {
     @State private var needsDashboardRefresh = false
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
-    @State private var showCardDetail = false
 
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -138,6 +137,7 @@ struct DashboardView: View {
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
                     preselectedFromCard: vm.primaryLinkedCard,
+                    primaryLinkedCard: vm.primaryLinkedCard,
                     initialCards: vm.apiCards,
                     container: container,
                     onDismiss: { needsDashboardRefresh = true }
@@ -198,6 +198,7 @@ struct DashboardView: View {
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
                     preselectedFromCard: vm.primaryLinkedCard,
+                    primaryLinkedCard: vm.primaryLinkedCard,
                     initialCards: vm.apiCards,
                     container: container,
                     onDismiss: { needsDashboardRefresh = true }
@@ -229,6 +230,7 @@ struct DashboardView: View {
             ViewCardsListScreen(
                 cards: vm.cards,
                 primaryAccountId: dashboardVM.primaryAccount?.id,
+                primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 container: container,
                 onDeleted: {}
             )
@@ -242,13 +244,18 @@ struct DashboardView: View {
                     .navigationBarBackButtonHidden(true)
             }
         }
-        .navigationDestination(isPresented: $showCardDetail) {
+        .navigationDestination(isPresented: Binding(
+            get: { selectedCard != nil },
+            set: { if !$0 { selectedCard = nil } }
+        )) {
             if let card = selectedCard {
-                CardDetailSheet(card: card,
-                                primaryAccountId: dashboardVM.primaryAccount?.id,
-                                savingVM: savingVM,
-                                container: container,
-                                onDeleted: {}
+                CardDetailSheet(
+                    card: card,
+                    primaryAccountId: dashboardVM.primaryAccount?.id,
+                    primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                    savingVM: savingVM,
+                    container: container,
+                    onDeleted: {}
                 )
             }
         }
@@ -280,7 +287,6 @@ struct DashboardView: View {
             // destinations to animate away when the flow changes to .choice.
             // This fires in the same notification cycle as MovocashIOSApp.onReceive
             // (which is deferred by one Task), so these dismissals happen first.
-            showCardDetail = false
             selectedCard = nil
             showTransactions = false
             showViewCardList = false
@@ -357,7 +363,6 @@ struct DashboardView: View {
                     onPrimaryTap: { showEditNickname = true },
                     onViewCardTap: {
                         selectedCard = vm.primaryLinkedCard
-                        showCardDetail = true
                     },
                     onQuickAction: handleQuickAction
                 )
@@ -427,7 +432,6 @@ struct DashboardView: View {
         Group {
             if !vm.hasLoadedCards {
                 CardSkeletonView()
-                    .frame(height: 220)
             } else if vm.cards.isEmpty {
                 CreateCardView(
                     title: data.title,
@@ -441,7 +445,6 @@ struct DashboardView: View {
                     onTap: { showCreateCashCard = true },
                     onEyeTap: { card in
                         selectedCard = card
-                        showCardDetail = true
                     },
                     onShowMore: { showViewCardList = true }
                 )

@@ -9,6 +9,7 @@ struct CardDetailSheet: View {
     
     let card: VCardListResponse
     let primaryAccountId: Int?
+    let primaryLinkedCard: VCardListResponse?
     let savingVM: SavingsAccountViewModel
     let container: AppContainer
     var onDeleted: () -> Void
@@ -18,6 +19,7 @@ struct CardDetailSheet: View {
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
     @State private var showTransfer = false
+    @State private var showAllTransactions = false
     @State private var isLoading = false
     @State private var walletTask: Task<Void, Never>?
     @State private var deleteTask: Task<Void, Never>?
@@ -27,17 +29,28 @@ struct CardDetailSheet: View {
     init(
         card: VCardListResponse,
         primaryAccountId: Int?,
+        primaryLinkedCard: VCardListResponse? = nil,
         savingVM: SavingsAccountViewModel,
         container: AppContainer,
         onDeleted: @escaping () -> Void
     ) {
         self.card = card
         self.primaryAccountId = primaryAccountId
+        self.primaryLinkedCard = primaryLinkedCard
         self.savingVM = savingVM
         self.container = container
         self.onDeleted = onDeleted
         _txVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+    }
+
+    private var transferMode: TransferFlowMode {
+        if card.id == primaryLinkedCard?.id {
+            return .fixedFrom
+        } else if let primaryCard = primaryLinkedCard {
+            return .fixedBoth(toCard: primaryCard)
+        }
+        return .standard
     }
     
     var body: some View {
@@ -49,15 +62,17 @@ struct CardDetailSheet: View {
                     navBar
                     cardHero
                     cardNumberRow
-                    appleWalletButton
-                    quickActions
-                    recentActivitySection
+                    cardActions
+                    if txVM.transactions.count > 0 {
+                        recentActivitySection
+                    }
                     deleteSection
                     Spacer().frame(height: Spacing.xxl)
                 }
             }
 
-            if isLoading {
+            if isLoading || isDeleting {
+                Color.black.opacity(0.45).ignoresSafeArea()
                 SpinnerView()
             }
         }
@@ -70,6 +85,16 @@ struct CardDetailSheet: View {
         } message: {
             Text("Are you sure you want to delete this card? This action cannot be undone.")
         }
+        .sheet(isPresented: $showAllTransactions) {
+            if let accountId = card.savingsAccountId {
+                TransactionListView(
+                    container: container,
+                    accountId: accountId,
+                    mode: .individual,
+                    initialMax: 500
+                )
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             walletTask?.cancel()
             walletTask = nil
@@ -77,6 +102,7 @@ struct CardDetailSheet: View {
             deleteTask = nil
             showDeleteConfirm = false
             showTransfer = false
+            showAllTransactions = false
             isLoading = false
             isDeleting = false
             dismiss()
@@ -88,10 +114,12 @@ struct CardDetailSheet: View {
             let fromAccount = cardAccount ?? primaryAccount
             if let fromAccount {
                 InternalTransferView(
+                    mode: transferMode,
                     toClientId: fromAccount.clientId,
                     fromAccount: fromAccount,
                     nonPrimaryAccounts: accounts.filter { $0.id != fromAccount.id },
                     preselectedFromCard: card,
+                    primaryLinkedCard: primaryLinkedCard,
                     container: container,
                     onDismiss: { showTransfer = false }
                 )
@@ -105,7 +133,7 @@ struct CardDetailSheet: View {
             let needsAccounts = savingVM.accountList == nil
             async let transactions: () = {
                 guard let accountId else { return }
-                await txVM.loadTransactions(max: 500, accountId: accountId)
+                await txVM.loadTransactions(max: 10, accountId: accountId)
             }()
             async let accounts: () = {
                 guard needsAccounts else { return }
@@ -117,32 +145,56 @@ struct CardDetailSheet: View {
     }
     
     
-    private var appleWalletButton: some View {
-        Button(action: {
-            walletTask = Task {
-                guard let accountId = card.savingsAccountId else { return }
-                await achVM.addVirtualCardToAppleWallet(
-                    accountId: accountId,
-                    localizedDescription: "Apple Pay"
+    private var cardActions: some View {
+        HStack(spacing: Spacing.sm) {
+            Button(action: {
+                walletTask = Task {
+                    guard let accountId = card.savingsAccountId else { return }
+                    await achVM.addVirtualCardToAppleWallet(
+                        accountId: accountId,
+                        localizedDescription: "Apple Pay"
+                    )
+                }
+            }) {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "wallet.pass")
+                        .font(.system(size: 16, weight: .medium))
+                    Text("Apple Wallet")
+                        .textStyle(Typography.bodyCompact)
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(Color.movo.background)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.lg)
+                        .fill(Color.movo.accent)
                 )
             }
-        }) {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "wallet.pass")
-                    .font(.system(size: 18, weight: .medium))
-                Text("Add to Apple Wallet")
-                    .textStyle(Typography.bodyCompact)
-                    .fontWeight(.semibold)
+            .buttonStyle(.plain)
+            
+            Button(action: { showTransfer = true }) {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 16, weight: .medium))
+                    Text("Transfer")
+                        .textStyle(Typography.bodyCompact)
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(Color.movo.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.lg)
+                        .fill(Color.movo.elevated)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.lg)
+                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        )
+                )
             }
-            .foregroundColor(Color.movo.background)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(Color.movo.accent)
-            )
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
         .padding(.horizontal, Spacing.screenHorizontal)
         .padding(.bottom, Spacing.xl)
     }
@@ -150,18 +202,9 @@ struct CardDetailSheet: View {
     private var deleteSection: some View {
         Button(action: { showDeleteConfirm = true }) {
             Text("Delete card")
-                .textStyle(Typography.caption)
-                .foregroundColor(Color.movo.textTertiary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .background(
-                    RoundedRectangle(cornerRadius: Radius.lg)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(OutlineButtonStyle())
         .padding(.horizontal, Spacing.screenHorizontal)
-        .padding(.top, Spacing.xs)
     }
     
     public func copyCardNumber() {
@@ -354,77 +397,6 @@ struct CardDetailSheet: View {
     }
     
     
-    private var quickActions: some View {
-        HStack(spacing: Spacing.sm) {
-            QuickActionCell(
-                icon: AnyView(
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color.movo.accent)
-                ),
-                iconBackground: Color.movo.accentTint,
-                iconBorder: Color.movo.accentBorder,
-                label: "Transfer",
-                action: { showTransfer = true }
-            )
-            QuickActionCell(
-                icon: AnyView(
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color.movo.textSecondary)
-                ),
-                iconBackground: Color.movo.elevated,
-                iconBorder: nil,
-                label: "Add money",
-                action: {}
-            )
-        }
-        .padding(.horizontal, Spacing.screenHorizontal)
-        .padding(.bottom, Spacing.xl)
-    }
-    
-    
-    private struct QuickActionCell: View {
-        let icon: AnyView
-        let iconBackground: Color
-        let iconBorder: Color?
-        let label: String
-        let action: () -> Void
-        
-        var body: some View {
-            Button(action: action) {
-                VStack(spacing: Spacing.sm) {
-                    icon
-                        .frame(width: 36, height: 36)
-                        .background(
-                            RoundedRectangle(cornerRadius: Radius.button)
-                                .fill(iconBackground)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: Radius.button)
-                                        .strokeBorder(iconBorder ?? .clear, lineWidth: Stroke.hairline)
-                                )
-                        )
-                    Text(label)
-                        .textStyle(Typography.captionSmall)
-                        .foregroundColor(Color.movo.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .padding(.horizontal, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .fill(Color.movo.surface.opacity(0.7))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Radius.heroCard)
-                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                        )
-                )
-            }
-            .buttonStyle(.plain)
-        }
-    }
-    
-    
     // MARK: - Recent Activity
     
     private var recentActivitySection: some View {
@@ -432,9 +404,11 @@ struct CardDetailSheet: View {
             HStack {
                 Eyebrow("Recent activity")
                 Spacer()
-//                Button("See all") { /* navigate */ }
-//                    .font(Typography.captionSmall.font)
-//                    .foregroundColor(Color.movo.accent)
+                if txVM.transactions.count >= 10 {
+                    Button("See all") { showAllTransactions = true }
+                        .font(Typography.captionSmall.font)
+                        .foregroundColor(Color.movo.accent)
+                }
             }
             .padding(.horizontal, 4)
             

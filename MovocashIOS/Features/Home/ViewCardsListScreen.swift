@@ -11,26 +11,31 @@ struct ViewCardsListScreen: View {
     
     let cards: [VCardListResponse]
     let primaryAccountId: Int?
+    let primaryLinkedCard: VCardListResponse?
     let container: AppContainer
     var onDeleted: (() -> Void)?
-    
+
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var cardVM: VCardViewModel
-    
+
     init(
         cards: [VCardListResponse],
         primaryAccountId: Int?,
+        primaryLinkedCard: VCardListResponse? = nil,
         container: AppContainer,
         onDeleted: (() -> Void)? = nil
     ) {
         self.cards = cards
         self.primaryAccountId = primaryAccountId
+        self.primaryLinkedCard = primaryLinkedCard
         self.container = container
         self.onDeleted = onDeleted
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
     
+    @SwiftUI.Environment(\.dismiss) private var dismiss
+
     @State private var selectedCard: VCardListResponse?
     @State private var showCardDetail = false
     @State private var showCreateCard = false
@@ -44,7 +49,8 @@ struct ViewCardsListScreen: View {
     var body: some View {
         ZStack {
             MovoBackground()
-            Group {
+            VStack(spacing: 0) {
+                navBar
                 if displayCards.isEmpty {
                     emptyState
                 } else {
@@ -52,21 +58,7 @@ struct ViewCardsListScreen: View {
                 }
             }
         }
-        .navigationTitle("Cards")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.movo.background, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showCreateCard = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.movo.accent)
-                }
-            }
-        }
+        .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showCreateCard) {
             CreateCashCardView(
                 onCancel: { showCreateCard = false },
@@ -84,6 +76,7 @@ struct ViewCardsListScreen: View {
                 CardDetailSheet(
                     card: card,
                     primaryAccountId: primaryAccountId,
+                    primaryLinkedCard: primaryLinkedCard,
                     savingVM: savingVM,
                     container: container,
                     onDeleted: {
@@ -98,8 +91,25 @@ struct ViewCardsListScreen: View {
         .globalAlert()
     }
     
+    // MARK: - Nav Bar
+
+    private var navBar: some View {
+        HStack {
+            CircularNavButton(systemName: "chevron.left") { dismiss() }
+            Spacer()
+            Text("Cards")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+            Spacer()
+            CircularNavButton(systemName: "plus") { showCreateCard = true }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.sm)
+    }
+
     // MARK: - Cards List
-    
+
     private var cardsList: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 14) {

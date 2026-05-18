@@ -22,6 +22,7 @@ struct PayAnyoneContactPickerView: View {
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     @State private var selectedFrequent: ContactRecord? = nil
     @State private var showCreateContact = false
+    @State private var showAllFrequents = false
     @State private var isInitialLoading = true
     @State private var loadTask: Task<Void, Never>?
     @State private var createContactTask: Task<Void, Never>?
@@ -53,59 +54,35 @@ struct PayAnyoneContactPickerView: View {
             ZStack {
                 MovoBackground()
 
-                if isInitialLoading {
-                    SpinnerView()
-                } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: Spacing.lg) {
+                VStack(spacing: 0) {
+                    navBar
 
-                            if !contactVM.frequents.isEmpty {
-                                frequentsSection
+                    if isInitialLoading {
+                        Spacer()
+                        SpinnerView()
+                        Spacer()
+                    } else {
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: Spacing.lg) {
+
+                                if !contactVM.frequents.isEmpty {
+                                    frequentsSection
+                                }
+
+                                contactsListCard
+
+                                if !isAuthorized {
+                                    permissionCard
+                                        .padding(.horizontal, Spacing.lg)
+                                }
                             }
-
-                            contactsListCard
-
-                            if !isAuthorized {
-                                permissionCard
-                                    .padding(.horizontal, Spacing.lg)
-                            }
+                            .padding(.top, Spacing.md)
+                            .padding(.bottom, Spacing.xxxl)
                         }
-                        .padding(.top, Spacing.md)
-                        .padding(.bottom, Spacing.xxxl)
                     }
                 }
             }
-            .navigationTitle("Pay Anyone")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(Color.movo.textSecondary)
-                            .frame(width: 28, height: 28)
-                            .background(
-                                Circle()
-                                    .fill(Color.movo.elevated.opacity(0.8))
-                                    .overlay(
-                                        Circle()
-                                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                                    )
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close")
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showCreateContact = true } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(Color.movo.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .toolbarBackground(Color.clear, for: .navigationBar)
+            .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(.dark)
             .navigationDestination(for: ContactRecord.self) { contact in
                 QuickTransferView(
@@ -155,6 +132,18 @@ struct PayAnyoneContactPickerView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.movo.surface)
             }
+            .sheet(isPresented: $showAllFrequents) {
+                AllFrequentsView(
+                    contactVM: contactVM,
+                    container: container,
+                    cards: cards,
+                    accountBalance: accountBalance,
+                    primaryLinkedCard: primaryLinkedCard,
+                    onSuccess: { onSuccess(); dismiss() }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
             .blur(radius: showCreateContact ? 3 : 0)
             .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
                 loadTask?.cancel()
@@ -163,6 +152,7 @@ struct PayAnyoneContactPickerView: View {
                 createContactTask = nil
                 isInitialLoading = false
                 showCreateContact = false
+                showAllFrequents = false
                 selectedFrequent = nil
                 dismiss()
             }
@@ -187,12 +177,35 @@ struct PayAnyoneContactPickerView: View {
         }
     }
 
+    // MARK: - Nav Bar
+
+    private var navBar: some View {
+        HStack {
+            CircularNavButton(systemName: "xmark") { dismiss() }
+            Spacer()
+            Text("Pay Anyone")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+            Spacer()
+            CircularNavButton(systemName: "plus") { showCreateContact = true }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.sm)
+    }
+
     // MARK: - Frequents
 
     private var frequentsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Eyebrow("RECENT PAY")
-                .padding(.horizontal, Spacing.lg)
+            HStack {
+                Eyebrow("RECENT PAY")
+                Spacer()
+                Button("See all") { showAllFrequents = true }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color.movo.accent)
+            }
+            .padding(.horizontal, Spacing.lg)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.sm + 2) {

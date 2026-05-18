@@ -74,6 +74,7 @@ struct ViewCardScreen: View {
         switch vm.state {
         case .loading where card == nil:
             CardSkeletonView()
+                .padding(.horizontal, Spacing.lg)
         default:
             if let card {
                 CustomCardView(

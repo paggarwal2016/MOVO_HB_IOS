@@ -134,8 +134,10 @@ struct PayAnyoneView: View {
                 QuickTransferView(contact: contact, container: container, cards: cards)
             }
         }
-        .navigationDestination(isPresented: $showAllFrequents) {
+        .sheet(isPresented: $showAllFrequents) {
             AllFrequentsView(contactVM: contactVM, container: container, cards: cards)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .onAppear {
             // Resolve permission status synchronously before async work begins
@@ -484,22 +486,6 @@ struct PayAnyoneView: View {
         .padding(.top, Spacing.lg - 2)
         .padding(.bottom, Spacing.md)
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
 }
 
 // MARK: - Hero Illustration (two figures + flying bill)

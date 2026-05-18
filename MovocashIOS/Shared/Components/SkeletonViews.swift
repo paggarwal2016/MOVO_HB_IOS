@@ -156,6 +156,7 @@ struct DashboardSkeletonView: View {
 
             // myCards section
             CardSkeletonView()
+                .padding(.horizontal, 15)
         }
         .padding(.top, 16)
     }

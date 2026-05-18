@@ -215,11 +215,11 @@ struct CardSelectorView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 0)
                 }
             }
         }
-        .frame(height: cards.count > 1 ? 210 : 200)
+        .frame(height: cards.count > 1 ? 195 : 190)
         .clipped()
         .contentShape(Rectangle())
     }

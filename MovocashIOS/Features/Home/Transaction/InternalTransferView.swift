@@ -7,14 +7,27 @@
 
 import SwiftUI
 
+// MARK: - Transfer Flow Mode
+
+enum TransferFlowMode {
+    /// Both sides interactive, swap allowed (Flow 1 — Move Money)
+    case standard
+    /// From is fixed, To is pickable, no swap (Flow 3 — primary card detail)
+    case fixedFrom
+    /// Both sides fixed, no swap (Flow 2 — secondary card detail)
+    case fixedBoth(toCard: VCardListResponse)
+}
+
 struct InternalTransferView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var vcardVM: VCardViewModel
 
+    private let mode: TransferFlowMode
     private let toClientId: Int
     private let preselectedFromCard: VCardListResponse?
+    private let primaryLinkedCard: VCardListResponse?
     private let initialCards: [VCardListResponse]
     private let allAccounts: [SavingsAccountInfo]
 
@@ -70,16 +83,20 @@ struct InternalTransferView: View {
     }
 
     init(
+        mode: TransferFlowMode = .standard,
         toClientId: Int,
         fromAccount: SavingsAccountInfo?,
         nonPrimaryAccounts: [SavingsAccountInfo],
         preselectedFromCard: VCardListResponse? = nil,
+        primaryLinkedCard: VCardListResponse? = nil,
         initialCards: [VCardListResponse] = [],
         container: AppContainer,
         onDismiss: @escaping () -> Void,
     ) {
+        self.mode = mode
         self.toClientId = toClientId
         self.preselectedFromCard = preselectedFromCard
+        self.primaryLinkedCard = primaryLinkedCard
         self.initialCards = initialCards
         var accounts = nonPrimaryAccounts
         if let from = fromAccount { accounts.insert(from, at: 0) }
@@ -88,9 +105,11 @@ struct InternalTransferView: View {
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
         self.onDismiss = onDismiss
+        let fixedToCard: VCardListResponse?
+        if case .fixedBoth(let toCard) = mode { fixedToCard = toCard } else { fixedToCard = nil }
         let firstDestination = initialCards.first(where: { $0.savingsAccountId != nil && $0.id != preselectedFromCard?.id })
         _selectedFromCard = State(initialValue: preselectedFromCard)
-        _selectedToCard = State(initialValue: firstDestination)
+        _selectedToCard = State(initialValue: fixedToCard ?? firstDestination)
     }
 
     var body: some View {
@@ -170,6 +189,7 @@ struct InternalTransferView: View {
             .presentationCornerRadius(Radius.sheet)
         }
         .task {
+            if case .fixedBoth = mode { return }
             if initialCards.isEmpty {
                 await vcardVM.loadCards()
             }
@@ -242,7 +262,36 @@ struct InternalTransferView: View {
 
     private var transferPanel: some View {
         VStack(spacing: 0) {
-            // Top slot: fixed design before swap, pickable design after swap
+            slotLabel("FROM")
+            fromSlot
+            swapDivider
+            slotLabel("TO")
+            toSlot
+        }
+        .padding(.vertical, Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.surface.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        )
+    }
+
+    private func slotLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold))
+            .tracking(0.8)
+            .foregroundColor(Color.movo.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.bottom, Spacing.xs)
+    }
+
+    @ViewBuilder
+    private var fromSlot: some View {
+        if case .standard = mode {
             if isSwapped {
                 pickableSlot(
                     card: selectedFromCard,
@@ -251,21 +300,23 @@ struct InternalTransferView: View {
                     onTap: { showFromCardSheet = true }
                 )
             } else {
-                fixedSlot(
-                    card: selectedFromCard,
-                    balance: selectedFromAccount?.formattedBalance ?? ""
-                )
+                fixedSlot(card: selectedFromCard, balance: selectedFromAccount?.formattedBalance ?? "")
             }
+        } else {
+            fixedSlot(card: selectedFromCard, balance: selectedFromAccount?.formattedBalance ?? "")
+        }
+    }
 
+    @ViewBuilder
+    private var swapDivider: some View {
+        if case .standard = mode {
             ZStack {
                 Rectangle()
                     .fill(Color.movo.border)
                     .frame(height: Stroke.hairline)
                     .padding(.horizontal, Spacing.lg)
                     .allowsHitTesting(false)
-                Button {
-                    swapAccounts()
-                } label: {
+                Button { swapAccounts() } label: {
                     Circle()
                         .fill(Color.movo.elevated)
                         .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
@@ -280,38 +331,46 @@ struct InternalTransferView: View {
                 .contentShape(Circle())
             }
             .padding(.vertical, Spacing.md)
-
-            // Bottom slot: pickable design before swap, fixed design after swap
-            if isSwapped {
-                fixedSlot(
-                    card: selectedToCard,
-                    balance: toCardAccount?.formattedBalance ?? ""
-                )
-            } else {
-                if isLoadingCards {
-                    cardLoadingRow
-                } else {
-                    Button { showCardSheet = true } label: {
-                        pickableRowContent(
-                            card: selectedToCard,
-                            balance: toCardAccount?.formattedBalance ?? "",
-                            showChevron: !toCardsList.isEmpty
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(toCardsList.isEmpty)
-                }
-            }
+        } else {
+            Rectangle()
+                .fill(Color.movo.border)
+                .frame(height: Stroke.hairline)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.md)
         }
-        .padding(.vertical, Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface.opacity(0.85))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+    }
+
+    @ViewBuilder
+    private var toSlot: some View {
+        if case .fixedBoth = mode {
+            fixedSlot(card: selectedToCard, balance: toCardAccount?.formattedBalance ?? "")
+        } else if case .standard = mode {
+            if isSwapped {
+                fixedSlot(card: selectedToCard, balance: toCardAccount?.formattedBalance ?? "")
+            } else {
+                pickableToContent
+            }
+        } else {
+            // fixedFrom: To is always pickable
+            pickableToContent
+        }
+    }
+
+    @ViewBuilder
+    private var pickableToContent: some View {
+        if isLoadingCards {
+            cardLoadingRow
+        } else {
+            Button { showCardSheet = true } label: {
+                pickableRowContent(
+                    card: selectedToCard,
+                    balance: toCardAccount?.formattedBalance ?? "",
+                    showChevron: !toCardsList.isEmpty
                 )
-        )
+            }
+            .buttonStyle(.plain)
+            .disabled(toCardsList.isEmpty)
+        }
     }
 
     // MARK: - Row Helpers
@@ -321,6 +380,7 @@ struct InternalTransferView: View {
         let name = card?.name ?? "Card"
         let lastFour = card?.lastFour ?? "••••"
         let subtitle = balance.isEmpty ? "•••• \(lastFour)" : "\(balance) · •••• \(lastFour)"
+        let isPrimary = card != nil && card?.id == primaryLinkedCard?.id
         return HStack(spacing: Spacing.md) {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
@@ -329,10 +389,15 @@ struct InternalTransferView: View {
             }
             .frame(width: 52, height: 52)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(name)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color.movo.textPrimary)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: Spacing.xs) {
+                    Text(name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                    if isPrimary {
+                        StatusPill("PRIMARY", variant: .accent)
+                    }
+                }
                 Text(subtitle)
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(Color.movo.textTertiary)
@@ -474,10 +539,10 @@ struct InternalTransferView: View {
 
     private func resolveCardSelection() {
         if selectedFromCard == nil {
-            // Try to match by savings account ID, else take first available card
             selectedFromCard = allCards.first { $0.savingsAccountId == selectedFromAccount?.id }
                 ?? allCards.first { $0.savingsAccountId != nil && $0.id != selectedToCard?.id }
         }
+        if case .fixedBoth = mode { return }
         if selectedToCard == nil {
             selectedToCard = toCardsList.first
         }

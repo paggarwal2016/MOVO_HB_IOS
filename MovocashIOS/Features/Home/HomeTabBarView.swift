@@ -280,6 +280,7 @@ private extension HomeTabBarView {
             .padding(.horizontal, Spacing.lg)
 
             CardSkeletonView()
+                .padding(.horizontal, Spacing.lg)
         }
     }
 

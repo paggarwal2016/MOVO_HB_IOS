@@ -64,7 +64,7 @@ struct ProfileScreen: View {
                     emptyState
                 }
             }
-            if isLinkedAccountLoading {
+            if isLinkedAccountLoading || isLoggingOut {
                 Color.black.opacity(0.45).ignoresSafeArea()
                 SpinnerView()
             }
