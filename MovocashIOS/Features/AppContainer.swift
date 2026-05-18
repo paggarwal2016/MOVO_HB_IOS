@@ -44,7 +44,8 @@ final class AppContainer: ObservableObject {
             sessionManager: sessionManager,
             kycManager: kycManager,
             alertManager: alertManager,
-            analytics: analytics
+            analytics: analytics,
+            lockManager: lockManager
         )
     }
 

@@ -24,6 +24,7 @@ final class AuthViewModel: ObservableObject {
     private let kycManager: KYCManagerProtocol
     private let alertManager: AlertManagerProtocol
     private let analytics: AnalyticsTracking
+    private let lockManager: AppLockManager
 
     init(
         network: NetworkServiceProtocol,
@@ -31,7 +32,8 @@ final class AuthViewModel: ObservableObject {
         sessionManager: SessionManager,
         kycManager: KYCManagerProtocol,
         alertManager: AlertManagerProtocol,
-        analytics: AnalyticsTracking
+        analytics: AnalyticsTracking,
+        lockManager: AppLockManager
     ) {
         self.network = network
         self.keychain = keychain
@@ -39,6 +41,7 @@ final class AuthViewModel: ObservableObject {
         self.kycManager = kycManager
         self.alertManager = alertManager
         self.analytics = analytics
+        self.lockManager = lockManager
     }
     
     // MARK: - Send OTP
@@ -299,12 +302,13 @@ extension AuthViewModel {
             try await sessionManager.startSession(accessToken: tokenResponse.accessToken, appState: appState)
 
             SecureLogger.info("tokenRSA + tokenAccess success — session started", category: .auth)
+            lockManager.unlockAfterRSAAuth()
             UserDefaults.standard.set(true, forKey: "kycCompleted")
             appState.flow = .home
             return true
         } catch {
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
-            ToastManager.shared.show("Biometric login failed. Please use your passcode.", style: .error, position: .bottom)
+            ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
             return false
         }
     }
