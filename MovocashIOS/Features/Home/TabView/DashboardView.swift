@@ -50,6 +50,9 @@ struct DashboardView: View {
     @State private var showInternalTransfer = false
     @State private var showViewCardList = false
     @State private var showAccountList = false
+    // Set to true by any child screen that completes a successful action;
+    // triggers a single dashboard refresh on return.
+    @State private var needsDashboardRefresh = false
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
     @State private var showCardDetail = false
@@ -116,14 +119,10 @@ struct DashboardView: View {
                 savingsList: $savingVM.accountList,
                 isPresented: $showAccountList,
                 container: container,
-                onDataChanged: {}
+                onDataChanged: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
-        }
-        .onChange(of: showAccountList) { isShowing in
-            guard !isShowing else { return }
-            Task { await dashboardVM.refresh() }
         }
         .sheet(isPresented: $showViewCard) {
             if let account = displayAccount {
@@ -141,27 +140,20 @@ struct DashboardView: View {
                     preselectedFromCard: vm.primaryLinkedCard,
                     initialCards: vm.apiCards,
                     container: container,
-                    onDismiss: {}
+                    onDismiss: { needsDashboardRefresh = true }
                 )
             }
-        }
-        .onChange(of: showFunds) { isShowing in
-            guard !isShowing else { return }
-            Task { await dashboardVM.refresh() }
         }
         .sheet(isPresented: $showContactList) {
             PayAnyoneContactPickerView(
                 container: container,
                 cards: vm.cards,
                 accountBalance: displayAccount?.availableBalance ?? 0,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard
+                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
-        }
-        .onChange(of: showContactList) { isShowing in
-            guard !isShowing else { return }
-            Task { await dashboardVM.refresh() }
         }
         .sheet(isPresented: $showAllFrequents) {
             AllFrequentsView(
@@ -169,14 +161,11 @@ struct DashboardView: View {
                 container: container,
                 cards: vm.cards,
                 accountBalance: displayAccount?.availableBalance ?? 0,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard
+                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
-        }
-        .onChange(of: showAllFrequents) { isShowing in
-            guard !isShowing else { return }
-            Task { await dashboardVM.refresh() }
         }
         .sheet(item: $quickTransferContact) { contact in
             QuickTransferView(
@@ -184,14 +173,11 @@ struct DashboardView: View {
                 container: container,
                 cards: vm.cards,
                 accountBalance: displayAccount?.availableBalance ?? 0,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard
+                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
-        }
-        .onChange(of: quickTransferContact) { contact in
-            guard contact == nil else { return }
-            Task { await dashboardVM.refresh() }
         }
         .fullScreenCover(isPresented: $showFundAccount) {
             if let account = displayAccount {
@@ -199,15 +185,11 @@ struct DashboardView: View {
                     container: container,
                     initialAccounts: dashboardVM.linkedAccounts?.linkedAccounts ?? [],
                     primaryAccount: account,
-                    onSuccess: {}
+                    onSuccess: { needsDashboardRefresh = true }
                 ) {
                     Task { await achVM.startPlaidLink() }
                 }
             }
-        }
-        .onChange(of: showFundAccount) { isShowing in
-            guard !isShowing else { return }
-            Task { await dashboardVM.refresh() }
         }
         .fullScreenCover(isPresented: $showInternalTransfer) {
             if let account = displayAccount {
@@ -218,15 +200,11 @@ struct DashboardView: View {
                     preselectedFromCard: vm.primaryLinkedCard,
                     initialCards: vm.apiCards,
                     container: container,
-                    onDismiss: {}
+                    onDismiss: { needsDashboardRefresh = true }
                 )
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationBarBackButtonHidden(true)
             }
-        }
-        .onChange(of: showInternalTransfer) { isShowing in
-            guard !isShowing else { return }
-            Task { await dashboardVM.refresh() }
         }
         .sheet(isPresented: $showMoveMoney) {
             MoveMoneyMenuView(
@@ -288,6 +266,11 @@ struct DashboardView: View {
                 .presentationCornerRadius(Radius.sheet)
                 .presentationBackground(Color.movo.surface)
             }
+        }
+        .onChange(of: needsDashboardRefresh) { shouldRefresh in
+            guard shouldRefresh else { return }
+            needsDashboardRefresh = false
+            Task { await dashboardVM.refresh() }
         }
         .onChange(of: vm.primaryLinkedCard?.id) { _ in
             dashboardVM.primaryLinkedCard = vm.primaryLinkedCard

@@ -15,6 +15,7 @@ struct AllFrequentsView: View {
     let cards: [VCardListResponse]
     var accountBalance: Decimal = 0
     var primaryLinkedCard: VCardListResponse? = nil
+    var onSuccess: () -> Void = {}
     
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var search: String = ""
@@ -106,7 +107,7 @@ struct AllFrequentsView: View {
             }
             .navigationDestination(isPresented: $isNavigating) {
                 if let contact = selectedContact {
-                    QuickTransferView(contact: contact, container: container, cards: cards, accountBalance: accountBalance, primaryLinkedCard: primaryLinkedCard)
+                    QuickTransferView(contact: contact, container: container, cards: cards, accountBalance: accountBalance, primaryLinkedCard: primaryLinkedCard, onSuccess: { onSuccess() })
                 }
             }
         }

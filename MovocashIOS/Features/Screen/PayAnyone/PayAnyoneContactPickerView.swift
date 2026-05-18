@@ -12,6 +12,7 @@ struct PayAnyoneContactPickerView: View {
     let cards: [VCardListResponse]
     let accountBalance: Decimal
     let primaryLinkedCard: VCardListResponse?
+    var onSuccess: () -> Void = {}
 
     @StateObject private var contactVM: ContactViewModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
@@ -25,11 +26,12 @@ struct PayAnyoneContactPickerView: View {
     @State private var loadTask: Task<Void, Never>?
     @State private var createContactTask: Task<Void, Never>?
 
-    init(container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal, primaryLinkedCard: VCardListResponse? = nil) {
+    init(container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal, primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
         self.container = container
         self.cards = cards
         self.accountBalance = accountBalance
         self.primaryLinkedCard = primaryLinkedCard
+        self.onSuccess = onSuccess
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
     }
 
@@ -112,7 +114,7 @@ struct PayAnyoneContactPickerView: View {
                     cards: cards,
                     accountBalance: accountBalance,
                     primaryLinkedCard: primaryLinkedCard,
-                    onSuccess: { dismiss() }
+                    onSuccess: { onSuccess(); dismiss() }
                 )
             }
             .navigationDestination(isPresented: Binding(
@@ -126,7 +128,7 @@ struct PayAnyoneContactPickerView: View {
                         cards: cards,
                         accountBalance: accountBalance,
                         primaryLinkedCard: primaryLinkedCard,
-                        onSuccess: { dismiss() }
+                        onSuccess: { onSuccess(); dismiss() }
                     )
                 }
             }

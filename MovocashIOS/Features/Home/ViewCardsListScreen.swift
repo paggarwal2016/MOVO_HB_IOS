@@ -74,8 +74,10 @@ struct ViewCardsListScreen: View {
                     await createCard(nickname: nickname, pin: pin)
                 }
             )
-            .presentationDetents([.large])
+            .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.surface)
         }
         .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {
