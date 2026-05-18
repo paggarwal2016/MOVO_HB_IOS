@@ -23,29 +23,12 @@ protocol TokenRefreshable {
 
 extension TokenRefreshable {
 
-    // MARK: - Needs Refresh
+    // MARK: - Fresh Access Token
 
-    /// Returns `true` when the token must be refreshed before use.
-    ///
-    /// Triggers refresh when:
-    /// - JWT is malformed or missing the `exp` claim.
-    /// - Token expires within the next 60 seconds (proactive buffer for long-running flows).
-    /// - `exp` is more than 24 hours in the future (tampered / injected token guard).
-    func needsTokenRefresh(_ token: String) -> Bool {
-        guard
-            let payload = JWTDecoder.decodePayload(token),
-            let exp = payload["exp"] as? TimeInterval
-        else { return true }
-
-        let now = Date().timeIntervalSince1970
-
-        if exp > now + 24 * 60 * 60 {
-            SecureLogger.warning("JWT exp exceeds 24-hour sanity limit — treating as tampered", category: .security)
-            return true
-        }
-
-        // 60-second proactive buffer — refresh before the flow starts, not during
-        return now >= exp - 60
+    /// Always fetches a fresh access token from the server and saves it to Keychain.
+    /// Throws `PlaidLinkError.tokenUnavailable` if the refresh fails.
+    func freshAccessToken() async throws -> String {
+        return try await performTokenRefresh()
     }
 
     // MARK: - Perform Refresh

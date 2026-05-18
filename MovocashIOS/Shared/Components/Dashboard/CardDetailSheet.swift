@@ -12,6 +12,7 @@ struct CardDetailSheet: View {
     let primaryLinkedCard: VCardListResponse?
     let savingVM: SavingsAccountViewModel
     let container: AppContainer
+    var canDelete: Bool
     var onDeleted: () -> Void
     
     @SwiftUI.Environment(\.dismiss) private var dismiss
@@ -32,6 +33,7 @@ struct CardDetailSheet: View {
         primaryLinkedCard: VCardListResponse? = nil,
         savingVM: SavingsAccountViewModel,
         container: AppContainer,
+        canDelete: Bool = true,
         onDeleted: @escaping () -> Void
     ) {
         self.card = card
@@ -39,6 +41,7 @@ struct CardDetailSheet: View {
         self.primaryLinkedCard = primaryLinkedCard
         self.savingVM = savingVM
         self.container = container
+        self.canDelete = canDelete
         self.onDeleted = onDeleted
         _txVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
@@ -66,7 +69,7 @@ struct CardDetailSheet: View {
                     if txVM.transactions.count > 0 {
                         recentActivitySection
                     }
-                    deleteSection
+                    if canDelete { deleteSection }
                     Spacer().frame(height: Spacing.xxl)
                 }
             }

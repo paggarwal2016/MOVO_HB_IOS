@@ -55,6 +55,7 @@ struct DashboardView: View {
     @State private var needsDashboardRefresh = false
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
+    @State private var isLinkingPlaid = false
 
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -179,16 +180,17 @@ struct DashboardView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(isPresented: $showFundAccount) {
+        .navigationDestination(isPresented: $showFundAccount) {
             if let account = displayAccount {
                 FundAccountView(
                     container: container,
                     initialAccounts: dashboardVM.linkedAccounts?.linkedAccounts ?? [],
                     primaryAccount: account,
-                    onSuccess: { needsDashboardRefresh = true }
-                ) {
-                    Task { await achVM.startPlaidLink() }
-                }
+                    onSuccess: { needsDashboardRefresh = true },
+                    onAccountLinked: { needsDashboardRefresh = true }
+                )
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
             }
         }
         .fullScreenCover(isPresented: $showInternalTransfer) {
@@ -255,6 +257,7 @@ struct DashboardView: View {
                     primaryLinkedCard: dashboardVM.primaryLinkedCard,
                     savingVM: savingVM,
                     container: container,
+                    canDelete: card.id != vm.primaryLinkedCard?.id,
                     onDeleted: {}
                 )
             }
@@ -402,9 +405,19 @@ struct DashboardView: View {
                 description: data.description,
                 buttonLabel: data.actions.first?.label ?? "Link an account",
                 accounts: data.linkedAccounts ?? [],
-                isLoading: achVM.state == .loading,
+                isLoading: isLinkingPlaid || achVM.state == .loading,
                 onLinkAccount: {
                     Task {
+                        isLinkingPlaid = true
+                        defer { isLinkingPlaid = false }
+                        do {
+                            if !KYCManager.shared.isConfigured {
+                                try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+                            }
+                        } catch {
+                            AlertManager.shared.showError("Unable to initialize. Please try again.")
+                            return
+                        }
                         await achVM.startPlaidLink()
                         if achVM.linkedAccount != nil { await dashboardVM.refresh() }
                     }
@@ -412,6 +425,16 @@ struct DashboardView: View {
                 },
                 onConnectAnother: {
                     Task {
+                        isLinkingPlaid = true
+                        defer { isLinkingPlaid = false }
+                        do {
+                            if !KYCManager.shared.isConfigured {
+                                try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+                            }
+                        } catch {
+                            AlertManager.shared.showError("Unable to initialize. Please try again.")
+                            return
+                        }
                         await achVM.startPlaidLink()
                         if achVM.linkedAccount != nil { await dashboardVM.refresh() }
                     }

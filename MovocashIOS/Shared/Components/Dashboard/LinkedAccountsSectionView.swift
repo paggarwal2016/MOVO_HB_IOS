@@ -106,10 +106,16 @@ struct LinkedAccountsSectionView: View {
 
             Button(action: onConnectAnother) {
                 HStack(spacing: 6) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("Connect another bank")
-                        .textStyle(Typography.button)
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.textSecondary))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Connect another bank")
+                            .textStyle(Typography.button)
+                    }
                 }
                 .foregroundStyle(Color.movo.textSecondary)
                 .frame(maxWidth: .infinity)
@@ -125,6 +131,7 @@ struct LinkedAccountsSectionView: View {
                 )
             }
             .buttonStyle(.plain)
+            .disabled(isLoading)
         }
         .padding(DesignTokens.Spacing.lg)
         .background(Color.movo.elevated)

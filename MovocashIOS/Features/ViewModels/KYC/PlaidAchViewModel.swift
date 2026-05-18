@@ -11,10 +11,12 @@ import MobileBankingSDK
 import UIKit
 
 @MainActor
-final class PlaidAchViewModel: ObservableObject {
+final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
 
     private let service: PlaidService
     private let plaidLinkManager: PlaidLinkManagerProtocol
+    let network: NetworkServiceProtocol
+    let keychain: KeychainManagerProtocol
 
     // MARK: - Published State
 
@@ -42,12 +44,18 @@ final class PlaidAchViewModel: ObservableObject {
 
     init(
         service: PlaidService = .shared,
+        network: NetworkServiceProtocol? = nil,
+        keychain: KeychainManagerProtocol? = nil,
         plaidLinkManager: PlaidLinkManagerProtocol? = nil
     ) {
+        let resolvedNetwork = network ?? NetworkService.shared
+        let resolvedKeychain = keychain ?? KeychainManager.shared
         self.service = service
+        self.network = resolvedNetwork
+        self.keychain = resolvedKeychain
         self.plaidLinkManager = plaidLinkManager ?? PlaidLinkManager(
-            network: NetworkService.shared,
-            keychain: KeychainManager.shared
+            network: resolvedNetwork,
+            keychain: resolvedKeychain
         )
     }
 

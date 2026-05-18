@@ -46,10 +46,10 @@ struct ProfileScreen: View {
     }
     
     private var effectiveAccounts: [ACHAccount] {
-        if !achVM.accounts.isEmpty {
+        if achVM.hasFetched {
             return achVM.accounts
         }
-        return dashboardVM.linkedAccounts?.linkedAccounts ?? []
+        return achVM.accounts.isEmpty ? (dashboardVM.linkedAccounts?.linkedAccounts ?? []) : achVM.accounts
     }
     
     var body: some View {
@@ -485,6 +485,17 @@ private extension ProfileScreen {
     var connectBankRow: some View {
         Button {
             Task {
+                isLinkedAccountLoading = true
+                do {
+                    if !KYCManager.shared.isConfigured {
+                        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+                    }
+                } catch {
+                    isLinkedAccountLoading = false
+                    AlertManager.shared.showError("Unable to initialize. Please try again.")
+                    return
+                }
+                isLinkedAccountLoading = false
                 await plaidVM.startPlaidLink()
                 if plaidVM.linkedAccount != nil {
                     isLinkedAccountLoading = true

@@ -11,20 +11,20 @@ struct FundAccountView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var vm: ACHViewModel
-    @StateObject private var achVM: PlaidAchViewModel
+    @StateObject private var plaidVM: PlaidAchViewModel
 
     let primaryAccount: SavingsAccountInfo
-    let onConnectBank: () -> Void
     let onSuccess: () -> Void
+    let onAccountLinked: () -> Void
     private let initialAccounts: [ACHAccount]
 
-    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, onSuccess: @escaping () -> Void = {}, onConnectBank: @escaping () -> Void) {
+    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, onSuccess: @escaping () -> Void = {}, onAccountLinked: @escaping () -> Void = {}) {
         self.initialAccounts = initialAccounts
         _vm = StateObject(wrappedValue: container.makeACHViewModel())
-        _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+        _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         self.primaryAccount = primaryAccount
         self.onSuccess = onSuccess
-        self.onConnectBank = onConnectBank
+        self.onAccountLinked = onAccountLinked
     }
 
     @State private var selectedAccount: ACHAccount?
@@ -32,6 +32,7 @@ struct FundAccountView: View {
     @State private var showConfirmSheet: Bool = false
     @State private var showAccountSheet: Bool = false
     @State private var isSubmitting: Bool = false
+    @State private var isConnecting: Bool = false
     @State private var successData: SuccessConfirmation?
     @State private var transferTask: Task<Void, Never>?
     @FocusState private var isAmountFocused: Bool
@@ -168,12 +169,13 @@ struct FundAccountView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
         }
-        .fullScreenCover(item: $successData) { data in
+        .fullScreenCover(item: $successData, onDismiss: {
+            onSuccess()
+            dismiss()
+        }) { data in
             SuccessConfirmationView(
                 viewModel: SuccessConfirmationViewModel(success: data) {
                     successData = nil
-                    onSuccess()
-                    dismiss()
                 }
             )
         }
@@ -183,13 +185,13 @@ struct FundAccountView: View {
 
     private var navBar: some View {
         HStack {
-            Color.clear.frame(width: 32, height: 32)
+            CircularNavButton(systemName: "chevron.left") { dismiss() }
             Spacer()
             Text("Funds Transfer")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
-            CircularNavButton(systemName: "xmark") { dismiss() }
+            Color.clear.frame(width: 32, height: 32)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
@@ -250,9 +252,20 @@ struct FundAccountView: View {
                 } else if sortedAccounts.isEmpty {
                     Button {
                         Task {
-                            await achVM.startPlaidLink()
-                            if achVM.linkedAccount != nil {
+                            isConnecting = true
+                            defer { isConnecting = false }
+                            do {
+                                if !KYCManager.shared.isConfigured {
+                                    try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+                                }
+                            } catch {
+                                AlertManager.shared.showError("Unable to initialize. Please try again.")
+                                return
+                            }
+                            await plaidVM.startPlaidLink()
+                            if plaidVM.linkedAccount != nil {
                                 await vm.fetchAccounts()
+                                onAccountLinked()
                             }
                         }
                     } label: {
@@ -265,7 +278,7 @@ struct FundAccountView: View {
                                     .font(.system(size: 18, weight: .semibold))
                                     .foregroundStyle(Color.movo.accent)
                             }
-                            Text(achVM.state == .loading ? "Connecting..." : "Connect bank account")
+                            Text(isConnecting || plaidVM.state == .loading ? "Connecting..." : "Connect bank account")
                                 .font(Typography.body.font)
                                 .foregroundStyle(Color.movo.accent)
                             Spacer()
@@ -277,7 +290,7 @@ struct FundAccountView: View {
                         .padding(.horizontal, Spacing.lg)
                     }
                     .buttonStyle(.plain)
-                    .disabled(achVM.state == .loading)
+                    .disabled(isConnecting || plaidVM.state == .loading)
                 } else {
                     Button {
                         isAmountFocused = false

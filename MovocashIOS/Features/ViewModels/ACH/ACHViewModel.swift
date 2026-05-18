@@ -13,6 +13,7 @@ final class ACHViewModel: BaseViewModel {
     // MARK: - Published State
 
     @Published var accounts: [ACHAccount] = []
+    @Published var hasFetched: Bool = false
 
     // MARK: - Dependencies
 
@@ -47,6 +48,7 @@ final class ACHViewModel: BaseViewModel {
                 return try await network.request(AchAPI.getAccounts)
             }
             accounts = response.achAccounts
+            hasFetched = true
         } catch is CancellationError {
             // Task cancelled — no action needed
         } catch {
@@ -60,6 +62,7 @@ final class ACHViewModel: BaseViewModel {
         do {
             let response: ACHResponse = try await network.request(AchAPI.getAccounts)
             accounts = response.achAccounts
+            hasFetched = true
         } catch is CancellationError {
             SecureLogger.warning("ACH refresh cancelled — task cancelled before response", category: .network)
         } catch {

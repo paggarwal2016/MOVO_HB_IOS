@@ -131,35 +131,13 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
 
     // MARK: - Token Management
 
-    /// Returns a valid access token for the MobileBankingSDK before the Plaid flow starts.
-    ///
-    /// Flow:
-    /// - Reads current token from Keychain.
-    /// - Decodes the JWT `exp` claim locally — no network call on the happy path.
-    /// - Token valid → returns it immediately.
-    /// - Token expired or within 60-second buffer → delegates to `TokenRefreshable.performTokenRefresh()`.
+    /// Fetches a fresh access token from the server before the Plaid flow starts.
     private func freshAccessToken() async throws -> String {
-        guard let current = try? await keychain.get("access_token", biometricPrompt: nil),
-              !current.isEmpty else {
-            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
-                AnalyticsParam.errorCode: "missing_token"
-            ])
-            SecureLogger.error("No access token in keychain — aborting Plaid Link", category: .payment)
-            throw PlaidLinkError.tokenUnavailable
-        }
-
-        guard needsTokenRefresh(current) else {
-            return current
-        }
-
-        SecureLogger.info("Token near expiry — refreshing before Plaid Link", category: .payment)
-
         do {
             let fresh = try await performTokenRefresh()
             analytics.log(AnalyticsEvent.tokenRefreshed, params: [
                 AnalyticsParam.reason: "plaid_proactive_refresh"
             ])
-            SecureLogger.info("Token refreshed successfully for Plaid Link", category: .payment)
             return fresh
         } catch {
             analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
