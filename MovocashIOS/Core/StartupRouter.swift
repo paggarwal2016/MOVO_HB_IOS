@@ -138,8 +138,13 @@ enum StartupRouter {
             SecureLogger.info("Boot route → .appLock (biometric gate)", category: .auth)
             appState.pendingDestination = .appLock
         } else {
-            SecureLogger.info("Boot route → .home (returning user, no biometric)", category: .auth)
-            appState.pendingDestination = .home
+            // No biometric enrolled. Force phone-OTP re-auth on every cold launch
+            // so force-quit + relaunch never grants dashboard access without
+            // explicit auth. kycCompleted stays TRUE so post-OTP lands on Home.
+            SecureLogger.info("Boot route → .choice (no biometric, force re-auth)", category: .auth)
+            keychain.clearAuthTokens()
+            appState.isAuthenticated = false
+            appState.pendingDestination = .choice
         }
     }
 

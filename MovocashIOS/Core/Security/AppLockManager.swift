@@ -128,6 +128,10 @@ final class AppLockManager: ObservableObject {
     @Published var lockoutMessage: String? = nil
     @Published var revocationError: String? = nil
     @Published private(set) var requiresPhoneLogin: Bool = false
+    /// True when a silent biometric attempt has failed and the lock
+    /// overlay should appear for manual retry. Cleared on successful
+    /// unlock or explicit reset.
+    @Published var biometricRetryRequired: Bool = false
 
     // MARK: - Storage Keys
 
@@ -185,7 +189,10 @@ final class AppLockManager: ObservableObject {
         // Lock immediately so the first SwiftUI render never shows the dashboard
         // before the passcode screen — prevents the flash on cold launch and
         // notification tap.
-        if passcodeManager.isPasscodeSet {
+        // Lock immediately so the first SwiftUI render never shows the
+        // dashboard before authentication. StartupRouter resets this for
+        // paths that don't need the gate.
+        if passcodeManager.isPasscodeSet || RSAKeyManager.shared.keysExist() {
             state = .locked
         }
     }
@@ -207,7 +214,10 @@ final class AppLockManager: ObservableObject {
         self.config = config
         self.clock = clock
         restorePersistedState()
-        if passcodeManager.isPasscodeSet {
+        // Lock immediately so the first SwiftUI render never shows the
+        // dashboard before authentication. StartupRouter resets this for
+        // paths that don't need the gate.
+        if passcodeManager.isPasscodeSet || RSAKeyManager.shared.keysExist() {
             state = .locked
         }
     }
@@ -222,6 +232,11 @@ final class AppLockManager: ObservableObject {
     var isBiometricEnabled: Bool         { passcodeManager.isBiometricKeyEnrolled }
     var isBiometricPermissionDenied: Bool { biometricManager.isAppPermissionDenied }
     var maxPasscodeAttempts: Int         { config.maxAttempts }
+    /// True when any auth method is enrolled — passcode (legacy) or RSA
+    /// biometric (current product model). Drives the lock state machine.
+    var hasAuthMethod: Bool {
+        isPasscodeSet || RSAKeyManager.shared.keysExist()
+    }
 
     // MARK: - App Lifecycle
 
@@ -245,9 +260,6 @@ final class AppLockManager: ObservableObject {
             backgroundedAt = clock.now()
             wasUnlockedWhenBackgrounded = (state == .unlocked)
         case .active:
-            // Consume both suppression flags atomically. permissionFlowActive is
-            // the durable version that survives the .inactive bounce when Settings
-            // opens; skipNextLock is the one-shot flag for other callers.
             let suppress = skipNextLock || permissionFlowActive
             skipNextLock = false
             permissionFlowActive = false
@@ -258,37 +270,50 @@ final class AppLockManager: ObservableObject {
             guard let since = backgroundedAt else { return }
             backgroundedAt = nil
             let elapsed = clock.now().timeIntervalSince(since)
-            guard isPasscodeSet else { return }
-            // Only enforce app lock for users who have reached the dashboard.
-            // Mid-onboarding users are governed by the 10-minute inactivity
-            // timeout in RootView — triggering app lock here would show the
-            // passcode screen over registration screens incorrectly.
+
+            // Only enforce for users past the dashboard. Mid-onboarding is
+            // governed by RootView's 10-minute timeout.
             guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
-            // Always lock on return from background so the dashboard never
-            // flashes before authentication is confirmed.
-            state = .locked
-            if elapsed < config.backgroundTimeout && wasUnlockedWhenBackgrounded {
-                // Short background and the user was already authenticated —
-                // resume seamlessly without asking for the passcode again.
-                state = .unlocked
+
+            if hasAuthMethod {
+                // Biometric (or legacy passcode) user — 30s aggressive re-auth.
+                // Lock so the RootView overlay renders BiometricGateView and
+                // auto-triggers Face ID via loginWithBiometric (validates with
+                // backend + refreshes access token). Short backgrounds resume
+                // seamlessly.
+                state = .locked
+                if elapsed < config.backgroundTimeout && wasUnlockedWhenBackgrounded {
+                    state = .unlocked
+                }
+                // wasUnlockedWhenBackgrounded == false (user was on lock overlay
+                // when backgrounded) → stays locked regardless of elapsed time.
+            } else {
+                // No biometric — 15 min permissive re-auth (matches server idle).
+                // OTP is high-friction so only fire after server session is
+                // actually likely dead.
+                guard elapsed >= AppState.apiIdleTimeout else { return }
+                SecureLogger.info(
+                    "Background \(Int(elapsed))s, no biometric → ChoiceScreen",
+                    category: .auth
+                )
+                NotificationCenter.default.post(
+                    name: .sessionExpired,
+                    object: nil,
+                    userInfo: ["message": "Your session has expired. Please sign in again."]
+                )
             }
-            // For long background: state stays locked. AppLockView's
-            // autoTriggerBiometric will fire submitBiometric() (RSA → local
-            // fallback) when the overlay appears — no second prompt needed here.
-            // If the user was on the lock screen when they backgrounded
-            // (wasUnlockedWhenBackgrounded == false), we stay locked regardless
-            // of elapsed time — they must complete the full passcode entry.
         default:
             break
         }
     }
 
     func lock() {
-        guard isPasscodeSet else { return }
+        guard hasAuthMethod else { return }
         state = .locked
     }
 
     func resetToUnlocked() {
+        biometricRetryRequired = false
         state = .unlocked
     }
 
@@ -369,6 +394,7 @@ final class AppLockManager: ObservableObject {
     func unlockAfterRSAAuth() {
         guard state == .locked else { return }
         resetFailures()
+        biometricRetryRequired = false
         transitionToUnlocked()
     }
 
@@ -441,11 +467,12 @@ final class AppLockManager: ObservableObject {
         lockoutTask?.cancel()
         lockoutTask = nil
         try? passcodeManager.clearAll()
-        failedAttempts    = 0
-        lockoutRound      = 0
-        lockoutMessage    = nil
-        requiresPhoneLogin = false
-        state             = .unlocked
+        failedAttempts         = 0
+        lockoutRound           = 0
+        lockoutMessage         = nil
+        requiresPhoneLogin     = false
+        biometricRetryRequired = false
+        state                  = .unlocked
         clearAllLockoutState()
     }
 

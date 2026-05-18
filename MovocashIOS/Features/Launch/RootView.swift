@@ -20,6 +20,7 @@ struct RootView: View {
     @ObservedObject var kycVM: KYCViewModel
 
     @State private var legalAcceptedItems: Set<String> = []
+    @State private var isAttemptingSilentBiometric: Bool = false
 
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
@@ -213,7 +214,34 @@ struct RootView: View {
             .environmentObject(lockManager)
             .environmentObject(sessionManager)
 
+            // ── Warm-transition lock overlay ───────────────────────────────
+            if shouldShowLockOverlay {
+                BiometricGateView(
+                    biometricIcon: lockManager.biometricType.systemImageName,
+                    biometricLabel: lockManager.biometricType.displayName,
+                    authenticate: {
+                        await authVM.loginWithBiometric(appState: appState)
+                    },
+                    onAuthenticated: {
+                        // No-op: loginWithBiometric calls unlockAfterRSAAuth()
+                        // (state → .unlocked → shouldShowLockOverlay false →
+                        // overlay dismisses) and sets appState.flow = .home
+                        // (already .home on warm transition).
+                    },
+                    onUsePhoneNumber: {
+                        Task {
+                            await sessionManager.logout(appState: appState)
+                            lockManager.logout()
+                            appState.flow = .choice
+                        }
+                    },
+                    autoTriggerBiometric: false
+                )
+                .zIndex(10)
+                .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: shouldShowLockOverlay)
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
             // Onboarding inactivity tracking — only active before the dashboard is reached.
@@ -298,6 +326,30 @@ struct RootView: View {
                 }
             }
         }
+        .onChangeCompat(of: lockManager.state) { newState in
+            // When lock state transitions to .locked for a biometric-enrolled
+            // user, attempt biometric silently. The Face ID system dialog
+            // appears over the underlying screen — no Movo-branded overlay
+            // unless this attempt fails. Matches cold-launch postBootstrap
+            // pattern (silent attempt → only show retry UI on failure).
+            guard newState == .locked,
+                  lockManager.hasAuthMethod,
+                  appState.flow != .appLock,    // cold-launch handled by postBootstrap
+                  !isAttemptingSilentBiometric
+            else { return }
+
+            isAttemptingSilentBiometric = true
+            Task {
+                let success = await authVM.loginWithBiometric(appState: appState)
+                isAttemptingSilentBiometric = false
+                if !success {
+                    // Mark retry needed → overlay will appear via shouldShowLockOverlay
+                    lockManager.biometricRetryRequired = true
+                }
+                // On success, loginWithBiometric → unlockAfterRSAAuth →
+                // state = .unlocked → no overlay ever shown.
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
             guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
             let message = notification.userInfo?["message"] as? String
@@ -313,6 +365,17 @@ struct RootView: View {
     }
 
     // MARK: -
+
+    private var shouldShowLockOverlay: Bool {
+        lockManager.state == .locked
+            && lockManager.biometricRetryRequired
+            && lockManager.hasAuthMethod
+            && appState.isAuthenticated
+            && !appState.isNewRegistration
+            && !UserDefaults.standard.bool(forKey: "kycInProgress")
+            && UserDefaults.standard.bool(forKey: "kycCompleted")
+            && appState.flow != .appLock   // avoid double-render on cold-launch
+    }
 
     /// After biometric step:
     /// registration → KYC  |  login (KYC already done) → Home

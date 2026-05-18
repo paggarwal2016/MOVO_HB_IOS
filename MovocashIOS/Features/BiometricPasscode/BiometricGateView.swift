@@ -2,10 +2,20 @@
 //  BiometricGateView.swift
 //  MovocashIOS
 //
-//  Biometric-only cold-launch gate. Shown when a returning user has RSA keys
-//  enrolled (Face ID / Touch ID) but no passcode is configured. Triggers
-//  biometric authentication automatically on appear. On failure the user can
-//  retry or fall back to phone-number login.
+//  Biometric-only gate view. Used in two contexts:
+//
+//    1. Cold-launch flow case (.appLock) — autoTriggerBiometric defaults
+//       to false because postBootstrap already prompted Face ID on splash.
+//       User taps Try Again to retry.
+//
+//    2. Warm-transition lock overlay (RootView ZStack) — pass
+//       autoTriggerBiometric: true so Face ID prompts automatically
+//       when the overlay appears.
+//
+//  On success, loginWithBiometric centrally calls
+//  lockManager.unlockAfterRSAAuth() which dismisses the overlay via
+//  state → .unlocked. On failure, user can Try Again or fall back to
+//  phone-OTP via "Use phone number instead."
 //
 
 import SwiftUI
@@ -17,6 +27,7 @@ struct BiometricGateView: View {
     let authenticate: () async -> Bool
     let onAuthenticated: () -> Void
     let onUsePhoneNumber: () -> Void
+    var autoTriggerBiometric: Bool = false
 
     @State private var isLoading = false
     @State private var showError = false
@@ -97,6 +108,11 @@ struct BiometricGateView: View {
         }
         .preferredColorScheme(.dark)
         .toolbar(.hidden, for: .navigationBar)
+        .task {
+            if autoTriggerBiometric {
+                await attempt()
+            }
+        }
     }
 
     private func attempt() async {
