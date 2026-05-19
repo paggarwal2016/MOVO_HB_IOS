@@ -362,6 +362,7 @@ struct DashboardView: View {
                 PrimaryAccountContent(
                     account: account,
                     accountData: accountData,
+                    hasVCards: !vm.cards.isEmpty,
                     onCardTap: { showPrimaryAccountDetails = true },
                     onPrimaryTap: { showEditNickname = true },
                     onViewCardTap: {
@@ -504,6 +505,7 @@ struct DashboardView: View {
 struct PrimaryAccountContent: View {
     let account: SavingsAccountInfo
     let accountData: DashboardAccount
+    let hasVCards: Bool
     let onCardTap: () -> Void
     let onPrimaryTap: () -> Void
     let onViewCardTap: () -> Void
@@ -512,7 +514,7 @@ struct PrimaryAccountContent: View {
     var body: some View {
         BalanceCardView(
             account: account,
-            showViewCard: accountData.isPVCardActivated == "Active",
+            showViewCard: accountData.isPVCardActivated == "Active" && hasVCards,
             onCardTap: onCardTap,
             onPrimaryTap: onPrimaryTap,
             onViewCardTap: onViewCardTap
