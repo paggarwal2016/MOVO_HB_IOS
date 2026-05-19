@@ -265,6 +265,140 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         }
     }
 
+    // MARK: - Transaction Intent
+
+    @Published var transactionIntent: TransactionIntent?
+    @Published var peerTransferSuccess: SuccessConfirmation?
+
+    func configureSDKForTransfer() async {
+        guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+              !token.isEmpty else { return }
+        service.configureSDKForTransfer(authToken: token)
+    }
+
+    func registerDevicePasskeyIfNeeded() async throws {
+        guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+              let json = JWTDecoder.decodePayload(token),
+              let payload = json["payload"] as? [String: Any],
+              let userIdInt = payload["userId"] as? Int
+        else { return }
+        let userId = String(userIdInt)
+        let passkeyKey = "passkey_registered_\(userId)"
+        guard !UserDefaults.standard.bool(forKey: passkeyKey) else { return }
+        guard let presenter = await waitForPresentableViewController() else {
+            throw NSError(domain: "QuickTransfer", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to present passkey registration."])
+        }
+        let deviceId = await DeviceManager.shared.deviceID()
+        try await run {
+            try await self.service.registerDevicePasskey(
+                userId: userId,
+                deviceId: deviceId,
+                presentingViewController: presenter
+            )
+            UserDefaults.standard.set(true, forKey: passkeyKey)
+        }
+    }
+
+    func createTransactionIntent(requestBody: CreateTransactionIntentRequestBody) async throws -> TransactionIntent {
+        try await run {
+            let intent = try await self.service.createTransactionIntent(requestBody: requestBody)
+            self.transactionIntent = intent
+            return intent
+        }
+    }
+
+    @discardableResult
+    func approveTransactionIntent(intentId: String) async throws -> SecureTransactionApprovalResult {
+        guard let presenter = await waitForPresentableViewController() else {
+            throw NSError(domain: "QuickTransfer", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to present biometric approval."])
+        }
+        let deviceId = await DeviceManager.shared.deviceID()
+        return try await run {
+            try await self.service.approveTransactionIntent(
+                intentId: intentId,
+                deviceId: deviceId,
+                presentingViewController: presenter
+            )
+        }
+    }
+
+    func sendMoneyToContact(
+        fromCard: VCardListResponse,
+        toName: String,
+        normalizedPhone: String,
+        amount: Double,
+        amountText: String,
+        description: String?
+    ) async {
+        await perform {
+            // Step 1 — Configure KYC SDK (one-time)
+            if !KYCManager.shared.isConfigured {
+                try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+            }
+
+            // Step 2 — Register device passkey (one-time per user)
+            if let token = try? await self.keychain.get("access_token", biometricPrompt: nil),
+               let json = JWTDecoder.decodePayload(token),
+               let payload = json["payload"] as? [String: Any],
+               let userIdInt = payload["userId"] as? Int {
+                let userId = String(userIdInt)
+                let passkeyKey = "passkey_registered_\(userId)"
+                if !UserDefaults.standard.bool(forKey: passkeyKey) {
+                    guard let passkeyPresenter = await self.waitForPresentableViewController() else {
+                        throw NSError(domain: "QuickTransfer", code: -1,
+                                      userInfo: [NSLocalizedDescriptionKey: "Unable to present passkey registration."])
+                    }
+                    let deviceId = await DeviceManager.shared.deviceID()
+                    try await self.service.registerDevicePasskey(
+                        userId: userId,
+                        deviceId: deviceId,
+                        presentingViewController: passkeyPresenter
+                    )
+                    UserDefaults.standard.set(true, forKey: passkeyKey)
+                }
+            }
+
+            // Step 3 — Create transaction intent
+            let requestBody = CreateTransactionIntentRequestBody(
+                type: .externalTransfer,
+                details: .externalTransfer(
+                    fromAccountId: fromCard.savingsAccountId ?? 0,
+                    recipientPhoneNumber: normalizedPhone,
+                    amount: amount,
+                    description: description
+                ),
+                webhookUrl: nil
+            )
+            let intent = try await self.service.createTransactionIntent(requestBody: requestBody)
+            self.transactionIntent = intent
+
+            // Step 4 — Approve intent (triggers biometric)
+            guard let approvalPresenter = await self.waitForPresentableViewController() else {
+                throw NSError(domain: "QuickTransfer", code: -1,
+                              userInfo: [NSLocalizedDescriptionKey: "Unable to present biometric approval."])
+            }
+            let deviceId = await DeviceManager.shared.deviceID()
+            let approvalResult = try await self.service.approveTransactionIntent(
+                intentId: intent.id,
+                deviceId: deviceId,
+                presentingViewController: approvalPresenter
+            )
+
+            // Step 5 — Publish success
+            self.peerTransferSuccess = SuccessConfirmation(
+                channel: .peer,
+                amount: Decimal(string: amountText) ?? 0,
+                fromAccountName: fromCard.displayName,
+                fromAccountMask: fromCard.maskedNumber,
+                toAccountName: toName,
+                toAccountMask: nil,
+                arrivesText: "Instantly",
+                dateText: Date.now.formatted(date: .long, time: .shortened),
+                referenceCode: approvalResult.intent.id
+            )
+        }
+    }
+
     // MARK: - Helpers
 
     // Polls until the top VC has no active child presentation (max 2s).

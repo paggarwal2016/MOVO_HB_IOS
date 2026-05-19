@@ -168,17 +168,22 @@ struct DashboardView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(item: $quickTransferContact) { contact in
-            QuickTransferView(
-                contact: contact,
-                container: container,
-                cards: vm.cards,
-                accountBalance: displayAccount?.availableBalance ?? 0,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                onSuccess: { needsDashboardRefresh = true }
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+        .navigationDestination(isPresented: Binding(
+            get: { quickTransferContact != nil },
+            set: { if !$0 { quickTransferContact = nil } }
+        )) {
+            if let contact = quickTransferContact {
+                QuickTransferView(
+                    contact: contact,
+                    container: container,
+                    cards: vm.cards,
+                    accountBalance: displayAccount?.availableBalance ?? 0,
+                    primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                    onSuccess: { needsDashboardRefresh = true }
+                )
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
+            }
         }
         .navigationDestination(isPresented: $showFundAccount) {
             if let account = displayAccount {

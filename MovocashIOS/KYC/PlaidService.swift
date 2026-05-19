@@ -220,4 +220,62 @@ actor PlaidService {
             }
         }
     }
+
+    // MARK: - Transaction Intent
+
+    nonisolated func configureSDKForTransfer(authToken: String) {
+        MobileBankingSDK.configure(
+            authToken: authToken,
+            baseUrl: AppConfig.sdkURL,
+            officeId: AppConfig.officeId,
+            responseEncryptionPrivateKey: nil,
+            enableVerboseLogs: true
+        )
+    }
+
+    @MainActor
+    func registerDevicePasskey(
+        userId: String,
+        deviceId: String,
+        presentingViewController: UIViewController
+    ) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            MobileBankingSDK.registerDevicePasskey(
+                userId: userId,
+                deviceId: deviceId,
+                presentingViewController: presentingViewController
+            ) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
+    func createTransactionIntent(requestBody: CreateTransactionIntentRequestBody) async throws -> TransactionIntent {
+        try await withCheckedThrowingContinuation { continuation in
+            MobileBankingSDK.createTransactionIntent(
+                requestBody: requestBody,
+                enableEncryptedResponses: false
+            ) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
+    @MainActor
+    func approveTransactionIntent(
+        intentId: String,
+        deviceId: String,
+        presentingViewController: UIViewController
+    ) async throws -> SecureTransactionApprovalResult {
+        try await withCheckedThrowingContinuation { continuation in
+            MobileBankingSDK.approveTransactionIntent(
+                intentId: intentId,
+                deviceId: deviceId,
+                presentingViewController: presentingViewController,
+                enableEncryptedResponses: false
+            ) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
 }
