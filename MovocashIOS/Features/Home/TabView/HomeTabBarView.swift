@@ -15,7 +15,7 @@ enum Tab: Hashable {
     case home
     case accounts
     case profile
-
+    
     var label: String {
         switch self {
         case .home:     return "Home"
@@ -23,7 +23,7 @@ enum Tab: Hashable {
         case .profile:  return "Settings"
         }
     }
-
+    
     var icon: String {
         switch self {
         case .home:     return "house.fill"
@@ -31,7 +31,7 @@ enum Tab: Hashable {
         case .profile:  return "gearshape.fill"
         }
     }
-
+    
     // Maps the action string from the MENU section of the dashboard API
     init?(action: String) {
         switch action {
@@ -52,14 +52,14 @@ enum TabBarAppearance {
         appearance.configureWithTransparentBackground()
         appearance.backgroundColor = .clear
         appearance.shadowColor = .clear
-
+        
         // Hide native items — custom SwiftUI bar renders on top
         let invisible: [NSAttributedString.Key: Any] = [.foregroundColor: UIColor.clear]
         appearance.stackedLayoutAppearance.selected.iconColor   = .clear
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = invisible
         appearance.stackedLayoutAppearance.normal.iconColor     = .clear
         appearance.stackedLayoutAppearance.normal.titleTextAttributes   = invisible
-
+        
         UITabBar.appearance().standardAppearance   = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }
@@ -75,22 +75,22 @@ struct HomeTabBarView: View {
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
-
+    
     @StateObject private var dashboardVM: DashboardViewModel
     @StateObject private var linkAccountVM: ACHViewModel
     @StateObject private var vCardVM: VCardViewModel
-
+    
     @State private var selectedTab: Tab = .home
     @State private var isLoggingOut = false
-
+    
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
-
+    
     init(container: AppContainer) {
         _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
         _linkAccountVM = StateObject(wrappedValue: container.makeACHViewModel())
         _vCardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
-
+    
     var body: some View {
         Group {
             if let message = dashboardVM.supportMessage {
@@ -127,11 +127,11 @@ struct HomeTabBarView: View {
 // MARK: - Skeleton Screen
 
 private extension HomeTabBarView {
-
+    
     var skeletonScreen: some View {
         ZStack(alignment: .bottom) {
             MovoBackground()
-
+            
             VStack(spacing: 0) {
                 skeletonHeader
                 ScrollView(showsIndicators: false) {
@@ -139,21 +139,21 @@ private extension HomeTabBarView {
                         .padding(.bottom, 88)
                 }
             }
-
+            
             skeletonTabBar
         }
         .ignoresSafeArea(edges: .bottom)
     }
-
+    
     // MARK: Header
-
+    
     var skeletonHeader: some View {
         HStack(spacing: Spacing.md) {
             Circle()
                 .fill(Color.movo.elevated)
                 .frame(width: 38, height: 38)
                 .shimmer()
-
+            
             VStack(alignment: .leading, spacing: 5) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.movo.elevated)
@@ -164,9 +164,9 @@ private extension HomeTabBarView {
                     .frame(width: 128, height: 14)
                     .shimmer()
             }
-
+            
             Spacer()
-
+            
             RoundedRectangle(cornerRadius: Radius.sm)
                 .fill(Color.movo.elevated)
                 .frame(width: 36, height: 36)
@@ -176,30 +176,30 @@ private extension HomeTabBarView {
         .padding(.top, Spacing.lg)
         .padding(.bottom, Spacing.md)
     }
-
+    
     // MARK: Body
-
+    
     var skeletonBody: some View {
         VStack(spacing: Spacing.lg) {
             skeletonBalanceCard
                 .padding(.horizontal, Spacing.lg)
-
+            
             skeletonQuickActions
                 .padding(.horizontal, Spacing.lg)
-
+            
             skeletonFeatureCard(height: 88)
                 .padding(.horizontal, Spacing.lg)
-
+            
             skeletonFeatureCard(height: 88)
                 .padding(.horizontal, Spacing.lg)
-
+            
             skeletonMyCards
         }
         .padding(.top, Spacing.lg)
     }
-
+    
     // MARK: Balance card
-
+    
     var skeletonBalanceCard: some View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: Radius.heroCard)
@@ -209,18 +209,18 @@ private extension HomeTabBarView {
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
                 .frame(height: 180)
-
+            
             VStack(alignment: .leading, spacing: Spacing.md) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.movo.elevatedHigh)
                     .frame(width: 96, height: 10)
-
+                
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color.movo.elevatedHigh)
                     .frame(width: 152, height: 28)
-
+                
                 Spacer()
-
+                
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.movo.elevatedHigh)
                     .frame(width: 136, height: 11)
@@ -231,9 +231,9 @@ private extension HomeTabBarView {
         .shimmer()
         .shadow(color: Color.movo.accentSoft, radius: 24, x: 0, y: 10)
     }
-
+    
     // MARK: Quick actions
-
+    
     var skeletonQuickActions: some View {
         HStack(spacing: Spacing.md) {
             ForEach(0..<2, id: \.self) { _ in
@@ -248,9 +248,9 @@ private extension HomeTabBarView {
             }
         }
     }
-
+    
     // MARK: Feature cards (Pay Anyone, Linked Accounts)
-
+    
     func skeletonFeatureCard(height: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: Radius.heroCard)
             .fill(Color.movo.surface)
@@ -261,9 +261,9 @@ private extension HomeTabBarView {
             .frame(height: height)
             .shimmer()
     }
-
+    
     // MARK: My Cards section
-
+    
     var skeletonMyCards: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
@@ -278,14 +278,14 @@ private extension HomeTabBarView {
                     .shimmer()
             }
             .padding(.horizontal, Spacing.lg)
-
+            
             CardSkeletonView()
                 .padding(.horizontal, Spacing.lg)
         }
     }
-
+    
     // MARK: Tab bar
-
+    
     var skeletonTabBar: some View {
         HStack(spacing: 0) {
             ForEach(0..<3, id: \.self) { _ in
@@ -321,16 +321,16 @@ private extension HomeTabBarView {
 // MARK: - Real Tab View
 
 private extension HomeTabBarView {
-
+    
     var resolvedTabs: [Tab] {
         let mapped = dashboardVM.menuItems.compactMap { Tab(action: $0.action) }
         return mapped.isEmpty ? [.home, .accounts, .profile] : mapped
     }
-
+    
     func tabLabel(for tab: Tab) -> String {
         dashboardVM.menuItems.first { Tab(action: $0.action) == tab }?.label ?? tab.label
     }
-
+    
     var realTabView: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
@@ -339,11 +339,14 @@ private extension HomeTabBarView {
                 }
             }
             .tint(Color.movo.accent)
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 76)
+            }
 
             customTabBar
         }
     }
-
+    
     @ViewBuilder
     func tabContent(for tab: Tab) -> some View {
         NavigationStack {
@@ -354,39 +357,79 @@ private extension HomeTabBarView {
         }
         .tag(tab)
     }
-
+    
     private var customTabBar: some View {
         HStack(spacing: 0) {
             ForEach(resolvedTabs, id: \.self) { tab in
                 Button {
                     selectedTab = tab
                 } label: {
-                    VStack(spacing: 5) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 22, weight: selectedTab == tab ? .semibold : .regular))
+                    VStack(spacing: 4) {
+                        ZStack {
+                            if selectedTab == tab {
+                                Capsule()
+                                    .fill(Color.movo.accentTint)
+                                    .frame(width: 56, height: 32)
+                                    .animation(.spring(response: 0.2, dampingFraction: 0.8), value: selectedTab)
+                            }
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .regular))
+                                .foregroundStyle(
+                                    selectedTab == tab
+                                        ? Color.movo.accent
+                                        : Color.movo.textTertiary.opacity(0.5)
+                                )
+                        }
                         Text(tabLabel(for: tab))
-                            .textStyle(Typography.micro)
+                            .font(.system(size: 11, weight: selectedTab == tab ? .semibold : .regular))
+                            .foregroundStyle(
+                                selectedTab == tab
+                                    ? Color.movo.accent
+                                    : Color.movo.textTertiary.opacity(0.5)
+                            )
                     }
-                    .foregroundStyle(selectedTab == tab ? Color.movo.accent : Color.movo.textTertiary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.md)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: selectedTab == tab)
             }
         }
-        .background(
-            Color.movo.background
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(Color.movo.border)
-                        .frame(height: Stroke.hairline)
-                }
-                .ignoresSafeArea(edges: .bottom)
-        )
-    }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
+        .background {
+            ZStack {
+                Capsule()
+                    .fill(.ultraThinMaterial)
 
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.28), Color.clear],
+                            startPoint: .top,
+                            endPoint: .init(x: 0.5, y: 0.40)
+                        )
+                    )
+
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.clear, Color.white.opacity(0.14)],
+                            startPoint: .init(x: 0.5, y: 0.65),
+                            endPoint: .bottom
+                        )
+                    )
+
+                Capsule()
+                    .stroke(Color.white.opacity(0.30), lineWidth: Stroke.thin)
+            }
+            .environment(\.colorScheme, .dark)
+        }
+        .shadow(color: Color.black.opacity(0.40), radius: 24, x: 0, y: 10)
+        .shadow(color: Color.movo.accent.opacity(0.10), radius: 16, x: 0, y: 0)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.bottom, 2)
+    }
+    
     @ViewBuilder
     func destination(for tab: Tab) -> some View {
         switch tab {
@@ -401,7 +444,7 @@ private extension HomeTabBarView {
 // MARK: - Side Effects
 
 private extension HomeTabBarView {
-
+    
     func handleOnAppear() {
         guard appState.isNewRegistration else { return }
         lockManager.resetToUnlocked()
@@ -413,16 +456,16 @@ private extension HomeTabBarView {
 // MARK: - Support Screen
 
 private extension HomeTabBarView {
-
+    
     @ViewBuilder
     func supportScreen(message: String) -> some View {
         VStack(spacing: Spacing.xxl) {
             Spacer()
-
+            
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 52, weight: .semibold))
                 .foregroundColor(Color.movo.warning)
-
+            
             Text(message)
                 .textStyle(Typography.subtitle)
                 .foregroundColor(Color.movo.textSecondary)
@@ -441,7 +484,7 @@ private extension HomeTabBarView {
             }
             .buttonStyle(MovoPrimaryButtonStyle())
             .padding(.horizontal, Spacing.xxxl)
-
+            
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
