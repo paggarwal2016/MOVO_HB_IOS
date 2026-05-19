@@ -116,7 +116,7 @@ private extension ProfileScreen {
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.top, Spacing.sm)
-            .padding(.bottom, Spacing.huge)
+            .padding(.bottom, 88)
         }
         .scrollContentBackground(.hidden)
         .refreshable {

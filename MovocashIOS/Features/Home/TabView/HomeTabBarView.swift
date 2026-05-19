@@ -345,6 +345,7 @@ private extension HomeTabBarView {
 
             customTabBar
         }
+        .ignoresSafeArea(edges: .bottom)
     }
     
     @ViewBuilder
@@ -352,6 +353,7 @@ private extension HomeTabBarView {
         NavigationStack {
             destination(for: tab)
         }
+        .toolbar(.hidden, for: .tabBar)
         .tabItem {
             Label(tabLabel(for: tab), systemImage: tab.icon)
         }
@@ -394,40 +396,31 @@ private extension HomeTabBarView {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.md)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
         .background {
             ZStack {
                 Capsule()
                     .fill(.ultraThinMaterial)
-
+                Capsule()
+                    .fill(Color.black.opacity(0.22))
                 Capsule()
                     .fill(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.28), Color.clear],
+                            colors: [Color.white.opacity(0.18), Color.clear],
                             startPoint: .top,
-                            endPoint: .init(x: 0.5, y: 0.40)
+                            endPoint: .center
                         )
                     )
-
                 Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.clear, Color.white.opacity(0.14)],
-                            startPoint: .init(x: 0.5, y: 0.65),
-                            endPoint: .bottom
-                        )
-                    )
-
-                Capsule()
-                    .stroke(Color.white.opacity(0.30), lineWidth: Stroke.thin)
+                    .stroke(Color.white.opacity(0.22), lineWidth: Stroke.hairline)
             }
             .environment(\.colorScheme, .dark)
         }
-        .shadow(color: Color.black.opacity(0.40), radius: 24, x: 0, y: 10)
-        .shadow(color: Color.movo.accent.opacity(0.10), radius: 16, x: 0, y: 0)
-        .padding(.horizontal, Spacing.xl)
-        .padding(.bottom, 2)
+        .shadow(color: Color.black.opacity(0.40), radius: 20, x: 0, y: 8)
+        .shadow(color: Color.movo.accent.opacity(0.10), radius: 14, x: 0, y: 0)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 15)
     }
     
     @ViewBuilder

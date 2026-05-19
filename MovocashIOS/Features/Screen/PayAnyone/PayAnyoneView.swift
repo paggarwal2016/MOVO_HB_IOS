@@ -111,7 +111,7 @@ struct PayAnyoneView: View {
                         }
                     }
                     
-                    Spacer().frame(height: 20)
+                    Spacer().frame(height: 88)
                 }
             }
             
