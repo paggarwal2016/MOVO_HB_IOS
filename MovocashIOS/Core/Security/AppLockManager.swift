@@ -128,11 +128,6 @@ final class AppLockManager: ObservableObject {
     @Published var lockoutMessage: String? = nil
     @Published var revocationError: String? = nil
     @Published private(set) var requiresPhoneLogin: Bool = false
-    /// True when a silent biometric attempt has failed and the lock
-    /// overlay should appear for manual retry. Cleared on successful
-    /// unlock or explicit reset.
-    @Published var biometricRetryRequired: Bool = false
-
     // MARK: - Storage Keys
 
     private enum LockoutKey {
@@ -313,7 +308,6 @@ final class AppLockManager: ObservableObject {
     }
 
     func resetToUnlocked() {
-        biometricRetryRequired = false
         state = .unlocked
     }
 
@@ -394,7 +388,6 @@ final class AppLockManager: ObservableObject {
     func unlockAfterRSAAuth() {
         guard state == .locked else { return }
         resetFailures()
-        biometricRetryRequired = false
         transitionToUnlocked()
     }
 
@@ -471,7 +464,6 @@ final class AppLockManager: ObservableObject {
         lockoutRound           = 0
         lockoutMessage         = nil
         requiresPhoneLogin     = false
-        biometricRetryRequired = false
         state                  = .unlocked
         clearAllLockoutState()
     }

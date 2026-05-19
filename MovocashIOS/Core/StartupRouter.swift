@@ -190,17 +190,23 @@ enum StartupRouter {
             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
         }
 
-        // If biometric gate is pending, attempt Face ID now while still on the splash
-        // screen. On success the user skips BiometricGateView entirely and lands
-        // directly on home. On failure, transition to .appLock for manual retry.
+        // If biometric gate is pending, attempt Face ID now while still on the
+        // splash screen. On success the user skips BiometricGateView entirely
+        // and lands directly on home. On failure, transition to .appLock for
+        // manual retry. Warm transitions use the .warmRelock flow (auto-trigger
+        // via BiometricGateView.task), not this path.
         var resolvedDestination = appState.pendingDestination
         if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
             let success = await authenticate()
             if success {
-                SecureLogger.info("Biometric auth succeeded on splash — routing to .home", category: .auth)
+                SecureLogger.info(
+                    "Biometric auth succeeded on splash — routing to .home",
+                    category: .auth
+                )
                 resolvedDestination = .home
             }
-            // Failure: resolvedDestination stays .appLock → BiometricGateView shown
+            // Failure: resolvedDestination stays .appLock → BiometricGateView
+            // shown with manual retry (autoTriggerBiometric=false).
         }
 
         // Transition splash → destination
