@@ -138,8 +138,13 @@ enum StartupRouter {
             SecureLogger.info("Boot route → .appLock (biometric gate)", category: .auth)
             appState.pendingDestination = .appLock
         } else {
-            SecureLogger.info("Boot route → .home (returning user, no biometric)", category: .auth)
-            appState.pendingDestination = .home
+            // No biometric enrolled. Force phone-OTP re-auth on every cold launch
+            // so force-quit + relaunch never grants dashboard access without
+            // explicit auth. kycCompleted stays TRUE so post-OTP lands on Home.
+            SecureLogger.info("Boot route → .choice (no biometric, force re-auth)", category: .auth)
+            keychain.clearAuthTokens()
+            appState.isAuthenticated = false
+            appState.pendingDestination = .choice
         }
     }
 
@@ -185,17 +190,23 @@ enum StartupRouter {
             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
         }
 
-        // If biometric gate is pending, attempt Face ID now while still on the splash
-        // screen. On success the user skips BiometricGateView entirely and lands
-        // directly on home. On failure, transition to .appLock for manual retry.
+        // If biometric gate is pending, attempt Face ID now while still on the
+        // splash screen. On success the user skips BiometricGateView entirely
+        // and lands directly on home. On failure, transition to .appLock for
+        // manual retry. Warm transitions use the .warmRelock flow (auto-trigger
+        // via BiometricGateView.task), not this path.
         var resolvedDestination = appState.pendingDestination
         if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
             let success = await authenticate()
             if success {
-                SecureLogger.info("Biometric auth succeeded on splash — routing to .home", category: .auth)
+                SecureLogger.info(
+                    "Biometric auth succeeded on splash — routing to .home",
+                    category: .auth
+                )
                 resolvedDestination = .home
             }
-            // Failure: resolvedDestination stays .appLock → BiometricGateView shown
+            // Failure: resolvedDestination stays .appLock → BiometricGateView
+            // shown with manual retry (autoTriggerBiometric=false).
         }
 
         // Transition splash → destination

@@ -5,26 +5,33 @@
 //  Pure visual splash. Routing decisions live in StartupRouter — this view
 //  only renders while appState.flow == .splash during postBootstrap warmup.
 //
+//  The splash logo is extracted as MovoSplashLogo so BiometricGateView
+//  can reuse it in its splash mode (auto-trigger warm-transition state).
+//  This guarantees pixel-perfect visual continuity between cold launch
+//  and warm-transition re-auth screens.
+//
 
 import SwiftUI
 
 struct SplashScreen: View {
-    @State private var lockupVisible = false
-
     var body: some View {
         ZStack {
             MovoBackground()
             AmbientGlowView()
-
-            MovoLogoMark(size: 120, color: .white)
-                .scaleEffect(lockupVisible ? 1 : 0.96)
+            MovoSplashLogo()
         }
         .preferredColorScheme(.dark)
         .toolbar(.hidden, for: .navigationBar)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                lockupVisible = true
-            }
-        }
+        .ignoresSafeArea()
+    }
+}
+
+/// The Movo logo mark, sized and styled to match LaunchScreen.storyboard
+/// exactly. Used in both SplashScreen (cold launch) and BiometricGateView's
+/// splash mode (warm-transition re-auth). Static — no animation — so the
+/// transition from LaunchScreen to SwiftUI splash is visually seamless.
+struct MovoSplashLogo: View {
+    var body: some View {
+        MovoLogoMark(size: 120, color: .white)
     }
 }
