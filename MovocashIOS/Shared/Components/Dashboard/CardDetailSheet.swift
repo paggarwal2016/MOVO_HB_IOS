@@ -153,6 +153,16 @@ struct CardDetailSheet: View {
             Button(action: {
                 walletTask = Task {
                     guard let accountId = card.savingsAccountId else { return }
+                    isLoading = true
+                    defer { isLoading = false }
+                    do {
+                        if !KYCManager.shared.isConfigured {
+                            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+                        }
+                    } catch {
+                        AlertManager.shared.showError("Unable to initialize. Please try again.")
+                        return
+                    }
                     await achVM.addVirtualCardToAppleWallet(
                         accountId: accountId,
                         localizedDescription: "Apple Pay"
@@ -162,7 +172,7 @@ struct CardDetailSheet: View {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "wallet.pass")
                         .font(.system(size: 16, weight: .medium))
-                    Text("Apple Wallet")
+                    Text("Add to Apple Wallet")
                         .textStyle(Typography.bodyCompact)
                         .fontWeight(.semibold)
                 }
