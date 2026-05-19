@@ -63,6 +63,7 @@ struct BiometricGateView: View {
         }
         .preferredColorScheme(.dark)
         .toolbar(.hidden, for: .navigationBar)
+        .ignoresSafeArea()
         .task {
             if autoTriggerBiometric {
                 await attempt()

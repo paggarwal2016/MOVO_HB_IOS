@@ -22,22 +22,16 @@ struct SplashScreen: View {
         }
         .preferredColorScheme(.dark)
         .toolbar(.hidden, for: .navigationBar)
+        .ignoresSafeArea()
     }
 }
 
-/// The Movo logo mark with a 0.6s scale-in animation, used in both
-/// SplashScreen (cold launch) and BiometricGateView's splash mode
-/// (warm-transition re-auth).
+/// The Movo logo mark, sized and styled to match LaunchScreen.storyboard
+/// exactly. Used in both SplashScreen (cold launch) and BiometricGateView's
+/// splash mode (warm-transition re-auth). Static — no animation — so the
+/// transition from LaunchScreen to SwiftUI splash is visually seamless.
 struct MovoSplashLogo: View {
-    @State private var visible = false
-
     var body: some View {
         MovoLogoMark(size: 120, color: .white)
-            .scaleEffect(visible ? 1 : 0.96)
-            .onAppear {
-                withAnimation(.easeOut(duration: 0.6)) {
-                    visible = true
-                }
-            }
     }
 }
