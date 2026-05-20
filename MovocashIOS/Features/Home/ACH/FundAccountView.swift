@@ -298,8 +298,9 @@ struct FundAccountView: View {
                     } label: {
                         accountRow(
                             avatar: bankInitialsAvatar,
-                            title: selectedAccount?.accountName ?? "—",
-                            subtitle: "\(selectedAccount?.formattedBalance ?? "") · ••\((selectedAccount?.accountNumber ?? "").suffix(4))",
+                            name: selectedAccount?.accountName ?? "—",
+                            number: "••\((selectedAccount?.accountNumber ?? "").suffix(4))",
+                            amount: selectedAccount?.formattedBalance ?? "",
                             showChevron: sortedAccounts.count > 1
                         )
                     }
@@ -324,8 +325,9 @@ struct FundAccountView: View {
 
                 accountRow(
                     avatar: movoAvatar,
-                    title: primaryAccount.displayName,
-                    subtitle: "\(primaryAccount.formattedBalance) · \(primaryAccount.maskedAccountNumber)",
+                    name: primaryAccount.displayName,
+                    number: primaryAccount.maskedAccountNumber,
+                    amount: primaryAccount.formattedBalance,
                     showChevron: false
                 )
             }
@@ -346,8 +348,9 @@ struct FundAccountView: View {
 
     private func accountRow(
         avatar: some View,
-        title: String,
-        subtitle: String,
+        name: String,
+        number: String,
+        amount: String,
         showChevron: Bool
     ) -> some View {
         HStack(spacing: Spacing.md) {
@@ -355,12 +358,17 @@ struct FundAccountView: View {
                 .frame(width: 52, height: 52)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(name)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(Color.movo.textPrimary)
-                Text(subtitle)
+                Text(number)
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(Color.movo.textTertiary)
+                if !amount.isEmpty {
+                    Text(amount)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
+                }
             }
 
             Spacer()
