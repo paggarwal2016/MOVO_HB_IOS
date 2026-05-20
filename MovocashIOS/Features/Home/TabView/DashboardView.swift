@@ -175,6 +175,7 @@ struct DashboardView: View {
                 cards: vm.cards,
                 accountBalance: displayAccount?.availableBalance ?? 0,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                primaryAccountNickname: displayAccount?.nickname,
                 onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])

@@ -34,7 +34,7 @@ struct LinkedAccountsSectionView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .textStyle(Typography.cardHero)
+                    .textStyle(Typography.cardTitle)
                     .foregroundStyle(theme.textPrimary.color)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -113,7 +113,7 @@ struct LinkedAccountsSectionView: View {
                     } else {
                         Image(systemName: "plus")
                             .font(.system(size: 13, weight: .semibold))
-                        Text("Connect another bank")
+                        Text(buttonLabel)
                             .textStyle(Typography.button)
                     }
                 }

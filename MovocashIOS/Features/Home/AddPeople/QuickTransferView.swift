@@ -13,6 +13,7 @@ struct QuickTransferView: View {
     let cards: [VCardListResponse]
     let accountBalance: Decimal
     let primaryLinkedCard: VCardListResponse?
+    let primaryAccountNickname: String?
 
     // Primary card prepended so it is the first option in the selection sheet.
     private var displayCards: [VCardListResponse] {
@@ -34,11 +35,12 @@ struct QuickTransferView: View {
 
     var onSuccess: () -> Void = {}
 
-    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal = 0, primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
+    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal = 0, primaryLinkedCard: VCardListResponse? = nil, primaryAccountNickname: String? = nil, onSuccess: @escaping () -> Void = {}) {
         self.contact = contact
         self.cards = cards
         self.accountBalance = accountBalance
         self.primaryLinkedCard = primaryLinkedCard
+        self.primaryAccountNickname = primaryAccountNickname
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _selectedCard = State(wrappedValue: primaryLinkedCard ?? cards.first)
@@ -110,7 +112,12 @@ struct QuickTransferView: View {
             ConfirmationBottomSheet(
                 channel: .peer,
                 amount: amountText,
-                fromName: selectedCard.map { $0.displayName } ?? "—",
+                fromName: {
+                    guard let card = selectedCard else { return "—" }
+                    let isPrimary = card.id == primaryLinkedCard?.id
+                    if isPrimary, let nick = primaryAccountNickname, !nick.isEmpty { return nick }
+                    return card.displayName
+                }(),
                 fromMask: selectedCard?.maskedNumber,
                 toName: contact.nickname ?? contact.phoneNumber ?? "—",
                 toMask: contact.phoneNumber.map { "••\($0.suffix(4))" },
@@ -357,15 +364,28 @@ struct QuickTransferView: View {
             }
             .frame(width: 52, height: 52)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 if let card = selectedCard {
-                    Text("FROM  ·  \(card.maskedNumber)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(0.4)
-                        .foregroundColor(Color.movo.textTertiary)
-                    Text(card.displayName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(Color.movo.textPrimary)
+                    let isPrimary = card.id == primaryLinkedCard?.id
+                    if isPrimary {
+                        Text(primaryAccountNickname?.isEmpty == false ? primaryAccountNickname! : card.displayName)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Color.movo.textPrimary)
+                        Text("•••• •••• •••• \(card.lastFour ?? "••••")")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color.movo.textTertiary)
+                        Text(availableBalanceDisplay)
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color.movo.textTertiary)
+                    } else {
+                        Text("FROM  ·  \(card.maskedNumber)")
+                            .font(.system(size: 11, weight: .semibold))
+                            .tracking(0.4)
+                            .foregroundColor(Color.movo.textTertiary)
+                        Text(card.displayName)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Color.movo.textPrimary)
+                    }
                 } else {
                     Text("FROM")
                         .font(.system(size: 11, weight: .semibold))
@@ -555,10 +575,12 @@ struct QuickTransferView: View {
         }
 
         let dateText = Date.now.formatted(date: .long, time: .shortened)
+        let isPrimary = fromCard.id == primaryLinkedCard?.id
+        let fromName = isPrimary && primaryAccountNickname?.isEmpty == false ? primaryAccountNickname! : fromCard.displayName
         successData = SuccessConfirmation(
             channel: .peer,
             amount: Decimal(string: amountText) ?? 0,
-            fromAccountName: fromCard.displayName,
+            fromAccountName: fromName,
             fromAccountMask: fromCard.maskedNumber,
             toAccountName: contact.nickname ?? contact.phoneNumber ?? "",
             toAccountMask: nil,

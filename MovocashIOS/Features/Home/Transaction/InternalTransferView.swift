@@ -155,26 +155,36 @@ struct InternalTransferView: View {
         }
         // To-card picker (bottom slot / top slot when swapped back)
         .sheet(isPresented: $showCardSheet) {
+            let rowHeight: CGFloat = 86
+            let fixedHeight = CGFloat(toCardsList.count) * rowHeight + 80
             CardPickerSheet(cards: toCardsList, selected: $selectedToCard)
-                .presentationDetents([.medium, .large])
+                .presentationDetents(toCardsList.count > 5 ? [.medium, .large] : [.height(fixedHeight)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
         }
         // From-card picker (top slot when swapped)
         .sheet(isPresented: $showFromCardSheet) {
+            let rowHeight: CGFloat = 86
+            let fixedHeight = CGFloat(fromCardsList.count) * rowHeight + 80
             CardPickerSheet(cards: fromCardsList, selected: $selectedFromCard)
-                .presentationDetents([.medium, .large])
+                .presentationDetents(fromCardsList.count > 5 ? [.medium, .large] : [.height(fixedHeight)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
+            
+            
         }
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(
                 channel: .internalTransfer,
                 amount: amountText,
-                fromName: selectedFromCard?.name ?? "Card",
-                fromMask: selectedFromCard?.lastFour.map { "•••• \($0)" },
+                fromName: {
+                    let isPrimary = selectedFromCard?.id == primaryLinkedCard?.id
+                    if isPrimary, let nick = selectedFromAccount?.nickname, !nick.isEmpty { return nick }
+                    return selectedFromCard?.name ?? "Card"
+                }(),
+                fromMask: selectedFromCard?.maskedNumber,
                 toName: selectedToCard?.name ?? "Virtual Card",
-                toMask: selectedToCard?.lastFour.map { "•••• \($0)" },
+                toMask: selectedToCard?.maskedNumber,
                 note: descriptionText.isEmpty ? nil : descriptionText,
                 isLoading: transVM.state == .loading,
                 onCancel: { showConfirmSheet = false },
@@ -300,10 +310,18 @@ struct InternalTransferView: View {
                     onTap: { showFromCardSheet = true }
                 )
             } else {
-                fixedSlot(card: selectedFromCard, balance: selectedFromAccount?.formattedBalance ?? "")
+                fixedSlot(
+                    card: selectedFromCard,
+                    balance: selectedFromAccount?.formattedBalance ?? "",
+                    nickname: selectedFromAccount?.nickname
+                )
             }
         } else {
-            fixedSlot(card: selectedFromCard, balance: selectedFromAccount?.formattedBalance ?? "")
+            fixedSlot(
+                card: selectedFromCard,
+                balance: selectedFromAccount?.formattedBalance ?? "",
+                nickname: selectedFromAccount?.nickname
+            )
         }
     }
 
@@ -343,10 +361,18 @@ struct InternalTransferView: View {
     @ViewBuilder
     private var toSlot: some View {
         if case .fixedBoth = mode {
-            fixedSlot(card: selectedToCard, balance: toCardAccount?.formattedBalance ?? "")
+            fixedSlot(
+                card: selectedToCard,
+                balance: toCardAccount?.formattedBalance ?? "",
+                nickname: toCardAccount?.nickname
+            )
         } else if case .standard = mode {
             if isSwapped {
-                fixedSlot(card: selectedToCard, balance: toCardAccount?.formattedBalance ?? "")
+                fixedSlot(
+                    card: selectedToCard,
+                    balance: toCardAccount?.formattedBalance ?? "",
+                    nickname: toCardAccount?.nickname
+                )
             } else {
                 pickableToContent
             }
@@ -376,10 +402,9 @@ struct InternalTransferView: View {
     // MARK: - Row Helpers
 
     // Fixed row: no chevron, not tappable (primary card design)
-    private func fixedSlot(card: VCardListResponse?, balance: String) -> some View {
+    private func fixedSlot(card: VCardListResponse?, balance: String, nickname: String? = nil) -> some View {
         let name = card?.name ?? "Card"
         let lastFour = card?.lastFour ?? "••••"
-        let subtitle = balance.isEmpty ? "•••• \(lastFour)" : "\(balance) · •••• \(lastFour)"
         let isPrimary = card != nil && card?.id == primaryLinkedCard?.id
         return HStack(spacing: Spacing.md) {
             ZStack {
@@ -389,18 +414,32 @@ struct InternalTransferView: View {
             }
             .frame(width: 52, height: 52)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: Spacing.xs) {
+            if isPrimary {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: Spacing.xs) {
+                        Text(nickname?.isEmpty == false ? nickname! : name)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Color.movo.textPrimary)
+                        StatusPill("PRIMARY", variant: .accent)
+                    }
+                    Text("•••• •••• •••• \(lastFour)")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
+                    if !balance.isEmpty {
+                        Text(balance)
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color.movo.textTertiary)
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(name)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
-                    if isPrimary {
-                        StatusPill("PRIMARY", variant: .accent)
-                    }
+                    Text("•••• •••• •••• \(lastFour)")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
                 }
-                Text(subtitle)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(Color.movo.textTertiary)
             }
 
             Spacer()
@@ -430,7 +469,7 @@ struct InternalTransferView: View {
     private func pickableRowContent(card: VCardListResponse?, balance: String, showChevron: Bool) -> some View {
         let cardName = card?.name ?? "Select destination card"
         let lastFour = card?.lastFour ?? "••••"
-        let subtitle = balance.isEmpty ? "•••• \(lastFour)" : "\(balance) · •••• \(lastFour)"
+        let subtitle = "•••• •••• •••• \(lastFour)"
         return HStack(spacing: Spacing.md) {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
@@ -610,7 +649,7 @@ private struct CardChipRow: View {
                 Text(name)
                     .font(Typography.bodyCompact.font)
                     .foregroundColor(Color.movo.textPrimary)
-                Text("•••• \(lastFour)")
+                Text("•••• •••• •••• \(lastFour)")
                     .font(Typography.mono.font)
                     .foregroundColor(Color.movo.textTertiary)
             }
@@ -683,7 +722,7 @@ private struct CardPickerSheet: View {
                                     Text(card.name ?? "Virtual Card")
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(Color.movo.textPrimary)
-                                    Text("•••• \(card.lastFour ?? "••••")")
+                                    Text(card.maskedNumber)
                                         .font(.system(size: 13))
                                         .foregroundColor(Color.movo.textTertiary)
                                 }
