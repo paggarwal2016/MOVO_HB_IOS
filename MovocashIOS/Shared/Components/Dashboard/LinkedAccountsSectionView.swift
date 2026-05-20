@@ -58,12 +58,7 @@ struct LinkedAccountsSectionView: View {
                                 .font(.system(size: 10, weight: .semibold))
                         }
                     }
-                    .foregroundStyle(theme.background.color)
                     .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(theme.accent.color)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg))
                 }
                 .buttonStyle(SoftAccentButtonStyle())
                 .disabled(isLoading)

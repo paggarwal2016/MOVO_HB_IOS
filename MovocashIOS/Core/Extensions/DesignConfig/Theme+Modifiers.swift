@@ -197,7 +197,7 @@ public struct SoftAccentButtonStyle: ButtonStyle {
         configuration.label
             .textStyle(Typography.button)
             .foregroundColor(Color.movo.accent)
-            .padding(.horizontal, Spacing.sm)
+            .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.md)
             .background(
                 RoundedRectangle(cornerRadius: Radius.button)
