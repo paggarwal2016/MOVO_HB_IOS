@@ -16,7 +16,7 @@ struct CreateCardView: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
 
-            Color.movo.elevated
+            Color.movo.surface
 
             CardMockIllustration()
                 .frame(width: 140, height: 162)

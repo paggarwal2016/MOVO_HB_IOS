@@ -57,13 +57,8 @@ struct LinkedAccountsSectionView: View {
                                 .font(.system(size: 10, weight: .semibold))
                         }
                     }
-                    .foregroundStyle(theme.background.color)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(theme.accent.color)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(MovoCompactButtonStyle())
                 .disabled(isLoading)
             }
 
@@ -74,7 +69,7 @@ struct LinkedAccountsSectionView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.elevated.color)
+        .background(Color.movo.surface)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
@@ -87,8 +82,8 @@ struct LinkedAccountsSectionView: View {
     private var listState: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text(title)
-                .textStyle(Typography.cardHero)
-                .foregroundStyle(Color.movo.textPrimary)
+                .textStyle(Typography.eyebrow)
+                .foregroundStyle(Color.movo.textTertiary)
 
             VStack(spacing: 0) {
                 ForEach(accounts.indices, id: \.self) { index in
@@ -96,45 +91,41 @@ struct LinkedAccountsSectionView: View {
                     if index < accounts.count - 1 {
                         Rectangle()
                             .fill(Color.movo.border)
-                            .frame(height: DesignTokens.Stroke.hairline)
-                            .padding(.leading, 74)
+                            .frame(height: Stroke.hairline)
                     }
                 }
             }
-            .background(Color.movo.elevatedHigh)
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl))
 
             Button(action: onConnectAnother) {
-                HStack(spacing: 6) {
+                HStack(spacing: 12) {
                     if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.textSecondary))
                             .scaleEffect(0.8)
                     } else {
-                        Image(systemName: "plus")
-                            .font(.system(size: 13, weight: .semibold))
                         Text(buttonLabel)
-                            .textStyle(Typography.button)
+                            .textStyle(Typography.body)
+                            .foregroundStyle(Color.movo.accent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.movo.accent)
                     }
                 }
-                .foregroundStyle(Color.movo.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DesignTokens.Spacing.lg)
-                .background(Color.movo.elevatedHigh)
-                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl))
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.xl)
-                        .stroke(
-                            style: StrokeStyle(lineWidth: DesignTokens.Stroke.medium, dash: [6, 4])
-                        )
-                        .foregroundStyle(Color.movo.borderStrong)
-                )
+                .padding(.vertical, Spacing.md)
+                .padding(.top, Spacing.sm)
             }
             .buttonStyle(.plain)
             .disabled(isLoading)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.movo.border)
+                    .frame(height: Stroke.hairline)
+            }
         }
         .padding(DesignTokens.Spacing.lg)
-        .background(Color.movo.elevated)
+        .background(Color.movo.surface)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
@@ -235,41 +226,36 @@ struct LinkedAccountRowView: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(account.formattedBalance)
-                    .textStyle(Typography.body)
-                    .foregroundStyle(Color.movo.textPrimary)
-                Text("Available")
-                    .textStyle(Typography.captionSmall)
-                    .foregroundStyle(Color.movo.textTertiary)
-            }
+            Text(account.formattedBalance)
+                .textStyle(Typography.cardTitle)
+                .foregroundStyle(Color.movo.textPrimary)
+                .monospacedDigit()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, Spacing.md)
     }
 
     @ViewBuilder
     private var avatarView: some View {
         let initial = account.institutionName.first.map(String.init) ?? "?"
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(account.logoImage != nil ? Color(.systemBackground) : Color.matteBlack)
+            RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                .fill(account.logoImage != nil ? Color.movo.elevatedHigh : Color.movo.elevatedHigh)
                 .frame(width: 46, height: 46)
             if let logo = account.logoImage {
                 Image(uiImage: logo)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 45, height: 45)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
             } else {
                 Text(initial.uppercased())
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
+                    .textStyle(Typography.cardTitle)
+                    .foregroundStyle(Color.movo.textPrimary)
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color(.systemGray5), lineWidth: account.logoImage != nil ? 1 : 0)
+            RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                .strokeBorder(Color.movo.border, lineWidth: account.logoImage != nil ? Stroke.hairline : Stroke.hairline)
         )
     }
 }

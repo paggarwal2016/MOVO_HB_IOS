@@ -114,7 +114,7 @@ public struct MovoBackground: View {
     public init() {}
     public var body: some View {
         RadialGradient(
-            colors: [Color(red: 0.10, green: 0.12, blue: 0.16), Color.movo.background],
+            colors: [Color.movo.textPrimary.opacity(0.04), Color.movo.background],
             center: .top,
             startRadius: 0,
             endRadius: 600
