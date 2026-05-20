@@ -34,7 +34,7 @@ struct LinkedAccountsSectionView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .textStyle(Typography.cardTitle)
+                    .textStyle(Typography.cardHero)
                     .foregroundStyle(theme.textPrimary.color)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -53,11 +53,13 @@ struct LinkedAccountsSectionView: View {
                         } else {
                             Text(buttonLabel)
                                 .textStyle(Typography.button)
+                                .lineLimit(1)
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 10, weight: .semibold))
                         }
                     }
                     .foregroundStyle(theme.background.color)
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(theme.accent.color)
@@ -67,10 +69,10 @@ struct LinkedAccountsSectionView: View {
                 .disabled(isLoading)
             }
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 2)
 
             LinkBankIllustration()
-                .frame(width: 110, height: 90)
+                .frame(width: 80, height: 65)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,9 +88,11 @@ struct LinkedAccountsSectionView: View {
 
     private var listState: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            Text(title)
-                .textStyle(Typography.cardHero)
-                .foregroundStyle(Color.movo.textPrimary)
+            
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(1.2)
+                .foregroundColor(Color.movo.textTertiary)
 
             VStack(spacing: 0) {
                 ForEach(accounts.indices, id: \.self) { index in
@@ -150,59 +154,68 @@ private struct LinkBankIllustration: View {
 
     var body: some View {
         ZStack {
-            // Dotted connecting line from bank to phone
+            // Dotted connecting line
             Canvas { ctx, size in
                 var path = Path()
-                path.move(to: CGPoint(x: size.width * 0.38, y: size.height * 0.58))
-                path.addLine(to: CGPoint(x: size.width * 0.72, y: size.height * 0.42))
+                path.move(to: CGPoint(x: size.width * 0.38, y: size.height * 0.52))
+                path.addLine(to: CGPoint(x: size.width * 0.72, y: size.height * 0.50))
+
                 ctx.stroke(
                     path,
-                    with: .color(MovoTheme.color.accent.color.opacity(0.75)),
-                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [2.5, 4])
+                    with: .color(theme.accent.color.opacity(0.75)),
+                    style: StrokeStyle(
+                        lineWidth: 1.2,
+                        lineCap: .round,
+                        dash: [2, 3]
+                    )
                 )
             }
 
-            // Bank building — upper left
+            // Bank
             Image(systemName: "building.columns")
-                .font(.system(size: 46, weight: .thin))
+                .font(.system(size: 32, weight: .thin))
                 .foregroundStyle(theme.textSecondary.color)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .offset(x: 2, y: 0)
+                .offset(y: -4)
 
-            // Lock icon — right of bank top
+            // Lock
             Image(systemName: "lock.fill")
-                .font(.system(size: 11))
+                .font(.system(size: 8))
                 .foregroundStyle(theme.accent.color)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .offset(x: 54, y: 4)
+                .offset(x: 38, y: -2)
 
-            // Phone — lower right
+            // Phone
             phoneView
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .offset(x: -2, y: -2)
+                .offset(y: 4)
         }
+        .frame(width: 80, height: 70)
     }
 
     private var phoneView: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 7)
-                .stroke(theme.textSecondary.color, lineWidth: 1.5)
-                .frame(width: 38, height: 54)
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(theme.textSecondary.color, lineWidth: 1.2)
+                .frame(width: 28, height: 42)
 
-            VStack(spacing: 5) {
+            VStack(spacing: 4) {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(theme.textTertiary.color.opacity(0.5))
-                    .frame(width: 24, height: 5)
+                    .frame(width: 16, height: 4)
+
                 RoundedRectangle(cornerRadius: 2)
                     .fill(theme.textTertiary.color.opacity(0.5))
-                    .frame(width: 24, height: 5)
+                    .frame(width: 16, height: 4)
+
                 Spacer()
-                RoundedRectangle(cornerRadius: 3)
+
+                RoundedRectangle(cornerRadius: 2)
                     .fill(theme.accent.color)
-                    .frame(width: 24, height: 7)
+                    .frame(width: 16, height: 6)
             }
-            .padding(.vertical, 10)
-            .frame(width: 38, height: 54)
+            .padding(.vertical, 8)
+            .frame(width: 28, height: 42)
         }
     }
 }

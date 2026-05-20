@@ -327,7 +327,13 @@ struct InternalTransferView: View {
 
     @ViewBuilder
     private var swapDivider: some View {
-        if case .standard = mode {
+        let showSwap: Bool = {
+            if case .standard = mode { return true }
+            if case .fixedBoth = mode { return true }
+            return false
+        }()
+
+        if showSwap {
             ZStack {
                 Rectangle()
                     .fill(Color.movo.border)
