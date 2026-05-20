@@ -278,7 +278,7 @@ struct FundAccountView: View {
                                     .font(.system(size: 18, weight: .semibold))
                                     .foregroundStyle(Color.movo.accent)
                             }
-                            Text(isConnecting || plaidVM.state == .loading ? "Connecting..." : "Connect bank account")
+                            Text(isConnecting || plaidVM.state == .loading ? "Connecting..." : "Link your external account")
                                 .font(Typography.body.font)
                                 .foregroundStyle(Color.movo.accent)
                             Spacer()
@@ -307,24 +307,12 @@ struct FundAccountView: View {
                 }
             }
 
-            // Swap divider
-            ZStack {
-                Rectangle()
-                    .fill(Color.movo.border)
-                    .frame(height: Stroke.hairline)
-                    .padding(.horizontal, Spacing.lg)
-
-                Circle()
-                    .fill(Color.movo.elevated)
-                    .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-                    .frame(width: 36, height: 36)
-                    .overlay(
-                        Image(systemName: "arrow.up.arrow.down")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Color.movo.accent)
-                    )
-            }
-            .padding(.vertical, Spacing.md)
+            Rectangle()
+                .fill(Color.movo.border)
+                .frame(height: Stroke.hairline)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, 5)
+                .padding(.bottom, 10)
 
             // TO — Movo primary
             VStack(alignment: .leading, spacing: Spacing.sm) {
