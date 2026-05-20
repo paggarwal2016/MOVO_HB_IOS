@@ -453,28 +453,28 @@ struct DashboardView: View {
 
     @ViewBuilder
     private func myCardsSectionView(_ data: DashboardMyCards) -> some View {
-        Group {
-            if !vm.hasLoadedCards {
-                CardSkeletonView()
-            } else if vm.cards.isEmpty {
-                CreateCardView(
-                    title: data.title,
-                    message: data.description,
-                    onTap: { showCreateCashCard = true }
-                )
-            } else {
-                CardSelectorView(
-                    cards: vm.cards,
-                    sectionTitle: data.title,
-                    onTap: { showCreateCashCard = true },
-                    onEyeTap: { card in
-                        selectedCard = card
-                    },
-                    onShowMore: { showViewCardList = true }
-                )
-            }
+        if !vm.hasLoadedCards {
+            CardSkeletonView()
+                .frame(maxWidth: .infinity)
+        } else if vm.cards.isEmpty {
+            CreateCardView(
+                title: data.title,
+                message: data.description,
+                onTap: { showCreateCashCard = true }
+            )
+            .frame(maxWidth: .infinity)
+        } else {
+            CardSelectorView(
+                cards: vm.cards,
+                sectionTitle: data.title,
+                onTap: { showCreateCashCard = true },
+                onEyeTap: { card in
+                    selectedCard = card
+                },
+                onShowMore: { showViewCardList = true }
+            )
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Actions

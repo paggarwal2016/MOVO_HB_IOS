@@ -227,11 +227,11 @@ struct CardSelectorView: View {
     private var createCardSlot: some View {
         ZStack {
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.elevated.opacity(0.5))
+                .fill(Color.movo.surface.opacity(0.5))
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                         .strokeBorder(
-                            Color.movo.accentBorder,
+                            Color.movo.surface,
                             style: StrokeStyle(lineWidth: 1, dash: [5, 4])
                         )
                 )

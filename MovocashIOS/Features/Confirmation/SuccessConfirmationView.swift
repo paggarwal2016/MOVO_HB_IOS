@@ -257,8 +257,7 @@ public struct SuccessConfirmationView: View {
     
     private var heroTitleText: String {
         switch vm.success.channel {
-        case .external, .peer:    return "Transfer sent"
-        case .internalTransfer:   return "Transfer complete"
+        case .external, .peer, .internalTransfer: return "Transfer complete"
         }
     }
     

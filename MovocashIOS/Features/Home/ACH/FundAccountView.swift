@@ -187,7 +187,7 @@ struct FundAccountView: View {
         HStack {
             CircularNavButton(systemName: "chevron.left") { dismiss() }
             Spacer()
-            Text("Funds Transfer")
+            Text("Fund Account")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
