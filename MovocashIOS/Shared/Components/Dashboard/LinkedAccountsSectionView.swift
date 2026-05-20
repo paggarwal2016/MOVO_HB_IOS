@@ -57,12 +57,12 @@ struct LinkedAccountsSectionView: View {
                                 .font(.system(size: 10, weight: .semibold))
                         }
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(MovoCompactButtonStyle())
+                .buttonStyle(SoftAccentButtonStyle())
                 .disabled(isLoading)
             }
-
-            Spacer(minLength: 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             LinkBankIllustration()
                 .frame(width: 110, height: 90)

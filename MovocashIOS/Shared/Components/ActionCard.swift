@@ -47,13 +47,8 @@ struct ActionCard: View {
                                 .font(.system(size: 10, weight: .semibold))
                         }
                     }
-                    .foregroundStyle(theme.background.color)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(theme.accent.color)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SoftAccentButtonStyle())
                 .disabled(isLoading)
             }
         }
