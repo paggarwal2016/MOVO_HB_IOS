@@ -47,19 +47,14 @@ struct ActionCard: View {
                                 .font(.system(size: 10, weight: .semibold))
                         }
                     }
-                    .foregroundStyle(theme.background.color)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(theme.accent.color)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SoftAccentButtonStyle())
                 .disabled(isLoading)
             }
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.elevated.color)
+        .background(Color.movo.surface)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
@@ -223,7 +218,7 @@ struct PayAnyoneAddContactView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.elevated)
+                .fill(Color.movo.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)

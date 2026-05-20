@@ -347,9 +347,9 @@ struct CardDetailSheet: View {
                 // Base gradient
                 LinearGradient(
                     colors: [
-                        Color(red: 0.10, green: 0.10, blue: 0.13),
-                        Color(red: 0.04, green: 0.04, blue: 0.05),
-                        Color(red: 0.02, green: 0.02, blue: 0.03)
+                        Color.movo.elevated,
+                        Color.movo.surface,
+                        Color.movo.background
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing

@@ -793,8 +793,8 @@ public struct MovoLogoMark: View {
     public var size: CGFloat = 90
     public var color: Color = MovoLogoMark.brandSilver
 
-    /// MovoCash brand silver — #D9D9D9. Used for the monogram and wordmark.
-    public static let brandSilver = Color(red: 0.851, green: 0.851, blue: 0.851)
+    /// MovoCash brand silver — mapped to textSecondary on-palette.
+    public static let brandSilver = Color.movo.textSecondary
 
     public init(size: CGFloat = 90, color: Color = MovoLogoMark.brandSilver) {
         self.size = size

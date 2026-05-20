@@ -43,7 +43,8 @@ struct CustomHeaderView: View {
             Button(action: onLogout) {
                 ZStack {
                     Circle()
-                        .fill(theme.elevatedHigh.color)
+                        .fill(Color.movo.surface)
+                        .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
                         .frame(width: 44, height: 44)
 
                     Text(initial)

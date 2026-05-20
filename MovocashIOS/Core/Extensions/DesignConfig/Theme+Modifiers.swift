@@ -114,7 +114,7 @@ public struct MovoBackground: View {
     public init() {}
     public var body: some View {
         RadialGradient(
-            colors: [Color(red: 0.10, green: 0.12, blue: 0.16), Color.movo.background],
+            colors: [Color.movo.textPrimary.opacity(0.04), Color.movo.background],
             center: .top,
             startRadius: 0,
             endRadius: 600
@@ -184,6 +184,32 @@ public struct MovoCompactButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.accent.opacity(configuration.isPressed ? 0.85 : 1))
             )
+    }
+}
+
+/// Soft accent outline — accent-color label and hairline border on transparent fill.
+/// Use for secondary/empty-state CTAs that need to telegraph "this is the action"
+/// without competing with the primary accent-filled CTA on screen.
+public struct SoftAccentButtonStyle: ButtonStyle {
+    public init() {}
+
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .textStyle(Typography.button)
+            .foregroundColor(Color.movo.accent)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.button)
+                    .fill(Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline + 0.5)
+                    )
+            )
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeOut(duration: DesignTokens.Motion.fast), value: configuration.isPressed)
     }
 }
 
