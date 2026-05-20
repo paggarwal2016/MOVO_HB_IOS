@@ -19,16 +19,16 @@ enum Tab: Hashable {
     var label: String {
         switch self {
         case .home:     return "Home"
-        case .accounts: return "Send Money"
+        case .accounts: return "Pay Anyone"
         case .profile:  return "Settings"
         }
     }
 
     var icon: String {
         switch self {
-        case .home:     return "house.fill"
-        case .accounts: return "creditcard.fill"
-        case .profile:  return "gearshape.fill"
+        case .home:     return "house"
+        case .accounts: return "person.2"
+        case .profile:  return "gearshape"
         }
     }
 
@@ -43,27 +43,6 @@ enum Tab: Hashable {
     }
 }
 
-
-// MARK: - Appearance Setup
-
-enum TabBarAppearance {
-    static func configure() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundColor = .clear
-        appearance.shadowColor = .clear
-
-        // Hide native items — custom SwiftUI bar renders on top
-        let invisible: [NSAttributedString.Key: Any] = [.foregroundColor: UIColor.clear]
-        appearance.stackedLayoutAppearance.selected.iconColor   = .clear
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = invisible
-        appearance.stackedLayoutAppearance.normal.iconColor     = .clear
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes   = invisible
-
-        UITabBar.appearance().standardAppearance   = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
-    }
-}
 
 
 // MARK: - Main Tab View
@@ -129,20 +108,16 @@ struct HomeTabBarView: View {
 private extension HomeTabBarView {
 
     var skeletonScreen: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             MovoBackground()
 
             VStack(spacing: 0) {
                 skeletonHeader
                 ScrollView(showsIndicators: false) {
                     skeletonBody
-                        .padding(.bottom, 88)
                 }
             }
-
-            skeletonTabBar
         }
-        .ignoresSafeArea(edges: .bottom)
     }
 
     // MARK: Header
@@ -284,37 +259,6 @@ private extension HomeTabBarView {
         }
     }
 
-    // MARK: Tab bar
-
-    var skeletonTabBar: some View {
-        HStack(spacing: 0) {
-            ForEach(0..<3, id: \.self) { _ in
-                Spacer()
-                VStack(spacing: 5) {
-                    RoundedRectangle(cornerRadius: Radius.xs)
-                        .fill(Color.movo.elevated)
-                        .frame(width: 24, height: 24)
-                        .shimmer()
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.movo.elevated)
-                        .frame(width: 44, height: 9)
-                        .shimmer()
-                }
-                Spacer()
-            }
-        }
-        .padding(.top, Spacing.md)
-        .padding(.bottom, Spacing.lg)
-        .background(
-            Color.movo.surface
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(Color.movo.border)
-                        .frame(height: Stroke.hairline)
-                }
-                .ignoresSafeArea(edges: .bottom)
-        )
-    }
 }
 
 
@@ -332,16 +276,14 @@ private extension HomeTabBarView {
     }
 
     var realTabView: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                ForEach(resolvedTabs, id: \.self) { tab in
-                    tabContent(for: tab)
-                }
+        TabView(selection: $selectedTab) {
+            ForEach(resolvedTabs, id: \.self) { tab in
+                tabContent(for: tab)
             }
-            .tint(Color.movo.accent)
-
-            customTabBar
         }
+        .tint(Color.movo.accent)
+        .toolbarColorScheme(.dark, for: .tabBar)
+        .environment(\.symbolVariants, .none)
     }
 
     @ViewBuilder
@@ -351,40 +293,9 @@ private extension HomeTabBarView {
         }
         .tabItem {
             Label(tabLabel(for: tab), systemImage: tab.icon)
+                .environment(\.symbolVariants, SymbolVariants.none)
         }
         .tag(tab)
-    }
-
-    private var customTabBar: some View {
-        HStack(spacing: 0) {
-            ForEach(resolvedTabs, id: \.self) { tab in
-                Button {
-                    selectedTab = tab
-                } label: {
-                    VStack(spacing: 5) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 22, weight: selectedTab == tab ? .semibold : .regular))
-                        Text(tabLabel(for: tab))
-                            .textStyle(Typography.micro)
-                    }
-                    .foregroundStyle(selectedTab == tab ? Color.movo.accent : Color.movo.textTertiary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.md)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: selectedTab == tab)
-            }
-        }
-        .background(
-            Color.movo.background
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(Color.movo.border)
-                        .frame(height: Stroke.hairline)
-                }
-                .ignoresSafeArea(edges: .bottom)
-        )
     }
 
     @ViewBuilder
