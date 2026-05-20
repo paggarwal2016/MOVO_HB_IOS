@@ -254,7 +254,7 @@ struct TransactionFilterView: View {
                             get: { filter.amount.map { "\(Int($0))" } ?? "" },
                             set: { filter.amount = $0.isEmpty ? nil : Double($0) }
                           ),
-                          prompt: Text("Exact").foregroundColor(Color.movo.textDisabled))
+                          prompt: Text("0").foregroundColor(Color.movo.textDisabled))
                 .keyboardType(.numberPad)
                 .foregroundColor(Color.movo.textPrimary)
                 .tint(Color.movo.accent)

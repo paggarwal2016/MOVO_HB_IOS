@@ -385,7 +385,7 @@ struct InternalTransferView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.elevatedHigh)
-                MLogo().frame(width: 28, height: 28)
+                MovoMVSymbol().frame(width: 28, height: 28)
             }
             .frame(width: 52, height: 52)
 
@@ -436,7 +436,7 @@ struct InternalTransferView: View {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.elevatedHigh)
                 if card != nil {
-                    MLogo().frame(width: 28, height: 28)
+                    MovoMVSymbol().frame(width: 28, height: 28)
                 } else {
                     Image(systemName: "creditcard")
                         .font(.system(size: 15, weight: .medium))
@@ -675,7 +675,7 @@ private struct CardPickerSheet: View {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: Radius.button)
                                         .fill(Color.movo.elevatedHigh)
-                                    MLogo().frame(width: 26, height: 26)
+                                    MovoMVSymbol().frame(width: 26, height: 26)
                                 }
                                 .frame(width: 46, height: 46)
 
