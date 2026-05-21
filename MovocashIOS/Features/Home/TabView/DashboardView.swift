@@ -363,7 +363,7 @@ struct DashboardView: View {
                 PrimaryAccountContent(
                     account: account,
                     accountData: accountData,
-                    hasVCards: !vm.cards.isEmpty,
+                    hasVCards: vm.primaryLinkedCard != nil,
                     onCardTap: { showPrimaryAccountDetails = true },
                     onPrimaryTap: { showEditNickname = true },
                     onViewCardTap: {
