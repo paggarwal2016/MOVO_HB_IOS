@@ -42,9 +42,9 @@ struct CardChip: View {
             RoundedRectangle(cornerRadius: 5)
                 .fill(LinearGradient(
                     colors: [
-                        Color(red: 0.78, green: 0.78, blue: 0.81),
-                        Color(red: 0.54, green: 0.54, blue: 0.58),
-                        Color(red: 0.35, green: 0.35, blue: 0.39)
+                        Color.movo.textSecondary,
+                        Color.movo.textTertiary,
+                        Color.movo.textDisabled
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -143,11 +143,11 @@ struct MastercardMark: View {
         VStack(spacing: 2) {
             ZStack {
                 Circle()
-                    .fill(Color(red: 0.78, green: 0.78, blue: 0.81).opacity(0.55))
+                    .fill(Color.movo.textSecondary.opacity(0.55))
                     .frame(width: 18, height: 18)
                     .offset(x: -6)
                 Circle()
-                    .fill(Color(red: 0.59, green: 0.59, blue: 0.62).opacity(0.55))
+                    .fill(Color.movo.textTertiary.opacity(0.55))
                     .frame(width: 18, height: 18)
                     .offset(x: 6)
                     .blendMode(.screen)

@@ -16,7 +16,7 @@ struct CreateCardView: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
 
-            Color.movo.elevated
+            Color.movo.surface
 
             CardMockIllustration()
                 .frame(width: 140, height: 162)
@@ -44,13 +44,8 @@ struct CreateCardView: View {
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 10, weight: .semibold))
                         }
-                        .foregroundStyle(Color.movo.onAccent)
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.vertical, 10)
-                        .background(Color.movo.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SoftAccentButtonStyle())
                 }
                 .padding(20)
 

@@ -175,6 +175,7 @@ struct DashboardView: View {
                 cards: vm.cards,
                 accountBalance: displayAccount?.availableBalance ?? 0,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                primaryAccountNickname: displayAccount?.nickname,
                 onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])
@@ -362,7 +363,7 @@ struct DashboardView: View {
                 PrimaryAccountContent(
                     account: account,
                     accountData: accountData,
-                    hasVCards: !vm.cards.isEmpty,
+                    hasVCards: vm.primaryLinkedCard != nil,
                     onCardTap: { showPrimaryAccountDetails = true },
                     onPrimaryTap: { showEditNickname = true },
                     onViewCardTap: {
@@ -376,7 +377,7 @@ struct DashboardView: View {
                 ActionCard(
                     title: data.title ?? "Pay anyone, instantly",
                     description: data.description ?? "Tap to send. They get it the moment you do.",
-                    buttonLabel: data.actions.first?.label ?? "Add people"
+                    buttonLabel: data.actions.first?.label ?? "Add payee"
                 ) {
                     showContactList = true
                     SecureLogger.debug("Quick transfer tapped", category: .general)
