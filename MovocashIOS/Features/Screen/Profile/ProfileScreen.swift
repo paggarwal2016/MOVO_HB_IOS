@@ -513,7 +513,7 @@ private extension ProfileScreen {
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.movo.accent)
                 }
-                Text(plaidVM.state == .loading ? "Connecting..." : "Connect bank account")
+                Text(plaidVM.state == .loading ? "Connecting..." : "Link your external account")
                     .font(Typography.body.font)
                     .foregroundStyle(Color.movo.accent)
                 Spacer()

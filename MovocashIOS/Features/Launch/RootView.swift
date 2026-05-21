@@ -188,6 +188,26 @@ struct RootView: View {
                         }
                     )
 
+                case .warmRelock:
+                    BiometricGateView(
+                        biometricIcon: lockManager.biometricType.systemImageName,
+                        biometricLabel: lockManager.biometricType.displayName,
+                        authenticate: {
+                            await authVM.loginWithBiometric(appState: appState)
+                        },
+                        onAuthenticated: {
+                            appState.flow = .home
+                        },
+                        onUsePhoneNumber: {
+                            Task {
+                                await sessionManager.logout(appState: appState)
+                                lockManager.logout()
+                                appState.flow = .choice
+                            }
+                        },
+                        autoTriggerBiometric: true
+                    )
+
                 case .kyc:
                     EmptyView()
 
@@ -298,6 +318,23 @@ struct RootView: View {
                 }
             }
         }
+        .onChangeCompat(of: lockManager.state) { newState in
+            // Warm transition: route to .warmRelock so BiometricGateView
+            // auto-triggers Face ID. Cold launch uses .appLock (handled by
+            // postBootstrap's splash biometric attempt; only reaches .appLock
+            // on biometric failure, where manual retry is appropriate).
+            guard newState == .locked,
+                  lockManager.hasAuthMethod,
+                  appState.isAuthenticated,
+                  !appState.isNewRegistration,
+                  !UserDefaults.standard.bool(forKey: "kycInProgress"),
+                  UserDefaults.standard.bool(forKey: "kycCompleted"),
+                  appState.flow != .appLock,
+                  appState.flow != .warmRelock
+            else { return }
+
+            appState.flow = .warmRelock
+        }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
             guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
             let message = notification.userInfo?["message"] as? String
@@ -387,45 +424,3 @@ struct RootView: View {
         }
     }
 }
-
-
-
-
-//onVerify: { _ in
-//                            appState.flow = .setupPasscode
-//                            // Skip passcode setup — go to biometric enrollment if available
-//                            if lockManager.isBiometricHardwarePresent
-//                                && !lockManager.isBiometricEnabled
-//                                && !RSAKeyManager.shared.keysExist() {
-//                                appState.flow = .enableBiometrics
-//                            } else {
-//                                appState.flow = .getStartedInfo
-//                            }
-//                        },
-//                        onResend: { /* dummy — no API yet */ },
-
-//
-//    .onChangeCompat(of: appState.otpVerified) { verified in
-//                guard verified else { return }
-//                if lockManager.isPasscodeSet {
-//                    // Returning user — KYC already completed, restore the flag cleared on logout
-//                    UserDefaults.standard.set(true, forKey: "kycCompleted")
-//                    appState.flow = .home
-//                    Task { await pushManager.requestPermission() }
-//                } else if appState.context == .getStarted {
-//                    // New registration — collect email/password before security setup
-//                if appState.context == .getStarted {
-//                    // New registration — collect email + phone before security setup
-//                    appState.flow = .signupDetails
-//                } else {
-//                    appState.flow = .setupPasscode
-//                    // Login flow — skip passcode, enroll biometric if available
-//                    UserDefaults.standard.set(true, forKey: "kycCompleted")
-//                    if lockManager.isBiometricHardwarePresent && !RSAKeyManager.shared.keysExist() {
-//                        appState.flow = .enableBiometrics
-//                    } else {
-//                        appState.flow = .home
-//                    }
-//                    Task { await pushManager.requestPermission() }
-//                }
-//            }

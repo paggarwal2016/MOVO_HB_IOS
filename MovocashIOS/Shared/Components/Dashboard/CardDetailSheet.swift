@@ -149,7 +149,10 @@ struct CardDetailSheet: View {
     
     
     private var cardActions: some View {
-        HStack(spacing: Spacing.sm) {
+        let availableWidth = UIScreen.main.bounds.width - 2 * Spacing.screenHorizontal
+        let transferWidth = (availableWidth - 55) * 3 / 4
+
+        return HStack(spacing: Spacing.sm) {
             Button(action: {
                 walletTask = Task {
                     guard let accountId = card.savingsAccountId else { return }
@@ -177,7 +180,7 @@ struct CardDetailSheet: View {
                         .fontWeight(.semibold)
                 }
                 .foregroundColor(Color.movo.background)
-                .frame(maxWidth: .infinity)
+                .frame(width: transferWidth)
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: Radius.lg)
@@ -185,7 +188,7 @@ struct CardDetailSheet: View {
                 )
             }
             .buttonStyle(.plain)
-            
+
             Button(action: { showTransfer = true }) {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "arrow.left.arrow.right")
@@ -344,9 +347,9 @@ struct CardDetailSheet: View {
                 // Base gradient
                 LinearGradient(
                     colors: [
-                        Color(red: 0.10, green: 0.10, blue: 0.13),
-                        Color(red: 0.04, green: 0.04, blue: 0.05),
-                        Color(red: 0.02, green: 0.02, blue: 0.03)
+                        Color.movo.elevated,
+                        Color.movo.surface,
+                        Color.movo.background
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing

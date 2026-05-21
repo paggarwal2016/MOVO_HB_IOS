@@ -41,14 +41,13 @@ struct MovocashIOSApp: App {
         _lockVM           = StateObject(wrappedValue: c.makeAppLockViewModel())
         _kycVM            = StateObject(wrappedValue: c.makeKYCViewModel())
         _pushManager      = StateObject(wrappedValue: PushManager.shared)
-        TabBarAppearance.configure()
         UIRefreshControl.appearance().tintColor = DesignTokens.Palette.accent.uiColor
     }
 
     var body: some Scene {
         WindowGroup {
             RootView(kycVM: kycVM)
-                .preferredColorScheme(.light)
+                .preferredColorScheme(.dark)
                 .environmentObject(appState)
                 .environmentObject(container)
                 .environmentObject(lockManager)

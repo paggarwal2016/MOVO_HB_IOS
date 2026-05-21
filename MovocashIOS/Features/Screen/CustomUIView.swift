@@ -42,9 +42,9 @@ struct CardChip: View {
             RoundedRectangle(cornerRadius: 5)
                 .fill(LinearGradient(
                     colors: [
-                        Color(red: 0.78, green: 0.78, blue: 0.81),
-                        Color(red: 0.54, green: 0.54, blue: 0.58),
-                        Color(red: 0.35, green: 0.35, blue: 0.39)
+                        Color.movo.textSecondary,
+                        Color.movo.textTertiary,
+                        Color.movo.textDisabled
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -92,48 +92,48 @@ struct ContactlessIcon: View {
 
 // MARK: - MLogo
 
-struct MLogo: View {
-    var body: some View {
-        Canvas { context, size in
-            let s = size.width / 100.0
-            // Front M
-            var front = Path()
-            front.move(to: .init(x: 12 * s, y: 80 * s))
-            front.addLine(to: .init(x: 12 * s, y: 22 * s))
-            front.addLine(to: .init(x: 24 * s, y: 22 * s))
-            front.addLine(to: .init(x: 38 * s, y: 48 * s))
-            front.addLine(to: .init(x: 52 * s, y: 22 * s))
-            front.addLine(to: .init(x: 64 * s, y: 22 * s))
-            front.addLine(to: .init(x: 64 * s, y: 80 * s))
-            front.addLine(to: .init(x: 54 * s, y: 80 * s))
-            front.addLine(to: .init(x: 54 * s, y: 42 * s))
-            front.addLine(to: .init(x: 42 * s, y: 64 * s))
-            front.addLine(to: .init(x: 34 * s, y: 64 * s))
-            front.addLine(to: .init(x: 22 * s, y: 42 * s))
-            front.addLine(to: .init(x: 22 * s, y: 80 * s))
-            front.closeSubpath()
-            context.fill(front, with: .color(Color.movo.textPrimary))
-            
-            // Back M (offset, faded)
-            var back = Path()
-            back.move(to: .init(x: 36 * s, y: 80 * s))
-            back.addLine(to: .init(x: 36 * s, y: 22 * s))
-            back.addLine(to: .init(x: 48 * s, y: 22 * s))
-            back.addLine(to: .init(x: 62 * s, y: 48 * s))
-            back.addLine(to: .init(x: 76 * s, y: 22 * s))
-            back.addLine(to: .init(x: 88 * s, y: 22 * s))
-            back.addLine(to: .init(x: 88 * s, y: 80 * s))
-            back.addLine(to: .init(x: 78 * s, y: 80 * s))
-            back.addLine(to: .init(x: 78 * s, y: 42 * s))
-            back.addLine(to: .init(x: 66 * s, y: 64 * s))
-            back.addLine(to: .init(x: 58 * s, y: 64 * s))
-            back.addLine(to: .init(x: 46 * s, y: 42 * s))
-            back.addLine(to: .init(x: 46 * s, y: 80 * s))
-            back.closeSubpath()
-            context.fill(back, with: .color(Color.movo.textPrimary.opacity(0.55)))
-        }
-    }
-}
+//struct MLogo: View {
+//    var body: some View {
+//        Canvas { context, size in
+//            let s = size.width / 100.0
+//            // Front M
+//            var front = Path()
+//            front.move(to: .init(x: 12 * s, y: 80 * s))
+//            front.addLine(to: .init(x: 12 * s, y: 22 * s))
+//            front.addLine(to: .init(x: 24 * s, y: 22 * s))
+//            front.addLine(to: .init(x: 38 * s, y: 48 * s))
+//            front.addLine(to: .init(x: 52 * s, y: 22 * s))
+//            front.addLine(to: .init(x: 64 * s, y: 22 * s))
+//            front.addLine(to: .init(x: 64 * s, y: 80 * s))
+//            front.addLine(to: .init(x: 54 * s, y: 80 * s))
+//            front.addLine(to: .init(x: 54 * s, y: 42 * s))
+//            front.addLine(to: .init(x: 42 * s, y: 64 * s))
+//            front.addLine(to: .init(x: 34 * s, y: 64 * s))
+//            front.addLine(to: .init(x: 22 * s, y: 42 * s))
+//            front.addLine(to: .init(x: 22 * s, y: 80 * s))
+//            front.closeSubpath()
+//            context.fill(front, with: .color(Color.movo.textPrimary))
+//            
+//            // Back M (offset, faded)
+//            var back = Path()
+//            back.move(to: .init(x: 36 * s, y: 80 * s))
+//            back.addLine(to: .init(x: 36 * s, y: 22 * s))
+//            back.addLine(to: .init(x: 48 * s, y: 22 * s))
+//            back.addLine(to: .init(x: 62 * s, y: 48 * s))
+//            back.addLine(to: .init(x: 76 * s, y: 22 * s))
+//            back.addLine(to: .init(x: 88 * s, y: 22 * s))
+//            back.addLine(to: .init(x: 88 * s, y: 80 * s))
+//            back.addLine(to: .init(x: 78 * s, y: 80 * s))
+//            back.addLine(to: .init(x: 78 * s, y: 42 * s))
+//            back.addLine(to: .init(x: 66 * s, y: 64 * s))
+//            back.addLine(to: .init(x: 58 * s, y: 64 * s))
+//            back.addLine(to: .init(x: 46 * s, y: 42 * s))
+//            back.addLine(to: .init(x: 46 * s, y: 80 * s))
+//            back.closeSubpath()
+//            context.fill(back, with: .color(Color.movo.textPrimary.opacity(0.55)))
+//        }
+//    }
+//}
 
 
 // MARK: - MastercardMark
@@ -143,11 +143,11 @@ struct MastercardMark: View {
         VStack(spacing: 2) {
             ZStack {
                 Circle()
-                    .fill(Color(red: 0.78, green: 0.78, blue: 0.81).opacity(0.55))
+                    .fill(Color.movo.textSecondary.opacity(0.55))
                     .frame(width: 18, height: 18)
                     .offset(x: -6)
                 Circle()
-                    .fill(Color(red: 0.59, green: 0.59, blue: 0.62).opacity(0.55))
+                    .fill(Color.movo.textTertiary.opacity(0.55))
                     .frame(width: 18, height: 18)
                     .offset(x: 6)
                     .blendMode(.screen)

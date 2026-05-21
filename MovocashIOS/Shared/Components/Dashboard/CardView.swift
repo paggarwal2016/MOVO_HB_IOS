@@ -18,8 +18,12 @@ struct CardItemView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.elevated)
-            
+                .fill(Color.movo.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+
             VStack(alignment: .leading, spacing: 0) {
                 
                 // Icon + card name
@@ -76,8 +80,6 @@ struct CardSelectorView: View {
         GeometryReader { geo in
 
             let cardWidth = geo.size.width - 56
-            let viewAllWidth = cardWidth / 3
-            let viewAllPeek = geo.size.width - viewAllWidth - Spacing.sm
             let cardStride = cardWidth + 8
             let visibleCards = Array(cards.prefix(CardSelectorView.maxVisible))
             let hasMore = cards.count > CardSelectorView.maxVisible
@@ -90,7 +92,7 @@ struct CardSelectorView: View {
                         .font(.system(size: 11, weight: .semibold))
                         .tracking(1.2)
                         .foregroundColor(Color.movo.textTertiary)
-                    
+
                     Button(action: onTap) {
                         Image(systemName: "plus")
                             .font(.system(size: 13, weight: .semibold))
@@ -100,6 +102,14 @@ struct CardSelectorView: View {
                     }
                     .buttonStyle(.plain)
                     Spacer()
+                    if hasMore {
+                        Button(action: { onShowMore?() }) {
+                            Text("See all (\(cards.count))")
+                                .textStyle(Typography.button)
+                                .foregroundStyle(Color.movo.accent)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 // Carousel: existing cards + create card slot at end
@@ -123,20 +133,7 @@ struct CardSelectorView: View {
                         }
                     }
 
-                    if hasMore {
-                        createCardSlot
-                            .frame(width: viewAllWidth, height: 145)
-                            .onTapGesture {
-                                if selectedIndex == visibleCards.count {
-                                    onShowMore?()
-                                } else {
-                                    selectedIndex = visibleCards.count
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                        targetOffset = CGFloat(-visibleCards.count) * cardStride + viewAllPeek
-                                    }
-                                }
-                            }
-                    }
+
                 }
                 .offset(x: targetOffset + dragOffset)
                 .frame(height: 145, alignment: .leading)
@@ -148,7 +145,7 @@ struct CardSelectorView: View {
                             let dy = abs(value.translation.height)
                             guard dx > dy else { return }
                             let raw = value.translation.width
-                            let maxIndex = hasMore ? visibleCards.count : visibleCards.count - 1
+                            let maxIndex = visibleCards.count - 1
                             if (selectedIndex == 0 && raw > 0) ||
                                (selectedIndex == maxIndex && raw < 0) {
                                 dragOffset = raw / 3
@@ -166,13 +163,13 @@ struct CardSelectorView: View {
                             let translation = value.translation.width
                             let predicted  = value.predictedEndTranslation.width
                             var newIndex = selectedIndex
-                            let maxIndex = hasMore ? visibleCards.count : visibleCards.count - 1
+                            let maxIndex = visibleCards.count - 1
                             if translation < -(cardStride / 4) || predicted < -(cardStride / 2) {
                                 newIndex = min(selectedIndex + 1, maxIndex)
                             } else if translation > (cardStride / 4) || predicted > (cardStride / 2) {
                                 newIndex = max(selectedIndex - 1, 0)
                             }
-                            let peek: CGFloat = newIndex == 0 ? 0 : (newIndex == visibleCards.count ? viewAllPeek : 28)
+                            let peek: CGFloat = newIndex == 0 ? 0 : 28
                             selectedIndex = newIndex
                             targetOffset += dragOffset
                             dragOffset = 0
@@ -199,20 +196,7 @@ struct CardSelectorView: View {
                                     }
                                 }
                         }
-                        if hasMore {
-                            Circle()
-                                .fill(selectedIndex == visibleCards.count
-                                      ? Color.movo.accent
-                                      : Color.movo.textDisabled.opacity(0.5))
-                                .frame(width: 5, height: 5)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
-                                .onTapGesture {
-                                    selectedIndex = visibleCards.count
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                        targetOffset = CGFloat(-visibleCards.count) * cardStride + viewAllPeek
-                                    }
-                                }
-                        }
+
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.bottom, 0)
@@ -224,37 +208,4 @@ struct CardSelectorView: View {
         .contentShape(Rectangle())
     }
 
-    private var createCardSlot: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.elevated.opacity(0.5))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                        .strokeBorder(
-                            Color.movo.accentBorder,
-                            style: StrokeStyle(lineWidth: 1, dash: [5, 4])
-                        )
-                )
-
-            VStack(spacing: Spacing.lg) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
-                        .fill(Color.movo.elevatedHigh)
-                        .frame(width: 56, height: 56)
-                    Image(systemName: "square.grid.2x2")
-                        .font(.system(size: 22, weight: .regular))
-                        .foregroundColor(Color.movo.accent)
-                }
-                VStack(spacing: Spacing.xs) {
-                    Text("View all")
-                        .textStyle(Typography.cardTitle)
-                        .foregroundColor(Color.movo.textPrimary)
-                    Text("\(cards.count) cards")
-                        .textStyle(Typography.caption)
-                        .foregroundColor(Color.movo.accent)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
 }

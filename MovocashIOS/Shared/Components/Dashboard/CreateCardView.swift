@@ -9,56 +9,50 @@ import SwiftUI
 
 struct CreateCardView: View {
 
-    var title: String   = "Get your first cash card"
-    var message: String = "Spend instantly · Apple Pay ready"
+    var title: String   = "Get your\ncash card"
+    var message: String = "Spend instantly\nApple Pay ready"
     var onTap: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        ZStack(alignment: .bottomTrailing) {
 
-            // MARK: - Left column
-            VStack(alignment: .leading, spacing: 10) {
+            Color.movo.surface
 
-                // Title
-                Text(title)
-                    .textStyle(Typography.cardHero)
-                    .foregroundStyle(Color.movo.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                // Subtitle
-                Text(message)
-                    .textStyle(Typography.subtitle)
-                    .foregroundStyle(Color.movo.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                // CTA button
-                Button(action: onTap) {
-                    HStack(spacing: 7) {
-                        Text("Create card")
-                            .textStyle(Typography.button)
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 10, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.movo.onAccent)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.movo.accent)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg))
-                }
-                .buttonStyle(.plain)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            // MARK: - Right column: rotated card illustration
             CardMockIllustration()
-                .frame(width: 138, height: 95)
-                .rotationEffect(.degrees(10), anchor: .center)
-                .padding(.top, 6)
+                .frame(width: 140, height: 162)
+                .rotationEffect(.degrees(8), anchor: .center)
+                .offset(x: 20, y: 16)
+
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+
+                    Text(title)
+                        .textStyle(Typography.cardHero)
+                        .foregroundStyle(Color.movo.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(message)
+                        .textStyle(Typography.subtitle)
+                        .foregroundStyle(Color.movo.textSecondary)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button(action: onTap) {
+                        HStack(spacing: 6) {
+                            Text("Create card")
+                                .textStyle(Typography.button)
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                    }
+                    .buttonStyle(SoftAccentButtonStyle())
+                }
+                .padding(20)
+
+                Spacer(minLength: 128)
+            }
         }
-        .padding(.horizontal, DesignTokens.Spacing.xl)
-        .padding(.vertical, DesignTokens.Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.movo.elevated)
+        .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
@@ -73,34 +67,63 @@ private struct CardMockIllustration: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
                 .fill(Color.movo.elevatedHigh)
                 .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.lg)
-                        .strokeBorder(Color.movo.borderStrong,
-                                      lineWidth: DesignTokens.Stroke.hairline)
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: DesignTokens.Stroke.hairline)
                 )
 
             VStack(alignment: .leading, spacing: 0) {
 
-                Text("CASH CARD")
-                    .textStyle(Typography.eyebrow)
+                // Branding row
+                HStack(spacing: 5) {
+                    
+                    MovoMVSymbol().frame(width: 12, height: 12)
+                    
+                    Text("MOVOCASH")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Color.movo.textPrimary)
+                        .kerning(1.2)
+                }
+
+                Spacer().frame(height: 10)
+
+                // Balance
+                Text("BALANCE")
+                    .font(.system(size: 7, weight: .medium))
                     .foregroundStyle(Color.movo.textTertiary)
+                    .kerning(0.8)
 
-                Spacer().frame(height: 6)
+                Spacer().frame(height: 3)
 
-                Text("Your name here")
-                    .font(.system(size: 13, weight: .semibold))
+                Text("$0.00")
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(Color.movo.textPrimary)
 
                 Spacer()
 
+                // Chip + contactless icons
                 HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.movo.textTertiary.opacity(0.5))
+                        .frame(width: 22, height: 16)
+
+                    Image(systemName: "wave.3.right")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.movo.textTertiary.opacity(0.6))
+                }
+
+                Spacer().frame(height: 8)
+
+                // Masked card number dots
+                HStack(spacing: 6) {
+                    dotGroup(count: 4)
                     dotGroup(count: 4)
                     dotGroup(count: 4)
                 }
             }
-            .padding(12)
+            .padding(14)
         }
     }
 
@@ -108,8 +131,8 @@ private struct CardMockIllustration: View {
         HStack(spacing: 3) {
             ForEach(0..<count, id: \.self) { _ in
                 Circle()
-                    .fill(Color.movo.textTertiary.opacity(0.7))
-                    .frame(width: 4, height: 4)
+                    .fill(Color.movo.textTertiary.opacity(0.5))
+                    .frame(width: 3.5, height: 3.5)
             }
         }
     }

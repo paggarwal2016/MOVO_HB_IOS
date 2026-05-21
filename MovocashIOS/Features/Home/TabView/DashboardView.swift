@@ -168,22 +168,18 @@ struct DashboardView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .navigationDestination(isPresented: Binding(
-            get: { quickTransferContact != nil },
-            set: { if !$0 { quickTransferContact = nil } }
-        )) {
-            if let contact = quickTransferContact {
-                QuickTransferView(
-                    contact: contact,
-                    container: container,
-                    cards: vm.cards,
-                    accountBalance: displayAccount?.availableBalance ?? 0,
-                    primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                    onSuccess: { needsDashboardRefresh = true }
-                )
-                .toolbar(.hidden, for: .navigationBar)
-                .navigationBarBackButtonHidden(true)
-            }
+        .sheet(item: $quickTransferContact) { contact in
+            QuickTransferView(
+                contact: contact,
+                container: container,
+                cards: vm.cards,
+                accountBalance: displayAccount?.availableBalance ?? 0,
+                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                primaryAccountNickname: displayAccount?.nickname,
+                onSuccess: { needsDashboardRefresh = true }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .navigationDestination(isPresented: $showFundAccount) {
             if let account = displayAccount {
@@ -367,7 +363,7 @@ struct DashboardView: View {
                 PrimaryAccountContent(
                     account: account,
                     accountData: accountData,
-                    hasVCards: !vm.cards.isEmpty,
+                    hasVCards: vm.primaryLinkedCard != nil,
                     onCardTap: { showPrimaryAccountDetails = true },
                     onPrimaryTap: { showEditNickname = true },
                     onViewCardTap: {
@@ -381,7 +377,7 @@ struct DashboardView: View {
                 ActionCard(
                     title: data.title ?? "Pay anyone, instantly",
                     description: data.description ?? "Tap to send. They get it the moment you do.",
-                    buttonLabel: data.actions.first?.label ?? "Add people"
+                    buttonLabel: data.actions.first?.label ?? "Add payee"
                 ) {
                     showContactList = true
                     SecureLogger.debug("Quick transfer tapped", category: .general)
@@ -458,28 +454,28 @@ struct DashboardView: View {
 
     @ViewBuilder
     private func myCardsSectionView(_ data: DashboardMyCards) -> some View {
-        Group {
-            if !vm.hasLoadedCards {
-                CardSkeletonView()
-            } else if vm.cards.isEmpty {
-                CreateCardView(
-                    title: data.title,
-                    message: data.description,
-                    onTap: { showCreateCashCard = true }
-                )
-            } else {
-                CardSelectorView(
-                    cards: vm.cards,
-                    sectionTitle: data.title,
-                    onTap: { showCreateCashCard = true },
-                    onEyeTap: { card in
-                        selectedCard = card
-                    },
-                    onShowMore: { showViewCardList = true }
-                )
-            }
+        if !vm.hasLoadedCards {
+            CardSkeletonView()
+                .frame(maxWidth: .infinity)
+        } else if vm.cards.isEmpty {
+            CreateCardView(
+                title: data.title,
+                message: data.description,
+                onTap: { showCreateCashCard = true }
+            )
+            .frame(maxWidth: .infinity)
+        } else {
+            CardSelectorView(
+                cards: vm.cards,
+                sectionTitle: data.title,
+                onTap: { showCreateCashCard = true },
+                onEyeTap: { card in
+                    selectedCard = card
+                },
+                onShowMore: { showViewCardList = true }
+            )
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Actions
