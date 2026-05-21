@@ -59,12 +59,12 @@ struct RootView: View {
                                 case .signupDetails:
                                     appState.flow = .signupDetails
                                 default:
+                                    // Returning user — KYC already complete.
+                                    // Show BiometricEnrollView (which also registers device
+                                    // passkey) if not yet done on this device; otherwise go home.
                                     UserDefaults.standard.set(true, forKey: "kycCompleted")
-                                    if lockManager.isBiometricHardwarePresent && !RSAKeyManager.shared.keysExist() {
-                                        appState.flow = .enableBiometrics
-                                    } else {
-                                        appState.flow = .home
-                                    }
+                                    let passkeyDone = await authVM.isPasskeyRegistered()
+                                    appState.flow = passkeyDone ? .home : .enableBiometrics
                                 }
                             }
                         },
@@ -103,12 +103,12 @@ struct RootView: View {
                         isLoading: authVM.state == .loading,
                         onVerify: { code in
                             await authVM.verifyEmailOTP(code: code) {
-                                if lockManager.isBiometricHardwarePresent
-                                    && !lockManager.isBiometricEnabled
-                                    && !RSAKeyManager.shared.keysExist() {
-                                    appState.flow = .enableBiometrics
-                                } else {
-                                    appState.flow = .getStartedInfo
+                                Task { @MainActor in
+                                    // New user — show BiometricEnrollView (which also
+                                    // registers device passkey) if not yet done; otherwise
+                                    // skip straight to onboarding.
+                                    let passkeyDone = await authVM.isPasskeyRegistered()
+                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
                                 }
                             }
                         },
@@ -155,8 +155,8 @@ struct RootView: View {
                 case .enableBiometrics:
                     BiometricEnrollView(
                         lockManager: lockManager,
-                        onEnable: { advanceAfterSecurity() },  // enabled  → home or kyc
-                        onSkip:   { advanceAfterSecurity() }   // skipped  → home or kyc
+                        onEnable: { Task { await advanceAfterSecurity() } },
+                        onSkip:   { Task { await advanceAfterSecurity() } }
                     )
 
                 case .pickDocument:
@@ -314,21 +314,76 @@ struct RootView: View {
 
     // MARK: -
 
-    /// After biometric step:
-    /// registration → KYC  |  login (KYC already done) → Home
-    private func advanceAfterSecurity() {
-        // User just completed passcode/biometric setup. If they backgrounded the app
-        // during setup (e.g. went to Settings to enable Face ID), handleScenePhase
-        // may have set state = .locked. Clear it now — identity was proven during
-        // setup — so the lock overlay does not interrupt the next screen.
+    /// Called after the user enables or skips biometrics.
+    /// Registers the device passkey (mandatory — blocks navigation on failure),
+    /// then routes: registration → KYC onboarding  |  login → Home.
+    private func advanceAfterSecurity() async {
         lockManager.resetToUnlocked()
+
+        let registered = await registerPasskeyIfNeeded()
+        guard registered else { return }   // error already shown — stay on screen
+
         switch appState.context {
         case .getStarted:
             appState.flow = .getStartedInfo
         default:
-            // Login user re-establishing passcode after logout — KYC already done.
             UserDefaults.standard.set(true, forKey: "kycCompleted")
             appState.flow = .home
+        }
+    }
+
+    /// Registers the device passkey via MobileBankingSDK (one-time per user/device).
+    /// Returns true if already registered or successfully registered now.
+    /// Returns false if registration failed — caller must not advance the flow.
+    private func registerPasskeyIfNeeded() async -> Bool {
+        guard let token = try? await container.keychain.get("access_token", biometricPrompt: nil),
+              let json = JWTDecoder.decodePayload(token),
+              let payload = json["payload"] as? [String: Any],
+              let userIdInt = payload["userId"] as? Int
+        else {
+            // Cannot decode user — let through; server will enforce on next API call.
+            SecureLogger.warning("Passkey check: unable to decode userId from token", category: .auth)
+            return true
+        }
+
+        let userId = String(userIdInt)
+        let passkeyKey = "passkey_registered_\(userId)"
+        guard !UserDefaults.standard.bool(forKey: passkeyKey) else {
+            return true   // already registered on this device
+        }
+
+        // Configure MobileBankingSDK with the current token before calling it.
+        await PlaidService.shared.configureSDKForTransfer(authToken: token)
+
+        // Wait for any sheet/overlay to finish dismissing before presenting passkey UI.
+        var presenter: UIViewController?
+        for _ in 0..<20 {
+            if let vc = UIApplication.topViewController(),
+               vc.presentedViewController == nil || vc.presentedViewController?.isBeingDismissed == true {
+                presenter = vc
+                break
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        guard let presenter = presenter ?? UIApplication.topViewController() else {
+            AlertManager.shared.showError("Device registration failed. Please try again.")
+            return false
+        }
+
+        let deviceId = await DeviceManager.shared.deviceID()
+        do {
+            try await PlaidService.shared.registerDevicePasskey(
+                userId: userId,
+                deviceId: deviceId,
+                presentingViewController: presenter
+            )
+            UserDefaults.standard.set(true, forKey: passkeyKey)
+            SecureLogger.info("Device passkey registered for user \(userId)", category: .auth)
+            return true
+        } catch {
+            SecureLogger.error("Passkey registration failed: \(error.localizedDescription)", category: .auth)
+            AlertManager.shared.showError("Device registration failed. Please try again.")
+            return false
         }
     }
 }

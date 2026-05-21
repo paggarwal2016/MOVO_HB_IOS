@@ -95,7 +95,7 @@ final class AuthViewModel: ObservableObject {
     
     // MARK: - Complete OTP Verification Flow
     
-    func completeOTPVerification(code: String, appState: AppState, onNavigate: @escaping (AuthFlow) -> Void) async {
+    func completeOTPVerification(code: String, appState: AppState, onNavigate: @escaping (AuthFlow) async -> Void) async {
         analytics.trackLoginAttempt(method: .otp)
         do {
             // Step 1: Verify OTP → get sessionId
@@ -118,7 +118,7 @@ final class AuthViewModel: ObservableObject {
             analytics.trackLogin(method: .otp)
             let destination: AuthFlow = context == .login ? .home : .signupDetails
             reset()
-            onNavigate(destination)
+            await onNavigate(destination)
         } catch {
             analytics.trackLoginFailed(method: .otp, errorCode: error.localizedDescription)
             alertManager.showError(error.localizedDescription)
@@ -227,6 +227,23 @@ final class AuthViewModel: ObservableObject {
         phoneDisplayText = ""
         email = ""
         state = .idle
+    }
+}
+
+// MARK: - Passkey
+
+extension AuthViewModel {
+
+    /// Returns true if a device passkey has already been registered for the
+    /// currently authenticated user. Used by RootView to decide whether the
+    /// BiometricEnrollView (which handles passkey registration) must be shown.
+    func isPasskeyRegistered() async -> Bool {
+        guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+              let json = JWTDecoder.decodePayload(token),
+              let payload = json["payload"] as? [String: Any],
+              let userIdInt = payload["userId"] as? Int
+        else { return false }
+        return UserDefaults.standard.bool(forKey: "passkey_registered_\(userIdInt)")
     }
 }
 

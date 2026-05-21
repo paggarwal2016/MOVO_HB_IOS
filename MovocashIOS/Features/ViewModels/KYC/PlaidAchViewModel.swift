@@ -273,7 +273,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     func configureSDKForTransfer() async {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               !token.isEmpty else { return }
-        service.configureSDKForTransfer(authToken: token)
+        await service.configureSDKForTransfer(authToken: token)
     }
 
     func registerDevicePasskeyIfNeeded() async throws {
@@ -336,55 +336,35 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
             }
 
-            // Step 2 — Register device passkey (one-time per user)
+            // Step 2 — Verify device passkey was registered at login time.
+            // Registration happens in RootView.advanceAfterSecurity() immediately after
+            // the user authenticates — this guard is a defence-in-depth safety net only.
             if let token = try? await self.keychain.get("access_token", biometricPrompt: nil),
                let json = JWTDecoder.decodePayload(token),
                let payload = json["payload"] as? [String: Any],
                let userIdInt = payload["userId"] as? Int {
-                let userId = String(userIdInt)
-                let passkeyKey = "passkey_registered_\(userId)"
-                if !UserDefaults.standard.bool(forKey: passkeyKey) {
-                    guard let passkeyPresenter = await self.waitForPresentableViewController() else {
-                        throw NSError(domain: "QuickTransfer", code: -1,
-                                      userInfo: [NSLocalizedDescriptionKey: "Unable to present passkey registration."])
-                    }
-                    let deviceId = await DeviceManager.shared.deviceID()
-                    try await self.service.registerDevicePasskey(
-                        userId: userId,
-                        deviceId: deviceId,
-                        presentingViewController: passkeyPresenter
-                    )
-                    UserDefaults.standard.set(true, forKey: passkeyKey)
+                guard UserDefaults.standard.bool(forKey: "passkey_registered_\(userIdInt)") else {
+                    throw NSError(domain: "QuickTransfer", code: -2,
+                                  userInfo: [NSLocalizedDescriptionKey: "Device not registered. Please sign out and sign in again."])
                 }
             }
 
-            // Step 3 — Create transaction intent
-            let requestBody = CreateTransactionIntentRequestBody(
-                type: .externalTransfer,
-                details: .externalTransfer(
-                    fromAccountId: fromCard.savingsAccountId ?? 0,
-                    recipientPhoneNumber: normalizedPhone,
-                    amount: amount,
-                    description: description
-                ),
-                webhookUrl: nil
+            // Step 3 — Submit external transfer via app's own API
+            let transferRequest = TransactionRequest.Internal(
+                description: description ?? "",
+                amount: amount,
+                toAccountId: 0,
+                toClientId: 0,
+                fromAccountId: fromCard.savingsAccountId ?? 0,
+                phoneNumber: normalizedPhone,
+                userAction: "PEER-TRANSFER",
+                nickname: toName
             )
-            let intent = try await self.service.createTransactionIntent(requestBody: requestBody)
-            self.transactionIntent = intent
-
-            // Step 4 — Approve intent (triggers biometric)
-            guard let approvalPresenter = await self.waitForPresentableViewController() else {
-                throw NSError(domain: "QuickTransfer", code: -1,
-                              userInfo: [NSLocalizedDescriptionKey: "Unable to present biometric approval."])
-            }
-            let deviceId = await DeviceManager.shared.deviceID()
-            let approvalResult = try await self.service.approveTransactionIntent(
-                intentId: intent.id,
-                deviceId: deviceId,
-                presentingViewController: approvalPresenter
+            let response: TransferInternalResponse = try await self.network.request(
+                TransactionAPI.internals(transferRequest)
             )
 
-            // Step 5 — Publish success
+            // Step 4 — Publish success
             self.peerTransferSuccess = SuccessConfirmation(
                 channel: .peer,
                 amount: Decimal(string: amountText) ?? 0,
@@ -394,7 +374,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 toAccountMask: nil,
                 arrivesText: "Instantly",
                 dateText: Date.now.formatted(date: .long, time: .shortened),
-                referenceCode: approvalResult.intent.id
+                referenceCode: "\(response.transferId)"
             )
         }
     }
