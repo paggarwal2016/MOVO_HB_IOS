@@ -89,7 +89,6 @@ struct PayAnyoneContactPickerView: View {
                     contact: contact,
                     container: container,
                     cards: cards,
-                    accountBalance: accountBalance,
                     primaryLinkedCard: primaryLinkedCard,
                     onSuccess: { onSuccess(); dismiss() }
                 )
@@ -103,7 +102,6 @@ struct PayAnyoneContactPickerView: View {
                         contact: contact,
                         container: container,
                         cards: cards,
-                        accountBalance: accountBalance,
                         primaryLinkedCard: primaryLinkedCard,
                         onSuccess: { onSuccess(); dismiss() }
                     )

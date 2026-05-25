@@ -302,7 +302,7 @@ private extension HomeTabBarView {
     func destination(for tab: Tab) -> some View {
         switch tab {
         case .home:     DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM)
-        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: vCardVM.apiCards, totalBalance: dashboardVM.primaryAccount?.availableBalance ?? 0)
+        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: vCardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard)
         case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
         }
     }

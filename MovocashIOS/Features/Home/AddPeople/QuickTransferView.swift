@@ -11,9 +11,15 @@ struct QuickTransferView: View {
 
     let contact: ContactRecord
     let cards: [VCardListResponse]
-    let accountBalance: Decimal
     let primaryLinkedCard: VCardListResponse?
-    let primaryAccountNickname: String?
+
+    private var accountBalance: Decimal {
+        Decimal(primaryLinkedCard?.savingsAccountAvailableBalance ?? 0)
+    }
+
+    private var primaryAccountNickname: String? {
+        primaryLinkedCard?.savingsAccountNickname ?? primaryLinkedCard?.name
+    }
 
     // Primary card prepended so it is the first option in the selection sheet.
     private var displayCards: [VCardListResponse] {
@@ -35,12 +41,10 @@ struct QuickTransferView: View {
 
     var onSuccess: () -> Void = {}
 
-    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal = 0, primaryLinkedCard: VCardListResponse? = nil, primaryAccountNickname: String? = nil, onSuccess: @escaping () -> Void = {}) {
+    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
         self.contact = contact
         self.cards = cards
-        self.accountBalance = accountBalance
         self.primaryLinkedCard = primaryLinkedCard
-        self.primaryAccountNickname = primaryAccountNickname
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _selectedCard = State(wrappedValue: primaryLinkedCard ?? cards.first)
@@ -121,6 +125,7 @@ struct QuickTransferView: View {
                 fromMask: selectedCard?.maskedNumber,
                 toName: contact.nickname ?? contact.phoneNumber ?? "—",
                 toMask: contact.phoneNumber.map { "••\($0.suffix(4))" },
+                note: descriptionText.isEmpty ? nil : descriptionText,
                 isLoading: false,
                 onCancel: { showConfirmSheet = false },
                 onConfirm: {
@@ -129,7 +134,7 @@ struct QuickTransferView: View {
                 }
             )
             .padding(.top, 30)
-            .presentationDetents([.height(420)])
+            .presentationDetents([.height(descriptionText.isEmpty ? 420 : 490)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
         }
@@ -367,25 +372,20 @@ struct QuickTransferView: View {
             VStack(alignment: .leading, spacing: 4) {
                 if let card = selectedCard {
                     let isPrimary = card.id == primaryLinkedCard?.id
-                    if isPrimary {
-                        Text(primaryAccountNickname?.isEmpty == false ? primaryAccountNickname! : card.displayName)
+                    HStack(spacing: Spacing.xs) {
+                        Text(card.savingsAccountNickname ?? card.name ?? card.displayName)
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(Color.movo.textPrimary)
-                        Text("•••• •••• •••• \(card.lastFour ?? "••••")")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(Color.movo.textTertiary)
-                        Text(availableBalanceDisplay)
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(Color.movo.textTertiary)
-                    } else {
-                        Text("FROM  ·  \(card.maskedNumber)")
-                            .font(.system(size: 11, weight: .semibold))
-                            .tracking(0.4)
-                            .foregroundColor(Color.movo.textTertiary)
-                        Text(card.displayName)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(Color.movo.textPrimary)
+                        if isPrimary {
+                            StatusPill("PRIMARY", variant: .accent)
+                        }
                     }
+                    Text(card.maskedNumber)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
+                    Text(card.displayBalance)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
                 } else {
                     Text("FROM")
                         .font(.system(size: 11, weight: .semibold))
@@ -472,13 +472,16 @@ struct QuickTransferView: View {
     private func accountSheetRow(card: VCardListResponse, isSelected: Bool) -> some View {
         HStack(spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 3) {
+                Text(card.savingsAccountNickname ?? card.name ?? card.displayName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
                 Text(card.maskedNumber)
                     .font(.system(size: 11, weight: .semibold))
                     .tracking(0.6)
                     .foregroundColor(Color.movo.textTertiary)
-                Text(card.displayName)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color.movo.textPrimary)
+                Text(card.displayBalance)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(Color.movo.textTertiary)
             }
 
             Spacer()
@@ -583,7 +586,8 @@ struct QuickTransferView: View {
             fromAccountName: fromName,
             fromAccountMask: fromCard.maskedNumber,
             toAccountName: contact.nickname ?? contact.phoneNumber ?? "",
-            toAccountMask: nil,
+            toAccountMask: contact.nickname != nil ? contact.phoneNumber : nil,
+            note: descriptionText.isEmpty ? nil : descriptionText,
             arrivesText: "Instantly",
             dateText: dateText,
             referenceCode: "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"

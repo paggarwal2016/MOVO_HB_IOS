@@ -19,10 +19,10 @@ struct PayAnyoneView: View {
     @SwiftUI.Environment(\.openURL) private var openURL
     
     let cards: [VCardListResponse]
-    let totalBalance: Decimal
-    
+    let primaryLinkedCard: VCardListResponse?
+
     @Binding var selectedTab: Tab
-    
+
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
@@ -30,12 +30,12 @@ struct PayAnyoneView: View {
     @State private var selectedFrequent: ContactRecord? = nil
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
-    
-    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], totalBalance: Decimal) {
+
+    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
         _selectedTab = selectedTab
         self.cards = cards
-        self.totalBalance = totalBalance
+        self.primaryLinkedCard = primaryLinkedCard
     }
     
     private var isFormValid: Bool {
@@ -124,18 +124,18 @@ struct PayAnyoneView: View {
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
         .navigationDestination(for: ContactRecord.self) { contact in
-            QuickTransferView(contact: contact, container: container, cards: cards)
+            QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard)
         }
         .navigationDestination(isPresented: Binding(
             get: { selectedFrequent != nil },
             set: { if !$0 { selectedFrequent = nil } }
         )) {
             if let contact = selectedFrequent {
-                QuickTransferView(contact: contact, container: container, cards: cards)
+                QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard)
             }
         }
         .sheet(isPresented: $showAllFrequents) {
-            AllFrequentsView(contactVM: contactVM, container: container, cards: cards)
+            AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -693,8 +693,8 @@ extension PayAnyoneView {
     private var balanceCard: some View {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Eyebrow("Available to send")
-                Text("$\(totalBalance.toCurrencyString())")
+                Eyebrow(primaryLinkedCard?.savingsAccountNickname ?? primaryLinkedCard?.name ?? "Available to send")
+                Text(primaryLinkedCard?.displayBalance ?? "$ 0.00")
                     .font(.system(size: 22, weight: .semibold).monospacedDigit())
                     .foregroundColor(Color.movo.textPrimary)
                     .tracking(-0.5)
