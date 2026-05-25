@@ -32,7 +32,7 @@ struct AccountDetailsView: View {
             Rectangle()
                 .fill(Color.movo.elevated)
                 .frame(height: 1)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Spacing.xl)
             
             rowDetail
         }
@@ -44,7 +44,7 @@ struct AccountDetailsView: View {
                 }
                 onNicknameUpdated?(newValue)
             }
-            .presentationDetents([.height(320)])
+            .presentationDetents([.height(310)])
             .presentationDragIndicator(.visible)
             .presentationBackground(Color.movo.surface)
             .presentationCornerRadius(Radius.sheet)
@@ -54,13 +54,13 @@ struct AccountDetailsView: View {
     
     private var header: some View {
         HStack {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.sm) {
                 Image(systemName: "banknote")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.movo.accent)
                     .frame(width: 28, height: 28)
-                    .background(Color.movo.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
-                
+                    .background(Color.movo.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm))
+
                 Text("\(account.isPrimary ? "PRIMARY" : "ACCOUNT") · ••\(account.accountNumber.suffix(4))")
                     .font(.system(size: 11, weight: .medium))
                     .tracking(0.5)
@@ -76,27 +76,27 @@ struct AccountDetailsView: View {
             }
             .accessibilityLabel("Close")
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.md)
     }
     
     
     // MARK: Balance hero
     
     private var balanceHero: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(displayNickname)
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(Color.movo.textPrimary)
-                .padding(.top, 18)
-            
+                .padding(.top, Spacing.lg)
+
             Text(account.formattedBalance)
                 .font(.system(size: 36, weight: .medium))
                 .foregroundStyle(Color.movo.textPrimary)
                 .monospacedDigit()
                 .tracking(-0.8)
-            
-            HStack(spacing: 8) {
+
+            HStack(spacing: Spacing.sm) {
                 Text("AVAILABLE BALANCE")
                     .font(.system(size: 10))
                     .tracking(0.6)
@@ -105,30 +105,30 @@ struct AccountDetailsView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 14)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.bottom, Spacing.md)
     }
     
     private var rowDetail: some View {
         HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text("ACCOUNT NUMBER")
                     .font(.system(size: 10, weight: .medium))
                     .tracking(0.4)
                     .foregroundStyle(Color.movo.textSecondary)
-                
+
                 Text(account.accountNumber)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.movo.textPrimary)
                     .monospacedDigit()
             }
-            
+
             Spacer()
-            
+
             copyButton
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.vertical, Spacing.lg)
     }
     
     private var copyButton: some View {
@@ -164,7 +164,7 @@ struct AccountDetailsView: View {
             )
             .frame(width: 32, height: 32)
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Radius.sm)
                     .stroke(Color.movo.elevated, lineWidth: 1)
             )
         }
@@ -209,39 +209,45 @@ struct EditNicknameView: View {
             inputSection
             actionRow
         }
-        .padding(.top, 10)
-        .padding(.bottom, 22)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.xxl)
         .background(Color.movo.surface.ignoresSafeArea())
         .onAppear { isFocused = true }
     }
-
+    
     private var iconHeader: some View {
-        VStack(spacing: 0) {
+        HStack(alignment: .top, spacing: Spacing.md) {
+
             Image(systemName: "pencil")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(Color.movo.accent)
                 .frame(width: 44, height: 44)
-                .background(Color.movo.accent.opacity(0.14),
-                            in: RoundedRectangle(cornerRadius: 14))
+                .background(
+                    Color.movo.accent.opacity(0.14),
+                    in: RoundedRectangle(cornerRadius: Radius.xl)
+                )
 
-            Text("Edit nickname")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(Color.movo.textPrimary)
-                .padding(.top, 12)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
 
-            Text("Give your primary account a name that's easy to recognize.")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.movo.textSecondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-                .padding(.top, 4)
+                Text("Edit nickname")
+                    .textStyle(Typography.cardHero)
+                    .foregroundStyle(Color.movo.textPrimary)
+
+                Text("Give your primary account a name that's easy to recognize.")
+                    .textStyle(Typography.subtitle)
+                    .foregroundColor(Color.movo.textTertiary)
+                    .lineSpacing(2)
+            }
+
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 28)
+        .padding(.top, Spacing.xxl)
+        .padding(.horizontal, Spacing.xl)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var inputSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack {
                 Text("NICKNAME")
                     .font(.system(size: 10, weight: .medium))
@@ -250,7 +256,7 @@ struct EditNicknameView: View {
                 Spacer()
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.sm) {
                 TextField("", text: $draft)
                     .focused($isFocused)
                     .autocorrectionDisabled(true)
@@ -265,7 +271,7 @@ struct EditNicknameView: View {
                             draft = String(new.prefix(maxLength))
                         }
                     }
-                
+
                 if !draft.isEmpty {
                     CircularNavButton(systemName: "xmark") {
                         draft = ""
@@ -274,22 +280,22 @@ struct EditNicknameView: View {
                     .accessibilityLabel("Clear")
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Spacing.md)
             .frame(height: 48)
             .background(Color.movo.background,
-                        in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12)
+                        in: RoundedRectangle(cornerRadius: Radius.lg))
+            .overlay(RoundedRectangle(cornerRadius: Radius.lg)
                 .stroke(isFocused ? Color.movo.accentBorder : Color.movo.borderStrong,
                         lineWidth: 1))
             .animation(.easeInOut(duration: 0.15), value: isFocused)
             .animation(.easeInOut(duration: 0.15), value: draft.isEmpty)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 22)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.xxl)
     }
 
     private var actionRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.sm) {
             Button(action: { dismiss() } ) {
                 Text("Cancel")
             }
@@ -303,8 +309,8 @@ struct EditNicknameView: View {
             .disabled(!canSave)
             .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 24)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.xxl)
     }
 
     private func save() {

@@ -13,7 +13,6 @@ struct AllFrequentsView: View {
     @ObservedObject var contactVM: ContactViewModel
     let container: AppContainer
     let cards: [VCardListResponse]
-    var accountBalance: Decimal = 0
     var primaryLinkedCard: VCardListResponse? = nil
     var onSuccess: () -> Void = {}
     

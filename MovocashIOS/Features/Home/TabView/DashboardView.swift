@@ -122,7 +122,6 @@ struct DashboardView: View {
             PayAnyoneContactPickerView(
                 container: container,
                 cards: vm.cards,
-                accountBalance: displayAccount?.availableBalance ?? 0,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
@@ -134,7 +133,6 @@ struct DashboardView: View {
                 contactVM: contactVM,
                 container: container,
                 cards: vm.cards,
-                accountBalance: displayAccount?.availableBalance ?? 0,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
