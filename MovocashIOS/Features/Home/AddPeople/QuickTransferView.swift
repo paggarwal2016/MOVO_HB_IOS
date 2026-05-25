@@ -9,33 +9,33 @@ import SwiftUI
 import MobileBankingSDK
 
 struct QuickTransferView: View {
-    
+
     let contact: ContactRecord
     let cards: [VCardListResponse]
     let accountBalance: Decimal
     let primaryLinkedCard: VCardListResponse?
     let primaryAccountNickname: String?
-    
+
     // Primary card prepended so it is the first option in the selection sheet.
     private var displayCards: [VCardListResponse] {
         guard let primary = primaryLinkedCard else { return cards }
         return [primary] + cards
     }
-    
+
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
     @FocusState private var amountFocused: Bool
-    
+
     @State private var amountText = "0"
     @State private var descriptionText = ""
     @State private var selectedCard: VCardListResponse?
     @State private var showConfirmSheet = false
     @State private var showAccountSheet = false
     @State private var sendTask: Task<Void, Never>?
-    
+
     var onSuccess: () -> Void = {}
-    
+
     init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal = 0, primaryLinkedCard: VCardListResponse? = nil, primaryAccountNickname: String? = nil, onSuccess: @escaping () -> Void = {}) {
         self.contact = contact
         self.cards = cards
@@ -47,22 +47,22 @@ struct QuickTransferView: View {
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _selectedCard = State(wrappedValue: primaryLinkedCard ?? cards.first)
     }
-    
+
     private var amount: Double { Double(amountText) ?? 0 }
     private var isValid: Bool { amount > 0 && selectedCard != nil }
-    
+
     // MARK: - Amount display helpers
-    
+
     private var availableBalanceDisplay: String {
         "$\(accountBalance.toCurrencyString())"
     }
-    
+
     private var availableBalanceDouble: Double {
         NSDecimalNumber(decimal: accountBalance).doubleValue
     }
-    
+
     // MARK: - Body
-    
+
     var body: some View {
         ZStack {
             MovoBackground()
@@ -81,14 +81,14 @@ struct QuickTransferView: View {
                 }
                 .onTapGesture { amountFocused = false }
                 .scrollDismissesKeyboard(.immediately)
-                
+
                 sendButton
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.xs)
                     .padding(.bottom, Spacing.xs)
             }
             .blur(radius: showAccountSheet ? 3 : 0)
-            
+
             if transVM.state == .loading || achVM.state == .loading {
                 Color.black.opacity(0.5)
                     .ignoresSafeArea()
@@ -151,9 +151,9 @@ struct QuickTransferView: View {
             accountSelectionSheet
         }
     }
-    
+
     // MARK: - Nav Bar
-    
+
     private var navBar: some View {
         HStack {
             Button(action: { dismiss() }) {
@@ -164,24 +164,24 @@ struct QuickTransferView: View {
                     .background(Color.movo.elevated, in: Circle())
             }
             .buttonStyle(.plain)
-            
+
             Spacer()
-            
+
             Text("Pay")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
-            
+
             Spacer()
-            
+
             Color.clear.frame(width: 36, height: 36)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.lg)
         .padding(.bottom, Spacing.md)
     }
-    
+
     // MARK: - Recipient
-    
+
     private var recipientSection: some View {
         VStack(spacing: Spacing.sm) {
             ZStack {
@@ -199,12 +199,12 @@ struct QuickTransferView: View {
                     .font(Typography.eyebrow.font)
                     .tracking(1.2)
                     .foregroundColor(Color.movo.textTertiary)
-                
+
                 Text(contact.nickname ?? "")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(Color.movo.textPrimary)
             }
-            
+
             HStack(spacing: 8) {
                 Text(contact.phoneNumber ?? "")
                     .font(Typography.caption.font)
@@ -213,33 +213,33 @@ struct QuickTransferView: View {
         }
         .frame(maxWidth: .infinity)
     }
-    
+
     // MARK: - Amount Section
-    
+
     private var amountSection: some View {
         VStack(spacing: Spacing.md) {
             amountDisplay
-            
+
             Text("\(availableBalanceDisplay) available")
                 .font(Typography.caption.font)
                 .foregroundColor(Color.movo.textTertiary)
-            
+
             quickChips
         }
     }
-    
+
     private var amountDisplay: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text("$")
                 .font(.system(size: 32, weight: .semibold))
                 .foregroundColor(Color.movo.textSecondary)
                 .baselineOffset(25)
-            
+
             let parts = amountText.split(separator: ".")
             Text(parts.first.map(String.init) ?? "0")
                 .font(.system(size: 72, weight: .bold).monospacedDigit())
                 .foregroundColor(Color.movo.textPrimary)
-            
+
             Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
                 .font(.system(size: 32, weight: .semibold).monospacedDigit())
                 .foregroundColor(Color.movo.textSecondary)
@@ -254,11 +254,11 @@ struct QuickTransferView: View {
                 .opacity(0)
         )
     }
-    
+
     private let presets: [(String, Double?)] = [
         ("$10", 10), ("$25", 25), ("$50", 50), ("$100", 100)
     ]
-    
+
     private var quickChips: some View {
         HStack(spacing: Spacing.sm) {
             ForEach(presets, id: \.0) { label, value in
@@ -284,13 +284,13 @@ struct QuickTransferView: View {
             }
         }
     }
-    
+
     private func isPresetSelected(_ value: Double?) -> Bool {
         guard amount > 0 else { return false }
         if let v = value { return amount == v }
         return amount == availableBalanceDouble && !amountText.isEmpty
     }
-    
+
     private func applyPreset(_ value: Double?) {
         amountFocused = false
         if let v = value {
@@ -301,21 +301,21 @@ struct QuickTransferView: View {
             amountText = raw
         }
     }
-    
+
     // MARK: - Note Card
-    
+
     private var noteCard: some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: "bubble.left")
                 .font(.system(size: 15, weight: .regular))
                 .foregroundColor(Color.movo.textDisabled)
-            
+
             TextField("", text: $descriptionText,
                       prompt: Text("What's it for? (optional)")
-                .foregroundColor(Color.movo.textDisabled))
-            .font(.system(size: 15, weight: .regular))
-            .foregroundColor(Color.movo.textPrimary)
-            .autocorrectionDisabled()
+                          .foregroundColor(Color.movo.textDisabled))
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(Color.movo.textPrimary)
+                .autocorrectionDisabled()
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
@@ -328,9 +328,9 @@ struct QuickTransferView: View {
                 )
         )
     }
-    
+
     // MARK: - Account Card
-    
+
     private var accountCard: some View {
         Group {
             if displayCards.isEmpty {
@@ -345,21 +345,21 @@ struct QuickTransferView: View {
             } else if displayCards.count == 1 {
                 accountCardContent
             } else {
-                //                Button {
-                //                    amountFocused = false
-                //                    UIApplication.shared.dismissKeyboard()
-                //                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                //                        showAccountSheet = true
-                //                    }
-                //                } label: {
-                //                    accountCardContent
-                //                }
-                //                .buttonStyle(.plain)
+//                Button {
+//                    amountFocused = false
+//                    UIApplication.shared.dismissKeyboard()
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+//                        showAccountSheet = true
+//                    }
+//                } label: {
+//                    accountCardContent
+//                }
+//                .buttonStyle(.plain)
                 accountCardContent
             }
         }
     }
-    
+
     private var accountCardContent: some View {
         HStack(spacing: Spacing.md) {
             ZStack {
@@ -414,10 +414,10 @@ struct QuickTransferView: View {
         .padding(.vertical, Spacing.md)
         .background(cardBackground)
     }
-    
+
     private var accountSelectionSheet: some View {
         VStack(alignment: .leading, spacing: 0) {
-            
+
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("From Account")
@@ -440,7 +440,7 @@ struct QuickTransferView: View {
             .padding(.top, Spacing.lg)
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, Spacing.lg)
-            
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: Spacing.sm) {
                     ForEach(displayCards) { card in
@@ -463,7 +463,7 @@ struct QuickTransferView: View {
                 .padding(.top, Spacing.sm)
             }
             .padding(.horizontal, Spacing.lg)
-            
+
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -473,7 +473,7 @@ struct QuickTransferView: View {
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(Radius.sheet)
     }
-    
+
     private func accountSheetRow(card: VCardListResponse, isSelected: Bool) -> some View {
         HStack(spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 3) {
@@ -485,9 +485,9 @@ struct QuickTransferView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(Color.movo.textPrimary)
             }
-            
+
             Spacer()
-            
+
             ZStack {
                 Circle()
                     .strokeBorder(isSelected ? Color.clear : Color.movo.border, lineWidth: Stroke.hairline * 2)
@@ -502,7 +502,7 @@ struct QuickTransferView: View {
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
     }
-    
+
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: Radius.lg)
             .fill(Color.movo.surface)
@@ -511,9 +511,9 @@ struct QuickTransferView: View {
                     .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
             )
     }
-    
+
     // MARK: - Send Button
-    
+
     private var sendButton: some View {
         Button {
             UIApplication.shared.dismissKeyboard()
@@ -539,9 +539,9 @@ struct QuickTransferView: View {
         .disabled(!isValid)
         .buttonStyle(.plain)
     }
-    
+
     // MARK: - Actions
-    
+
     private func showReview() {
         let rawPhone = contact.phoneNumber ?? ""
         let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
@@ -556,12 +556,12 @@ struct QuickTransferView: View {
     private func sendMoney() async {
         guard let fromCard = selectedCard else { return }
         guard !Task.isCancelled else { return }
-        
+
         let rawPhone = contact.phoneNumber ?? ""
         let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
         let sanitized = PhoneNumberValidator.sanitize(withCountry)
         let normalizedPhone = PhoneNumberValidator.normalize(sanitized)
-        
+
         await achVM.sendMoneyToContact(
             fromCard: fromCard,
             toName: contact.nickname ?? contact.phoneNumber ?? "",
@@ -571,4 +571,5 @@ struct QuickTransferView: View {
             description: descriptionText.isEmpty ? nil : descriptionText
         )
     }
+
 }
