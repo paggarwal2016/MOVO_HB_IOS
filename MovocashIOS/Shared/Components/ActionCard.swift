@@ -185,15 +185,12 @@ struct PayAnyoneAddContactView: View {
 
             // Header
             HStack {
-                Text(title.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(1.2)
-                    .foregroundColor(Color.movo.textTertiary)
+                Eyebrow(title)
                 Spacer()
                 if showSeeAll {
                     Button(action: { onSeeAllTap?() }) {
                         Text("See all")
-                            .font(.system(size: 11, weight: .medium))
+                            .textStyle(Typography.caption)
                             .foregroundColor(Color.movo.accent)
                     }
                     .buttonStyle(.plain)
@@ -213,15 +210,14 @@ struct PayAnyoneAddContactView: View {
                 bubble(initial: "+", label: "Add", expand: showSeeAll, action: onAddTap)
             }
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.lg)
+        .padding(Spacing.cardPadding)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.heroCard)
                 .fill(Color.movo.cardSurface)
                 .overlay(
-                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
                 )
         )
     }
