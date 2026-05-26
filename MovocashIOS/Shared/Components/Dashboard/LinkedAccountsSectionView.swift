@@ -71,7 +71,7 @@ struct LinkedAccountsSectionView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.movo.surface)
+        .background(Color.movo.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
@@ -129,7 +129,7 @@ struct LinkedAccountsSectionView: View {
             }
         }
         .padding(DesignTokens.Spacing.lg)
-        .background(Color.movo.surface)
+        .background(Color.movo.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)

@@ -18,7 +18,7 @@ struct CardItemView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                         .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
@@ -181,7 +181,7 @@ struct CardSelectorView: View {
                             Circle()
                                 .fill(index == selectedIndex
                                       ? Color.movo.accent
-                                      : Color.movo.borderStrong)
+                                      : Color.movo.textDisabled)
                                 .frame(width: 7, height: 7)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
                                 .onTapGesture {
@@ -199,7 +199,7 @@ struct CardSelectorView: View {
                 }
             }
         }
-        .frame(height: cards.count > 1 ? 195 : 190)
+        .frame(height: cards.count > 1 ? 205 : 190)
         .clipped()
         .contentShape(Rectangle())
     }

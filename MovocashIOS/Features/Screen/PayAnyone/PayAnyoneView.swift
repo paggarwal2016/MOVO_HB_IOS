@@ -272,12 +272,15 @@ struct PayAnyoneView: View {
                     .lineSpacing(1.5)
                     .padding(.bottom, Spacing.sm + 2)
                 
-                HStack(spacing: Spacing.md + 2) {
-                    Button(action: isDenied ? openSettings : enableContacts) {
+                Button(action: isDenied ? openSettings : enableContacts) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 11, weight: .semibold))
                         Text("Enable Contacts")
+                            .textStyle(Typography.button)
                     }
-                    .buttonStyle(MovoPrimaryButtonStyle())
                 }
+                .buttonStyle(MovoCompactButtonStyle())
             }
         }
         .padding(Spacing.lg)

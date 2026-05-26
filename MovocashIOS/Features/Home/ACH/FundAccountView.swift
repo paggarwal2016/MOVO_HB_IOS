@@ -327,7 +327,7 @@ struct FundAccountView: View {
         .padding(.vertical, Spacing.lg)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface.opacity(0.85))
+                .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.heroCard)
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
@@ -501,7 +501,7 @@ private struct BankAccountPickerSheet: View {
                                     .animation(.spring(duration: 0.2), value: isSelected)
                             }
                             .padding(Spacing.md)
-                            .background(Color.movo.surface)
+                            .background(Color.movo.cardSurface)
                             .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
                             .overlay(
                                 RoundedRectangle(cornerRadius: Radius.lg)

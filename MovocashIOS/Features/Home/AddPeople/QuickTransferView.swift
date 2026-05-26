@@ -500,7 +500,7 @@ struct QuickTransferView: View {
 
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: Radius.lg)
-            .fill(Color.movo.surface)
+            .fill(Color.movo.cardSurface)
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.lg)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)

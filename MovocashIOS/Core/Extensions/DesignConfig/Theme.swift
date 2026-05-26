@@ -61,6 +61,9 @@ public struct MovoColorScheme: Sendable {
     // On-accent label color — high-contrast text drawn on accent fills
     public let onAccent:        ColorToken
 
+    // Card surface — adaptive elevation: light = platinum lift, dark = elevated lift
+    public let cardSurface:     ColorToken
+
     // Card artwork — brand-locked (heritage black card; same hex in both modes)
     // Scoped to the physical card artwork view only.
     public let cardArtwork:        ColorToken
@@ -102,6 +105,7 @@ public struct MovoColorScheme: Sendable {
         // (Was previously `background`, which would have flipped to white
         //  in light mode and made CTA labels invisible.)
         onAccent:      DesignTokens.Palette.onAccent,
+        cardSurface:   DesignTokens.Palette.cardSurface,
 
         // Heritage black card — locked, never adapts.
         cardArtwork:       DesignTokens.Palette.cardArtwork,
