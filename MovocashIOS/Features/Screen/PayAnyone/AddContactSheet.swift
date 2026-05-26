@@ -142,7 +142,7 @@ public struct AddContactSheet: View {
             .padding(.vertical, Spacing.md + 1)
             .background(
                 RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.surface)
+                    .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.button)
                             .strokeBorder(
@@ -188,7 +188,7 @@ public struct AddContactSheet: View {
                 .padding(.vertical, Spacing.md + 1)
                 .background(
                     RoundedRectangle(cornerRadius: Radius.button)
-                        .fill(Color.movo.surface)
+                        .fill(Color.movo.cardSurface)
                         .overlay(
                             RoundedRectangle(cornerRadius: Radius.button)
                                 .strokeBorder(

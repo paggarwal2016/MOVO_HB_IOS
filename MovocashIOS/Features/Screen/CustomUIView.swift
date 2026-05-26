@@ -286,7 +286,7 @@ struct AddContactCardView: View {
             .padding(.horizontal, 14)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.movo.surface)
+                    .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(Color.movo.elevated, lineWidth: 0.5)
@@ -324,13 +324,13 @@ struct AddContactCardView: View {
             .padding(.horizontal, 14)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.movo.surface)
+                    .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(Color.movo.accentBorder, lineWidth: 0.5)
                     )
             )
-            
+
             // Buttons
             HStack(spacing: 8) {
                 

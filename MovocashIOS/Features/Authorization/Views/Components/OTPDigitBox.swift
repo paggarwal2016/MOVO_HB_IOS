@@ -16,7 +16,7 @@ struct OTPDigitBox: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: Radius.md)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.md)
                         .stroke(

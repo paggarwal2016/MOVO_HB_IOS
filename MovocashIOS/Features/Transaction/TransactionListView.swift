@@ -502,7 +502,7 @@ extension TransactionListView {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.surface)
+                    .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.button)
                             .strokeBorder(searchFocused ? Color.movo.accentBorder : Color.movo.border,

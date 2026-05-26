@@ -131,7 +131,7 @@ struct PhoneNumberScreen: View {
                 cornerRadius: DesignTokens.Radius.xl,
                 style: .continuous
             )
-            .fill(Color.movo.surface)
+            .fill(Color.movo.cardSurface)
         )
         .overlay(
             RoundedRectangle(

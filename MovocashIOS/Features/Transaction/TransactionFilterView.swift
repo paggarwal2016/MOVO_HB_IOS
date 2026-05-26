@@ -129,7 +129,7 @@ struct TransactionFilterView: View {
         .padding(.vertical, Spacing.md + 2)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
@@ -203,7 +203,7 @@ struct TransactionFilterView: View {
         .padding(.vertical, Spacing.md + 2)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
@@ -263,7 +263,7 @@ struct TransactionFilterView: View {
         .padding(.vertical, Spacing.md + 2)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
@@ -294,7 +294,7 @@ struct TransactionFilterView: View {
         .padding(.vertical, Spacing.md + 2)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )

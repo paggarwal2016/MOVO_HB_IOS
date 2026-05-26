@@ -326,7 +326,7 @@ struct QuickTransferView: View {
         .padding(.vertical, Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Radius.lg)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.lg)
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
