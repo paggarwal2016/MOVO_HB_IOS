@@ -125,7 +125,7 @@ struct PayAnyoneContactPickerView: View {
                 }, onCancel: { showCreateContact = false })
                 .presentationDetents([.height(320)])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Color.movo.surface)
+                .presentationBackground(Color.movo.cardSurface)
             }
             .sheet(isPresented: $showAllFrequents) {
                 AllFrequentsView(

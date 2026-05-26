@@ -59,7 +59,7 @@ public struct AddContactSheet: View {
             cta
         }
         .padding(.top, Spacing.xxl)
-        .background(Color.movo.surface.ignoresSafeArea())
+        .background(Color.movo.cardSurface.ignoresSafeArea())
         .onAppear {
             // Brief delay so the sheet animation completes before keyboard appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {

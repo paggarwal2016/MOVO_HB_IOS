@@ -69,7 +69,7 @@ struct ViewCardsListScreen: View {
             .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.surface)
+            .presentationBackground(Color.movo.cardSurface)
         }
         .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {

@@ -62,7 +62,7 @@ struct CreateCashCardView: View {
                 .padding(.bottom, Spacing.xxxl)
         }
         .padding(.top, Spacing.xxl)
-        .background(Color.movo.surface.ignoresSafeArea())
+        .background(Color.movo.cardSurface.ignoresSafeArea())
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 focusedField = .nickname

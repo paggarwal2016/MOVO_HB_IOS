@@ -46,7 +46,7 @@ struct AccountDetailsView: View {
             }
             .presentationDetents([.height(310)])
             .presentationDragIndicator(.visible)
-            .presentationBackground(Color.movo.surface)
+            .presentationBackground(Color.movo.cardSurface)
             .presentationCornerRadius(Radius.sheet)
         }
 
@@ -211,7 +211,7 @@ struct EditNicknameView: View {
         }
         .padding(.top, Spacing.sm)
         .padding(.bottom, Spacing.xxl)
-        .background(Color.movo.surface.ignoresSafeArea())
+        .background(Color.movo.cardSurface.ignoresSafeArea())
         .onAppear { isFocused = true }
     }
     

@@ -185,7 +185,7 @@ struct PayAnyoneView: View {
             }, onCancel: { showCreateContactScreen = false })
             .presentationDetents([.height(320)])
             .presentationDragIndicator(.visible)
-            .presentationBackground(Color.movo.surface)
+            .presentationBackground(Color.movo.cardSurface)
         }
     }
     

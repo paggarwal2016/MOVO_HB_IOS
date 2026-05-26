@@ -89,7 +89,7 @@ struct DashboardView: View {
             .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.surface)
+            .presentationBackground(Color.movo.cardSurface)
         }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
@@ -197,7 +197,7 @@ struct DashboardView: View {
             )
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.surface)
+            .presentationBackground(Color.movo.cardSurface)
         }
         .navigationDestination(isPresented: $showViewCardList) {
             ViewCardsListScreen(
@@ -245,7 +245,7 @@ struct DashboardView: View {
                 .presentationDetents([.height(260)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
-                .presentationBackground(Color.movo.surface)
+                .presentationBackground(Color.movo.cardSurface)
             }
         }
         .onChange(of: needsDashboardRefresh) { shouldRefresh in
