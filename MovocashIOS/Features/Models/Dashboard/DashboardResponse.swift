@@ -337,11 +337,13 @@ nonisolated struct DashboardAccount: Decodable, Sendable {
     let isPrimary: Bool
     let actions: [DashboardAction]
     let isPVCardActivated: String?
+    let routingNumber: String?
 
     private enum CodingKeys: String, CodingKey {
         case id, accountNumber, clientName, status, accountBalance
         case availableBalance, clientId, nickname, isPrimary, actions
         case isPVCardActivated = "is_p_vcard_activated"
+        case routingNumber
     }
 
     init(from decoder: Decoder) throws {
@@ -357,6 +359,7 @@ nonisolated struct DashboardAccount: Decodable, Sendable {
         isPrimary = c.decodeLossyBool(forKey: .isPrimary, defaultIfMissing: true)
         actions = try c.decodeLossyDashboardActionArray(forKey: .actions)
         isPVCardActivated = try c.decodeLossyOptionalString(forKey: .isPVCardActivated)
+        routingNumber = try c.decodeLossyOptionalString(forKey: .routingNumber)
     }
 }
 

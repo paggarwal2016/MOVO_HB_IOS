@@ -188,5 +188,6 @@ private extension SavingsAccountInfo {
         clientId = a.clientId
         nickname = a.nickname.flatMap { $0.isEmpty ? nil : $0 }
         isPrimary = a.isPrimary
+        routingNumber = a.routingNumber.flatMap { $0.isEmpty ? nil : $0 }
     }
 }
