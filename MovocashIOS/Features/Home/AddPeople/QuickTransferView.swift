@@ -508,7 +508,7 @@ struct QuickTransferView: View {
             .fill(Color.movo.cardSurface)
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.lg)
-                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
             )
     }
 

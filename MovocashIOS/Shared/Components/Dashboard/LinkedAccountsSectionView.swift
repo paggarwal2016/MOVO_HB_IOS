@@ -75,7 +75,7 @@ struct LinkedAccountsSectionView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
+                .stroke(theme.borderStrong.color, lineWidth: DesignTokens.Stroke.hairline)
         )
     }
 
@@ -133,7 +133,7 @@ struct LinkedAccountsSectionView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .strokeBorder(Color.movo.border, lineWidth: DesignTokens.Stroke.hairline)
+                .strokeBorder(Color.movo.borderStrong, lineWidth: DesignTokens.Stroke.hairline)
         )
     }
 }

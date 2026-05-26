@@ -281,7 +281,7 @@ struct InternalTransferView: View {
                 .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
                 )
         )
     }
@@ -734,7 +734,7 @@ private struct CardPickerSheet: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: Radius.lg)
                                     .strokeBorder(
-                                        isSelected ? Color.movo.accentBorder : Color.movo.border,
+                                        isSelected ? Color.movo.accentBorder : Color.movo.borderStrong,
                                         lineWidth: Stroke.hairline
                                     )
                             )
@@ -767,7 +767,7 @@ private extension View {
             .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
             )
     }
 }

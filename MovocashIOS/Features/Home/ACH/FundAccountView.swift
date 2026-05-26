@@ -330,7 +330,7 @@ struct FundAccountView: View {
                 .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
                 )
         )
         .padding(.horizontal, Spacing.lg)
@@ -506,7 +506,7 @@ private struct BankAccountPickerSheet: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: Radius.lg)
                                     .strokeBorder(
-                                        isSelected ? Color.movo.accentBorder : Color.movo.border,
+                                        isSelected ? Color.movo.accentBorder : Color.movo.borderStrong,
                                         lineWidth: Stroke.hairline
                                     )
                             )
