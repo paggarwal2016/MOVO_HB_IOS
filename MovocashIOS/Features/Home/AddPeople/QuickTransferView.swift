@@ -574,21 +574,4 @@ struct QuickTransferView: View {
             description: descriptionText.isEmpty ? nil : descriptionText
         )
     }
-
-        let dateText = Date.now.formatted(date: .long, time: .shortened)
-        let isPrimary = fromCard.id == primaryLinkedCard?.id
-        let fromName = isPrimary && primaryAccountNickname?.isEmpty == false ? primaryAccountNickname! : fromCard.displayName
-        successData = SuccessConfirmation(
-            channel: .peer,
-            amount: Decimal(string: amountText) ?? 0,
-            fromAccountName: fromName,
-            fromAccountMask: fromCard.maskedNumber,
-            toAccountName: contact.nickname ?? contact.phoneNumber ?? "",
-            toAccountMask: contact.nickname != nil ? contact.phoneNumber : nil,
-            note: descriptionText.isEmpty ? nil : descriptionText,
-            arrivesText: "Instantly",
-            dateText: dateText,
-            referenceCode: "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"
-        )
-    }
 }
