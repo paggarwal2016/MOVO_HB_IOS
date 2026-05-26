@@ -13,7 +13,6 @@ struct AllFrequentsView: View {
     @ObservedObject var contactVM: ContactViewModel
     let container: AppContainer
     let cards: [VCardListResponse]
-    var accountBalance: Decimal = 0
     var primaryLinkedCard: VCardListResponse? = nil
     var onSuccess: () -> Void = {}
     
@@ -106,7 +105,7 @@ struct AllFrequentsView: View {
             }
             .navigationDestination(isPresented: $isNavigating) {
                 if let contact = selectedContact {
-                    QuickTransferView(contact: contact, container: container, cards: cards, accountBalance: accountBalance, primaryLinkedCard: primaryLinkedCard, onSuccess: { onSuccess() })
+                    QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard, onSuccess: { onSuccess() })
                 }
             }
         }

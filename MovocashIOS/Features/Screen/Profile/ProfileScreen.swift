@@ -28,6 +28,7 @@ struct ProfileScreen: View {
     @State private var showSignOutAlert          = false
     @State private var showDeleteAlert           = false
     @State private var isLinkedAccountLoading    = false
+    @State private var hasLoadedOnce             = false
     
     init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel) {
         self.dashboardVM = dashboardVM
@@ -42,14 +43,14 @@ struct ProfileScreen: View {
     }
     
     private var effectiveProfile: UserProfileResponse? {
-        userVM.profile ?? dashboardVM.userDetails.map { UserProfileResponse(from: $0) }
+        dashboardVM.userDetails.map { UserProfileResponse(from: $0) } ?? userVM.profile
     }
     
     private var effectiveAccounts: [ACHAccount] {
         if achVM.hasFetched {
             return achVM.accounts
         }
-        return achVM.accounts.isEmpty ? (dashboardVM.linkedAccounts?.linkedAccounts ?? []) : achVM.accounts
+        return dashboardVM.linkedAccounts?.linkedAccounts ?? achVM.accounts
     }
     
     var body: some View {
@@ -70,8 +71,9 @@ struct ProfileScreen: View {
             }
         }
         .task {
-            achVM.seed(accounts: dashboardVM.linkedAccounts?.linkedAccounts ?? [])
-            guard achVM.accounts.isEmpty else { return }
+            guard !hasLoadedOnce else { return }
+            hasLoadedOnce = true
+            guard !achVM.hasFetched, dashboardVM.linkedAccounts == nil else { return }
             await achVM.fetchAccounts()
         }
         .onAppear { isBiometricOn = lockManager.isBiometricEnabled }

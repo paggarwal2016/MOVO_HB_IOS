@@ -56,6 +56,9 @@ nonisolated struct VCardsProvisionResponse: Decodable {
 
 nonisolated struct VCardListResponse: Codable, Sendable {
     let savingsAccountId: Int?
+    let savingsAccountNickname: String?
+    let savingsAccountBalance: Double?
+    let savingsAccountAvailableBalance: Double?
     let cvc2: String?
     let lastName: String?
     let middleName: String?
@@ -83,6 +86,10 @@ extension VCardListResponse {
     }
 
     var maskedNumber: String {
+        if let number = cardNumber, number.count == 16 {
+            let last = String(number.suffix(4))
+            return "•••• •••• •••• \(last)"
+        }
         guard let lastFour else { return "•••• •••• •••• ••••" }
         return "•••• •••• •••• \(lastFour)"
     }
@@ -92,15 +99,16 @@ extension VCardListResponse {
     }
 
     var displayBalance: String {
-        "$ 0.00"
+        let amount = savingsAccountAvailableBalance ?? savingsAccountBalance ?? 0
+        return String(format: "$ %.2f", amount)
     }
-    
+
     var currencyCode: String {
         "USD"
     }
-    
+
     var balance: Decimal {
-        0
+        Decimal(savingsAccountBalance ?? 0)
     }
     
     var isActive: Bool {
@@ -111,7 +119,7 @@ extension VCardListResponse {
     }
     
     var fullNumberPasteboard: String {
-        ""
+        cardNumber ?? ""
     }
 }
 

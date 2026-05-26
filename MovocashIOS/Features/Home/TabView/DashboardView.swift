@@ -40,7 +40,6 @@ struct DashboardView: View {
     @State private var showAccountDetail = false
     @State private var showTransactions = false
     @State private var showCreateCashCard = false
-    @State private var showEditNickname = false
     @State private var showViewCard = false
     @State private var showFunds = false
     @State private var showMoveMoney = false
@@ -49,7 +48,6 @@ struct DashboardView: View {
     @State private var showAllFrequents = false
     @State private var showInternalTransfer = false
     @State private var showViewCardList = false
-    @State private var showAccountList = false
     // Set to true by any child screen that completes a successful action;
     // triggers a single dashboard refresh on return.
     @State private var needsDashboardRefresh = false
@@ -93,37 +91,12 @@ struct DashboardView: View {
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.surface)
         }
-        .textInputAlert(
-            isPresented: $showEditNickname,
-            title: "Edit Nickname",
-            message: "Enter a new nickname for your savings account.",
-            placeholder: "Type here...",
-            config: TextInputAlertConfig(primaryLabel: "Save"),
-            onCreate: { name in
-                guard let accountId = displayAccount?.id else { return }
-                Task {
-                    await savingVM.updateNickname(name: name, accountId: accountId)
-                    dashboardVM.optimisticallyUpdateNickname(name)
-                    await dashboardVM.refresh()
-                }
-            }
-        )
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
                 SavingAccountDetailView(accountId: account.id, showAccountCard: true, container: container)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
-        }
-        .sheet(isPresented: $showAccountList) {
-            AccountListSheetView(
-                savingsList: $savingVM.accountList,
-                isPresented: $showAccountList,
-                container: container,
-                onDataChanged: { needsDashboardRefresh = true }
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showViewCard) {
             if let account = displayAccount {
@@ -150,7 +123,6 @@ struct DashboardView: View {
             PayAnyoneContactPickerView(
                 container: container,
                 cards: vm.cards,
-                accountBalance: displayAccount?.availableBalance ?? 0,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
@@ -162,7 +134,6 @@ struct DashboardView: View {
                 contactVM: contactVM,
                 container: container,
                 cards: vm.cards,
-                accountBalance: displayAccount?.availableBalance ?? 0,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
@@ -174,9 +145,7 @@ struct DashboardView: View {
                 contact: contact,
                 container: container,
                 cards: vm.cards,
-                accountBalance: displayAccount?.availableBalance ?? 0,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                primaryAccountNickname: displayAccount?.nickname,
                 onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])
@@ -302,7 +271,6 @@ struct DashboardView: View {
             showFundAccount = false
             showInternalTransfer = false
             showAccountDetail = false
-            showAccountList = false
             showCreateCashCard = false
             quickTransferContact = nil
         }
@@ -366,7 +334,6 @@ struct DashboardView: View {
                     accountData: accountData,
                     hasVCards: vm.primaryLinkedCard != nil,
                     onCardTap: { showPrimaryAccountDetails = true },
-                    onPrimaryTap: { showEditNickname = true },
                     onViewCardTap: {
                         selectedCard = vm.primaryLinkedCard
                     },
@@ -509,7 +476,6 @@ struct PrimaryAccountContent: View {
     let accountData: DashboardAccount
     let hasVCards: Bool
     let onCardTap: () -> Void
-    let onPrimaryTap: () -> Void
     let onViewCardTap: () -> Void
     let onQuickAction: (String) -> Void
 
@@ -518,7 +484,6 @@ struct PrimaryAccountContent: View {
             account: account,
             showViewCard: accountData.isPVCardActivated == "Active" && hasVCards,
             onCardTap: onCardTap,
-            onPrimaryTap: onPrimaryTap,
             onViewCardTap: onViewCardTap
         )
 

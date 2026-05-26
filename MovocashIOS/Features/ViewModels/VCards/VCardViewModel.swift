@@ -75,6 +75,27 @@ final class VCardViewModel: BaseViewModel {
         }
     }
 
+    func fetchPrimaryCard() async throws -> VCardListResponse? {
+        do {
+            let envelope: CreateVCardEncryptedResponse = try await perform {
+                try await self.network.request(VCardAPI.getVCardsPrimary)
+            }
+            guard let encryptedBase64 = envelope.data?.encryptedData else { return nil }
+            let plainData = try SealedCryptoService.decrypt(encryptedBase64: encryptedBase64)
+#if DEBUG
+            if let json = String(data: plainData, encoding: .utf8) {
+                print("[VCard decrypt]", json)
+            }
+#endif
+            return try JSONDecoder().decode(VCardListResponse.self, from: plainData)
+        } catch NetworkError.noContent {
+            return nil
+        } catch {
+            analytics.log(AnalyticsEvent.vcardFetchFailed)
+            throw error
+        }
+    }
+
     // MARK: - Vcard All
 
     func getVCardsList() async throws -> [VCardsList] {

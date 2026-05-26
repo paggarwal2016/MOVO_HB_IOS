@@ -93,7 +93,9 @@ struct TransactionFilterView: View {
             Spacer()
 
             Button("Reset", action: onReset)
-                .buttonStyle(MovoTextButtonStyle())
+                .buttonStyle(.plain)
+                .textStyle(Typography.bodyCompact)
+                .foregroundColor(Color.movo.accent)
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.top, Spacing.lg)
@@ -426,7 +428,7 @@ private struct RangeSliderView: View {
 
                 // Min thumb
                 Circle()
-                    .fill(Color.movo.textPrimary)
+                    .fill(Color.movo.surface)
                     .frame(width: thumbDiameter, height: thumbDiameter)
                     .shadow(color: Color.movo.background.opacity(0.4), radius: 4, y: 2)
                     .overlay(Circle().strokeBorder(Color.movo.accent, lineWidth: Stroke.thin))
@@ -446,7 +448,7 @@ private struct RangeSliderView: View {
 
                 // Max thumb
                 Circle()
-                    .fill(Color.movo.textPrimary)
+                    .fill(Color.movo.surface)
                     .frame(width: thumbDiameter, height: thumbDiameter)
                     .shadow(color: Color.movo.background.opacity(0.4), radius: 4, y: 2)
                     .overlay(Circle().strokeBorder(Color.movo.accent, lineWidth: Stroke.thin))

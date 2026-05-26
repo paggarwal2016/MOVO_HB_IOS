@@ -13,7 +13,6 @@ struct BalanceCardView: View {
     let account: SavingsAccountInfo
     var showViewCard: Bool
     var onCardTap: () -> Void
-    var onPrimaryTap: () -> Void
     var onViewCardTap: () -> Void
     
     var body: some View {
@@ -63,7 +62,7 @@ struct BalanceCardView: View {
                             .font(.system(size: 11, weight: .medium))
                             .tracking(0.5)
                             .foregroundColor(Color.movo.textTertiary)
-                        Button(action: onPrimaryTap) {
+                        Button(action: onCardTap) {
                             Image(systemName: "info.circle")
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(Color.movo.accent)
