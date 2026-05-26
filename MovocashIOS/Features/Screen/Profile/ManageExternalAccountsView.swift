@@ -69,7 +69,14 @@ struct ManageExternalAccountsView: View {
                     container: container,
                     initialAccounts: achVM.accounts,
                     primaryAccount: primary,
-                    mode: .profile
+                    mode: .profile,
+                    onSuccess: {
+                        Task {
+                            isLinkedAccountLoading = true
+                            await achVM.fetchAccounts()
+                            isLinkedAccountLoading = false
+                        }
+                    }
                 )
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationBarBackButtonHidden(true)
@@ -144,6 +151,11 @@ struct ManageExternalAccountsView: View {
                 Text("\(account.accountName) · ••\(account.accountNumber.suffix(4))")
                     .font(Typography.caption.font)
                     .foregroundStyle(Color.movo.textTertiary)
+                if account.plaidAccountBalance > 0 {
+                    Text(account.formattedBalance)
+                        .font(Typography.caption.font)
+                        .foregroundStyle(Color.movo.textTertiary)
+                }
             }
 
             Spacer()
@@ -262,7 +274,7 @@ struct ManageExternalAccountsView: View {
         } label: {
             HStack {
                 Spacer()
-                Text("Withdraw")
+                Text("Withdraw Funds")
                     .font(Typography.body.font)
                     .foregroundStyle(Color.movo.textPrimary)
                 Spacer()

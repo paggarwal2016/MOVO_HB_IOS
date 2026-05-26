@@ -401,7 +401,7 @@ private extension ProfileScreen {
             HStack(spacing: Spacing.md) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Radius.sm)
-                        .fill(Color.movo.accentTint)
+                        .fill(Color.movo.elevated)
                         .frame(width: 44, height: 44)
                     Image(systemName: "building.columns")
                         .font(.system(size: 18, weight: .semibold))
@@ -409,7 +409,7 @@ private extension ProfileScreen {
                 }
                 Text("Manage external account")
                     .font(Typography.body.font)
-                    .foregroundStyle(Color.movo.accent)
+                    .foregroundStyle(Color.movo.textPrimary)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))

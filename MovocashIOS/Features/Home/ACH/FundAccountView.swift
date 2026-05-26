@@ -66,7 +66,9 @@ struct FundAccountView: View {
     }
 
     private var isFormValid: Bool {
-        selectedAccount != nil && enteredAmount > 0 && !amountExceedsBalance
+        guard selectedAccount != nil, enteredAmount > 0 else { return false }
+        if isProfileMode { return true }
+        return !amountExceedsBalance
     }
 
     private var sortedAccounts: [ACHAccount] {
@@ -225,7 +227,7 @@ struct FundAccountView: View {
         HStack {
             CircularNavButton(systemName: "chevron.left") { dismiss() }
             Spacer()
-            Text(isProfileMode ? "Fund Withdraw" : "Fund Account")
+            Text(isProfileMode ? "Withdraw Funds" : "Fund Account")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
