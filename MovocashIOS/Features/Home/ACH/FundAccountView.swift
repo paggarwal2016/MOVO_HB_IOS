@@ -7,24 +7,42 @@
 
 import SwiftUI
 
+// MARK: - Mode
+
+enum FundAccountMode {
+    case dashboard
+    case profile
+}
+
+// MARK: - View
+
 struct FundAccountView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var vm: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
+    @StateObject private var transactionVM: TransactionViewModel
 
     let primaryAccount: SavingsAccountInfo
     let onSuccess: () -> Void
     let onAccountLinked: () -> Void
     private let initialAccounts: [ACHAccount]
+    private let mode: FundAccountMode
 
-    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, onSuccess: @escaping () -> Void = {}, onAccountLinked: @escaping () -> Void = {}) {
+    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, mode: FundAccountMode = .dashboard, onSuccess: @escaping () -> Void = {}, onAccountLinked: @escaping () -> Void = {}) {
         self.initialAccounts = initialAccounts
+        self.mode = mode
         _vm = StateObject(wrappedValue: container.makeACHViewModel())
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+        _transactionVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         self.primaryAccount = primaryAccount
         self.onSuccess = onSuccess
         self.onAccountLinked = onAccountLinked
+    }
+
+    private var isProfileMode: Bool {
+        if case .profile = mode { return true }
+        return false
     }
 
     @State private var selectedAccount: ACHAccount?
@@ -40,12 +58,17 @@ struct FundAccountView: View {
     private var enteredAmount: Decimal { Decimal(string: amount) ?? 0 }
 
     private var amountExceedsBalance: Bool {
+        if isProfileMode {
+            return enteredAmount > primaryAccount.availableBalance
+        }
         guard let account = selectedAccount else { return false }
         return enteredAmount > account.plaidAccountBalance
     }
 
     private var isFormValid: Bool {
-        selectedAccount != nil && enteredAmount > 0 && !amountExceedsBalance
+        guard selectedAccount != nil, enteredAmount > 0 else { return false }
+        if isProfileMode { return true }
+        return !amountExceedsBalance
     }
 
     private var sortedAccounts: [ACHAccount] {
@@ -99,9 +122,8 @@ struct FundAccountView: View {
             await vm.fetchAccounts()
         }
         .onChange(of: vm.accounts) { accounts in
-            if selectedAccount == nil {
-                selectedAccount = accounts.first(where: { $0.isDefault }) ?? accounts.first
-            }
+            guard selectedAccount == nil else { return }
+            selectedAccount = accounts.first(where: { $0.isDefault }) ?? accounts.first
         }
         .onChange(of: isAmountFocused) { focused in
             if focused && amount == "0" { amount = "" }
@@ -116,13 +138,17 @@ struct FundAccountView: View {
             dismiss()
         }
         .sheet(isPresented: $showConfirmSheet) {
+            let fromName = isProfileMode ? primaryAccount.displayName : (selectedAccount?.accountName ?? "—")
+            let fromMask = isProfileMode ? primaryAccount.maskedAccountNumber : selectedAccount.map { "••\($0.accountNumber.suffix(4))" }
+            let toName   = isProfileMode ? (selectedAccount?.accountName ?? "—") : primaryAccount.displayName
+            let toMask   = isProfileMode ? selectedAccount.map { "••\($0.accountNumber.suffix(4))" } : primaryAccount.maskedAccountNumber
             ConfirmationBottomSheet(
                 channel: .external,
                 amount: amount,
-                fromName: selectedAccount?.accountName ?? "—",
-                fromMask: selectedAccount.map { "••\($0.accountNumber.suffix(4))" },
-                toName: primaryAccount.displayName,
-                toMask: primaryAccount.maskedAccountNumber,
+                fromName: fromName,
+                fromMask: fromMask,
+                toName: toName,
+                toMask: toMask,
                 isLoading: vm.state == .loading,
                 onCancel: { showConfirmSheet = false },
                 onConfirm: {
@@ -130,12 +156,26 @@ struct FundAccountView: View {
                     showConfirmSheet = false
                     isSubmitting = true
                     transferTask = Task {
-                        let request = ACHRequest(
-                            amount: Int(amount) ?? 0,
-                            achAccountId: account.achAccountId,
-                            userAction: "SUBMITS-ACH-DEPOSIT"
-                        )
-                        let success = await vm.initiateTransfer(request: request)
+                        var success = false
+                        var referenceCode = "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"
+                        if isProfileMode {
+                            let request = TransactionRequest.Withdrawal(
+                                accountId: account.achAccountId,
+                                transactionAmount: Double(amount) ?? 0,
+                                savingsAccountId: primaryAccount.id
+                            )
+                            if let response = try? await transactionVM.postWithdrawal(request: request) {
+                                success = true
+                                referenceCode = "MV-\(response.transactionId)"
+                            }
+                        } else {
+                            let request = ACHRequest(
+                                amount: Int(amount) ?? 0,
+                                achAccountId: account.achAccountId,
+                                userAction: "SUBMITS-ACH-DEPOSIT"
+                            )
+                            success = await vm.initiateTransfer(request: request)
+                        }
                         guard !Task.isCancelled else { return }
                         isSubmitting = false
                         if success {
@@ -143,13 +183,13 @@ struct FundAccountView: View {
                             successData = SuccessConfirmation(
                                 channel: .external,
                                 amount: Decimal(string: amount) ?? 0,
-                                fromAccountName: account.accountName,
-                                fromAccountMask: "••\(account.accountNumber.suffix(4))",
-                                toAccountName: primaryAccount.displayName,
-                                toAccountMask: primaryAccount.maskedAccountNumber,
+                                fromAccountName: fromName,
+                                fromAccountMask: fromMask ?? "—",
+                                toAccountName: toName,
+                                toAccountMask: toMask ?? "—",
                                 arrivesText: "1–3 business days",
                                 dateText: dateText,
-                                referenceCode: "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"
+                                referenceCode: referenceCode
                             )
                         }
                     }
@@ -186,7 +226,7 @@ struct FundAccountView: View {
         HStack {
             CircularNavButton(systemName: "chevron.left") { dismiss() }
             Spacer()
-            Text("Fund Account")
+            Text(isProfileMode ? "Withdraw Funds" : "Fund Account")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
@@ -232,14 +272,24 @@ struct FundAccountView: View {
 
     private var transferPanel: some View {
         VStack(spacing: 0) {
-            // FROM — bank account(s)
+            // FROM
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("From")
                     .textStyle(Typography.eyebrow)
                     .foregroundColor(Color.movo.textTertiary)
                     .padding(.horizontal, Spacing.lg)
 
-                if vm.state == .loading && sortedAccounts.isEmpty {
+                if isProfileMode {
+                    // Withdraw: FROM = Movo primary (fixed)
+                    accountRow(
+                        avatar: movoAvatar,
+                        name: primaryAccount.displayName,
+                        number: primaryAccount.maskedAccountNumber,
+                        amount: primaryAccount.formattedBalance,
+                        showChevron: false,
+                        isPrimary: true
+                    )
+                } else if vm.state == .loading && sortedAccounts.isEmpty {
                     HStack {
                         ProgressView().tint(Color.movo.textSecondary)
                         Text("Loading accounts…")
@@ -291,7 +341,7 @@ struct FundAccountView: View {
                     } label: {
                         accountRow(
                             avatar: bankInitialsAvatar,
-                            name: selectedAccount?.accountName ?? "—",
+                            name: selectedAccount?.institutionName ?? "—",
                             number: "••\((selectedAccount?.accountNumber ?? "").suffix(4))",
                             amount: selectedAccount?.formattedBalance ?? "",
                             showChevron: sortedAccounts.count > 1
@@ -308,20 +358,50 @@ struct FundAccountView: View {
                 .padding(.top, 5)
                 .padding(.bottom, 10)
 
-            // TO — Movo primary
+            // TO
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("To")
                     .textStyle(Typography.eyebrow)
                     .foregroundColor(Color.movo.textTertiary)
                     .padding(.horizontal, Spacing.lg)
 
-                accountRow(
-                    avatar: movoAvatar,
-                    name: primaryAccount.displayName,
-                    number: primaryAccount.maskedAccountNumber,
-                    amount: primaryAccount.formattedBalance,
-                    showChevron: false
-                )
+                if isProfileMode {
+                    // Withdraw: TO = ACH account picker
+                    if vm.state == .loading && sortedAccounts.isEmpty {
+                        HStack {
+                            ProgressView().tint(Color.movo.textSecondary)
+                            Text("Loading accounts…")
+                                .font(.system(size: 13))
+                                .foregroundColor(Color.movo.textTertiary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.vertical, Spacing.md)
+                    } else {
+                        Button {
+                            isAmountFocused = false
+                            if sortedAccounts.count > 1 { showAccountSheet = true }
+                        } label: {
+                            accountRow(
+                                avatar: bankInitialsAvatar,
+                                name: selectedAccount?.institutionName ?? "—",
+                                number: "••\((selectedAccount?.accountNumber ?? "").suffix(4))",
+                                amount: selectedAccount?.formattedBalance ?? "",
+                                showChevron: sortedAccounts.count > 1
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else {
+                    accountRow(
+                        avatar: movoAvatar,
+                        name: primaryAccount.displayName,
+                        number: primaryAccount.maskedAccountNumber,
+                        amount: primaryAccount.formattedBalance,
+                        showChevron: false,
+                        isPrimary: true
+                    )
+                }
             }
         }
         .padding(.vertical, Spacing.lg)
@@ -343,16 +423,22 @@ struct FundAccountView: View {
         name: String,
         number: String,
         amount: String,
-        showChevron: Bool
+        showChevron: Bool,
+        isPrimary: Bool = false
     ) -> some View {
         HStack(spacing: Spacing.md) {
             AnyView(avatar)
                 .frame(width: 52, height: 52)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(name)
+                HStack(spacing: Spacing.sm) {
+                    Text(name)
                     .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
+                    if isPrimary {
+                        StatusPill("PRIMARY", variant: .accent)
+                    }
+                }
                 Text(number)
                     .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
@@ -393,8 +479,8 @@ struct FundAccountView: View {
                     .frame(width: 30, height: 30)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             } else {
-                Text(selectedAccount?.accountName.prefix(2).uppercased() ?? "••")
-                    .textStyle(Typography.cardTitle)
+                Text(selectedAccount?.institutionName.prefix(2).uppercased() ?? "••")
+                   .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
             }
         }
@@ -433,10 +519,10 @@ struct FundAccountView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 54)
-            .background(
-                Capsule()
-                    .fill(isFormValid ? Color.movo.accent : Color.movo.accent.opacity(0.8))
-            )
+            .background(isFormValid ? Color.movo.accent : Color.movo.accent.opacity(0.8))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         }
         .buttonStyle(.plain)
         .disabled(!isFormValid)
@@ -452,7 +538,7 @@ struct FundAccountView: View {
 
 // MARK: - Bank Account Picker Sheet
 
-private struct BankAccountPickerSheet: View {
+struct BankAccountPickerSheet: View {
     let accounts: [ACHAccount]
     @Binding var selected: ACHAccount?
     @SwiftUI.Environment(\.dismiss) private var dismiss
@@ -477,19 +563,19 @@ private struct BankAccountPickerSheet: View {
                                             .frame(width: 28, height: 28)
                                             .clipShape(RoundedRectangle(cornerRadius: 6))
                                     } else {
-                                        Text(account.accountName.prefix(2).uppercased())
-                                            .textStyle(Typography.body)
+                                        Text(account.institutionName.prefix(2).uppercased())
+                                              .textStyle(Typography.body)
                                             .foregroundColor(Color.movo.textPrimary)
                                     }
                                 }
                                 .frame(width: 46, height: 46)
 
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(account.accountName)
-                                        .textStyle(Typography.cardTitle)
-                                        .foregroundColor(Color.movo.textPrimary)
-                                    Text("••\(account.accountNumber.suffix(4)) · \(account.formattedBalance)")
-                                        .textStyle(Typography.subtitle)
+                                    Text(account.institutionName)
+                                       .textStyle(Typography.cardTitle)
+                                       .foregroundColor(Color.movo.textPrimary)
+                                    Text("\(account.accountName) · ••\(account.accountNumber.suffix(4))")
+                                         .textStyle(Typography.subtitle)
                                         .foregroundColor(Color.movo.textTertiary)
                                 }
 
@@ -516,9 +602,12 @@ private struct BankAccountPickerSheet: View {
                 }
                 .padding(Spacing.lg)
             }
+            .scrollContentBackground(.hidden)
             .background(Color.movo.background.ignoresSafeArea())
             .navigationTitle("Select Account")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.movo.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }

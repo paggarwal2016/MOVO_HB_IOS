@@ -50,9 +50,17 @@ enum TransactionRequest {
 
     // MARK: - Withdrawal Request
     struct Withdrawal: Encodable {
+        let userAction: String
         let accountId: Int
         let transactionAmount: Double
         let savingsAccountId: Int
+
+        init(accountId: Int, transactionAmount: Double, savingsAccountId: Int) {
+            self.userAction = "TRANSACTION-WITHDRAW"
+            self.accountId = accountId
+            self.transactionAmount = transactionAmount
+            self.savingsAccountId = savingsAccountId
+        }
     }
     
     // MARK: - Internal Request
