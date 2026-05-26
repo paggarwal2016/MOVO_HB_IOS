@@ -18,22 +18,23 @@ struct ProfileScreen: View {
     
     @ObservedObject var dashboardVM: DashboardViewModel
     @ObservedObject var achVM: ACHViewModel
-    @StateObject private var plaidVM: PlaidAchViewModel
-    
+
+    private let container: AppContainer
+
     @State private var isBiometricOn             = false
     @State private var showDisableBiometricAlert = false
     @State private var showBiometricEnrollSheet  = false
     @State private var showSecuritySettings      = false
+    @State private var showManageAccounts        = false
     @State private var isLoggingOut              = false
     @State private var showSignOutAlert          = false
     @State private var showDeleteAlert           = false
-    @State private var isLinkedAccountLoading    = false
     @State private var hasLoadedOnce             = false
-    
+
     init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel) {
+        self.container   = container
         self.dashboardVM = dashboardVM
         self.achVM = achVM
-        _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
     
     private var effectiveBiometricType: BiometricType {
@@ -65,7 +66,7 @@ struct ProfileScreen: View {
                     emptyState
                 }
             }
-            if isLinkedAccountLoading || isLoggingOut {
+            if isLoggingOut {
                 Color.black.opacity(0.45).ignoresSafeArea()
                 SpinnerView()
             }
@@ -147,6 +148,15 @@ private extension ProfileScreen {
         }
         .navigationDestination(isPresented: $showSecuritySettings) {
             SecuritySettingsView(lockManager: lockManager)
+        }
+        .navigationDestination(isPresented: $showManageAccounts) {
+            ManageExternalAccountsView(
+                achVM: achVM,
+                primaryAccount: dashboardVM.primaryAccount,
+                container: container
+            )
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarBackButtonHidden(true)
         }
         .alert("Sign Out?", isPresented: $showSignOutAlert) {
             Button("Sign Out", role: .destructive) {
@@ -372,27 +382,7 @@ private extension ProfileScreen {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             eyebrowLabel("LINKED BANK ACCOUNTS")
             VStack(spacing: 0) {
-                if achVM.state == .loading && effectiveAccounts.isEmpty {
-                    HStack {
-                        Spacer()
-                        ProgressView().tint(Color.movo.textTertiary)
-                        Spacer()
-                    }
-                    .padding(.vertical, Spacing.xl)
-                } else {
-                    ForEach(effectiveAccounts, id: \.achAccountId) { account in
-                        bankAccountRow(account)
-                        if account.achAccountId != effectiveAccounts.last?.achAccountId {
-                            Divider()
-                                .background(Color.movo.border)
-                                .padding(.horizontal, Spacing.lg)
-                        }
-                    }
-                }
-                Divider()
-                    .background(Color.movo.border)
-                    .padding(.horizontal, Spacing.lg)
-                connectBankRow
+                manageExternalAccount
             }
             .background(Color.movo.surface)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card))
@@ -401,121 +391,23 @@ private extension ProfileScreen {
         }
     }
     
-    func bankAccountRow(_ account: ACHAccount) -> some View {
-        HStack(spacing: Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.sm)
-                    .fill(account.logoImage != nil ? Color(.systemBackground) : Color.movo.elevated)
-                    .frame(width: 44, height: 44)
-                if let logo = account.logoImage {
-                    Image(uiImage: logo)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 36, height: 36)
-                        .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
-                } else {
-                    Image(systemName: "building.columns")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Color.movo.textSecondary)
-                }
-            }
-            .overlay(RoundedRectangle(cornerRadius: Radius.sm)
-                .strokeBorder(Color.movo.border, lineWidth: account.logoImage != nil ? Stroke.hairline : 0))
-
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                HStack(spacing: Spacing.sm) {
-                    Text(account.institutionName)
-                        .font(Typography.body.font)
-                        .foregroundStyle(Color.movo.textPrimary)
-                    if account.isDefault {
-                        StatusPill("PRIMARY", variant: .accent)
-                    }
-                }
-                Text("\(account.accountName) · ••\(account.accountNumber.suffix(4))")
-                    .font(Typography.caption.font)
-                    .foregroundStyle(Color.movo.textTertiary)
-            }
-            
-            Spacer()
-            
-            HStack(spacing: Spacing.sm) {
-                if !account.isDefault {
-                    Button {
-                        Task {
-                            await achVM.updateAccount(id: account.achAccountId)
-                            await achVM.fetchAccounts()
-                        }
-                    } label: {
-                        Image(systemName: "star")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.movo.textSecondary)
-                            .frame(width: 36, height: 36)
-                            .background(Color.movo.elevated,
-                                        in: RoundedRectangle(cornerRadius: Radius.sm))
-                    }
-                    .buttonStyle(.plain)
-                }
-                
-                Button {
-                    AlertManager.shared.showConfirmation(
-                        title: "Remove Account",
-                        message: "Are you sure you want to remove \(account.institutionName) - \(account.accountName)?",
-                        onConfirm: {
-                            Task {
-                                isLinkedAccountLoading = true
-                                await achVM.deleteAccount(id: account.achAccountId)
-                                await achVM.fetchAccounts()
-                                isLinkedAccountLoading = false
-                            }
-                        }
-                    )
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.movo.danger)
-                        .frame(width: 36, height: 36)
-                        .background(Color.movo.dangerTint,
-                                    in: RoundedRectangle(cornerRadius: Radius.sm))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.vertical, Spacing.rowPaddingVertical)
-        .padding(.horizontal, Spacing.lg)
-    }
     
-    var connectBankRow: some View {
+    
+    var manageExternalAccount: some View {
         Button {
-            Task {
-                isLinkedAccountLoading = true
-                do {
-                    if !KYCManager.shared.isConfigured {
-                        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                    }
-                } catch {
-                    isLinkedAccountLoading = false
-                    AlertManager.shared.showError("Unable to initialize. Please try again.")
-                    return
-                }
-                isLinkedAccountLoading = false
-                await plaidVM.startPlaidLink()
-                if plaidVM.linkedAccount != nil {
-                    isLinkedAccountLoading = true
-                    await achVM.fetchAccounts()
-                    isLinkedAccountLoading = false
-                }
-            }
+            achVM.seed(accounts: effectiveAccounts)
+            showManageAccounts = true
         } label: {
             HStack(spacing: Spacing.md) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Radius.sm)
                         .fill(Color.movo.accentTint)
                         .frame(width: 44, height: 44)
-                    Image(systemName: "plus")
+                    Image(systemName: "building.columns")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.movo.accent)
                 }
-                Text(plaidVM.state == .loading ? "Connecting..." : "Link your external account")
+                Text("Manage external account")
                     .font(Typography.body.font)
                     .foregroundStyle(Color.movo.accent)
                 Spacer()
@@ -527,8 +419,9 @@ private extension ProfileScreen {
             .padding(.horizontal, Spacing.lg)
         }
         .buttonStyle(.plain)
-        .disabled(plaidVM.state == .loading)
     }
+    
+    
     
     // MARK: Bottom Actions
     
