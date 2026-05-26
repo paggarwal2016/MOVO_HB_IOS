@@ -143,7 +143,6 @@ struct InternalTransferView: View {
             }
         }
         .background(Color.movo.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
         .navigationBarHidden(true)
         .onChange(of: isAmountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
@@ -241,17 +240,19 @@ struct InternalTransferView: View {
         VStack(spacing: Spacing.xs) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("$")
-                    .font(.system(size: 32, weight: .semibold))
+                    .textStyle(Typography.amountPrefix)
                     .foregroundColor(Color.movo.textSecondary)
                     .baselineOffset(25)
 
                 let parts = amountText.split(separator: ".")
                 Text(parts.first.map(String.init) ?? "0")
-                    .font(.system(size: 72, weight: .bold).monospacedDigit())
+                    .textStyle(Typography.amountInput)
+                    .monospacedDigit()
                     .foregroundColor(Color.movo.textPrimary)
 
                 Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                    .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                    .textStyle(Typography.amountPrefix)
+                    .monospacedDigit()
                     .foregroundColor(Color.movo.textSecondary)
                     .baselineOffset(25)
             }
@@ -291,8 +292,7 @@ struct InternalTransferView: View {
 
     private func slotLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .tracking(0.8)
+            .textStyle(Typography.eyebrow)
             .foregroundColor(Color.movo.textTertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.lg)
@@ -424,26 +424,26 @@ struct InternalTransferView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: Spacing.xs) {
                         Text(nickname?.isEmpty == false ? nickname! : name)
-                            .font(.system(size: 15, weight: .semibold))
+                            .textStyle(Typography.cardTitle)
                             .foregroundColor(Color.movo.textPrimary)
                         StatusPill("PRIMARY", variant: .accent)
                     }
                     Text("•••• •••• •••• \(lastFour)")
-                        .font(.system(size: 13, weight: .regular))
+                        .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                     if !balance.isEmpty {
                         Text(balance)
-                            .font(.system(size: 13, weight: .regular))
+                            .textStyle(Typography.subtitle)
                             .foregroundColor(Color.movo.textTertiary)
                     }
                 }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name)
-                        .font(.system(size: 15, weight: .semibold))
+                        .textStyle(Typography.cardTitle)
                         .foregroundColor(Color.movo.textPrimary)
                     Text("•••• •••• •••• \(lastFour)")
-                        .font(.system(size: 13, weight: .regular))
+                        .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                 }
             }
@@ -492,11 +492,11 @@ struct InternalTransferView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(cardName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundColor(card != nil ? Color.movo.textPrimary : Color.movo.textDisabled)
                 if card != nil {
                     Text(subtitle)
-                        .font(.system(size: 13, weight: .regular))
+                        .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                 }
             }
@@ -520,7 +520,7 @@ struct InternalTransferView: View {
                 .frame(width: 52, height: 52)
             ProgressView().tint(Color.movo.textSecondary)
             Text("Loading cards…")
-                .font(.system(size: 13))
+                .textStyle(Typography.subtitle)
                 .foregroundColor(Color.movo.textTertiary)
             Spacer()
         }
@@ -539,7 +539,7 @@ struct InternalTransferView: View {
             TextField("", text: $descriptionText,
                       prompt: Text("What's it for? (optional)")
                           .foregroundColor(Color.movo.textDisabled))
-                .font(.system(size: 15, weight: .regular))
+                .textStyle(Typography.subtitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .autocorrectionDisabled()
         }
@@ -550,7 +550,7 @@ struct InternalTransferView: View {
                 .fill(Color.movo.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
         )
     }
@@ -567,7 +567,7 @@ struct InternalTransferView: View {
                 Image(systemName: "arrow.up.forward")
                     .font(.system(size: 13, weight: .semibold))
                 Text(amount > 0 ? "Transfer $\(String(format: "%.2f", amount))" : "Transfer")
-                    .font(.system(size: 16, weight: .semibold))
+                    .textStyle(Typography.buttonLarge)
             }
             .foregroundColor(isValid ? Color.movo.onAccent : Color.movo.textDisabled)
             .frame(maxWidth: .infinity)
@@ -653,10 +653,10 @@ private struct CardChipRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
-                    .font(Typography.bodyCompact.font)
+                    .textStyle(Typography.bodyCompact)
                     .foregroundColor(Color.movo.textPrimary)
                 Text("•••• •••• •••• \(lastFour)")
-                    .font(Typography.mono.font)
+                    .textStyle(Typography.mono)
                     .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
@@ -726,10 +726,10 @@ private struct CardPickerSheet: View {
 
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(card.name ?? "Virtual Card")
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .textStyle(Typography.cardTitle)
                                         .foregroundColor(Color.movo.textPrimary)
                                     Text(card.maskedNumber)
-                                        .font(.system(size: 13))
+                                        .textStyle(Typography.subtitle)
                                         .foregroundColor(Color.movo.textTertiary)
                                 }
 
@@ -757,13 +757,12 @@ private struct CardPickerSheet: View {
                 .padding(Spacing.lg)
             }
             .background(Color.movo.background.ignoresSafeArea())
-            .preferredColorScheme(.dark)
             .navigationTitle("Select Card")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .font(Typography.buttonLarge.font)
+                        .textStyle(Typography.buttonLarge)
                         .foregroundColor(Color.movo.accent)
                 }
             }

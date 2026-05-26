@@ -15,7 +15,7 @@ private struct SkeletonBlock: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Color.gray.opacity(0.2))
+            .fill(Color.movo.elevated)
             .frame(height: height)
             .shimmer()
     }
@@ -28,7 +28,7 @@ struct TransactionRowSkeleton: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(Color.gray.opacity(0.2))
+                .fill(Color.movo.elevated)
                 .frame(width: 48, height: 48)
                 .shimmer()
 
@@ -46,8 +46,8 @@ struct TransactionRowSkeleton: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(Color.movo.surface)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
     }
 }
 
@@ -57,7 +57,7 @@ struct TransactionRowSkeleton: View {
 struct AccountCardSkeleton: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 20)
-            .fill(Color.gray.opacity(0.2))
+            .fill(Color.movo.elevated)
             .frame(height: 180)
             .shimmer()
             .padding(.horizontal, 10)
@@ -90,7 +90,7 @@ struct ProfileAvatarSkeleton: View {
     var body: some View {
         VStack(spacing: 10) {
             Circle()
-                .fill(Color.gray.opacity(0.2))
+                .fill(Color.movo.elevated)
                 .frame(width: 65, height: 65)
                 .shimmer()
             SkeletonBlock(height: 16, cornerRadius: 7)
@@ -118,10 +118,9 @@ struct LinkedAccountSkeleton: View {
             SkeletonBlock(height: 44, cornerRadius: 10)
         }
         .padding(20)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
-        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
+        .background(Color.movo.surface)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
+        .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         .padding(.horizontal, 15)
     }
 }
@@ -134,7 +133,7 @@ struct DashboardSkeletonView: View {
         VStack(spacing: 20) {
             // primaryAccount — balance card
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color.gray.opacity(0.2))
+                .fill(Color.movo.elevated)
                 .frame(height: 180)
                 .shimmer()
                 .padding(.horizontal, 15)
@@ -165,11 +164,17 @@ struct DashboardSkeletonView: View {
 // MARK: - AccountRowSkeleton
 // Matches AccountRowView layout in AccountListSheetView
 
+#Preview("Dashboard Skeleton") {
+    ThemePreview {
+        DashboardSkeletonView()
+    }
+}
+
 struct AccountRowSkeleton: View {
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.2))
+                .fill(Color.movo.elevated)
                 .frame(width: 44, height: 44)
                 .shimmer()
 
@@ -186,8 +191,8 @@ struct AccountRowSkeleton: View {
                 .frame(width: 60)
         }
         .padding(14)
-        .background(.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .background(Color.movo.surface)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
         .padding(.horizontal, 16)
         .padding(.vertical, 4)
     }

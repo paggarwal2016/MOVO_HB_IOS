@@ -42,7 +42,7 @@ struct OTPScreen: View {
             MovoBackground()
             AmbientGlowView()
             
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: Spacing.xxl) {
                 topBar
                 titleView
                 otpSectionView
@@ -82,20 +82,19 @@ private extension OTPScreen {
     var titleView: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             Text(title)
-                .font(.system(size: 26, weight: .semibold))
-                .tracking(-0.5)
+                .textStyle(Typography.heroTitle)
                 .foregroundStyle(Color.movo.textPrimary)
                 .lineSpacing(2)
-            
+
             Text(subtitle)
-                .font(.system(size: 14))
+                .textStyle(Typography.body)
                 .foregroundStyle(Color.movo.textTertiary)
                 .lineSpacing(2)
         }
     }
 
     var otpSectionView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.md) {
             otpBoxesView
             hiddenTextField
             resendView
@@ -103,7 +102,7 @@ private extension OTPScreen {
     }
 
     var otpBoxesView: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             ForEach(0..<otpVM.maxLength, id: \.self) { index in
                 OTPDigitBox(
                     digit: digit(at: index),
@@ -143,7 +142,7 @@ private extension OTPScreen {
                     try? await onResend()
                 }
             }
-            .font(.subheadline.bold())
+            .textStyle(Typography.bodyCompact)
             .foregroundColor(Color.movo.accent)
             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -153,13 +152,18 @@ private extension OTPScreen {
     }
 
     var continueButton: some View {
-        PrimaryButton(title: "Continue", isEnabled: otpVM.isValidOTP && !otpVM.isSubmitting) {
+        let isEnabled = otpVM.isValidOTP && !isLoading && !otpVM.isSubmitting
+        return Button {
             UIApplication.shared.dismissKeyboard()
             Task {
                 await otpVM.submitOTP { await onVerify($0) }
             }
+        } label: {
+            Text("Continue")
         }
-        .disabled(!otpVM.isValidOTP || isLoading || otpVM.isSubmitting)
+        .buttonStyle(MovoPrimaryButtonStyle())
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1.0 : 0.45)
     }
 }
 

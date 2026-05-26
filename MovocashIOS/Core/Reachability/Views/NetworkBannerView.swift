@@ -19,7 +19,7 @@ struct NetworkBannerView: View {
                 .foregroundStyle(isConnected ? Color.green : Color.white)
 
             Text(isConnected ? "Back online" : "No internet connection")
-                .font(.system(size: 13, weight: .medium))
+                .textStyle(Typography.bodyCompact)
                 .foregroundStyle(Color.white)
 
             Spacer()

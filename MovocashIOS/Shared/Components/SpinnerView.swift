@@ -31,8 +31,10 @@ struct SpinnerView: View {
         GeometryReader { geometry in
             ZStack {
 
-                // Backdrop — dims content beneath without obscuring context
-                Color.movo.background
+                // Backdrop — dims content beneath without obscuring context.
+                // Must be black (not movo.background) so it darkens in both
+                // light and dark modes; background is near-white in light mode.
+                Color.black
                     .opacity(configuration.backdropOpacity)
                     .ignoresSafeArea()
 

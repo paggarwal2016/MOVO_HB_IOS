@@ -7,8 +7,8 @@
 
 import Foundation
 
-// MARK: - Environment
-struct Environment {
+// MARK: - AppEnvironment
+struct AppEnvironment {
     private init() {}
     
     static let baseURL: URL = makeURL("https://api-staging.movocash.com") // SP URL
@@ -35,8 +35,8 @@ enum APIVersion: String {
 final class AppConfig {
     private init() {}
     
-    static let baseURL: URL    = Environment.baseURL
-    static let sdkURL: String  = Environment.sdkURL
+    static let baseURL: URL    = AppEnvironment.baseURL
+    static let sdkURL: String  = AppEnvironment.sdkURL
     static let officeId: String = "3"
 }
 

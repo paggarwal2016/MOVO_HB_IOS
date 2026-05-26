@@ -56,12 +56,12 @@ enum BadgeStatus {
         switch self {
         case .cardPrimary:                              return .blue
         case .cardActive, .emailVerified,
-                .smsVerified, .twoFactorEnabled:        return .green
+                .smsVerified, .twoFactorEnabled:        return Color.movo.success
         case .cardInactive, .emailUnverified,
-                .smsUnverified, .twoFactorDisabled:     return .gray
+                .smsUnverified, .twoFactorDisabled:     return Color.movo.textDisabled
         case .cardFrozen:                               return .cyan
-        case .cardPending:                              return .orange
-        case .cardClosed:                               return .red
+        case .cardPending:                              return Color.movo.warning
+        case .cardClosed:                               return Color.movo.danger
         case .cardView:                                 return .indigo
         }
     }

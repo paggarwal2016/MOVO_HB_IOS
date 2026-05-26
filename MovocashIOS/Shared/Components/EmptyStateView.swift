@@ -19,10 +19,10 @@ struct EmptyStateView: View {
             }
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.headline)
+                    .textStyle(Typography.sectionTitle)
                     .foregroundStyle(.primary)
                 Text(description)
-                    .font(.subheadline)
+                    .textStyle(Typography.subtitle)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }

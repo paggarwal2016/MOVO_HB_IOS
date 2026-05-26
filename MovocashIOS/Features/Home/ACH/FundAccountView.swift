@@ -89,7 +89,6 @@ struct FundAccountView: View {
         .blur(radius: showConfirmSheet ? 3 : 0)
         .blur(radius: showAccountSheet ? 3 : 0)
         .background(Color.movo.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
         .onAppear {
             vm.seed(accounts: initialAccounts)
             if selectedAccount == nil {
@@ -203,17 +202,19 @@ struct FundAccountView: View {
     private var amountDisplay: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text("$")
-                .font(.system(size: 32, weight: .semibold))
+                .textStyle(Typography.amountPrefix)
                 .foregroundColor(Color.movo.textSecondary)
                 .baselineOffset(25)
 
             let parts = amount.split(separator: ".")
             Text(parts.first.map(String.init) ?? "0")
-                .font(.system(size: 72, weight: .bold).monospacedDigit())
+                .textStyle(Typography.amountInput)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textPrimary)
 
             Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                .textStyle(Typography.amountPrefix)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textSecondary)
                 .baselineOffset(25)
         }
@@ -234,8 +235,7 @@ struct FundAccountView: View {
             // FROM — bank account(s)
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("From")
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(0.6)
+                    .textStyle(Typography.eyebrow)
                     .foregroundColor(Color.movo.textTertiary)
                     .padding(.horizontal, Spacing.lg)
 
@@ -243,7 +243,7 @@ struct FundAccountView: View {
                     HStack {
                         ProgressView().tint(Color.movo.textSecondary)
                         Text("Loading accounts…")
-                            .font(.system(size: 13))
+                            .textStyle(Typography.subtitle)
                             .foregroundColor(Color.movo.textTertiary)
                         Spacer()
                     }
@@ -270,16 +270,9 @@ struct FundAccountView: View {
                         }
                     } label: {
                         HStack(spacing: 12) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.movo.accentTint)
-                                    .frame(width: 46, height: 46)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(Color.movo.accent)
-                            }
+                            CircleIconAvatar(systemName: "plus", size: 44, tint: .accent)
                             Text(isConnecting || plaidVM.state == .loading ? "Connecting..." : "Link your external account")
-                                .font(Typography.body.font)
+                                .textStyle(Typography.body)
                                 .foregroundStyle(Color.movo.accent)
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -318,8 +311,7 @@ struct FundAccountView: View {
             // TO — Movo primary
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("To")
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(0.6)
+                    .textStyle(Typography.eyebrow)
                     .foregroundColor(Color.movo.textTertiary)
                     .padding(.horizontal, Spacing.lg)
 
@@ -359,14 +351,14 @@ struct FundAccountView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(name)
-                    .font(.system(size: 15, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
                 Text(number)
-                    .font(.system(size: 13, weight: .regular))
+                    .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
                 if !amount.isEmpty {
                     Text(amount)
-                        .font(.system(size: 13, weight: .regular))
+                        .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                 }
             }
@@ -402,7 +394,7 @@ struct FundAccountView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             } else {
                 Text(selectedAccount?.accountName.prefix(2).uppercased() ?? "••")
-                    .font(.system(size: 16, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
             }
         }
@@ -432,11 +424,11 @@ struct FundAccountView: View {
         } label: {
             Group {
                 if vm.state == .loading {
-                    ProgressView().tint(Color.movo.background)
+                    ProgressView().tint(Color.movo.onAccent)
                 } else {
                     Text("Transfer")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color.movo.background)
+                        .textStyle(Typography.buttonLarge)
+                        .foregroundColor(Color.movo.onAccent)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -486,7 +478,7 @@ private struct BankAccountPickerSheet: View {
                                             .clipShape(RoundedRectangle(cornerRadius: 6))
                                     } else {
                                         Text(account.accountName.prefix(2).uppercased())
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .textStyle(Typography.body)
                                             .foregroundColor(Color.movo.textPrimary)
                                     }
                                 }
@@ -494,10 +486,10 @@ private struct BankAccountPickerSheet: View {
 
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(account.accountName)
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .textStyle(Typography.cardTitle)
                                         .foregroundColor(Color.movo.textPrimary)
                                     Text("••\(account.accountNumber.suffix(4)) · \(account.formattedBalance)")
-                                        .font(.system(size: 13, weight: .regular))
+                                        .textStyle(Typography.subtitle)
                                         .foregroundColor(Color.movo.textTertiary)
                                 }
 
@@ -525,13 +517,12 @@ private struct BankAccountPickerSheet: View {
                 .padding(Spacing.lg)
             }
             .background(Color.movo.background.ignoresSafeArea())
-            .preferredColorScheme(.dark)
             .navigationTitle("Select Account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .font(Typography.buttonLarge.font)
+                        .textStyle(Typography.buttonLarge)
                         .foregroundColor(Color.movo.accent)
                 }
             }

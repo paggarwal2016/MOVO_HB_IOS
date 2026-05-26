@@ -102,8 +102,7 @@ struct ChoiceScreen: View {
             // Welcome copy
             VStack(spacing: 10) {
                 Text("Welcome to MovoCash")
-                    .font(.system(size: 28, weight: .bold))
-                    .tracking(-0.56)
+                    .textStyle(Typography.balance)
                     .foregroundColor(Color.movo.textPrimary)
                     .multilineTextAlignment(.center)
                 
@@ -152,7 +151,7 @@ struct ChoiceScreen: View {
                             Image(systemName: biometricIcon)
                                 .font(.system(size: 16, weight: .regular))
                             Text(biometricLabel)
-                                .font(.system(size: 13, weight: .medium))
+                                .textStyle(Typography.bodyCompact)
                         }
                     }
                     .foregroundStyle(Color.movo.accent)

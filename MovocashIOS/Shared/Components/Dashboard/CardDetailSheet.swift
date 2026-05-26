@@ -256,7 +256,7 @@ struct CardDetailSheet: View {
     
     public struct MovoCardHero: View {
         public let card: VCardListResponse
-        
+
         private var formattedBalance: String {
             let formatter = NumberFormatter()
             formatter.numberStyle = .currency
@@ -271,30 +271,30 @@ struct CardDetailSheet: View {
                 // Top: brand lockup + status pill
                 HStack(alignment: .center) {
                     HStack(spacing: 6) {
-                        
+
                         MovoMVSymbol()
                             .frame(width: 22, height: 22)
-                        
+
                         Text("MOVOCASH")
                             .font(.system(size: 10, weight: .bold))
                             .tracking(1.8)
-                            .foregroundColor(Color.movo.textPrimary)
+                            .foregroundColor(Color.movo.onCardArtwork)
                     }
                     Spacer()
                     StatusPill(card.isActive ? "Active" : "Inactive",
                                variant: card.isActive ? .accent : .neutral)
                 }
-                
+
                 // Balance
                 VStack(alignment: .leading, spacing: 3) {
-                    Eyebrow("Available balance")
+                    Eyebrow("Available balance", color: Color.movo.cardArtworkMuted)
                     Text(formattedBalance)
                         .textStyle(Typography.cardHero)
-                        .foregroundColor(Color.movo.textPrimary)
+                        .foregroundColor(Color.movo.onCardArtwork)
                         .monospacedDigit()
                 }
                 .padding(.top, Spacing.lg)
-                
+
                 // Chip + contactless
                 HStack(spacing: 14) {
                     CardChip()
@@ -303,27 +303,27 @@ struct CardDetailSheet: View {
                         .frame(width: 22, height: 22)
                 }
                 .padding(.top, Spacing.md)
-                
+
                 Spacer(minLength: 8)
-                
+
                 // Card number
                 VStack(alignment: .leading, spacing: 4) {
                     Text("CARD NUMBER")
                         .font(.system(size: 7.5, weight: .medium))
                         .tracking(1.0)
-                        .foregroundColor(Color.movo.textTertiary)
+                        .foregroundColor(Color.movo.cardArtworkMuted)
                     Text(card.maskedNumber)
                         .font(.system(size: 13, weight: .medium, design: .monospaced))
                         .tracking(1.3)
-                        .foregroundColor(Color.movo.textPrimary)
+                        .foregroundColor(Color.movo.onCardArtwork)
                 }
-                
+
                 // Bottom: DEBIT + Mastercard
                 HStack(alignment: .bottom) {
                     Text(card.tier.uppercased())
                         .font(.system(size: 8.5, weight: .medium))
                         .tracking(1.5)
-                        .foregroundColor(Color.movo.textSecondary)
+                        .foregroundColor(Color.movo.cardArtworkMuted)
                     Spacer()
                     MastercardMark()
                 }
@@ -336,27 +336,22 @@ struct CardDetailSheet: View {
             .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
+                    .strokeBorder(Color.movo.cardArtworkBorder, lineWidth: Stroke.hairline)
             )
-            .shadow(color: .black.opacity(0.6), radius: 25, x: 0, y: 20)
-            .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 4)
+            .cardArtworkShadow()
         }
         
         private var cardBackground: some View {
             ZStack {
-                // Base gradient
+                // Base gradient — fixed brand-locked values (heritage black card, constant in both modes)
                 LinearGradient(
-                    colors: [
-                        Color.movo.elevated,
-                        Color.movo.surface,
-                        Color.movo.background
-                    ],
+                    colors: [Color.movo.cardArtworkBorder, Color.movo.cardArtwork],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 // Top shimmer
                 RadialGradient(
-                    colors: [Color.movo.textPrimary.opacity(0.10), .clear],
+                    colors: [Color.movo.onCardArtwork.opacity(0.10), .clear],
                     center: .top,
                     startRadius: 0,
                     endRadius: 180

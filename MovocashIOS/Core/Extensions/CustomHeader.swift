@@ -26,9 +26,9 @@ struct CustomHeader: View {
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(Color.movo.textPrimary)
                             .frame(width: 36, height: 36)
-                            .background(Color.gray.opacity(0.1))
+                            .background(Color.movo.elevated)
                             .clipShape(Circle())
                     }
                 }
@@ -39,12 +39,12 @@ struct CustomHeader: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.black)
-                
+                    .foregroundColor(Color.movo.textPrimary)
+
                 if !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.system(size: 14))
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color.movo.textTertiary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

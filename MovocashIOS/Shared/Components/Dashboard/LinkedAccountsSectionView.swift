@@ -48,7 +48,7 @@ struct LinkedAccountsSectionView: View {
                     HStack(spacing: 6) {
                         if isLoading {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: theme.background.color))
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.onAccent))
                                 .scaleEffect(0.8)
                         } else {
                             Text(buttonLabel)

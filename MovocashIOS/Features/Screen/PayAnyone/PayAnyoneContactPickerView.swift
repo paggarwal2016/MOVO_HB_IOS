@@ -83,7 +83,6 @@ struct PayAnyoneContactPickerView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .preferredColorScheme(.dark)
             .navigationDestination(for: ContactRecord.self) { contact in
                 QuickTransferView(
                     contact: contact,
@@ -187,7 +186,10 @@ struct PayAnyoneContactPickerView: View {
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
-            CircularNavButton(systemName: "plus") { showCreateContact = true }
+            Button { showCreateContact = true } label: {
+                CircleIconAvatar(systemName: "plus", size: 32, tint: .neutral)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
@@ -201,9 +203,12 @@ struct PayAnyoneContactPickerView: View {
             HStack {
                 Eyebrow("RECENT PAY")
                 Spacer()
-                Button("See all") { showAllFrequents = true }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color.movo.accent)
+                Button(action: { showAllFrequents = true }) {
+                    Text("See all")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.accent)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, Spacing.lg)
 
@@ -241,13 +246,13 @@ struct PayAnyoneContactPickerView: View {
                         ))
                     Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                     Text(String(contact.nickname?.prefix(1) ?? "?"))
-                        .font(.system(size: 18, weight: .medium))
+                        .textStyle(Typography.cardTitle)
                         .foregroundColor(Color.movo.textPrimary)
                 }
                 .frame(width: 56, height: 56)
 
                 Text((contact.nickname?.split(separator: " ").first.map(String.init) ?? contact.nickname) ?? "")
-                    .font(.system(size: 10, weight: .regular))
+                    .textStyle(Typography.captionSmall)
                     .foregroundColor(Color.movo.textSecondary)
                     .lineLimit(1)
             }
@@ -267,7 +272,7 @@ struct PayAnyoneContactPickerView: View {
                     .foregroundColor(Color.movo.textDisabled)
                 TextField("", text: $contactVM.search,
                           prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
-                    .font(.system(size: 15, weight: .regular))
+                    .textStyle(Typography.body)
                     .foregroundColor(Color.movo.textPrimary)
                     .autocorrectionDisabled()
                 if !contactVM.search.isEmpty {
@@ -310,7 +315,7 @@ struct PayAnyoneContactPickerView: View {
                 }
             } else if contactVM.filteredFavourites.isEmpty {
                 Text(contactVM.search.isEmpty ? "No contacts found" : "No results for \"\(contactVM.search)\"")
-                    .font(.system(size: 13))
+                    .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.textTertiary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.xl)
@@ -322,15 +327,14 @@ struct PayAnyoneContactPickerView: View {
             RoundedRectangle(cornerRadius: Radius.heroCard)
                 .fill(Color.movo.surface.opacity(0.85))
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline))
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
         .padding(.horizontal, Spacing.lg)
     }
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .tracking(0.8)
+            .textStyle(Typography.eyebrow)
             .foregroundColor(Color.movo.textTertiary)
             .padding(.horizontal, Spacing.lg)
             .padding(.top, Spacing.md)
@@ -341,7 +345,7 @@ struct PayAnyoneContactPickerView: View {
     private func rowDivider(isLast: Bool) -> some View {
         if !isLast {
             Rectangle()
-                .fill(Color.movo.elevated)
+                .fill(Color.movo.border)
                 .frame(height: Stroke.hairline)
                 .padding(.horizontal, Spacing.lg)
         }
@@ -353,11 +357,11 @@ struct PayAnyoneContactPickerView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(contact.nickname ?? "")
-                        .font(.system(size: 15, weight: .semibold))
+                        .textStyle(Typography.bodyCompact)
                         .foregroundColor(Color.movo.textPrimary)
                     if contact.isAdded {
                         Text("MOVO")
-                            .font(.system(size: 9, weight: .bold))
+                            .textStyle(Typography.micro)
                             .foregroundColor(Color.movo.accent)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -365,7 +369,7 @@ struct PayAnyoneContactPickerView: View {
                     }
                 }
                 Text(contact.phoneNumber ?? "")
-                    .font(.system(size: 13))
+                    .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
@@ -374,7 +378,7 @@ struct PayAnyoneContactPickerView: View {
                 .foregroundColor(Color.movo.textDisabled)
         }
         .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, 12)
+        .padding(.vertical, Spacing.md)
     }
 
     private func favouriteRow(_ contact: ContactRecord) -> some View {
@@ -383,11 +387,11 @@ struct PayAnyoneContactPickerView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(contact.nickname ?? "")
-                        .font(.system(size: 15, weight: .semibold))
+                        .textStyle(Typography.bodyCompact)
                         .foregroundColor(Color.movo.textPrimary)
                     if contact.isAdded {
                         Text("MOVO")
-                            .font(.system(size: 9, weight: .bold))
+                            .textStyle(Typography.micro)
                             .foregroundColor(Color.movo.accent)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -395,7 +399,7 @@ struct PayAnyoneContactPickerView: View {
                     }
                 }
                 Text(contact.phoneNumber ?? "")
-                    .font(.system(size: 13))
+                    .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
@@ -404,7 +408,7 @@ struct PayAnyoneContactPickerView: View {
                 .foregroundColor(Color.movo.textDisabled)
         }
         .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, 12)
+        .padding(.vertical, Spacing.md)
     }
 
     private func contactAvatar(initials: String, size: CGFloat) -> some View {
@@ -435,27 +439,19 @@ struct PayAnyoneContactPickerView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Movo is better with friends")
-                    .font(.system(size: 14, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
 
                 Text("Find people you know already on Movo and send instantly.")
-                    .font(.system(size: 12))
+                    .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.textTertiary)
                     .lineSpacing(1.5)
                     .padding(.bottom, Spacing.sm + 2)
 
                 Button(action: isDenied ? openSettings : enableContacts) {
                     Text(isDenied ? "Open Settings" : "Enable Contacts")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.movo.onAccent)
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.vertical, 9)
-                        .background(
-                            RoundedRectangle(cornerRadius: Radius.button)
-                                .fill(Color.movo.accent)
-                        )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(MovoPrimaryButtonStyle())
             }
         }
         .padding(Spacing.lg)

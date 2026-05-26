@@ -106,11 +106,8 @@ struct TextInputAlertView: View {
                     // Cancel
                     Button(action: onCancel) {
                         Text(config.secondaryLabel)
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(config.secondaryColor)
                     }
+                    .buttonStyle(MovoTextButtonStyle())
 
                     Rectangle()
                         .fill(Color.movo.border)
@@ -122,11 +119,9 @@ struct TextInputAlertView: View {
                         onCreate()
                     } label: {
                         Text(config.primaryLabel)
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(isEmpty ? config.primaryColor.opacity(0.4) : config.primaryColor)
                     }
+                    .buttonStyle(MovoCompactButtonStyle())
+                    .disabled(isEmpty)
                 }
                 .background(Color.movo.elevated)
                 // bottom two corners only

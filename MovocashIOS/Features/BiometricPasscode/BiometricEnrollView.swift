@@ -49,8 +49,7 @@ struct BiometricEnrollView: View {
                     Text(enrollmentSucceeded
                          ? "\(displayBiometricType.displayName) Enabled"
                          : "Enable \(displayBiometricType.displayName)")
-                    .font(.system(size: 28, weight: .bold))
-                    .tracking(-0.56)
+                    .textStyle(Typography.balance)
                     .foregroundColor(Color.movo.textPrimary)
                     .multilineTextAlignment(.center)
                     
@@ -66,10 +65,10 @@ struct BiometricEnrollView: View {
                 // Error (hidden once enrolled)
                 if !enrollmentSucceeded, let err = errorMessage {
                     Text(err)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .padding(.top, 16)
-                        .padding(.horizontal, 32)
+                        .textStyle(Typography.subtitle)
+                        .foregroundStyle(Color.movo.danger)
+                        .padding(.top, Spacing.lg)
+                        .padding(.horizontal, Spacing.xxxl)
                         .multilineTextAlignment(.center)
                 }
                 
@@ -91,15 +90,15 @@ struct BiometricEnrollView: View {
                     }
                     .buttonStyle(MovoPrimaryButtonStyle())
                     .disabled(isEnrolling || enrollmentSucceeded)
-                    .padding(.horizontal, 24)
-                    
+                    .padding(.horizontal, Spacing.xxl)
+
                     // Skip — hidden once enrolled
                     if !enrollmentSucceeded {
                         Button(action: { onSkip() }) {
                             Text("Skip")
                         }
                         .buttonStyle(OutlineButtonStyle())
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, Spacing.xxl)
                     }
                 }
                 
@@ -272,11 +271,11 @@ extension FaceScanView {
             // Eyes (smaller + better spacing)
             HStack(spacing: 18) {
                 Circle()
-                    .fill(Color.white)
+                    .fill(Color.movo.textSecondary)
                     .frame(width: 5, height: 5)
-                
+
                 Circle()
-                    .fill(Color.white)
+                    .fill(Color.movo.textSecondary)
                     .frame(width: 5, height: 5)
             }
             
@@ -287,7 +286,7 @@ extension FaceScanView {
             
             // Smile (better curve)
             SmileShape()
-                .stroke(Color.white, lineWidth: 2)
+                .stroke(Color.movo.textSecondary, lineWidth: 2)
                 .frame(width: 34, height: 16)
         }
     }

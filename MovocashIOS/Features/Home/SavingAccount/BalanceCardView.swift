@@ -19,10 +19,10 @@ struct BalanceCardView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.elevated)
+                .fill(Color.movo.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
                 )
                 .contentShape(Rectangle())
                 .onTapGesture { onCardTap() }

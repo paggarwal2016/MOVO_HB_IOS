@@ -27,13 +27,8 @@ struct CompromisedDeviceView: View {
                 // Optional: Retry check or exit app
             }) {
                 Text("Retry Check")
-                    .bold()
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.red.opacity(0.8))
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
             }
+            .buttonStyle(MovoPrimaryButtonStyle())
             .padding(.horizontal)
         }
         .padding()

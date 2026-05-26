@@ -21,7 +21,7 @@ struct CardItemView: View {
                 .fill(Color.movo.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
                 )
 
             VStack(alignment: .leading, spacing: 0) {
@@ -94,11 +94,7 @@ struct CardSelectorView: View {
                         .foregroundColor(Color.movo.textTertiary)
 
                     Button(action: onTap) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(Color.movo.accent)
-                            .frame(width: 18, height: 18)
-                            .background(Circle().fill(Color.movo.accentTint))
+                        CircleIconAvatar(systemName: "plus", size: 24, tint: .accent)
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -185,8 +181,8 @@ struct CardSelectorView: View {
                             Circle()
                                 .fill(index == selectedIndex
                                       ? Color.movo.accent
-                                      : Color.movo.textDisabled.opacity(0.5))
-                                .frame(width: 5, height: 5)
+                                      : Color.movo.borderStrong)
+                                .frame(width: 7, height: 7)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
                                 .onTapGesture {
                                     let peek: CGFloat = index == 0 ? 0 : 28

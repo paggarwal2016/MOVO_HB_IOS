@@ -71,7 +71,7 @@ struct AllFrequentsView: View {
 
                                 if contact.id != filteredFrequents.last?.id {
                                     Rectangle()
-                                        .fill(Color.movo.elevated)
+                                        .fill(Color.movo.border)
                                         .frame(height: Stroke.hairline)
                                         .padding(.horizontal, 14)
                                 }
@@ -82,7 +82,7 @@ struct AllFrequentsView: View {
                                 .fill(Color.movo.surface.opacity(0.85))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: Radius.heroCard)
-                                        .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                                 )
                         )
                         .padding(.horizontal, Spacing.lg)
@@ -93,7 +93,6 @@ struct AllFrequentsView: View {
                 }
             }
             .background(Color.movo.background)
-            .preferredColorScheme(.dark)
             .navigationBarHidden(true)
             .onAppear {
                 if contactVM.frequents.isEmpty {
@@ -115,14 +114,7 @@ struct AllFrequentsView: View {
     
     private var navBar: some View {
         HStack {
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color.movo.textPrimary)
-                    .frame(width: 36, height: 36)
-                    .background(Color.movo.elevated, in: Circle())
-            }
-            .buttonStyle(.plain)
+            CircularNavButton(systemName: "chevron.left") { dismiss() }
             Spacer()
             Text("Recent Pay")
                 .textStyle(Typography.cardTitle)
@@ -141,7 +133,7 @@ struct AllFrequentsView: View {
                 .foregroundColor(Color.movo.textDisabled)
             TextField("", text: $search,
                       prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
-                .font(.system(size: 15, weight: .regular))
+                .textStyle(Typography.body)
                 .foregroundColor(Color.movo.textPrimary)
                 .autocorrectionDisabled()
             if !search.isEmpty {
@@ -170,18 +162,18 @@ struct AllFrequentsView: View {
                 Circle().fill(Color.movo.elevated)
                 Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
                 Text(contact.nickname?.prefix(1).uppercased() ?? "?")
-                    .font(.system(size: 17, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
             }
             .frame(width: 44, height: 44)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(contact.nickname ?? "")
-                    .font(.system(size: 15, weight: .semibold))
+                    .textStyle(Typography.bodyCompact)
                     .foregroundColor(Color.movo.textPrimary)
                     .lineLimit(1)
                 Text(contact.phoneNumber ?? "")
-                    .font(.system(size: 13, weight: .regular))
+                    .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.textTertiary)
                     .lineLimit(1)
             }
@@ -193,7 +185,7 @@ struct AllFrequentsView: View {
                 .foregroundColor(Color.movo.textDisabled)
         }
         .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, 12)
+        .padding(.vertical, Spacing.md)
         .frame(maxWidth: .infinity, minHeight: 64)
         .contentShape(Rectangle())
     }

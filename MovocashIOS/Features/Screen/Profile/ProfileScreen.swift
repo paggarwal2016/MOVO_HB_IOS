@@ -505,14 +505,7 @@ private extension ProfileScreen {
             }
         } label: {
             HStack(spacing: Spacing.md) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: Radius.sm)
-                        .fill(Color.movo.accentTint)
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.movo.accent)
-                }
+                CircleIconAvatar(systemName: "plus", size: 44, tint: .accent)
                 Text(plaidVM.state == .loading ? "Connecting..." : "Link your external account")
                     .font(Typography.body.font)
                     .foregroundStyle(Color.movo.accent)

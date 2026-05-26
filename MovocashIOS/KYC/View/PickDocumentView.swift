@@ -90,8 +90,7 @@ struct PickDocumentView: View {
         VStack(spacing: 12) {
             
             Text("Verify Your Identity")
-                .font(.system(size: 26, weight: .bold))
-                .tracking(-0.5)
+                .textStyle(Typography.heroTitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .multilineTextAlignment(.center)
             
@@ -129,8 +128,7 @@ private var infoCard: some View {
         
         VStack(alignment: .leading, spacing: 4) {
             Text("You'll need photo ID")
-                .font(.system(size: 18, weight: .bold))
-                .tracking(-0.56)
+                .textStyle(Typography.cardHero)
                 .foregroundColor(Color.movo.textPrimary)
                 .multilineTextAlignment(.center)
             

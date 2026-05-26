@@ -99,7 +99,6 @@ struct ProfileImageView: View {
             .overlay(
                 Text(userName)
                     .font(fontSize)
-                    .fontWeight(.bold)
                     .foregroundStyle(.white)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)

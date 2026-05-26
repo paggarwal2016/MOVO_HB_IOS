@@ -40,12 +40,15 @@ struct SignUpScreen: View {
                 }
                 
                 // Button
-                PrimaryButton(title: "Send code", isEnabled: vm.isValid) {
+                Button {
                     UIApplication.shared.dismissKeyboard()
                     onContinue(vm.email)
+                } label: {
+                    Text("Send code")
                 }
-                .frame(maxWidth: .infinity)
+                .buttonStyle(MovoPrimaryButtonStyle())
                 .disabled(!vm.isValid)
+                .opacity(vm.isValid ? 1.0 : 0.45)
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
             .padding(.bottom, DesignTokens.Spacing.xl)
@@ -91,13 +94,12 @@ struct SignUpScreen: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             Text("Please enter your email")
-                .font(.system(size: 26, weight: .semibold))
-                .tracking(-0.5)
+                .textStyle(Typography.heroTitle)
                 .foregroundStyle(Color.movo.textPrimary)
                 .lineSpacing(2)
-            
+
             Text("We'll send a verification code to confirm it's you.")
-                .font(.system(size: 14))
+                .textStyle(Typography.body)
                 .foregroundStyle(Color.movo.textTertiary)
                 .lineSpacing(2)
         }
@@ -108,7 +110,7 @@ struct SignUpScreen: View {
     private var emailField: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             Text("Email address")
-                .font(.subheadline)
+                .textStyle(Typography.caption)
                 .foregroundColor(Color.movo.textTertiary)
             
             TextField("Enter your email", text: $vm.email)

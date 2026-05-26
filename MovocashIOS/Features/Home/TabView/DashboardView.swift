@@ -74,6 +74,7 @@ struct DashboardView: View {
                 scrollContent
             }
             if dashboardVM.isRefreshing {
+                // Scrim — black-on-alpha is intentional; works on both light and dark backgrounds.
                 Color.black.opacity(0.35)
                     .ignoresSafeArea()
                 SpinnerView()
@@ -531,7 +532,7 @@ struct PrimaryAccountContent: View {
                         .font(.system(size: 13, weight: .semibold))
                         .tracking(0.4)
                 }
-                .foregroundColor(Color.movo.onAccent)
+                .foregroundColor(Color.movo.background)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(RoundedRectangle(cornerRadius: Radius.xl).fill(Color.movo.accent))

@@ -68,10 +68,10 @@ private extension PDFViewScreen {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(documentType.title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundStyle(Color.movo.textPrimary)
                 Text("Please read carefully before accepting")
-                    .font(.system(size: 12))
+                    .textStyle(Typography.caption)
                     .foregroundStyle(Color.movo.textTertiary)
             }
 
@@ -142,10 +142,10 @@ private extension PDFViewScreen {
                 .foregroundStyle(Color.movo.textTertiary)
             VStack(spacing: 6) {
                 Text("Document Unavailable")
-                    .font(.system(size: 17, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundStyle(Color.movo.textPrimary)
                 Text("Unable to load this document.\nPlease try again later.")
-                    .font(.system(size: 14))
+                    .textStyle(Typography.body)
                     .foregroundStyle(Color.movo.textTertiary)
                     .multilineTextAlignment(.center)
             }
@@ -173,7 +173,7 @@ private extension PDFViewScreen {
                 Text(hasReachedEnd
                      ? "By tapping Accept, you agree to the above document."
                      : "Scroll to the end to accept this document.")
-                    .font(.system(size: 12))
+                    .textStyle(Typography.caption)
                     .foregroundStyle(Color.movo.textTertiary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, DesignTokens.Spacing.lg)
@@ -187,11 +187,11 @@ private extension PDFViewScreen {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 16))
                         Text("Accept & continue")
-                            .font(.system(size: 15, weight: .semibold))
+                            .textStyle(Typography.buttonLarge)
                     }
                     .foregroundStyle(
                         hasReachedEnd
-                        ? Color.movo.background
+                        ? Color.movo.onAccent
                         : Color.movo.accent.opacity(0.55)
                     )
                     .frame(maxWidth: .infinity)
