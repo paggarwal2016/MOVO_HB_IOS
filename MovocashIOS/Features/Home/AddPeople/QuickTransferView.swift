@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import MobileBankingSDK
 
 struct QuickTransferView: View {
 
@@ -29,6 +30,7 @@ struct QuickTransferView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var transVM: TransactionViewModel
+    @StateObject private var achVM: PlaidAchViewModel
     @FocusState private var amountFocused: Bool
 
     @State private var amountText = "0"
@@ -36,7 +38,6 @@ struct QuickTransferView: View {
     @State private var selectedCard: VCardListResponse?
     @State private var showConfirmSheet = false
     @State private var showAccountSheet = false
-    @State private var successData: SuccessConfirmation?
     @State private var sendTask: Task<Void, Never>?
 
     var onSuccess: () -> Void = {}
@@ -47,6 +48,7 @@ struct QuickTransferView: View {
         self.primaryLinkedCard = primaryLinkedCard
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
+        _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _selectedCard = State(wrappedValue: primaryLinkedCard ?? cards.first)
     }
 
@@ -91,7 +93,7 @@ struct QuickTransferView: View {
             }
             .blur(radius: showAccountSheet ? 3 : 0)
 
-            if transVM.state == .loading {
+            if transVM.state == .loading || achVM.state == .loading {
                 Color.black.opacity(0.5)
                     .ignoresSafeArea()
                 SpinnerView()
@@ -129,7 +131,10 @@ struct QuickTransferView: View {
                 onCancel: { showConfirmSheet = false },
                 onConfirm: {
                     showConfirmSheet = false
-                    sendTask = Task { await sendMoney() }
+                    sendTask = Task {
+                        try? await Task.sleep(nanoseconds: 350_000_000)
+                        await sendMoney()
+                    }
                 }
             )
             .padding(.top, 30)
@@ -137,10 +142,10 @@ struct QuickTransferView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
         }
-        .fullScreenCover(item: $successData) { data in
+        .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
             SuccessConfirmationView(
                 viewModel: SuccessConfirmationViewModel(success: data) {
-                    successData = nil
+                    achVM.peerTransferSuccess = nil
                     onSuccess()
                     dismiss()
                 }
@@ -368,7 +373,7 @@ struct QuickTransferView: View {
                 MovoMVSymbol().frame(width: 28, height: 28)
             }
             .frame(width: 52, height: 52)
-
+            
             VStack(alignment: .leading, spacing: 4) {
                 if let card = selectedCard {
                     let isPrimary = card.id == primaryLinkedCard?.id
@@ -395,14 +400,14 @@ struct QuickTransferView: View {
                         .foregroundColor(Color.movo.textDisabled)
                 }
             }
-
+            
             Spacer()
-
-//            if displayCards.count > 1 {
-//                Image(systemName: "chevron.right")
-//                    .font(.system(size: 12, weight: .semibold))
-//                    .foregroundColor(Color.movo.accent)
-//            }
+            
+            //            if displayCards.count > 1 {
+            //                Image(systemName: "chevron.right")
+            //                    .font(.system(size: 12, weight: .semibold))
+            //                    .foregroundColor(Color.movo.accent)
+            //            }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
@@ -513,7 +518,10 @@ struct QuickTransferView: View {
         Button {
             UIApplication.shared.dismissKeyboard()
             amountFocused = false
-            showReview()
+            Task {
+                await sendMoney()
+            }
+            //showReview()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.up.forward")
@@ -544,50 +552,23 @@ struct QuickTransferView: View {
         }
         showConfirmSheet = true
     }
-
+    
     private func sendMoney() async {
         guard let fromCard = selectedCard else { return }
+        guard !Task.isCancelled else { return }
 
         let rawPhone = contact.phoneNumber ?? ""
         let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
         let sanitized = PhoneNumberValidator.sanitize(withCountry)
         let normalizedPhone = PhoneNumberValidator.normalize(sanitized)
 
-        let request = TransactionRequest.Internal(
-            description: descriptionText,
+        await achVM.sendMoneyToContact(
+            fromCard: fromCard,
+            toName: contact.nickname ?? contact.phoneNumber ?? "",
+            normalizedPhone: normalizedPhone,
             amount: amount,
-            toAccountId: 0,
-            toClientId: 0,
-            fromAccountId: fromCard.savingsAccountId ?? 0,
-            phoneNumber: normalizedPhone,
-            userAction: "Internal-Transfer",
-            nickname: contact.nickname ?? ""
-        )
-        let success = await transVM.submitInternalTransfer(request: request)
-
-        // If the task was cancelled mid-flight (session expired), do nothing —
-        // the .onReceive handler already dismissed this view.
-        guard !Task.isCancelled else { return }
-
-        guard success else {
-            AlertManager.shared.showError("Transfer failed. Please try again.")
-            return
-        }
-
-        let dateText = Date.now.formatted(date: .long, time: .shortened)
-        let isPrimary = fromCard.id == primaryLinkedCard?.id
-        let fromName = isPrimary && primaryAccountNickname?.isEmpty == false ? primaryAccountNickname! : fromCard.displayName
-        successData = SuccessConfirmation(
-            channel: .peer,
-            amount: Decimal(string: amountText) ?? 0,
-            fromAccountName: fromName,
-            fromAccountMask: fromCard.maskedNumber,
-            toAccountName: contact.nickname ?? contact.phoneNumber ?? "",
-            toAccountMask: contact.nickname != nil ? contact.phoneNumber : nil,
-            note: descriptionText.isEmpty ? nil : descriptionText,
-            arrivesText: "Instantly",
-            dateText: dateText,
-            referenceCode: "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"
+            amountText: amountText,
+            description: descriptionText.isEmpty ? nil : descriptionText
         )
     }
 }
