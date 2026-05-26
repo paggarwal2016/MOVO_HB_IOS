@@ -13,16 +13,18 @@ import Contacts
 struct PayAnyoneView: View {
     
     @StateObject private var contactVM: ContactViewModel
+    @StateObject private var cardVM: VCardViewModel
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
     @SwiftUI.Environment(\.openURL) private var openURL
-    
+
     let cards: [VCardListResponse]
-    let totalBalance: Decimal
-    
+    let primaryLinkedCard: VCardListResponse?
+
+    @State private var localPrimaryCard: VCardListResponse?
     @Binding var selectedTab: Tab
-    
+
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
@@ -30,12 +32,14 @@ struct PayAnyoneView: View {
     @State private var selectedFrequent: ContactRecord? = nil
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
-    
-    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], totalBalance: Decimal) {
+
+    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
+        _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
         _selectedTab = selectedTab
         self.cards = cards
-        self.totalBalance = totalBalance
+        self.primaryLinkedCard = primaryLinkedCard
+        _localPrimaryCard = State(initialValue: primaryLinkedCard)
     }
     
     private var isFormValid: Bool {
@@ -124,20 +128,23 @@ struct PayAnyoneView: View {
         .background(Color.movo.background)
         .preferredColorScheme(.dark)
         .navigationDestination(for: ContactRecord.self) { contact in
-            QuickTransferView(contact: contact, container: container, cards: cards)
+            QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
         }
         .navigationDestination(isPresented: Binding(
             get: { selectedFrequent != nil },
             set: { if !$0 { selectedFrequent = nil } }
         )) {
             if let contact = selectedFrequent {
-                QuickTransferView(contact: contact, container: container, cards: cards)
+                QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
             }
         }
         .sheet(isPresented: $showAllFrequents) {
-            AllFrequentsView(contactVM: contactVM, container: container, cards: cards)
+            AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: localPrimaryCard)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .onChange(of: primaryLinkedCard?.id) { _ in
+            localPrimaryCard = primaryLinkedCard
         }
         .onAppear {
             // Resolve permission status synchronously before async work begins
@@ -460,6 +467,13 @@ struct PayAnyoneView: View {
         }
     }
     
+    private func refreshPrimaryCard() {
+        Task {
+            guard let updated = try? await cardVM.fetchPrimaryCard() else { return }
+            localPrimaryCard = updated
+        }
+    }
+
     private func enableContacts() {
         Task {
             await contactVM.load()
@@ -694,7 +708,7 @@ extension PayAnyoneView {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Eyebrow("Available to send")
-                Text("$\(totalBalance.toCurrencyString())")
+                Text(localPrimaryCard?.displayBalance ?? "$ 0.00")
                     .font(.system(size: 22, weight: .semibold).monospacedDigit())
                     .foregroundColor(Color.movo.textPrimary)
                     .tracking(-0.5)

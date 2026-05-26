@@ -28,11 +28,13 @@ public struct SuccessConfirmation: Sendable, Identifiable {
     
     public let toAccountName: String        // "Wells Fargo Checking" or "Maya Patel"
     public let toAccountMask: String?       // "••8900" or nil for peer
-    
+
+    public let note: String?               // optional message/memo
+
     public let arrivesText: String          // "By May 8, 2026" or "Instantly"
     public let dateText: String             // "May 5, 2026 · 9:41 AM"
     public let referenceCode: String        // "MV-20260505-9F2A"
-    
+
     public init(channel: Channel,
                 amount: Decimal,
                 currencyCode: String = "USD",
@@ -40,6 +42,7 @@ public struct SuccessConfirmation: Sendable, Identifiable {
                 fromAccountMask: String? = nil,
                 toAccountName: String,
                 toAccountMask: String? = nil,
+                note: String? = nil,
                 arrivesText: String,
                 dateText: String,
                 referenceCode: String) {
@@ -50,6 +53,7 @@ public struct SuccessConfirmation: Sendable, Identifiable {
         self.fromAccountMask = fromAccountMask
         self.toAccountName = toAccountName
         self.toAccountMask = toAccountMask
+        self.note = note
         self.arrivesText = arrivesText
         self.dateText = dateText
         self.referenceCode = referenceCode
@@ -195,13 +199,17 @@ public struct SuccessConfirmationView: View {
             summaryRow(label: "To",
                        value: vm.success.toAccountName,
                        meta: vm.success.toAccountMask)
+//            divider
+//
+//            summaryRow(label: "Arrives",
+//                       value: vm.success.arrivesText,
+//                       meta: nil)
+            if let note = vm.success.note, !note.isEmpty {
+                divider
+                summaryRow(label: "Note", value: note, meta: nil)
+            }
             divider
-            
-            summaryRow(label: "Arrives",
-                       value: vm.success.arrivesText,
-                       meta: nil)
-            divider
-            
+
             summaryRow(label: "Date",
                        value: vm.success.dateText,
                        meta: nil)

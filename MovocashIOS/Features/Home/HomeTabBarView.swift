@@ -61,6 +61,7 @@ struct HomeTabBarView: View {
 
     @State private var selectedTab: Tab = .home
     @State private var isLoggingOut = false
+    @State private var hasLoadedOnce = false
 
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
@@ -81,6 +82,8 @@ struct HomeTabBarView: View {
             }
         }
         .task {
+            guard !hasLoadedOnce else { return }
+            hasLoadedOnce = true
             await dashboardVM.fetchDashboard()
             await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
         }
@@ -93,11 +96,17 @@ struct HomeTabBarView: View {
         }
         .onChange(of: selectedTab) { newTab in
             guard newTab == .home else { return }
-            Task { await dashboardVM.refreshIfStale(within: 15) }
+            Task {
+                await dashboardVM.refreshIfStale(within: 15)
+                await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+            }
         }
         .onChange(of: scenePhase) { phase in
             guard phase == .active, dashboardVM.dashboard != nil else { return }
-            Task { await dashboardVM.refreshIfStale(within: 60) }
+            Task {
+                await dashboardVM.refreshIfStale(within: 60)
+                await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+            }
         }
     }
 }
@@ -302,7 +311,7 @@ private extension HomeTabBarView {
     func destination(for tab: Tab) -> some View {
         switch tab {
         case .home:     DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM)
-        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: vCardVM.apiCards, totalBalance: dashboardVM.primaryAccount?.availableBalance ?? 0)
+        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: vCardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard)
         case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
         }
     }

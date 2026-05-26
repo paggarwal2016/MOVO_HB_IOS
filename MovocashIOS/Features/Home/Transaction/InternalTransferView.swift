@@ -177,13 +177,9 @@ struct InternalTransferView: View {
             ConfirmationBottomSheet(
                 channel: .internalTransfer,
                 amount: amountText,
-                fromName: {
-                    let isPrimary = selectedFromCard?.id == primaryLinkedCard?.id
-                    if isPrimary, let nick = selectedFromAccount?.nickname, !nick.isEmpty { return nick }
-                    return selectedFromCard?.name ?? "Card"
-                }(),
+                fromName: selectedFromCard?.savingsAccountNickname ?? selectedFromCard?.name ?? "Card",
                 fromMask: selectedFromCard?.maskedNumber,
-                toName: selectedToCard?.name ?? "Virtual Card",
+                toName: selectedToCard?.savingsAccountNickname ?? selectedToCard?.name ?? "Virtual Card",
                 toMask: selectedToCard?.maskedNumber,
                 note: descriptionText.isEmpty ? nil : descriptionText,
                 isLoading: transVM.state == .loading,
@@ -409,8 +405,7 @@ struct InternalTransferView: View {
 
     // Fixed row: no chevron, not tappable (primary card design)
     private func fixedSlot(card: VCardListResponse?, balance: String, nickname: String? = nil) -> some View {
-        let name = card?.name ?? "Card"
-        let lastFour = card?.lastFour ?? "••••"
+        let displayName = card?.savingsAccountNickname ?? card?.name ?? "Card"
         let isPrimary = card != nil && card?.id == primaryLinkedCard?.id
         return HStack(spacing: Spacing.md) {
             ZStack {
@@ -420,32 +415,21 @@ struct InternalTransferView: View {
             }
             .frame(width: 52, height: 52)
 
-            if isPrimary {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: Spacing.xs) {
-                        Text(nickname?.isEmpty == false ? nickname! : name)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(Color.movo.textPrimary)
-                        StatusPill("PRIMARY", variant: .accent)
-                    }
-                    Text("•••• •••• •••• \(lastFour)")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(Color.movo.textTertiary)
-                    if !balance.isEmpty {
-                        Text(balance)
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(Color.movo.textTertiary)
-                    }
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(name)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: Spacing.xs) {
+                    Text(displayName)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
-                    Text("•••• •••• •••• \(lastFour)")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(Color.movo.textTertiary)
+                    if isPrimary {
+                        StatusPill("PRIMARY", variant: .accent)
+                    }
                 }
+                Text(card?.maskedNumber ?? "•••• •••• •••• ••••")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(Color.movo.textTertiary)
+                Text(card?.displayBalance ?? balance)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(Color.movo.textTertiary)
             }
 
             Spacer()
@@ -473,9 +457,7 @@ struct InternalTransferView: View {
     }
 
     private func pickableRowContent(card: VCardListResponse?, balance: String, showChevron: Bool) -> some View {
-        let cardName = card?.name ?? "Select destination card"
-        let lastFour = card?.lastFour ?? "••••"
-        let subtitle = "•••• •••• •••• \(lastFour)"
+        let cardName = card?.savingsAccountNickname ?? card?.name ?? "Select destination card"
         return HStack(spacing: Spacing.md) {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
@@ -494,8 +476,11 @@ struct InternalTransferView: View {
                 Text(cardName)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(card != nil ? Color.movo.textPrimary : Color.movo.textDisabled)
-                if card != nil {
-                    Text(subtitle)
+                if let card {
+                    Text(card.maskedNumber)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.movo.textTertiary)
+                    Text(card.displayBalance)
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(Color.movo.textTertiary)
                 }
@@ -725,10 +710,13 @@ private struct CardPickerSheet: View {
                                 .frame(width: 46, height: 46)
 
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(card.name ?? "Virtual Card")
+                                    Text(card.savingsAccountNickname ?? card.name ?? "Virtual Card")
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(Color.movo.textPrimary)
                                     Text(card.maskedNumber)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color.movo.textTertiary)
+                                    Text(card.displayBalance)
                                         .font(.system(size: 13))
                                         .foregroundColor(Color.movo.textTertiary)
                                 }

@@ -10,7 +10,6 @@ struct PayAnyoneContactPickerView: View {
 
     let container: AppContainer
     let cards: [VCardListResponse]
-    let accountBalance: Decimal
     let primaryLinkedCard: VCardListResponse?
     var onSuccess: () -> Void = {}
 
@@ -27,10 +26,9 @@ struct PayAnyoneContactPickerView: View {
     @State private var loadTask: Task<Void, Never>?
     @State private var createContactTask: Task<Void, Never>?
 
-    init(container: AppContainer, cards: [VCardListResponse], accountBalance: Decimal, primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
+    init(container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
         self.container = container
         self.cards = cards
-        self.accountBalance = accountBalance
         self.primaryLinkedCard = primaryLinkedCard
         self.onSuccess = onSuccess
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
@@ -89,7 +87,6 @@ struct PayAnyoneContactPickerView: View {
                     contact: contact,
                     container: container,
                     cards: cards,
-                    accountBalance: accountBalance,
                     primaryLinkedCard: primaryLinkedCard,
                     onSuccess: { onSuccess(); dismiss() }
                 )
@@ -103,7 +100,6 @@ struct PayAnyoneContactPickerView: View {
                         contact: contact,
                         container: container,
                         cards: cards,
-                        accountBalance: accountBalance,
                         primaryLinkedCard: primaryLinkedCard,
                         onSuccess: { onSuccess(); dismiss() }
                     )
@@ -137,7 +133,6 @@ struct PayAnyoneContactPickerView: View {
                     contactVM: contactVM,
                     container: container,
                     cards: cards,
-                    accountBalance: accountBalance,
                     primaryLinkedCard: primaryLinkedCard,
                     onSuccess: { onSuccess(); dismiss() }
                 )

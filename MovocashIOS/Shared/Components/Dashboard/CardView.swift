@@ -31,7 +31,7 @@ struct CardItemView: View {
                     Image(systemName: "creditcard")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundColor(Color.movo.textTertiary)
-                    Text((card.name ?? card.displayName).uppercased())
+                    Text((card.savingsAccountNickname ?? card.name ?? card.displayName).uppercased())
                         .font(.system(size: 11, weight: .semibold))
                         .tracking(0.9)
                         .foregroundColor(Color.movo.textTertiary)
@@ -48,8 +48,8 @@ struct CardItemView: View {
                 
                 Spacer()
                 
-                // Type · last four
-                Text("VIRTUAL  ·  ••\(card.lastFour ?? "——")")
+                // Type · masked number
+                Text("VIRTUAL  ·  \(card.maskedNumber)")
                     .font(.system(size: 11, weight: .medium))
                     .tracking(0.5)
                     .foregroundColor(Color.movo.textTertiary)
