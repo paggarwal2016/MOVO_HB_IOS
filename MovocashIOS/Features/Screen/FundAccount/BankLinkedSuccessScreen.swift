@@ -64,7 +64,7 @@ struct BankLinkedSuccessScreen: View {
 
             VStack(spacing: 0) {
 
-                Spacer().frame(height: Spacing.huge + Spacing.xxxl) // 72pt — icon in upper third
+                Spacer().frame(height: Spacing.huge + Spacing.xxl) // 72pt — icon in upper third
 
                 // MARK: - Success Icon
 
@@ -190,7 +190,7 @@ struct BankLinkedSuccessScreen: View {
                     if container != nil && primaryAccount != nil {
                         showFundAccount = true   // navigate into FundAccountView
                     } else {
-                        onDone()                 // fallback — ManageExternalAccountsView path
+                        onDone()
                     }
                 } label: {
                     Text("Add funds")

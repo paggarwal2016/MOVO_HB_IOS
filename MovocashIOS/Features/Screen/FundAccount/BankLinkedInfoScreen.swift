@@ -17,10 +17,18 @@ struct BankLinkedInfoScreen: View {
 
     @State private var isConnecting = false
     @State private var fetchedAchAccounts: [ACHAccount] = []
-    @State private var showFundAccount = false
+    @State private var showSuccessScreen = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xxl) {
+            
+            HStack {
+                Spacer()
+                CircularNavButton(systemName: "xmark") { dismiss() }
+                    .accessibilityLabel("Close")
+                    .padding(.leading, Spacing.md)
+            }
+            .padding(.top, Spacing.lg)
 
             // Header — logos + close on one balanced row
             HStack(alignment: .center, spacing: 0) {
@@ -33,6 +41,8 @@ struct BankLinkedInfoScreen: View {
                         MovoMVSymbol(color: Color.movo.onAccent)
                             .frame(width: 28, height: 28)
                     )
+                
+                Spacer()
 
                 // Dot connector — fills space between the two tiles
                 HStack(spacing: 5) {
@@ -44,6 +54,8 @@ struct BankLinkedInfoScreen: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                
+                Spacer()
 
                 // Plaid tile
                 RoundedRectangle(cornerRadius: Radius.xl)
@@ -58,11 +70,7 @@ struct BankLinkedInfoScreen: View {
                             .textStyle(Typography.cardTitle)
                             .foregroundColor(Color.movo.textPrimary)
                     )
-
-                // Close — fixed width to balance MOVO tile on the left
-                CircularNavButton(systemName: "xmark") { dismiss() }
-                    .accessibilityLabel("Close")
-                    .padding(.leading, Spacing.md)
+               
             }
 
             // Title
@@ -121,13 +129,11 @@ struct BankLinkedInfoScreen: View {
                         let response = try? await container.network.request(AchAPI.getAccounts) as ACHResponse
                         SpinnerView.hideFullScreen()
                         fetchedAchAccounts = response?.achAccounts ?? []
-                        if primaryAccount != nil {
-                            showFundAccount = true
-                        } else {
-                            // No primary account available — surface result to caller.
-                            onSuccess()
-                            dismiss()
-                        }
+                        // Always show the success screen so the user sees the
+                        // linked-account confirmation. BankLinkedSuccessScreen
+                        // handles the "Add funds" → FundAccountView step itself
+                        // when container + primaryAccount are provided.
+                        showSuccessScreen = true
                     }
                 }
             }
@@ -142,24 +148,24 @@ struct BankLinkedInfoScreen: View {
             // sheet is dismissed mid-flow (e.g. force-swipe while connecting).
             SpinnerView.hideFullScreen()
         }
-        // MARK: - FundAccountView
-        // Presented immediately after the bank is linked and fresh ACH accounts
-        // are fetched — skips the intermediate success screen for a faster flow.
-        .fullScreenCover(isPresented: $showFundAccount) {
-            if let primary = primaryAccount {
-                FundAccountView(
-                    container: container,
-                    initialAccounts: fetchedAchAccounts,
-                    primaryAccount: primary,
-                    onSuccess: {
-                        showFundAccount = false
-                        onSuccess()
-                        dismiss()
-                    }
-                )
-                .toolbar(.hidden, for: .navigationBar)
-                .navigationBarBackButtonHidden(true)
-            }
+        // MARK: - BankLinkedSuccessScreen
+        // Shown after the bank account is linked. container + primaryAccount +
+        // linkedAccounts are forwarded so the "Add funds" button inside
+        // BankLinkedSuccessScreen can present FundAccountView directly.
+        // onDone fires after the transfer completes (or if the user skips
+        // funding) — dismiss the whole sheet chain back to the dashboard.
+        .fullScreenCover(isPresented: $showSuccessScreen) {
+            BankLinkedSuccessScreen(
+                account: fetchedAchAccounts.first,
+                onDone: {
+                    showSuccessScreen = false
+                    onSuccess()
+                    dismiss()
+                },
+                container: container,
+                primaryAccount: primaryAccount,
+                linkedAccounts: fetchedAchAccounts
+            )
         }
     }
 
