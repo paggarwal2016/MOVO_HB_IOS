@@ -395,7 +395,7 @@ struct DashboardView: View {
                         isLinkingPlaid = true
                         defer { isLinkingPlaid = false }
                         do {
-
+                            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
                         } catch {
                             AlertManager.shared.showError("Unable to initialize. Please try again.")
                             return
@@ -410,7 +410,7 @@ struct DashboardView: View {
                         isLinkingPlaid = true
                         defer { isLinkingPlaid = false }
                         do {
-
+                            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
                         } catch {
                             AlertManager.shared.showError("Unable to initialize. Please try again.")
                             return
