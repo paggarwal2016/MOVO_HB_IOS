@@ -208,7 +208,7 @@ struct PinInputAlertPresenter<Content: View>: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("PIN")
                     .textStyle(Typography.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.movo.textSecondary)
                 HStack {
                     SecureToggleField(
                         placeholder: pinPlaceholder,
@@ -227,7 +227,7 @@ struct PinInputAlertPresenter<Content: View>: View {
 
                     Button { isPinVisible.toggle() } label: {
                         Image(systemName: isPinVisible ? "eye.slash" : "eye")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.movo.textSecondary)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -239,7 +239,7 @@ struct PinInputAlertPresenter<Content: View>: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Confirm PIN")
                     .textStyle(Typography.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.movo.textSecondary)
                 HStack {
                     SecureToggleField(
                         placeholder: confirmPlaceholder,
@@ -257,7 +257,7 @@ struct PinInputAlertPresenter<Content: View>: View {
 
                     Button { isConfirmPinVisible.toggle() } label: {
                         Image(systemName: isConfirmPinVisible ? "eye.slash" : "eye")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.movo.textSecondary)
                     }
                 }
                 .padding(.horizontal, 8)

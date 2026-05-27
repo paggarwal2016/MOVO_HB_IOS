@@ -332,7 +332,7 @@ struct InternalTransferView: View {
         if showSwap {
             ZStack {
                 Rectangle()
-                    .fill(Color.movo.border)
+                    .fill(Color.movo.cardBorder)
                     .frame(height: Stroke.hairline)
                     .padding(.horizontal, Spacing.lg)
                     .allowsHitTesting(false)
@@ -353,7 +353,7 @@ struct InternalTransferView: View {
             .padding(.vertical, Spacing.md)
         } else {
             Rectangle()
-                .fill(Color.movo.border)
+                .fill(Color.movo.cardBorder)
                 .frame(height: Stroke.hairline)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.md)

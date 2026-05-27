@@ -62,7 +62,6 @@ struct ManageExternalAccountsView: View {
             }
         }
         .background(Color.movo.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
         .navigationDestination(isPresented: $showWithdraw) {
             if let primary = primaryAccount {
                 FundAccountView(

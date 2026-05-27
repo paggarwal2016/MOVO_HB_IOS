@@ -94,7 +94,7 @@ struct LinkedAccountsSectionView: View {
                     LinkedAccountRowView(account: accounts[index])
                     if index < accounts.count - 1 {
                         Rectangle()
-                            .fill(Color.movo.border)
+                            .fill(Color.movo.cardBorder)
                             .frame(height: Stroke.hairline)
                     }
                 }
@@ -124,7 +124,7 @@ struct LinkedAccountsSectionView: View {
             .frame(maxWidth: .infinity)
             .overlay(alignment: .top) {
                 Rectangle()
-                    .fill(Color.movo.border)
+                    .fill(Color.movo.cardBorder)
                     .frame(height: Stroke.hairline)
             }
         }

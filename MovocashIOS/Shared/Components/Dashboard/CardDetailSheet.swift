@@ -428,18 +428,18 @@ struct CardDetailSheet: View {
                     ActivityRow(item: item)
                     if index < txVM.transactions.count - 1 {
                         Rectangle()
-                            .fill(Color.movo.border)
+                            .fill(Color.movo.cardBorder)
                             .frame(height: Stroke.hairline)
-                            .padding(.leading, 60)
+                            .padding(.horizontal, Spacing.md)
                     }
                 }
             }
             .background(
                 RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .fill(Color.movo.surface.opacity(0.85))
+                    .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.heroCard)
-                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                            .strokeBorder(Color.movo.cardBorder, lineWidth: Stroke.hairline)
                     )
             )
         }

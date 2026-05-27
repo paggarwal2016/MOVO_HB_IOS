@@ -258,7 +258,7 @@ struct SecuritySettingsView: View {
             Spacer()
             if let detail {
                 Text(detail)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.movo.textSecondary)
                     .font(.subheadline)
             } else {
                 Image(systemName: "chevron.right")
@@ -310,7 +310,7 @@ struct RemovePasscodeConfirmView: View {
                             .font(.title2.bold())
                         Text("Enter your current passcode to confirm removal.")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.movo.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
                     }

@@ -100,7 +100,7 @@ struct ViewCardScreen: View {
         VStack(spacing: 12) {
             Image(systemName: "creditcard")
                 .font(.system(size: 52, weight: .light))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.movo.textSecondary)
             Text("No Card Yet")
                 .font(.title3.bold())
         }

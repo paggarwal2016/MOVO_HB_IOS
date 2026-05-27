@@ -93,7 +93,7 @@ struct BiometricGateView: View {
 
             Text("Unlock with \(biometricLabel)")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.movo.textPrimary)
 
             if showError {
                 Spacer().frame(height: 12)
@@ -115,13 +115,13 @@ struct BiometricGateView: View {
                     } else {
                         Text("Try Again")
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.movo.textPrimary)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
             }
-            .background(Color.white.opacity(0.15))
+            .background(Color.movo.elevated.opacity(0.4))
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .padding(.horizontal, 40)
             .disabled(isLoading)

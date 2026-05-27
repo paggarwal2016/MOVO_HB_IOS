@@ -63,6 +63,10 @@ public struct MovoColorScheme: Sendable {
 
     // Card surface — adaptive elevation: light = platinum lift, dark = elevated lift
     public let cardSurface:     ColorToken
+    // Card border — brighter than borderStrong for visible outlines on cardSurface in dark mode
+    public let cardBorder:      ColorToken
+    // Ghost surface — surface at 85% opacity, subtle near-flush card feel
+   // public let ghostSurface:    ColorToken
 
     // Card artwork — brand-locked (heritage black card; same hex in both modes)
     // Scoped to the physical card artwork view only.
@@ -106,6 +110,7 @@ public struct MovoColorScheme: Sendable {
         //  in light mode and made CTA labels invisible.)
         onAccent:      DesignTokens.Palette.onAccent,
         cardSurface:   DesignTokens.Palette.cardSurface,
+        cardBorder:    DesignTokens.Palette.cardBorder,
 
         // Heritage black card — locked, never adapts.
         cardArtwork:       DesignTokens.Palette.cardArtwork,

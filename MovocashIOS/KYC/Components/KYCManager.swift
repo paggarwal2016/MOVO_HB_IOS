@@ -160,7 +160,7 @@ private extension KYCManager {
 
     func makeKYCTheme() -> Theme {
         Theme(
-            backgroundGradient: [UIColor(Color(red: 0.10, green: 0.12, blue: 0.16)), UIColor(Color.movo.background)], // Back theme
+            backgroundGradient: [UIColor(Color.movo.elevated), UIColor(Color.movo.background)], // Back theme
                         
             accentColor: UIColor(Color.movo.textTertiary), // Try againing and icon Disclaimer
             

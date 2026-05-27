@@ -113,10 +113,10 @@ struct TransactionRow: View {
                 HStack(spacing: 4) {
                     Text(item.subtitle)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.movo.textSecondary)
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.movo.textSecondary)
                 }
             }
 

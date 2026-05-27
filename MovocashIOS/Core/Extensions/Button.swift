@@ -135,7 +135,7 @@ struct FilledButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding()
             .background(Color.primary)
-            .foregroundColor(.white)
+            .foregroundColor(Color.movo.onAccent)
             .cornerRadius(8)
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
     }

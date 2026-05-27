@@ -38,6 +38,7 @@ extension Color {
         public static var warning:       Color { MovoTheme.color.warning.color }
         public static var onAccent:      Color { MovoTheme.color.onAccent.color }
         public static var cardSurface:   Color { MovoTheme.color.cardSurface.color }
+        public static var cardBorder:    Color { MovoTheme.color.cardBorder.color }
 
         // Card artwork — brand-locked. Use only in the physical card artwork view.
         public static var cardArtwork:       Color { MovoTheme.color.cardArtwork.color }

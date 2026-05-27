@@ -163,7 +163,7 @@ public struct AddContactSheet: View {
                         .padding(.trailing, Spacing.sm + 2)
                         .overlay(
                             Rectangle()
-                                .fill(Color.movo.border)
+                                .fill(Color.movo.cardBorder)
                                 .frame(width: Stroke.hairline)
                                 .padding(.vertical, Spacing.xs),
                             alignment: .trailing

@@ -87,10 +87,17 @@ public enum DesignTokens {
         public static let onAccent = ColorToken(
             light: 0xF2F3F6, dark: 0x060608, name: "onAccent")
 
-        // Card surface — adaptive elevation tuned per mode.
+        // Card surface — adaptive elevation tuned per mode. 1C1C25
         // Light: subtle platinum lift (matches surface). Dark: clear lift from black (matches elevated).
         public static let cardSurface = ColorToken(
-            light: 0xE4E6EC, dark: 0x1C1C25, name: "cardSurface")
+            light: 0xE4E6EC, dark: 0x0F0F14, name: "cardSurface", alpha: 0.85)
+
+        // Card border — paired with cardSurface for visible outlines in dark mode.
+        // Light: same as borderStrong light. Dark: ~70-unit lift above cardSurface for hairline visibility.
+        public static let cardBorder = ColorToken(
+            light: 0xBFC3CE, dark: 0x1C1C25, name: "cardBorder")
+
+        
 
         // Card artwork — LOCKED (heritage Amex-style black card; constant across both modes).
         // Use ONLY in the physical card artwork view. Do not use for any other UI surface.
