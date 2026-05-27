@@ -55,9 +55,10 @@ nonisolated struct SavingsAccountInfo: Decodable, Sendable, Identifiable {
     let clientId: Int
     let nickname: String?
     let isPrimary: Bool
-    
+    let routingNumber: String?
+
     // MARK: - Coding Keys
-    
+
     enum CodingKeys: CodingKey {
         case id
         case accountNumber
@@ -68,13 +69,14 @@ nonisolated struct SavingsAccountInfo: Decodable, Sendable, Identifiable {
         case clientId
         case nickname
         case isPrimary
+        case routingNumber
     }
-    
+
     // MARK: - Custom Decoder
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         id = try container.decode(Int.self, forKey: .id)
         accountNumber = try container.decode(String.self, forKey: .accountNumber)
         clientName = try container.decode(String.self, forKey: .clientName)
@@ -84,9 +86,10 @@ nonisolated struct SavingsAccountInfo: Decodable, Sendable, Identifiable {
         accountBalance   = Decimal(string: accBalStr) ?? 0
         availableBalance = Decimal(string: availBalStr) ?? 0
         clientId = try container.decode(Int.self, forKey: .clientId)
-        
+
         nickname = try container.decodeIfPresent(String.self, forKey: .nickname)
         isPrimary = try container.decodeIfPresent(Bool.self, forKey: .isPrimary) ?? false
+        routingNumber = try container.decodeIfPresent(String.self, forKey: .routingNumber)
     }
     
     // MARK: - Display Helpers

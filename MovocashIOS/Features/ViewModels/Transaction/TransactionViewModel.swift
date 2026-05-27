@@ -18,6 +18,10 @@ final class TransactionViewModel: BaseViewModel {
     @Published public var searchQuery: String = ""
     public var totalCount: Int { transactions.count }
 
+    /// Result of the most recent `checkIntent` call.
+    /// `nil` while the check is in-flight or if it has not yet been called.
+    @Published var checkIntentResult: CheckIntentResponse? = nil
+
     // MARK: - Computed
 
     var filteredTransactions: [TransactionItem] {
@@ -122,6 +126,30 @@ final class TransactionViewModel: BaseViewModel {
             // cancelled — no action
         } catch {
             // error surfaced via BaseViewModel toast
+        }
+    }
+
+    // MARK: - Check Transfer Intent
+
+    /// Calls `POST /transactions/check-intent` for the given phone number.
+    /// Sets `checkIntentResult` on success; leaves it `nil` on error so the
+    /// Pay button stays enabled (the transfer itself will fail if ineligible).
+    func checkIntent(phoneNumber: String) async {
+        checkIntentResult = nil
+        do {
+            let request = TransactionRequest.CheckMode(
+                phoneNumber: phoneNumber,
+                userAction: "PEER-TRANSFER"
+            )
+            let response: CheckIntentResponse = try await perform {
+                try await self.network.request(TransactionAPI.checkType(request))
+            }
+            checkIntentResult = response
+        } catch is CancellationError {
+            // View dismissed mid-flight — no action needed.
+        } catch {
+            // Error already surfaced via BaseViewModel alert.
+            // checkIntentResult stays nil → Pay button remains enabled.
         }
     }
 

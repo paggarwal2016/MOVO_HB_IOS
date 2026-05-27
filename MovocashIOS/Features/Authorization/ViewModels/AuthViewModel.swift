@@ -243,7 +243,50 @@ extension AuthViewModel {
               let payload = json["payload"] as? [String: Any],
               let userIdInt = payload["userId"] as? Int
         else { return false }
-        return UserDefaults.standard.bool(forKey: "passkey_registered_\(userIdInt)")
+        if case .found = keychain.getSync("passkey_registered_\(userIdInt)") { return true }
+        return false
+    }
+}
+
+// MARK: - Biometric Enrollment (per-user)
+
+extension AuthViewModel {
+
+    /// Returns true if the **current user** has completed biometric enrollment on
+    /// this device. Stored as a per-user Keychain flag so multiple users sharing
+    /// a device each independently track their own enrollment state.
+    func isBiometricEnrolledForCurrentUser() async -> Bool {
+        guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+              let json = JWTDecoder.decodePayload(token),
+              let payload = json["payload"] as? [String: Any],
+              let userIdInt = payload["userId"] as? Int
+        else { return false }
+        if case .found = keychain.getSync("biometric_enrolled_\(userIdInt)") { return true }
+        return false
+    }
+
+    /// Persists the biometric enrollment flag scoped to the current user.
+    /// Called after Face ID verify + Secure Enclave key + RSA registration all succeed.
+    func markBiometricEnrolled() async {
+        guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+              let json = JWTDecoder.decodePayload(token),
+              let payload = json["payload"] as? [String: Any],
+              let userIdInt = payload["userId"] as? Int
+        else { return }
+        try? await keychain.save("1", for: "biometric_enrolled_\(userIdInt)", protection: .backgroundSafe)
+        SecureLogger.info("Biometric enrollment marked for user \(userIdInt)", category: .auth)
+    }
+
+    /// Removes the biometric enrollment flag for the current user.
+    /// Call when the user explicitly revokes Face ID from app settings.
+    func clearBiometricEnrollmentForCurrentUser() async {
+        guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+              let json = JWTDecoder.decodePayload(token),
+              let payload = json["payload"] as? [String: Any],
+              let userIdInt = payload["userId"] as? Int
+        else { return }
+        try? await keychain.delete("biometric_enrolled_\(userIdInt)")
+        SecureLogger.info("Biometric enrollment cleared for user \(userIdInt)", category: .auth)
     }
 }
 
@@ -321,7 +364,10 @@ extension AuthViewModel {
             SecureLogger.info("tokenRSA + tokenAccess success — session started", category: .auth)
             lockManager.unlockAfterRSAAuth()
             UserDefaults.standard.set(true, forKey: "kycCompleted")
-            appState.flow = .home
+            // Always verify passkey before routing home — the user may have enrolled
+            // biometrics on a previous session without completing passkey registration.
+            let passkeyDone = await isPasskeyRegistered()
+            appState.flow = passkeyDone ? .home : .enableBiometrics
             return true
         } catch {
             SecureLogger.error("biometric login failed: \(error)", category: .auth)

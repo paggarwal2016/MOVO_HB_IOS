@@ -151,3 +151,17 @@ nonisolated struct TransactionWithdrawalResponse: Codable {
 nonisolated struct TransferInternalResponse: Codable {
     let transferId: Int
 }
+
+// MARK: - Check Intent Response
+// Matches POST /transactions/check-intent:
+//   { "success": true, "message": "...", "exists": true|false }
+
+nonisolated struct CheckIntentResponse: Decodable {
+    /// Whether the API call itself succeeded.
+    let success: Bool
+    /// Optional human-readable reason from the server.
+    let message: String?
+    /// `true` → recipient exists and transfer is permitted.
+    /// `false` → recipient not found; Pay button should be blocked.
+    let exists: Bool
+}

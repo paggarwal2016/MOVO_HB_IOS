@@ -156,6 +156,11 @@ struct PayAnyoneView: View {
                     await contactVM.load()
                 }
                 isInitialLoading = false
+                // Silently refresh primary card balance only when there is
+                // contact data to display (balance card is visible).
+                if hasAnyData {
+                    refreshPrimaryCard()
+                }
             }
         }
         .onChange(of: scenePhase) { newPhase in

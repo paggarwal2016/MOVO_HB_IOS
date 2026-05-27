@@ -305,35 +305,71 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         normalizedPhone: String,
         amount: Double,
         amountText: String,
-        description: String?
+        description: String?,
+        isInternal: Bool = false
     ) async {
         await perform {
-            // Step 1 — Configure KYC SDK (one-time)
-            if !KYCManager.shared.isConfigured {
-                try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-            }
+            // Step 1 — Configure KYC SDK on every transfer so the SDK always holds
+            // the current token. Skipping this with an isConfigured guard would leave
+            // the SDK using a stale/expired token after the first refresh cycle.
+            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
 
-            // Step 2 — Assert device passkey was registered at login (RootView owns registration).
-            // If somehow missing, reject the transfer rather than enrolling mid-payment.
-            if let token = try? await self.keychain.get("access_token", biometricPrompt: nil),
-               let json = JWTDecoder.decodePayload(token),
-               let payload = json["payload"] as? [String: Any],
-               let userIdInt = payload["userId"] as? Int {
-                guard UserDefaults.standard.bool(forKey: "passkey_registered_\(userIdInt)") else {
+            // Step 2 — Ensure device passkey is registered before attempting transfer.
+            // Keychain is the source of truth (survives OS memory pressure; UserDefaults does not).
+            // If the flag is missing (e.g. cleared by OS), attempt silent re-registration here
+            // so the user never sees a "sign out" error for a transient OS eviction.
+            guard let passkeyToken = try? await self.keychain.get("access_token", biometricPrompt: nil),
+                  let json = JWTDecoder.decodePayload(passkeyToken),
+                  let payload = json["payload"] as? [String: Any],
+                  let userIdInt = payload["userId"] as? Int
+            else {
+                throw NSError(domain: "QuickTransfer", code: -3,
+                              userInfo: [NSLocalizedDescriptionKey: "Unable to verify device identity. Please try again."])
+            }
+            let passkeyKey = "passkey_registered_\(userIdInt)"
+            if case .found = self.keychain.getSync(passkeyKey) {
+                // Already registered — proceed.
+            } else {
+                // Flag missing: attempt silent re-registration before blocking the transfer.
+                await self.service.configureSDKForTransfer(authToken: passkeyToken)
+                let reRegDeviceId = await DeviceManager.shared.deviceID()
+                guard let reRegPresenter = await self.waitForPresentableViewController() else {
                     throw NSError(domain: "QuickTransfer", code: -2,
-                                  userInfo: [NSLocalizedDescriptionKey: "Device not registered. Please sign out and sign in again."])
+                                  userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
+                }
+                do {
+                    try await self.service.registerDevicePasskey(
+                        userId: String(userIdInt),
+                        deviceId: reRegDeviceId,
+                        presentingViewController: reRegPresenter
+                    )
+                    try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+                    SecureLogger.info("Device passkey re-registered for user \(userIdInt) during transfer", category: .auth)
+                } catch {
+                    SecureLogger.error("Passkey re-registration failed: \(error.localizedDescription)", category: .auth)
+                    throw NSError(domain: "QuickTransfer", code: -2,
+                                  userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
                 }
             }
 
             // Step 3 — Create transaction intent
+            // Use .internalTransfer when the recipient is a registered MOVO user
+            // (checkIntent returned exists == true), otherwise .externalTransfer.
             let requestBody = CreateTransactionIntentRequestBody(
-                type: .externalTransfer,
-                details: .externalTransfer(
-                    fromAccountId: fromCard.savingsAccountId ?? 0,
-                    recipientPhoneNumber: normalizedPhone,
-                    amount: amount,
-                    description: description
-                ),
+                type:    isInternal ? .internalTransfer : .externalTransfer,
+                details: isInternal
+                    ? .internalTransfer(
+                        amount: amount,
+                        fromAccountId: fromCard.savingsAccountId ?? 0,
+                        phoneNumber: normalizedPhone,
+                        description: description
+                    )
+                    : .externalTransfer(
+                        fromAccountId: fromCard.savingsAccountId ?? 0,
+                        recipientPhoneNumber: normalizedPhone,
+                        amount: amount,
+                        description: description
+                    ),
                 webhookUrl: nil
             )
             let intent = try await self.service.createTransactionIntent(requestBody: requestBody)
@@ -355,10 +391,10 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             self.peerTransferSuccess = SuccessConfirmation(
                 channel: .peer,
                 amount: Decimal(string: amountText) ?? 0,
-                fromAccountName: fromCard.displayName,
+                fromAccountName: fromCard.savingsAccountNickname ?? fromCard.name ?? fromCard.displayName,
                 fromAccountMask: fromCard.maskedNumber,
                 toAccountName: toName,
-                toAccountMask: nil,
+                toAccountMask: normalizedPhone,
                 arrivesText: "Instantly",
                 dateText: Date.now.formatted(date: .long, time: .shortened),
                 referenceCode: approvalResult.intent.id

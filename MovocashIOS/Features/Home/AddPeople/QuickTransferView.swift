@@ -53,6 +53,11 @@ struct QuickTransferView: View {
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
+
+    /// Pay button is enabled only when:
+    ///  • amount > 0 and a card is selected
+    ///  • the check-intent result confirms the recipient exists (`exists == true`)
+    ///    or the result is still pending (`nil` while loading / on API error)
     private var isValid: Bool { amount > 0 && selectedCard != nil }
 
     // MARK: - Amount display helpers
@@ -101,6 +106,15 @@ struct QuickTransferView: View {
         }
         .background(Color.movo.background)
         .navigationBarHidden(true)
+        // Call check-intent as soon as the view appears so the Pay button is
+        // gated before the user finishes entering an amount.
+        .task {
+            let rawPhone    = contact.phoneNumber ?? ""
+            let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
+            let sanitized   = PhoneNumberValidator.sanitize(withCountry)
+            let normalized  = PhoneNumberValidator.normalize(sanitized)
+            await transVM.checkIntent(phoneNumber: normalized)
+        }
         .onChange(of: amountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
@@ -557,10 +571,15 @@ struct QuickTransferView: View {
         guard let fromCard = selectedCard else { return }
         guard !Task.isCancelled else { return }
 
-        let rawPhone = contact.phoneNumber ?? ""
+        let rawPhone    = contact.phoneNumber ?? ""
         let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
-        let sanitized = PhoneNumberValidator.sanitize(withCountry)
+        let sanitized   = PhoneNumberValidator.sanitize(withCountry)
         let normalizedPhone = PhoneNumberValidator.normalize(sanitized)
+
+        // checkIntent result drives the transfer route:
+        //   exists == true  → recipient is a MOVO user → .internalTransfer
+        //   exists == false / nil → external recipient → .externalTransfer
+        let isInternal = transVM.checkIntentResult?.exists ?? false
 
         await achVM.sendMoneyToContact(
             fromCard: fromCard,
@@ -568,7 +587,8 @@ struct QuickTransferView: View {
             normalizedPhone: normalizedPhone,
             amount: amount,
             amountText: amountText,
-            description: descriptionText.isEmpty ? nil : descriptionText
+            description: descriptionText.isEmpty ? nil : descriptionText,
+            isInternal: isInternal
         )
     }
 }
