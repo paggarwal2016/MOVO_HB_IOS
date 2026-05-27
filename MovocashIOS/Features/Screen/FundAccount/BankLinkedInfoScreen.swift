@@ -100,9 +100,7 @@ struct BankLinkedInfoScreen: View {
                     await Task.yield()
 
                     do {
-                        if !KYCManager.shared.isConfigured {
-                            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                        }
+                        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
                     } catch {
                         SpinnerView.hideFullScreen()
                         AlertManager.shared.showError("Unable to initialize. Please try again.")

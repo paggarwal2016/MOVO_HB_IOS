@@ -224,13 +224,18 @@ actor PlaidService {
     // MARK: - Transaction Intent
 
     func configureSDKForTransfer(authToken: String) async {
+        #if DEBUG
+        let verboseLogs = true
+        #else
+        let verboseLogs = false
+        #endif
         await MainActor.run {
             MobileBankingSDK.configure(
                 authToken: authToken,
                 baseUrl: AppConfig.sdkURL,
                 officeId: AppConfig.officeId,
                 responseEncryptionPrivateKey: nil,
-                enableVerboseLogs: true
+                enableVerboseLogs: verboseLogs
             )
         }
     }

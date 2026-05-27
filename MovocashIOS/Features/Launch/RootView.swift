@@ -357,7 +357,16 @@ struct RootView: View {
     private func advanceAfterSecurity() async {
         lockManager.resetToUnlocked()
 
+        // Show a loader immediately so the screen doesn't appear frozen during
+        // the JWT decode → SDK configure → passkey UI presentation sequence.
+        SpinnerView.showFullScreen()
+        await Task.yield()
+
         let registered = await registerPasskeyIfNeeded()
+
+        // Hide before navigating so the next screen isn't revealed behind the spinner.
+        SpinnerView.hideFullScreen()
+
         guard registered else { return }   // error already shown — stay on screen
 
         switch appState.context {
@@ -373,19 +382,23 @@ struct RootView: View {
     /// Returns true if already registered or successfully registered now.
     /// Returns false if registration failed — caller must not advance the flow.
     private func registerPasskeyIfNeeded() async -> Bool {
+        // Fail-closed: if we cannot decode the token we cannot confirm identity,
+        // so block navigation rather than silently proceeding.
         guard let token = try? await container.keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
               let userIdInt = payload["userId"] as? Int
         else {
-            // Cannot decode user — let through; server will enforce on next API call.
-            SecureLogger.warning("Passkey check: unable to decode userId from token", category: .auth)
-            return true
+            SecureLogger.error("Passkey check: unable to decode userId from token — blocking navigation", category: .auth)
+            AlertManager.shared.showError("Device registration failed. Please try again.")
+            return false
         }
 
         let userId = String(userIdInt)
         let passkeyKey = "passkey_registered_\(userId)"
-        guard !UserDefaults.standard.bool(forKey: passkeyKey) else {
+
+        // Keychain is the source of truth (survives OS memory pressure; UserDefaults does not).
+        if case .found = container.keychain.getSync(passkeyKey) {
             return true   // already registered on this device
         }
 
@@ -408,16 +421,20 @@ struct RootView: View {
         }
 
         let deviceId = await DeviceManager.shared.deviceID()
+
         do {
             try await PlaidService.shared.registerDevicePasskey(
                 userId: userId,
                 deviceId: deviceId,
                 presentingViewController: presenter
             )
-            UserDefaults.standard.set(true, forKey: passkeyKey)
+            try? await container.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
             SecureLogger.info("Device passkey registered for user \(userId)", category: .auth)
             return true
         } catch {
+            // Single attempt only — no automatic retry. If the user cancelled the
+            // passkey prompt or a network error occurred, surface the error and let
+            // them retry manually by tapping the button again.
             SecureLogger.error("Passkey registration failed: \(error.localizedDescription)", category: .auth)
             AlertManager.shared.showError("Device registration failed. Please try again.")
             return false

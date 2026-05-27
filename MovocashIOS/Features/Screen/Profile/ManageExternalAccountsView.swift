@@ -243,9 +243,7 @@ struct ManageExternalAccountsView: View {
             Task {
                 isLinkedAccountLoading = true
                 do {
-                    if !KYCManager.shared.isConfigured {
-                        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                    }
+                    try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
                 } catch {
                     isLinkedAccountLoading = false
                     AlertManager.shared.showError("Unable to initialize. Please try again.")

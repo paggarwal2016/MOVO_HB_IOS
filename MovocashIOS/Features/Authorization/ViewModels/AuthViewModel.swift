@@ -243,7 +243,8 @@ extension AuthViewModel {
               let payload = json["payload"] as? [String: Any],
               let userIdInt = payload["userId"] as? Int
         else { return false }
-        return UserDefaults.standard.bool(forKey: "passkey_registered_\(userIdInt)")
+        if case .found = keychain.getSync("passkey_registered_\(userIdInt)") { return true }
+        return false
     }
 }
 
