@@ -63,8 +63,6 @@ struct HomeTabBarView: View {
     @State private var isLoggingOut = false
     @State private var hasLoadedOnce = false
 
-    @SwiftUI.Environment(\.scenePhase) private var scenePhase
-
     init(container: AppContainer) {
         _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
         _linkAccountVM = StateObject(wrappedValue: container.makeACHViewModel())
@@ -98,13 +96,6 @@ struct HomeTabBarView: View {
             guard newTab == .home else { return }
             Task {
                 await dashboardVM.refreshIfStale(within: 15)
-                await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
-            }
-        }
-        .onChange(of: scenePhase) { phase in
-            guard phase == .active, dashboardVM.dashboard != nil else { return }
-            Task {
-                await dashboardVM.refreshIfStale(within: 60)
                 await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
             }
         }

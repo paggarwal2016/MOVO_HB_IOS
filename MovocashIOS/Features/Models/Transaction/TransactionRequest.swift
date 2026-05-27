@@ -75,4 +75,11 @@ enum TransactionRequest {
         let userAction: String
         let nickname: String?
     }
+    
+    // MARK: - Check Type Request
+    
+    struct CheckMode: Encodable {
+        let phoneNumber: String
+        let userAction: String
+    }
 }

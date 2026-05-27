@@ -305,7 +305,8 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         normalizedPhone: String,
         amount: Double,
         amountText: String,
-        description: String?
+        description: String?,
+        isInternal: Bool = false
     ) async {
         await perform {
             // Step 1 — Configure KYC SDK (one-time)
@@ -326,14 +327,23 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             }
 
             // Step 3 — Create transaction intent
+            // Use .internalTransfer when the recipient is a registered MOVO user
+            // (checkIntent returned exists == true), otherwise .externalTransfer.
             let requestBody = CreateTransactionIntentRequestBody(
-                type: .externalTransfer,
-                details: .externalTransfer(
-                    fromAccountId: fromCard.savingsAccountId ?? 0,
-                    recipientPhoneNumber: normalizedPhone,
-                    amount: amount,
-                    description: description
-                ),
+                type:    isInternal ? .internalTransfer : .externalTransfer,
+                details: isInternal
+                    ? .internalTransfer(
+                        amount: amount,
+                        fromAccountId: fromCard.savingsAccountId ?? 0,
+                        phoneNumber: normalizedPhone,
+                        description: description
+                    )
+                    : .externalTransfer(
+                        fromAccountId: fromCard.savingsAccountId ?? 0,
+                        recipientPhoneNumber: normalizedPhone,
+                        amount: amount,
+                        description: description
+                    ),
                 webhookUrl: nil
             )
             let intent = try await self.service.createTransactionIntent(requestBody: requestBody)
@@ -355,10 +365,10 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             self.peerTransferSuccess = SuccessConfirmation(
                 channel: .peer,
                 amount: Decimal(string: amountText) ?? 0,
-                fromAccountName: fromCard.displayName,
+                fromAccountName: fromCard.savingsAccountNickname ?? fromCard.name ?? fromCard.displayName,
                 fromAccountMask: fromCard.maskedNumber,
                 toAccountName: toName,
-                toAccountMask: nil,
+                toAccountMask: normalizedPhone,
                 arrivesText: "Instantly",
                 dateText: Date.now.formatted(date: .long, time: .shortened),
                 referenceCode: approvalResult.intent.id
