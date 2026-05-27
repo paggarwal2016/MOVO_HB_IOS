@@ -155,7 +155,7 @@ struct RootView: View {
                 case .enableBiometrics:
                     BiometricEnrollView(
                         lockManager: lockManager,
-                        onEnable: { Task { await advanceAfterSecurity() } },
+                        onEnable: { return await advanceAfterSecurity() },
                         onSkip:   { Task { await advanceAfterSecurity() } }
                     )
 
@@ -288,17 +288,33 @@ struct RootView: View {
             }
         }
         .onChangeCompat(of: appState.otpVerified) { verified in
-            guard verified else { return }
+            // Guard: OTPScreen.onVerify is the primary routing handler for the OTP flow.
+            // This observer is the fallback for paths that set otpVerified without going
+            // through OTPScreen (e.g. deep links). If the flow has already moved away
+            // from .otp, OTPScreen.onVerify already handled routing — skip here to
+            // avoid double-execution and potential race overrides.
+            guard verified, appState.flow == .otp else { return }
             if appState.context == .getStarted {
                 // New registration — collect email + phone before security setup
                 appState.flow = .signupDetails
             } else {
-                // Login flow — skip passcode, enroll biometric if available
+                // Login flow.
                 UserDefaults.standard.set(true, forKey: "kycCompleted")
-                if lockManager.isBiometricHardwarePresent && !RSAKeyManager.shared.keysExist() {
-                    appState.flow = .enableBiometrics
-                } else {
-                    appState.flow = .home
+                Task {
+                    if lockManager.isBiometricHardwarePresent {
+                        // Check enrollment per-user — not per-device — so User B is never
+                        // skipped because User A enrolled on the same device previously.
+                        let enrolledForUser = await authVM.isBiometricEnrolledForCurrentUser()
+                        if !enrolledForUser {
+                            // This user has not enrolled biometrics yet — show the screen.
+                            appState.flow = .enableBiometrics
+                            return
+                        }
+                    }
+                    // Biometrics either enrolled or no hardware present.
+                    // Passkey may still be missing — always verify before routing home.
+                    let passkeyDone = await authVM.isPasskeyRegistered()
+                    appState.flow = passkeyDone ? .home : .enableBiometrics
                 }
             }
         }
@@ -354,7 +370,10 @@ struct RootView: View {
     /// Called after the user enables or skips biometrics.
     /// Registers the device passkey (mandatory — blocks navigation on failure),
     /// then routes: registration → KYC onboarding  |  login → Home.
-    private func advanceAfterSecurity() async {
+    /// Returns true if passkey succeeded and navigation was triggered; false otherwise.
+    /// BiometricEnrollView uses the return value to reset its enroll state on failure.
+    @discardableResult
+    private func advanceAfterSecurity() async -> Bool {
         lockManager.resetToUnlocked()
 
         // Show a loader immediately so the screen doesn't appear frozen during
@@ -367,7 +386,7 @@ struct RootView: View {
         // Hide before navigating so the next screen isn't revealed behind the spinner.
         SpinnerView.hideFullScreen()
 
-        guard registered else { return }   // error already shown — stay on screen
+        guard registered else { return false }   // error already shown — stay on screen
 
         switch appState.context {
         case .getStarted:
@@ -376,6 +395,7 @@ struct RootView: View {
             UserDefaults.standard.set(true, forKey: "kycCompleted")
             appState.flow = .home
         }
+        return true
     }
 
     /// Registers the device passkey via MobileBankingSDK (one-time per user/device).

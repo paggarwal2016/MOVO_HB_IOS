@@ -23,6 +23,8 @@ protocol KeychainManagerProtocol: Sendable {
 
     /// Synchronous wipe of auth tokens. Safe to call at launch.
     func clearAuthTokens()
+    
+    func clearKeychain()
 }
 
 
@@ -214,6 +216,26 @@ final class KeychainManager: KeychainManagerProtocol {
         case errSecInteractionNotAllowed: throw KeychainError.interactionNotAllowed
         default: throw KeychainError.unexpectedStatus(status)
         }
+    }
+    
+    func clearKeychain() {
+        let secItemClasses = [
+            kSecClassGenericPassword,
+            kSecClassInternetPassword,
+            kSecClassCertificate,
+            kSecClassKey,
+            kSecClassIdentity
+        ]
+
+        for secClass in secItemClasses {
+            let query: [String: Any] = [
+                kSecClass as String: secClass
+            ]
+
+            SecItemDelete(query as CFDictionary)
+        }
+
+        print("All keychain items deleted")
     }
 }
 

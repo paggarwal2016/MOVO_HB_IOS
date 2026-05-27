@@ -11,8 +11,8 @@ import UIKit
 struct BiometricEnrollView: View {
     
     let lockManager: AppLockManager
-    var onEnable: () -> Void     // user tapped "Enable"
-    var onSkip: () -> Void       // user tapped "Skip"
+    var onEnable: () async -> Bool  // user tapped "Enable"; returns false if passkey was cancelled/failed
+    var onSkip: () -> Void          // user tapped "Skip"
     
     @EnvironmentObject var authVM: AuthViewModel
     
@@ -161,7 +161,25 @@ struct BiometricEnrollView: View {
             showSettingsAlert = true
             return
         }
-        
+
+        // Fast path: this specific user has already enrolled biometrics on this device.
+        // Uses a per-user Keychain flag so User B is not skipped because User A enrolled.
+        // Covers two scenarios:
+        //   (a) Passkey cancelled on a previous attempt — Face ID + RSA are done,
+        //       only the passkey step is outstanding.
+        //   (b) Login where biometrics were enrolled in a prior session but passkey
+        //       never completed — jump straight to passkey without re-enrolling.
+        let alreadyEnrolledForUser = await authVM.isBiometricEnrolledForCurrentUser()
+        if lockManager.isBiometricAvailable && alreadyEnrolledForUser {
+            isEnrolling = true
+            defer { isEnrolling = false }
+            let passkeySucceeded = await onEnable()
+            if !passkeySucceeded {
+                errorMessage = "Device registration failed. Please try again."
+            }
+            return
+        }
+
         isEnrolling = true
         errorMessage = nil
         
@@ -202,7 +220,7 @@ struct BiometricEnrollView: View {
         
         // 3. Register RSA key pair with server (POST /rsa)
         await authVM.enrollRSA()
-        
+
         // enrollRSA() deletes the RSA key pair on any failure.
         // If keys are absent, roll back the local Secure Enclave key so both
         // sides stay in sync — the user will need to retry enrollment.
@@ -221,13 +239,25 @@ struct BiometricEnrollView: View {
             isEnrolling = false
             return
         }
+
+        // 4. Persist per-user enrollment flag so this specific user is not asked
+        //    to re-enroll on next login, and other users on the same device are
+        //    not incorrectly treated as enrolled.
+        await authVM.markBiometricEnrolled()
         
         // Show success confirmation on this screen before navigating forward.
         // Gives the user a clear signal that enrollment completed.
         enrollmentSucceeded = true
         isEnrolling = false
         try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 s
-        onEnable()
+
+        let passkeySucceeded = await onEnable()
+        if !passkeySucceeded {
+            // Passkey was cancelled or failed — reset so the user can retry
+            // without being stuck in the disabled "Enrolled" state.
+            enrollmentSucceeded = false
+            errorMessage = "Device registration failed. Please try again."
+        }
     }
 }
 

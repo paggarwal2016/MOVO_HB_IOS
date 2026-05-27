@@ -10,6 +10,7 @@ import SwiftUI
 struct SecuritySettingsView: View {
 
     @ObservedObject var lockManager: AppLockManager
+    @EnvironmentObject private var authVM: AuthViewModel
 
     // Sheet routing
     @State private var route: Route? = nil
@@ -60,7 +61,7 @@ struct SecuritySettingsView: View {
             case .enrollBiometric:
                 BiometricEnrollView(
                     lockManager: lockManager,
-                    onEnable: { route = nil },
+                    onEnable: { route = nil; return true },
                     onSkip:   { route = nil }
                 )
 
@@ -73,7 +74,12 @@ struct SecuritySettingsView: View {
         }
         // Disable biometric confirmation
         .alert("Disable \(lockManager.biometricType.displayName)?", isPresented: $showDisableBiometricAlert) {
-            Button("Disable", role: .destructive) { lockManager.revokeBiometricSafely() }
+            Button("Disable", role: .destructive) {
+                lockManager.revokeBiometricSafely()
+                // Clear the per-user Keychain enrollment flag so the next login
+                // correctly re-prompts this user to re-enroll biometrics.
+                Task { await authVM.clearBiometricEnrollmentForCurrentUser() }
+            }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("You'll need your passcode to unlock MovoCash.")
