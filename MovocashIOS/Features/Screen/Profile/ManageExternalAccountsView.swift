@@ -21,6 +21,7 @@ struct ManageExternalAccountsView: View {
     // Bank-link success flow
     @State private var showBankLinkedSuccess = false
     @State private var newlyLinkedAccount: ACHAccount? = nil
+    @State private var showBankLinkedInfo = false
 
     init(achVM: ACHViewModel, primaryAccount: SavingsAccountInfo?, container: AppContainer) {
         self.achVM = achVM
@@ -97,11 +98,30 @@ struct ManageExternalAccountsView: View {
                 account: newlyLinkedAccount,
                 onDone: {
                     if primaryAccount != nil {
-                        showWithdraw = true      // push FundAccountView behind the cover first
+                        showWithdraw = true
                     }
-                    showBankLinkedSuccess = false // then dismiss the cover to reveal it
+                    showBankLinkedSuccess = false
                 }
             )
+        }
+        .sheet(isPresented: $showBankLinkedInfo) {
+            BankLinkedInfoScreen(
+                container: container,
+                plaidVM: plaidVM,
+                primaryAccount: primaryAccount,
+                allowFunding: false,
+                onSuccess: {
+                    Task {
+                        isLinkedAccountLoading = true
+                        await achVM.fetchAccounts()
+                        isLinkedAccountLoading = false
+                    }
+                }
+            )
+            .presentationDetents([.height(500)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.cardSurface)
         }
     }
 
@@ -239,25 +259,7 @@ struct ManageExternalAccountsView: View {
 
     private var connectBankRow: some View {
         Button {
-            Task {
-                isLinkedAccountLoading = true
-                do {
-                    try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                } catch {
-                    isLinkedAccountLoading = false
-                    AlertManager.shared.showError("Unable to initialize. Please try again.")
-                    return
-                }
-                isLinkedAccountLoading = false
-                await plaidVM.startPlaidLink()
-                if plaidVM.linkedAccount != nil {
-                    isLinkedAccountLoading = true
-                    await achVM.fetchAccounts()
-                    isLinkedAccountLoading = false
-                    newlyLinkedAccount = achVM.accounts.first
-                    showBankLinkedSuccess = true
-                }
-            }
+            showBankLinkedInfo = true
         } label: {
             HStack(spacing: Spacing.md) {
                 ZStack {

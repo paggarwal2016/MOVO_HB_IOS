@@ -55,6 +55,7 @@ struct DashboardView: View {
     @State private var selectedCard: VCardListResponse? = nil
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
+    @State private var plaidInfoAllowFunding = true
 
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -254,6 +255,7 @@ struct DashboardView: View {
                 container: container,
                 plaidVM: achVM,
                 primaryAccount: dashboardVM.primaryAccount,
+                allowFunding: plaidInfoAllowFunding,
                 onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.height(500)])
@@ -391,33 +393,13 @@ struct DashboardView: View {
                 accounts: data.linkedAccounts ?? [],
                 isLoading: isLinkingPlaid || achVM.state == .loading,
                 onLinkAccount: {
-                    Task {
-                        isLinkingPlaid = true
-                        defer { isLinkingPlaid = false }
-                        do {
-                            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                        } catch {
-                            AlertManager.shared.showError("Unable to initialize. Please try again.")
-                            return
-                        }
-                        await achVM.startPlaidLink()
-                        if achVM.linkedAccount != nil { await dashboardVM.refresh() }
-                    }
+                    plaidInfoAllowFunding = false
+                    showPlaidInfo = true
                     SecureLogger.debug("Link your bank tapped", category: .general)
                 },
                 onConnectAnother: {
-                    Task {
-                        isLinkingPlaid = true
-                        defer { isLinkingPlaid = false }
-                        do {
-                            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                        } catch {
-                            AlertManager.shared.showError("Unable to initialize. Please try again.")
-                            return
-                        }
-                        await achVM.startPlaidLink()
-                        if achVM.linkedAccount != nil { await dashboardVM.refresh() }
-                    }
+                    plaidInfoAllowFunding = false
+                    showPlaidInfo = true
                     SecureLogger.debug("Connect another bank tapped", category: .general)
                 }
             )
@@ -474,7 +456,7 @@ struct DashboardView: View {
         switch action {
         case "ACTIVITY":          showTransactions = true
         case "MOVE-MONEY":            showMoveMoney = true
-        case "FUND-ACCOUNT":          showPlaidInfo = true
+        case "FUND-ACCOUNT":          plaidInfoAllowFunding = true; showPlaidInfo = true
         default:                      break
         }
     }
