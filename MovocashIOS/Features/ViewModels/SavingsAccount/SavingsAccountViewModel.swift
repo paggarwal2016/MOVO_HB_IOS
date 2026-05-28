@@ -68,7 +68,7 @@ final class SavingsAccountViewModel: BaseViewModel {
         } catch is CancellationError {
             // cancelled — no action
         } catch {
-            ToastManager.shared.show("Failed to update nickname.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
     }
 
@@ -98,7 +98,7 @@ final class SavingsAccountViewModel: BaseViewModel {
             analytics.log(AnalyticsEvent.savingsAccountCreateFailed, params: [
                 AnalyticsParam.accountName: trimmed
             ])
-            ToastManager.shared.show("Failed to create account. Please try again.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
     }
 
@@ -169,7 +169,7 @@ final class SavingsAccountViewModel: BaseViewModel {
         } catch is CancellationError {
             // cancelled — no action
         } catch {
-            ToastManager.shared.show("Failed to load account details.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
     }
 }

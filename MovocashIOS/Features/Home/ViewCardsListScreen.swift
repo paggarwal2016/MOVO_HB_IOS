@@ -145,7 +145,7 @@ struct ViewCardsListScreen: View {
             await cardVM.loadCards()
             onDeleted?()
         } catch {
-            ToastManager.shared.show("Failed to create card. Please try again.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
     }
     

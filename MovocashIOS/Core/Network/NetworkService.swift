@@ -285,10 +285,16 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         if http.statusCode == 429 {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
             throw NetworkError.rateLimited
         }
-        
+
         if (500...599).contains(http.statusCode) {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
             throw NetworkError.serverError
         }
         
@@ -373,8 +379,18 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.unauthorized
         }
 
-        if http.statusCode == 429 { throw NetworkError.rateLimited }
-        if (500...599).contains(http.statusCode) { throw NetworkError.serverError }
+        if http.statusCode == 429 {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
+            throw NetworkError.rateLimited
+        }
+        if (500...599).contains(http.statusCode) {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
+            throw NetworkError.serverError
+        }
         if !(200...299).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
                 throw NetworkError.serverMessage(apiError.message)

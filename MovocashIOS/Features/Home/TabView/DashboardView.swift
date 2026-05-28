@@ -448,7 +448,7 @@ struct DashboardView: View {
             await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
             await dashboardVM.refresh()
         } catch {
-            ToastManager.shared.show("Failed to create cash card. Please try again.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
     }
 

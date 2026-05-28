@@ -46,10 +46,15 @@ struct TransactionListView: View {
         return transactionVM.filteredTransactions.filter { activeChipFilter.matches($0) }
     }
     
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMMM d, yyyy"
+        return f
+    }()
+
     private var displayGroups: [(label: String, date: Date, items: [TransactionItem])] {
         let calendar  = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d, yyyy"
+        let formatter = Self.dayFormatter
         let grouped = Dictionary(grouping: chipFilteredTransactions) {
             calendar.startOfDay(for: $0.date)
         }
@@ -340,10 +345,14 @@ struct TransactionListView: View {
         
         // MARK: Subtitle
         
-        private var combinedSubtitle: String {
+        private static let timeFormatter: DateFormatter = {
             let f = DateFormatter()
             f.dateFormat = "h:mm a"
-            let time = f.string(from: item.date)
+            return f
+        }()
+
+        private var combinedSubtitle: String {
+            let time = Self.timeFormatter.string(from: item.date)
             return item.subtitle.isEmpty ? time : "\(item.subtitle) · \(time)"
         }
         

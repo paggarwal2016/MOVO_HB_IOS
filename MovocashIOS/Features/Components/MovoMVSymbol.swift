@@ -27,35 +27,47 @@ import SwiftUI
 /// It is centered inside the available rect with that aspect ratio preserved, so
 /// the symbol stays proportional regardless of how the parent frames it.
 
-struct MovoMVSymbol: Shape {
+struct MovoMVSymbol: View {
 
     /// Intrinsic aspect ratio (width / height) of the original artwork.
     static let aspectRatio: CGFloat = 3717.0 / 3650.0
 
-    func path(in rect: CGRect) -> Path {
-        // Fit the symbol's aspect ratio inside `rect`, centered.
-        let target: CGSize
-        if rect.width / rect.height > Self.aspectRatio {
-            target = CGSize(width: rect.height * Self.aspectRatio,
-                            height: rect.height)
-        } else {
-            target = CGSize(width: rect.width,
-                            height: rect.width / Self.aspectRatio)
-        }
-        let origin = CGPoint(
-            x: rect.midX - target.width / 2,
-            y: rect.midY - target.height / 2
-        )
+    /// Movo's signature teal accent.
+    static let defaultAccent = Color(red: 0x62 / 255.0,
+                                     green: 0x9F / 255.0,
+                                     blue: 0x86 / 255.0)
 
-        // Maps a normalized (x, y) ∈ [0,1]² into the fitted rect.
+    var color: Color
+    var accent: Color
+
+    init(color: Color = Color.movo.textPrimary, accent: Color = Color.movo.accent) {
+        self.color = color
+        self.accent = accent
+    }
+
+    var body: some View {
+        ZStack {
+            MovoMVBodyShape().fill(color)
+            MovoMVChevronShape().fill(accent)
+        }
+        .aspectRatio(Self.aspectRatio, contentMode: .fit)
+    }
+}
+
+
+// MARK: - Shapes
+
+/// The primary body of the mark: outer M outline + two inner legs.
+struct MovoMVBodyShape: Shape {
+    func path(in rect: CGRect) -> Path {
         func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
-            CGPoint(x: origin.x + x * target.width,
-                    y: origin.y + y * target.height)
+            CGPoint(x: rect.minX + x * rect.width,
+                    y: rect.minY + y * rect.height)
         }
 
         var path = Path()
 
-        // 1. Outer M (the main thick "M" outline — single connected piece).
+        // 1. Outer M (the main thick "M" outline).
         path.move(to:    p(0.000, 0.000))   // top-left corner
         path.addLine(to: p(0.000, 1.000))   // bottom-left corner
         path.addLine(to: p(0.128, 1.000))   // bottom of inner edge, left pillar
@@ -70,7 +82,33 @@ struct MovoMVSymbol: Shape {
         path.addLine(to: p(0.109, 0.000))   // top of left diagonal
         path.closeSubpath()
 
-        // 2. Floating inner chevron (the V-shape sitting inside the outer notch).
+        // 2. Inner left leg (vertical pillar with chamfered top-right corner).
+        path.move(to:    p(0.186, 0.573))
+        path.addLine(to: p(0.186, 1.000))
+        path.addLine(to: p(0.319, 1.000))
+        path.addLine(to: p(0.319, 0.690))
+        path.closeSubpath()
+
+        // 3. Inner right leg (mirror of #2).
+        path.move(to:    p(0.814, 0.573))
+        path.addLine(to: p(0.681, 0.690))
+        path.addLine(to: p(0.681, 1.000))
+        path.addLine(to: p(0.814, 1.000))
+        path.closeSubpath()
+
+        return path
+    }
+}
+
+/// The floating inner chevron — the V-shape that sits inside the outer notch.
+struct MovoMVChevronShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: rect.minX + x * rect.width,
+                    y: rect.minY + y * rect.height)
+        }
+
+        var path = Path()
         path.move(to:    p(0.184, 0.329))   // top-left
         path.addLine(to: p(0.184, 0.494))   // bottom of outer-left edge
         path.addLine(to: p(0.500, 0.771))   // chevron's bottom V-tip
@@ -78,26 +116,9 @@ struct MovoMVSymbol: Shape {
         path.addLine(to: p(0.816, 0.329))   // top-right
         path.addLine(to: p(0.500, 0.604))   // top notch tip
         path.closeSubpath()
-
-        // 3. Inner left leg (vertical pillar with chamfered top-right corner).
-        path.move(to:    p(0.186, 0.573))   // top-left
-        path.addLine(to: p(0.186, 1.000))   // bottom-left
-        path.addLine(to: p(0.319, 1.000))   // bottom-right
-        path.addLine(to: p(0.319, 0.690))   // top-right (slanted edge starts here)
-        path.closeSubpath()
-
-        // 4. Inner right leg (mirror of #3).
-        path.move(to:    p(0.814, 0.573))   // top-right
-        path.addLine(to: p(0.681, 0.690))   // top-left (slanted edge ends here)
-        path.addLine(to: p(0.681, 1.000))   // bottom-left
-        path.addLine(to: p(0.814, 1.000))   // bottom-right
-        path.closeSubpath()
-
         return path
     }
 }
-
-
 
 struct AmbientGlowView: View {
     

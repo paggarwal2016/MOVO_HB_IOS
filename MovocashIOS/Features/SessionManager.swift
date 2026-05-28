@@ -270,9 +270,8 @@ final class SessionManager: ObservableObject {
 
         resetAppState(appState)
 
-        let toastMessage = message?.isEmpty == false
-            ? message!
-            : "Your session has expired. Please sign in again."
+        let toastMessage = message.flatMap { $0.isEmpty ? nil : $0 }
+            ?? "Your session has expired. Please sign in again."
         ToastManager.shared.show(toastMessage, style: .error, position: .bottom)
     }
 

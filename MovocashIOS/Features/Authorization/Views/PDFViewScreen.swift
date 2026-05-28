@@ -481,7 +481,7 @@ private struct PDFKitView: UIViewRepresentable {
             object: pdfView
         )
 
-        if let document = PDFDocument(url: pdfURL!) {
+        if let url = pdfURL, let document = PDFDocument(url: url) {
             pdfView.document = document
             // Single-page docs never trigger PDFViewPageChangedNotification on scroll,
             // so signal end after the current render pass completes.
