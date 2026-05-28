@@ -193,7 +193,7 @@ struct BankLinkedSuccessScreen: View {
                         onDone()
                     }
                 } label: {
-                    Text("Add funds")
+                    Text(container != nil && primaryAccount != nil ? "Add funds" : "Done")
                 }
                 .buttonStyle(MovoPrimaryButtonStyle())
                 .padding(.horizontal, Spacing.xxl)

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PDFKit
+import WebKit
 
 struct PDFViewScreen: View {
 
@@ -124,9 +125,15 @@ private extension PDFViewScreen {
 
     var contentArea: some View {
         ZStack {
-            if let pdfURL = viewModel.pdfURL {
-                PDFKitView(pdfURL: pdfURL) {
-                    hasReachedEnd = true
+            if let url = viewModel.pdfURL {
+                if url.pathExtension.lowercased() == "html" {
+                    WebKitView(url: url) {
+                        hasReachedEnd = true
+                    }
+                } else {
+                    PDFKitView(pdfURL: url) {
+                        hasReachedEnd = true
+                    }
                 }
             } else if viewModel.state != .loading {
                 pdfUnavailableState
@@ -215,6 +222,203 @@ private extension PDFViewScreen {
             }
             .padding(.bottom, DesignTokens.Spacing.xxxl)
             .background(Color.movo.background)
+        }
+    }
+}
+
+// MARK: - WebKit View (HTML documents)
+
+private struct WebKitView: UIViewRepresentable {
+
+    let url: URL
+    let onReachEnd: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onReachEnd: onReachEnd)
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let controller = WKUserContentController()
+        controller.add(context.coordinator, name: "scrollEnd")
+
+        // Script A: inject CSS token variables derived from MovoTheme (light + dark blocks)
+        // and set the initial data-theme attribute. Must run at document start so variables
+        // are available before any HTML content is parsed.
+        controller.addUserScript(makeTokenScript(scheme: colorScheme))
+
+        // Script B: inject terms-layout.css from the app bundle as a <style> element.
+        if let layoutScript = makeLayoutCSSScript() {
+            controller.addUserScript(layoutScript)
+        }
+
+        let scrollScript = WKUserScript(
+            source: """
+            window.addEventListener('scroll', function() {
+                if (window.scrollY + window.innerHeight >= document.body.scrollHeight - 50) {
+                    window.webkit.messageHandlers.scrollEnd.postMessage('end');
+                }
+            });
+            """,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
+        controller.addUserScript(scrollScript)
+
+        let config = WKWebViewConfiguration()
+        config.userContentController = controller
+
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        // Use the adaptive background token so UIScrollView can infer a contrasting
+        // indicator color. .clear prevents the system from choosing the right indicator style.
+        webView.scrollView.backgroundColor = MovoTheme.color.background.uiColor
+        webView.scrollView.showsHorizontalScrollIndicator = false
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.load(URLRequest(url: url))
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        // Update the data-theme attribute when the system color scheme changes — no reload needed.
+        let theme = colorScheme == .dark ? "dark" : "light"
+        webView.evaluateJavaScript(
+            "document.documentElement.setAttribute('data-theme', '\(theme)')",
+            completionHandler: nil
+        )
+    }
+
+    // MARK: - Style script builders
+
+    /// Builds Script A: a <style> block containing :root (light) and [data-theme="dark"]
+    /// variable declarations pulled directly from MovoTheme.color, plus static typography
+    /// and spacing constants. Sets the initial data-theme attribute on <html>.
+    private func makeTokenScript(scheme: ColorScheme) -> WKUserScript {
+        let c = MovoTheme.color
+
+        func hex(_ v: UInt32) -> String { String(format: "#%06X", v) }
+        func rgba(_ v: UInt32, alpha: Double) -> String {
+            "rgba(\((v >> 16) & 0xFF), \((v >> 8) & 0xFF), \(v & 0xFF), \(alpha))"
+        }
+
+        let css = """
+        :root {
+          --bg: \(hex(c.background.lightHex));
+          --surface: \(hex(c.surface.lightHex));
+          --elevated: \(hex(c.elevated.lightHex));
+          --fg: \(hex(c.textPrimary.lightHex));
+          --fg-secondary: \(hex(c.textSecondary.lightHex));
+          --fg-tertiary: \(hex(c.textTertiary.lightHex));
+          --fg-disabled: \(hex(c.textDisabled.lightHex));
+          --accent: \(hex(c.accent.lightHex));
+          --accent-tint: \(rgba(c.accent.lightHex, alpha: 0.12));
+          --danger: \(hex(c.danger.lightHex));
+          --warning: \(hex(c.warning.lightHex));
+          --border: \(hex(c.border.lightHex));
+          --border-strong: \(hex(c.borderStrong.lightHex));
+          --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+          --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+          --size-h1: 26px; --size-h2: 22px; --size-h3: 18px; --size-h4: 16px;
+          --size-body: 16px; /* intentionally overrides Typography.body (14pt) for long-form reading */
+          --size-caption: 12px; --size-eyebrow: 10px;
+          --track-h1: -0.5px; --track-h2: -0.4px; --track-h3: -0.2px; --track-eyebrow: 0.8px;
+          --weight-regular: 400; --weight-medium: 500; --weight-semi: 600; --weight-bold: 700;
+          --line-body: 1.55; /* intentionally overrides TextStyle.lineHeight (1.2) for long-form reading */
+          --line-heading: 1.25;
+          --space-xs: 4px; --space-sm: 8px; --space-md: 12px; --space-lg: 16px;
+          --space-xl: 20px; --space-xxl: 24px; --space-xxxl: 32px;
+          --radius-md: 10px; --radius-lg: 12px;
+          --stroke-hairline: 0.5px;
+        }
+        [data-theme="dark"] {
+          --bg: \(hex(c.background.darkHex));
+          --surface: \(hex(c.surface.darkHex));
+          --elevated: \(hex(c.elevated.darkHex));
+          --fg: \(hex(c.textPrimary.darkHex));
+          --fg-secondary: \(hex(c.textSecondary.darkHex));
+          --fg-tertiary: \(hex(c.textTertiary.darkHex));
+          --fg-disabled: \(hex(c.textDisabled.darkHex));
+          --accent: \(hex(c.accent.darkHex));
+          --accent-tint: \(rgba(c.accent.darkHex, alpha: 0.18));
+          --danger: \(hex(c.danger.darkHex));
+          --warning: \(hex(c.warning.darkHex));
+          --border: \(hex(c.border.darkHex));
+          --border-strong: \(hex(c.borderStrong.darkHex));
+        }
+        """
+
+        // Escape backticks and backslashes before embedding in the JS template literal.
+        let escapedCSS = css
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "`", with: "\\`")
+
+        let initialTheme = scheme == .dark ? "dark" : "light"
+        // Inline style values applied directly on <html> so the first paint frame
+        // already has the correct background — no white flash while CSS cascade resolves.
+        let initialBg  = hex(scheme == .dark ? c.background.darkHex    : c.background.lightHex)
+        let initialFg  = hex(scheme == .dark ? c.textSecondary.darkHex  : c.textSecondary.lightHex)
+
+        let source = """
+        (function() {
+          var s = document.createElement('style');
+          s.textContent = `\(escapedCSS)`;
+          document.documentElement.appendChild(s);
+          document.documentElement.style.backgroundColor = '\(initialBg)';
+          document.documentElement.style.color = '\(initialFg)';
+          document.documentElement.setAttribute('data-theme', '\(initialTheme)');
+        })();
+        """
+        return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+    }
+
+    /// Builds Script B: loads terms-layout.css from the main bundle and injects it
+    /// as a <style> element at document start. Returns nil if the file is not in the bundle.
+    private func makeLayoutCSSScript() -> WKUserScript? {
+        guard let cssURL = Bundle.main.url(forResource: "terms-layout", withExtension: "css"),
+              let raw = try? String(contentsOf: cssURL, encoding: .utf8) else { return nil }
+
+        // Escape backticks and backslashes before embedding in the JS template literal.
+        let escapedCSS = raw
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "`", with: "\\`")
+
+        let source = """
+        (function() {
+          var s = document.createElement('style');
+          s.textContent = `\(escapedCSS)`;
+          document.documentElement.appendChild(s);
+        })();
+        """
+        return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        private let onReachEnd: () -> Void
+        private var didFire = false
+
+        init(onReachEnd: @escaping () -> Void) {
+            self.onReachEnd = onReachEnd
+        }
+
+        func signalEnd() {
+            guard !didFire else { return }
+            didFire = true
+            onReachEnd()
+        }
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "scrollEnd" { signalEnd() }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Signal end immediately for pages short enough to fit without scrolling.
+            webView.evaluateJavaScript("document.body.scrollHeight <= window.innerHeight") { result, _ in
+                if let fits = result as? Bool, fits {
+                    DispatchQueue.main.async { self.signalEnd() }
+                }
+            }
         }
     }
 }

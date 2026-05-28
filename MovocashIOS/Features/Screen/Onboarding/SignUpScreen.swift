@@ -44,7 +44,7 @@ struct SignUpScreen: View {
                     UIApplication.shared.dismissKeyboard()
                     onContinue(vm.email)
                 } label: {
-                    Text("Send code")
+                    Text("Continue")
                 }
                 .buttonStyle(MovoPrimaryButtonStyle())
                 .disabled(!vm.isValid)
@@ -98,7 +98,7 @@ struct SignUpScreen: View {
                 .foregroundStyle(Color.movo.textPrimary)
                 .lineSpacing(2)
 
-            Text("We'll send a verification code to confirm it's you.")
+            Text("We'll send a verification email to confirm it's you.")
                 .textStyle(Typography.body)
                 .foregroundStyle(Color.movo.textTertiary)
                 .lineSpacing(2)

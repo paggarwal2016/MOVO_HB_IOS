@@ -84,38 +84,28 @@ struct RootView: View {
                         onContinue: { email in
                             authVM.email = email
                             Task {
+                                SpinnerView.showFullScreen()
                                 do {
                                     try await authVM.sendEmailOTP()
-                                    appState.flow = .emailOTP
+                                    SpinnerView.hideFullScreen()
+                                    AlertManager.shared.showCustom(
+                                        title: "Check your email",
+                                        message: "We sent a verification link to \(email).",
+                                        primary: "Continue",
+                                        onPrimary: {
+                                            Task {
+                                                let passkeyDone = await authVM.isPasskeyRegistered()
+                                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                            }
+                                        }
+                                    )
                                 } catch {
+                                    SpinnerView.hideFullScreen()
                                     AlertManager.shared.showError(error.localizedDescription)
                                 }
                             }
                         },
                         onSignIn: { appState.flow = .loginPhone }
-                    )
-
-                case .emailOTP:
-                    OTPScreen(
-                        title: "Verify email",
-                        subtitle: "A 6-digit verification code was sent to \(authVM.email)",
-                        maxLength: 6,
-                        isLoading: authVM.state == .loading,
-                        onVerify: { code in
-                            await authVM.verifyEmailOTP(code: code) {
-                                Task { @MainActor in
-                                    // New user — show BiometricEnrollView (which also
-                                    // registers device passkey) if not yet done; otherwise
-                                    // skip straight to onboarding.
-                                    let passkeyDone = await authVM.isPasskeyRegistered()
-                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
-                                }
-                            }
-                        },
-                        onResend: {
-                            try await authVM.sendEmailOTP()
-                        },
-                        onBack: { appState.flow = .signupDetails }
                     )
 
                 case .getStartedInfo:
