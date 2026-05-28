@@ -41,14 +41,14 @@ struct GetStartedInfoScreen: View {
     ]
 
     private let legalItems: [LegalItem] = [
-        LegalItem(subtitle: "How we handle your personal data",
-                  documentType: .privacy),
-        LegalItem(subtitle: "Herring Bank's privacy practices",
-                  documentType: .herringPrivacy),
+//        LegalItem(subtitle: "How we handle your personal data",
+//                  documentType: .privacy),
+//        LegalItem(subtitle: "Herring Bank's privacy practices",
+//                  documentType: .herringPrivacy),
         LegalItem(subtitle: "Rules and conditions for using Movo",
                   documentType: .tos),
-        LegalItem(subtitle: "Digital agreement and consent",
-                  documentType: .cardholderAgreement)
+//        LegalItem(subtitle: "Digital agreement and consent",
+//                  documentType: .cardholderAgreement)
     ]
 
     private var allAccepted: Bool {

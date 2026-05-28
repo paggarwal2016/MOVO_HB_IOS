@@ -472,7 +472,7 @@ struct DashboardView: View {
 
     private func handleQuickAction(_ action: String) {
         switch action {
-        case "TRANSACTIONS":          showTransactions = true
+        case "ACTIVITY":          showTransactions = true
         case "MOVE-MONEY":            showMoveMoney = true
         case "FUND-ACCOUNT":          showPlaidInfo = true
         default:                      break
@@ -508,7 +508,7 @@ struct PrimaryAccountContent: View {
                 }
             }
 
-            if let txAction = accountData.actions.first(where: { $0.action == "TRANSACTIONS" }) {
+            if let txAction = accountData.actions.first(where: { $0.action == "ACTIVITY" }) {
                 QuickActionButton(action: txAction, style: .secondary) {
                     onQuickAction(txAction.action)
                 }
@@ -531,7 +531,7 @@ private struct QuickActionButton: View {
         switch action.action {
         case "FUND-ACCOUNT":  return "arrow.down.to.line"
         case "MOVE-MONEY":    return "arrow.left.arrow.right"
-        case "TRANSACTIONS":  return "clock"
+        case "ACTIVITY":      return "clock"
         default:              return "circle"
         }
     }

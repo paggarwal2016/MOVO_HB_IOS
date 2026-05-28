@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PDFKit
+import WebKit
 
 struct PDFViewScreen: View {
 
@@ -124,9 +125,15 @@ private extension PDFViewScreen {
 
     var contentArea: some View {
         ZStack {
-            if let pdfURL = viewModel.pdfURL {
-                PDFKitView(pdfURL: pdfURL) {
-                    hasReachedEnd = true
+            if let url = viewModel.pdfURL {
+                if url.pathExtension.lowercased() == "html" {
+                    WebKitView(url: url) {
+                        hasReachedEnd = true
+                    }
+                } else {
+                    PDFKitView(pdfURL: url) {
+                        hasReachedEnd = true
+                    }
                 }
             } else if viewModel.state != .loading {
                 pdfUnavailableState
@@ -215,6 +222,76 @@ private extension PDFViewScreen {
             }
             .padding(.bottom, DesignTokens.Spacing.xxxl)
             .background(Color.movo.background)
+        }
+    }
+}
+
+// MARK: - WebKit View (HTML documents)
+
+private struct WebKitView: UIViewRepresentable {
+
+    let url: URL
+    let onReachEnd: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onReachEnd: onReachEnd)
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let controller = WKUserContentController()
+        controller.add(context.coordinator, name: "scrollEnd")
+
+        let scrollScript = WKUserScript(
+            source: """
+            window.addEventListener('scroll', function() {
+                if (window.scrollY + window.innerHeight >= document.body.scrollHeight - 50) {
+                    window.webkit.messageHandlers.scrollEnd.postMessage('end');
+                }
+            });
+            """,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
+        controller.addUserScript(scrollScript)
+
+        let config = WKWebViewConfiguration()
+        config.userContentController = controller
+
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        webView.backgroundColor = UIColor(Color.movo.background)
+        webView.isOpaque = false
+        webView.load(URLRequest(url: url))
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {}
+
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        private let onReachEnd: () -> Void
+        private var didFire = false
+
+        init(onReachEnd: @escaping () -> Void) {
+            self.onReachEnd = onReachEnd
+        }
+
+        func signalEnd() {
+            guard !didFire else { return }
+            didFire = true
+            onReachEnd()
+        }
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "scrollEnd" { signalEnd() }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Signal end immediately for pages short enough to fit without scrolling.
+            webView.evaluateJavaScript("document.body.scrollHeight <= window.innerHeight") { result, _ in
+                if let fits = result as? Bool, fits {
+                    DispatchQueue.main.async { self.signalEnd() }
+                }
+            }
         }
     }
 }
