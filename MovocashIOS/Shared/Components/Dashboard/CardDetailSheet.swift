@@ -270,7 +270,7 @@ struct CardDetailSheet: View {
                 HStack(alignment: .center) {
                     HStack(spacing: 6) {
 
-                        MovoMVSymbol(color: Color.movo.onCardArtwork)
+                        MovoMVSymbol()
                             .frame(width: 22, height: 22)
 
                         Text("MOVOCASH")
