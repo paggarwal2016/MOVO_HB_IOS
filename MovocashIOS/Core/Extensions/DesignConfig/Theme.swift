@@ -2,13 +2,18 @@
 //  Theme.swift
 //  MovoCash
 //
-//  Semantic color API. Views call `Theme.color.background` (intent),
+//  Semantic color API. Views call `MovoTheme.color.background` (intent),
 //  not `DesignTokens.Palette.background` (raw token).
 //
-//  This indirection lets us:
+//  v2.0 — Single ADAPTIVE scheme. `voidSilver` automatically renders the
+//  correct hex based on system appearance or any `.preferredColorScheme(...)`
+//  override. No more global theme swapping needed for light/dark.
+//
+//  This indirection still lets us:
 //  - Re-skin the app by swapping palette tokens without touching views
 //  - Add new semantic intents (e.g., `cardElevated`) without rewriting palette
-//  - Eventually support multiple themes (e.g., Light, High Contrast)
+//  - Eventually support multiple themes (e.g., High Contrast) by swapping
+//    `MovoTheme.color` for a different MovoColorScheme variant
 //
 
 import SwiftUI
@@ -17,12 +22,13 @@ import SwiftUI
 
 public enum MovoTheme {
     /// Active palette. Single source of truth for color intent → palette.
-    public static var color: ColorScheme = .voidSilver
+    /// Defaults to `voidSilver` (adaptive light/dark).
+    public static var color: MovoColorScheme = .voidSilver
 }
 
 // MARK: - Semantic color scheme
 
-public struct ColorScheme: Sendable {
+public struct MovoColorScheme: Sendable {
     // Surfaces
     public let background:      ColorToken   // App canvas
     public let surface:         ColorToken   // Default card / row background
@@ -52,12 +58,26 @@ public struct ColorScheme: Sendable {
     public let dangerTint:      ColorToken
     public let warning:         ColorToken
 
-    // On-accent text (high-contrast text drawn on accent fills)
+    // On-accent label color — high-contrast text drawn on accent fills
     public let onAccent:        ColorToken
 
-    // MARK: - Built-in scheme: Void Silver
+    // Card surface — adaptive elevation: light = platinum lift, dark = elevated lift
+    public let cardSurface:     ColorToken
+    // Card border — brighter than borderStrong for visible outlines on cardSurface in dark mode
+    public let cardBorder:      ColorToken
+    // Ghost surface — surface at 85% opacity, subtle near-flush card feel
+   // public let ghostSurface:    ColorToken
 
-    public static let voidSilver = ColorScheme(
+    // Card artwork — brand-locked (heritage black card; same hex in both modes)
+    // Scoped to the physical card artwork view only.
+    public let cardArtwork:        ColorToken
+    public let onCardArtwork:      ColorToken
+    public let cardArtworkMuted:   ColorToken
+    public let cardArtworkBorder:  ColorToken
+
+    // MARK: - Built-in scheme: Void Silver (adaptive)
+
+    public static let voidSilver = MovoColorScheme(
         background:    DesignTokens.Palette.background,
         surface:       DesignTokens.Palette.surface,
         elevated:      DesignTokens.Palette.elevated,
@@ -73,6 +93,9 @@ public struct ColorScheme: Sendable {
         textTertiary:  DesignTokens.Palette.textTertiary,
         textDisabled:  DesignTokens.Palette.textDisabled,
 
+        // Borders: slightly darker than the canvas in both modes.
+        // Light: elevated = #D0D3DC, borderStrong = #BFC3CE
+        // Dark:  elevated = #1C1C25, borderStrong = #2A2A35
         border:        DesignTokens.Palette.elevated,
         borderStrong:  DesignTokens.Palette.elevatedHigh,
 
@@ -82,6 +105,18 @@ public struct ColorScheme: Sendable {
         dangerTint:    DesignTokens.Palette.danger.opacity(0.10),
         warning:       DesignTokens.Palette.warning,
 
-        onAccent:      DesignTokens.Palette.background  // Black-on-green = high contrast
+        // Always near-black — works on the green accent in BOTH modes.
+        // (Was previously `background`, which would have flipped to white
+        //  in light mode and made CTA labels invisible.)
+        onAccent:      DesignTokens.Palette.onAccent,
+        cardSurface:   DesignTokens.Palette.cardSurface,
+        cardBorder:    DesignTokens.Palette.cardBorder,
+
+        // Heritage black card — locked, never adapts.
+        cardArtwork:       DesignTokens.Palette.cardArtwork,
+        onCardArtwork:     DesignTokens.Palette.onCardArtwork,
+        cardArtworkMuted:  DesignTokens.Palette.cardArtworkMuted,
+        cardArtworkBorder: DesignTokens.Palette.cardArtworkBorder
     )
 }
+

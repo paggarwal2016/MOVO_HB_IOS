@@ -53,6 +53,11 @@ struct QuickTransferView: View {
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
+
+    /// Pay button is enabled only when:
+    ///  • amount > 0 and a card is selected
+    ///  • the check-intent result confirms the recipient exists (`exists == true`)
+    ///    or the result is still pending (`nil` while loading / on API error)
     private var isValid: Bool { amount > 0 && selectedCard != nil }
 
     // MARK: - Amount display helpers
@@ -100,8 +105,16 @@ struct QuickTransferView: View {
             }
         }
         .background(Color.movo.background)
-        .preferredColorScheme(.dark)
         .navigationBarHidden(true)
+        // Call check-intent as soon as the view appears so the Pay button is
+        // gated before the user finishes entering an amount.
+        .task {
+            let rawPhone    = contact.phoneNumber ?? ""
+            let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
+            let sanitized   = PhoneNumberValidator.sanitize(withCountry)
+            let normalized  = PhoneNumberValidator.normalize(sanitized)
+            await transVM.checkIntent(phoneNumber: normalized)
+        }
         .onChange(of: amountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
@@ -191,9 +204,9 @@ struct QuickTransferView: View {
         VStack(spacing: Spacing.sm) {
             ZStack {
                 Circle().fill(Color.movo.elevated)
-                Circle().strokeBorder(Color.movo.accent, lineWidth: 1.5)
+                Circle().strokeBorder(Color.movo.accent, lineWidth: Stroke.medium)
                 Text(contact.initials)
-                    .font(.system(size: 28, weight: .semibold))
+                    .textStyle(Typography.balance)
                     .foregroundColor(Color.movo.textPrimary)
             }
             .frame(width: 72, height: 72)
@@ -201,18 +214,17 @@ struct QuickTransferView: View {
             
             HStack(spacing: 8) {
                 Text("TO")
-                    .font(Typography.eyebrow.font)
-                    .tracking(1.2)
+                    .textStyle(Typography.eyebrow)
                     .foregroundColor(Color.movo.textTertiary)
 
                 Text(contact.nickname ?? "")
-                    .font(.system(size: 20, weight: .bold))
+                    .textStyle(Typography.sectionTitle)
                     .foregroundColor(Color.movo.textPrimary)
             }
 
             HStack(spacing: 8) {
                 Text(contact.phoneNumber ?? "")
-                    .font(Typography.caption.font)
+                    .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.textTertiary)
             }
         }
@@ -226,7 +238,7 @@ struct QuickTransferView: View {
             amountDisplay
 
             Text("\(availableBalanceDisplay) available")
-                .font(Typography.caption.font)
+                .textStyle(Typography.caption)
                 .foregroundColor(Color.movo.textTertiary)
 
             quickChips
@@ -236,17 +248,19 @@ struct QuickTransferView: View {
     private var amountDisplay: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text("$")
-                .font(.system(size: 32, weight: .semibold))
+                .textStyle(Typography.amountPrefix)
                 .foregroundColor(Color.movo.textSecondary)
                 .baselineOffset(25)
 
             let parts = amountText.split(separator: ".")
             Text(parts.first.map(String.init) ?? "0")
-                .font(.system(size: 72, weight: .bold).monospacedDigit())
+                .textStyle(Typography.amountInput)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textPrimary)
 
             Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                .textStyle(Typography.amountPrefix)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textSecondary)
                 .baselineOffset(25)
         }
@@ -270,10 +284,10 @@ struct QuickTransferView: View {
                 let selected = isPresetSelected(value)
                 Button { applyPreset(value) } label: {
                     Text(label)
-                        .font(.system(size: 14, weight: .semibold))
+                        .textStyle(Typography.body)
                         .foregroundColor(selected ? Color.movo.accent : Color.movo.textSecondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, Spacing.md)
                         .background(
                             Capsule()
                                 .fill(selected ? Color.movo.accentTint : Color.movo.elevated)
@@ -318,7 +332,7 @@ struct QuickTransferView: View {
             TextField("", text: $descriptionText,
                       prompt: Text("What's it for? (optional)")
                           .foregroundColor(Color.movo.textDisabled))
-                .font(.system(size: 15, weight: .regular))
+                .textStyle(Typography.subtitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .autocorrectionDisabled()
         }
@@ -326,10 +340,10 @@ struct QuickTransferView: View {
         .padding(.vertical, Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Radius.lg)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
         )
     }
@@ -341,7 +355,7 @@ struct QuickTransferView: View {
             if displayCards.isEmpty {
                 HStack {
                     Text("No cards available")
-                        .font(Typography.caption.font)
+                        .textStyle(Typography.caption)
                         .foregroundColor(Color.movo.textTertiary)
                     Spacer()
                 }
@@ -393,11 +407,10 @@ struct QuickTransferView: View {
                         .foregroundColor(Color.movo.textTertiary)
                 } else {
                     Text("FROM")
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(0.4)
+                        .textStyle(Typography.eyebrow)
                         .foregroundColor(Color.movo.textTertiary)
                     Text("Select card")
-                        .font(.system(size: 15, weight: .semibold))
+                        .textStyle(Typography.cardTitle)
                         .foregroundColor(Color.movo.textDisabled)
                 }
             }
@@ -421,10 +434,10 @@ struct QuickTransferView: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("From Account")
-                        .font(.system(size: 20, weight: .bold))
+                        .textStyle(Typography.sectionTitle)
                         .foregroundColor(Color.movo.textPrimary)
                     Text("Choose which account to send from")
-                        .font(.system(size: 13, weight: .regular))
+                        .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                 }
                 Spacer()
@@ -468,7 +481,6 @@ struct QuickTransferView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.movo.background)
-        .preferredColorScheme(.dark)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(Radius.sheet)
@@ -481,8 +493,7 @@ struct QuickTransferView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(Color.movo.textPrimary)
                 Text(card.maskedNumber)
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(0.6)
+                    .textStyle(Typography.eyebrow)
                     .foregroundColor(Color.movo.textTertiary)
                 Text(card.displayBalance)
                     .font(.system(size: 11, weight: .regular))
@@ -508,10 +519,10 @@ struct QuickTransferView: View {
 
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: Radius.lg)
-            .fill(Color.movo.surface)
+            .fill(Color.movo.cardSurface)
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.lg)
-                    .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                    .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
             )
     }
 
@@ -530,7 +541,7 @@ struct QuickTransferView: View {
                 Image(systemName: "arrow.up.forward")
                     .font(.system(size: 13, weight: .semibold))
                 Text(amount > 0 ? "Pay $\(String(format: "%.2f", amount))" : "Pay")
-                    .font(.system(size: 16, weight: .semibold))
+                    .textStyle(Typography.buttonLarge)
             }
             .foregroundColor(isValid ? Color.movo.onAccent : Color.movo.textDisabled)
             .frame(maxWidth: .infinity)
@@ -560,10 +571,15 @@ struct QuickTransferView: View {
         guard let fromCard = selectedCard else { return }
         guard !Task.isCancelled else { return }
 
-        let rawPhone = contact.phoneNumber ?? ""
+        let rawPhone    = contact.phoneNumber ?? ""
         let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
-        let sanitized = PhoneNumberValidator.sanitize(withCountry)
+        let sanitized   = PhoneNumberValidator.sanitize(withCountry)
         let normalizedPhone = PhoneNumberValidator.normalize(sanitized)
+
+        // checkIntent result drives the transfer route:
+        //   exists == true  → recipient is a MOVO user → .internalTransfer
+        //   exists == false / nil → external recipient → .externalTransfer
+        let isInternal = transVM.checkIntentResult?.exists ?? false
 
         await achVM.sendMoneyToContact(
             fromCard: fromCard,
@@ -571,7 +587,8 @@ struct QuickTransferView: View {
             normalizedPhone: normalizedPhone,
             amount: amount,
             amountText: amountText,
-            description: descriptionText.isEmpty ? nil : descriptionText
+            description: descriptionText.isEmpty ? nil : descriptionText,
+            isInternal: isInternal
         )
     }
 }

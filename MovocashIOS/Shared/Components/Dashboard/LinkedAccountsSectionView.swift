@@ -48,7 +48,7 @@ struct LinkedAccountsSectionView: View {
                     HStack(spacing: 6) {
                         if isLoading {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: theme.background.color))
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.onAccent))
                                 .scaleEffect(0.8)
                         } else {
                             Text(buttonLabel)
@@ -71,11 +71,11 @@ struct LinkedAccountsSectionView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.movo.surface)
+        .background(Color.movo.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
+                .stroke(theme.borderStrong.color, lineWidth: DesignTokens.Stroke.hairline)
         )
     }
 
@@ -94,7 +94,7 @@ struct LinkedAccountsSectionView: View {
                     LinkedAccountRowView(account: accounts[index])
                     if index < accounts.count - 1 {
                         Rectangle()
-                            .fill(Color.movo.border)
+                            .fill(Color.movo.cardBorder)
                             .frame(height: Stroke.hairline)
                     }
                 }
@@ -124,16 +124,16 @@ struct LinkedAccountsSectionView: View {
             .frame(maxWidth: .infinity)
             .overlay(alignment: .top) {
                 Rectangle()
-                    .fill(Color.movo.border)
+                    .fill(Color.movo.cardBorder)
                     .frame(height: Stroke.hairline)
             }
         }
         .padding(DesignTokens.Spacing.lg)
-        .background(Color.movo.surface)
+        .background(Color.movo.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .strokeBorder(Color.movo.border, lineWidth: DesignTokens.Stroke.hairline)
+                .strokeBorder(Color.movo.borderStrong, lineWidth: DesignTokens.Stroke.hairline)
         )
     }
 }

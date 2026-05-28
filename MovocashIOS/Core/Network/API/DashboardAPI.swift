@@ -28,7 +28,7 @@ enum DashboardAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .dashboard:
-            return .movoAuthorized
+            return .movoAuthorizedAllWithIdempotency //.movoAuthorized
         }
     }
     

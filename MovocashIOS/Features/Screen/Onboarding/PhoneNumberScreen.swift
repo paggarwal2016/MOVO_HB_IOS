@@ -24,7 +24,7 @@ struct PhoneNumberScreen: View {
         ZStack {
             MovoBackground()
             AmbientGlowView()
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: Spacing.xxl) {
                 topBar
                     .padding(.horizontal, DesignTokens.Spacing.lg)
                     .padding(.top, DesignTokens.Spacing.sm)
@@ -65,13 +65,12 @@ struct PhoneNumberScreen: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             Text("What's your mobile number?")
-                .font(.system(size: 26, weight: .semibold))
-                .tracking(-0.5)
+                .textStyle(Typography.heroTitle)
                 .foregroundStyle(Color.movo.textPrimary)
                 .lineSpacing(2)
-            
+
             Text("We'll text you a 6-digit code to verify it's you.")
-                .font(.system(size: 14))
+                .textStyle(Typography.body)
                 .foregroundStyle(Color.movo.textTertiary)
                 .lineSpacing(2)
         }
@@ -85,7 +84,7 @@ struct PhoneNumberScreen: View {
             Button(action: { }) {
                 HStack(spacing: 6) {
                     Text("+1")
-                        .font(.system(size: 16, weight: .medium))
+                        .textStyle(Typography.cardTitle)
                         .foregroundStyle(Color.movo.textPrimary)
                 }
                 .padding(.leading, 14)
@@ -113,7 +112,7 @@ struct PhoneNumberScreen: View {
             }
             .keyboardType(.numberPad)
             .textContentType(.telephoneNumber)
-            .font(.system(size: 16, weight: .medium))
+            .textStyle(Typography.cardTitle)
             .foregroundStyle(Color.movo.textPrimary)
             .tint(Color.movo.accent)
             .focused($phoneFieldFocused)
@@ -132,7 +131,7 @@ struct PhoneNumberScreen: View {
                 cornerRadius: DesignTokens.Radius.xl,
                 style: .continuous
             )
-            .fill(Color.movo.surface)
+            .fill(Color.movo.cardSurface)
         )
         .overlay(
             RoundedRectangle(
@@ -178,7 +177,7 @@ struct PhoneNumberScreen: View {
                 ErrorBadgeIcon(size: 14, tint: Color.movo.danger)
                     .padding(.top, 1)
                 Text(error)
-                    .font(.system(size: 12))
+                    .textStyle(Typography.caption)
                     .foregroundStyle(Color.movo.danger)
                     .lineSpacing(2)
                     .frame(maxWidth: .infinity, alignment: .leading)

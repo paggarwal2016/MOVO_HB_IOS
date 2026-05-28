@@ -143,7 +143,6 @@ struct InternalTransferView: View {
             }
         }
         .background(Color.movo.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
         .navigationBarHidden(true)
         .onChange(of: isAmountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
@@ -237,17 +236,19 @@ struct InternalTransferView: View {
         VStack(spacing: Spacing.xs) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("$")
-                    .font(.system(size: 32, weight: .semibold))
+                    .textStyle(Typography.amountPrefix)
                     .foregroundColor(Color.movo.textSecondary)
                     .baselineOffset(25)
 
                 let parts = amountText.split(separator: ".")
                 Text(parts.first.map(String.init) ?? "0")
-                    .font(.system(size: 72, weight: .bold).monospacedDigit())
+                    .textStyle(Typography.amountInput)
+                    .monospacedDigit()
                     .foregroundColor(Color.movo.textPrimary)
 
                 Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                    .font(.system(size: 32, weight: .semibold).monospacedDigit())
+                    .textStyle(Typography.amountPrefix)
+                    .monospacedDigit()
                     .foregroundColor(Color.movo.textSecondary)
                     .baselineOffset(25)
             }
@@ -277,18 +278,17 @@ struct InternalTransferView: View {
         .padding(.vertical, Spacing.lg)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface.opacity(0.85))
+                .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
                 )
         )
     }
 
     private func slotLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .tracking(0.8)
+            .textStyle(Typography.eyebrow)
             .foregroundColor(Color.movo.textTertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.lg)
@@ -332,7 +332,7 @@ struct InternalTransferView: View {
         if showSwap {
             ZStack {
                 Rectangle()
-                    .fill(Color.movo.border)
+                    .fill(Color.movo.cardBorder)
                     .frame(height: Stroke.hairline)
                     .padding(.horizontal, Spacing.lg)
                     .allowsHitTesting(false)
@@ -353,7 +353,7 @@ struct InternalTransferView: View {
             .padding(.vertical, Spacing.md)
         } else {
             Rectangle()
-                .fill(Color.movo.border)
+                .fill(Color.movo.cardBorder)
                 .frame(height: Stroke.hairline)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.md)
@@ -474,7 +474,7 @@ struct InternalTransferView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(cardName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundColor(card != nil ? Color.movo.textPrimary : Color.movo.textDisabled)
                 if let card {
                     Text(card.maskedNumber)
@@ -505,7 +505,7 @@ struct InternalTransferView: View {
                 .frame(width: 52, height: 52)
             ProgressView().tint(Color.movo.textSecondary)
             Text("Loading cards…")
-                .font(.system(size: 13))
+                .textStyle(Typography.subtitle)
                 .foregroundColor(Color.movo.textTertiary)
             Spacer()
         }
@@ -524,7 +524,7 @@ struct InternalTransferView: View {
             TextField("", text: $descriptionText,
                       prompt: Text("What's it for? (optional)")
                           .foregroundColor(Color.movo.textDisabled))
-                .font(.system(size: 15, weight: .regular))
+                .textStyle(Typography.subtitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .autocorrectionDisabled()
         }
@@ -532,10 +532,10 @@ struct InternalTransferView: View {
         .padding(.vertical, Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Radius.lg)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .strokeBorder(Color.movo.elevated, lineWidth: Stroke.hairline)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
         )
     }
@@ -552,7 +552,7 @@ struct InternalTransferView: View {
                 Image(systemName: "arrow.up.forward")
                     .font(.system(size: 13, weight: .semibold))
                 Text(amount > 0 ? "Transfer $\(String(format: "%.2f", amount))" : "Transfer")
-                    .font(.system(size: 16, weight: .semibold))
+                    .textStyle(Typography.buttonLarge)
             }
             .foregroundColor(isValid ? Color.movo.onAccent : Color.movo.textDisabled)
             .frame(maxWidth: .infinity)
@@ -638,10 +638,10 @@ private struct CardChipRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
-                    .font(Typography.bodyCompact.font)
+                    .textStyle(Typography.bodyCompact)
                     .foregroundColor(Color.movo.textPrimary)
                 Text("•••• •••• •••• \(lastFour)")
-                    .font(Typography.mono.font)
+                    .textStyle(Typography.mono)
                     .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
@@ -714,7 +714,7 @@ private struct CardPickerSheet: View {
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(Color.movo.textPrimary)
                                     Text(card.maskedNumber)
-                                        .font(.system(size: 13))
+                                        .textStyle(Typography.subtitle)
                                         .foregroundColor(Color.movo.textTertiary)
                                     Text(card.displayBalance)
                                         .font(.system(size: 13))
@@ -729,12 +729,12 @@ private struct CardPickerSheet: View {
                                     .animation(.spring(duration: 0.2), value: isSelected)
                             }
                             .padding(Spacing.md)
-                            .background(Color.movo.surface)
+                            .background(Color.movo.cardSurface)
                             .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
                             .overlay(
                                 RoundedRectangle(cornerRadius: Radius.lg)
                                     .strokeBorder(
-                                        isSelected ? Color.movo.accentBorder : Color.movo.border,
+                                        isSelected ? Color.movo.accentBorder : Color.movo.borderStrong,
                                         lineWidth: Stroke.hairline
                                     )
                             )
@@ -745,13 +745,12 @@ private struct CardPickerSheet: View {
                 .padding(Spacing.lg)
             }
             .background(Color.movo.background.ignoresSafeArea())
-            .preferredColorScheme(.dark)
             .navigationTitle("Select Card")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .font(Typography.buttonLarge.font)
+                        .textStyle(Typography.buttonLarge)
                         .foregroundColor(Color.movo.accent)
                 }
             }
@@ -764,11 +763,11 @@ private struct CardPickerSheet: View {
 private extension View {
     func movoCard() -> some View {
         self
-            .background(Color.movo.surface)
+            .background(Color.movo.cardSurface)
             .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
             )
     }
 }

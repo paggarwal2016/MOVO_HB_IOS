@@ -60,8 +60,8 @@ struct ProfileImageView: View {
                         case .empty:
                             // Loading shimmer
                             Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .overlay(ProgressView().tint(.white))
+                                .fill(Color.movo.elevated)
+                                .overlay(ProgressView().tint(Color.movo.textPrimary))
                             
                         @unknown default:
                             initialsView
@@ -82,10 +82,10 @@ struct ProfileImageView: View {
             // MARK: - Online indicator dot
             if showOnline {
                 Circle()
-                    .fill(Color.gray)
+                    .fill(Color.movo.elevated)
                     .frame(width: width * 0.22, height: height * 0.22)
                     .overlay(
-                        Circle().stroke(Color.white, lineWidth: 1.5)
+                        Circle().stroke(Color.movo.background, lineWidth: 1.5)
                     )
                     .offset(x: 2, y: 2)
             }
@@ -95,12 +95,11 @@ struct ProfileImageView: View {
     // MARK: - Initials fallback
     var initialsView: some View {
         Circle()
-            .fill(.gray) // avatarColor
+            .fill(Color.movo.elevated) // avatarColor
             .overlay(
                 Text(userName)
                     .font(fontSize)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.movo.textPrimary)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
             )

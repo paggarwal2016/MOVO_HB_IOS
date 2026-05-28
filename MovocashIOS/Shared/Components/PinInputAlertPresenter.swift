@@ -186,11 +186,11 @@ struct PinInputAlertPresenter<Content: View>: View {
                     .padding(.bottom, 2)
             }
             Text(title)
-                .font(.headline)
+                .textStyle(Typography.cardTitle)
                 .foregroundStyle(config.titleColor)
 
             Text(message)
-                .font(.subheadline)
+                .textStyle(Typography.subtitle)
                 .foregroundStyle(config.messageColor)
                 .multilineTextAlignment(.center)
         }
@@ -207,8 +207,8 @@ struct PinInputAlertPresenter<Content: View>: View {
             // PIN field
             VStack(alignment: .leading, spacing: 4) {
                 Text("PIN")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .textStyle(Typography.caption)
+                    .foregroundStyle(Color.movo.textSecondary)
                 HStack {
                     SecureToggleField(
                         placeholder: pinPlaceholder,
@@ -227,7 +227,7 @@ struct PinInputAlertPresenter<Content: View>: View {
 
                     Button { isPinVisible.toggle() } label: {
                         Image(systemName: isPinVisible ? "eye.slash" : "eye")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.movo.textSecondary)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -238,8 +238,8 @@ struct PinInputAlertPresenter<Content: View>: View {
             // Confirm PIN field
             VStack(alignment: .leading, spacing: 4) {
                 Text("Confirm PIN")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .textStyle(Typography.caption)
+                    .foregroundStyle(Color.movo.textSecondary)
                 HStack {
                     SecureToggleField(
                         placeholder: confirmPlaceholder,
@@ -257,7 +257,7 @@ struct PinInputAlertPresenter<Content: View>: View {
 
                     Button { isConfirmPinVisible.toggle() } label: {
                         Image(systemName: isConfirmPinVisible ? "eye.slash" : "eye")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.movo.textSecondary)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -271,7 +271,7 @@ struct PinInputAlertPresenter<Content: View>: View {
                     Image(systemName: "exclamationmark.circle.fill")
                         .font(.caption)
                     Text(error)
-                        .font(.caption)
+                        .textStyle(Typography.caption)
                 }
                 .foregroundStyle(.red)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -285,25 +285,15 @@ struct PinInputAlertPresenter<Content: View>: View {
 
             Button { cancel() } label: {
                 Text(config.secondaryLabel)
-                    .fontWeight(.medium)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(config.secondaryColor)
             }
+            .buttonStyle(MovoTextButtonStyle())
 
             Divider().frame(height: 44)
 
             Button { handleConfirm() } label: {
                 Text(config.primaryLabel)
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(
-                        isDisabled
-                        ? config.primaryColor.opacity(0.4)
-                        : config.primaryColor
-                    )
             }
+            .buttonStyle(MovoCompactButtonStyle())
             .disabled(isDisabled)
         }
         .background(Color(.systemBackground))

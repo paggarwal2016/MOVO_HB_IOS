@@ -56,6 +56,7 @@
 		14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D52CBC2F9B908500CB648B /* EmptyStateView.swift */; };
 		14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D8165E2F73C30300B7D1EF /* ActionCard.swift */; };
 		14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D816602F73D3B100B7D1EF /* ContactsManager.swift */; };
+		14D8A4242FC5DF5700177617 /* CircleIconAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D8A4232FC5DF5700177617 /* CircleIconAvatar.swift */; };
 		14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5912F50204D000D84FD /* SecureLogger.swift */; };
 		14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5952F504AF8000D84FD /* NetworkError.swift */; };
 		14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */; };
@@ -148,6 +149,7 @@
 		14D52CBC2F9B908500CB648B /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		14D8165E2F73C30300B7D1EF /* ActionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionCard.swift; sourceTree = "<group>"; };
 		14D816602F73D3B100B7D1EF /* ContactsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsManager.swift; sourceTree = "<group>"; };
+		14D8A4232FC5DF5700177617 /* CircleIconAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircleIconAvatar.swift; sourceTree = "<group>"; };
 		14DBC5912F50204D000D84FD /* SecureLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureLogger.swift; sourceTree = "<group>"; };
 		14DBC5952F504AF8000D84FD /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
 		14DBC5972F507C4D000D84FD /* ScreenSecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSecurityManager.swift; sourceTree = "<group>"; };
@@ -449,6 +451,7 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				14D8A4232FC5DF5700177617 /* CircleIconAvatar.swift */,
 				146893D92FA33D7A001918AE /* Dashboard */,
 				14D36C582F7AAF150024760F /* ShimmerModifier.swift */,
 				14D52CBC2F9B908500CB648B /* EmptyStateView.swift */,
@@ -751,6 +754,7 @@
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,
+				14D8A4242FC5DF5700177617 /* CircleIconAvatar.swift in Sources */,
 				14716FFE2F86671600198064 /* PlaidService.swift in Sources */,
 				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
 				14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */,

@@ -41,14 +41,14 @@ struct GetStartedInfoScreen: View {
     ]
 
     private let legalItems: [LegalItem] = [
-        LegalItem(subtitle: "How we handle your personal data",
-                  documentType: .privacy),
-        LegalItem(subtitle: "Herring Bank's privacy practices",
-                  documentType: .herringPrivacy),
+//        LegalItem(subtitle: "How we handle your personal data",
+//                  documentType: .privacy),
+//        LegalItem(subtitle: "Herring Bank's privacy practices",
+//                  documentType: .herringPrivacy),
         LegalItem(subtitle: "Rules and conditions for using Movo",
                   documentType: .tos),
-        LegalItem(subtitle: "Digital agreement and consent",
-                  documentType: .cardholderAgreement)
+//        LegalItem(subtitle: "Digital agreement and consent",
+//                  documentType: .cardholderAgreement)
     ]
 
     private var allAccepted: Bool {
@@ -121,8 +121,7 @@ private extension GetStartedInfoScreen {
             HStack(spacing: DesignTokens.Spacing.sm) {
                 ShieldCheckIcon(size: 18, tint: Color.movo.accent)
                 Text("Eligibility")
-                    .font(.system(size: 12, weight: .medium))
-                    .tracking(0.6)
+                    .textStyle(Typography.eyebrow)
                     .textCase(.uppercase)
                     .foregroundStyle(Color.movo.textTertiary)
             }
@@ -133,7 +132,7 @@ private extension GetStartedInfoScreen {
                     HStack(spacing: DesignTokens.Spacing.md) {
                         EligibilityCheckIcon(size: 18, tint: Color.movo.accent)
                         Text(item)
-                            .font(.system(size: 14))
+                            .textStyle(Typography.body)
                             .foregroundStyle(Color.movo.textPrimary)
                         Spacer(minLength: 0)
                     }
@@ -168,8 +167,7 @@ private extension GetStartedInfoScreen {
             HStack(spacing: DesignTokens.Spacing.sm) {
                 DocumentBadgeIcon(size: 18, stroke: Color.movo.textTertiary)
                 Text("Documents to review")
-                    .font(.system(size: 12, weight: .medium))
-                    .tracking(0.6)
+                    .textStyle(Typography.eyebrow)
                     .textCase(.uppercase)
                     .foregroundStyle(Color.movo.textTertiary)
             }
@@ -252,11 +250,11 @@ private extension GetStartedInfoScreen {
                 VStack(alignment: .leading, spacing: 2) {
 
                     Text(item.documentType.title)
-                        .font(.system(size: 14, weight: .semibold))
+                        .textStyle(Typography.body)
                         .foregroundStyle(Color.movo.textPrimary)
 
                     Text(item.subtitle)
-                        .font(.system(size: 12))
+                        .textStyle(Typography.caption)
                         .foregroundStyle(Color.movo.textTertiary)
                         .lineLimit(2)
                 }
@@ -320,10 +318,10 @@ private extension GetStartedInfoScreen {
     private var continueButton: some View {
         Button(action: { onReady() }) {
             Text("Accept & continue")
-                .font(.system(size: 15, weight: .semibold))
+                .textStyle(Typography.buttonLarge)
                 .foregroundStyle(
                     allAccepted
-                    ? Color.movo.background
+                    ? Color.movo.onAccent
                     : Color.movo.accent.opacity(0.55)
                 )
                 .frame(maxWidth: .infinity)

@@ -116,7 +116,6 @@ public struct SuccessConfirmationView: View {
             
         }
         .background(Color.movo.background)
-        .preferredColorScheme(.dark)
     }
     
     // MARK: - Subviews
@@ -162,8 +161,7 @@ public struct SuccessConfirmationView: View {
     private var amountHero: some View {
         VStack(spacing: 10) {
             Text("AMOUNT SENT")
-                .font(.system(size: 10, weight: .medium))
-                .tracking(1.0)
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
             
             amountValue
@@ -175,15 +173,17 @@ public struct SuccessConfirmationView: View {
         let parts = splitAmount(vm.success.amount)
         return HStack(alignment: .firstTextBaseline, spacing: 2) {
             Text("$")
-                .font(.system(size: 24, weight: .medium).monospacedDigit())
+                .textStyle(Typography.heroTitle)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textTertiary)
                 .baselineOffset(20)
             Text(parts.whole)
-                .font(.system(size: 56, weight: .bold).monospacedDigit())
+                .textStyle(Typography.displayLarge)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textPrimary)
-                .tracking(-1.7)
             Text(".\(parts.fraction)")
-                .font(.system(size: 24, weight: .medium).monospacedDigit())
+                .textStyle(Typography.heroTitle)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textTertiary)
                 .baselineOffset(20)
         }
@@ -234,11 +234,12 @@ public struct SuccessConfirmationView: View {
             
             VStack(alignment: .trailing, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 13, weight: .medium).monospacedDigit())
+                    .textStyle(Typography.bodyCompact)
+                    .monospacedDigit()
                     .foregroundColor(Color.movo.textPrimary)
                 if let meta {
                     Text(meta)
-                        .font(.system(size: 10, weight: .regular, design: .monospaced))
+                        .textStyle(Typography.mono)
                         .foregroundColor(Color.movo.textTertiary)
                 }
             }
@@ -254,7 +255,7 @@ public struct SuccessConfirmationView: View {
     }
     
     private var bottomActions: some View {
-        PrimaryButton(title: "Done", backgroundColor: Color.movo.accent, textColor: .black) {
+        PrimaryButton(title: "Done", backgroundColor: Color.movo.accent, textColor: Color.movo.onAccent) {
             vm.done()
         }
         .padding(.horizontal, Spacing.lg)
@@ -314,7 +315,7 @@ private struct CheckmarkHalo: View {
                 .fill(Color.movo.accentTint)
                 .overlay(
                     Circle()
-                        .strokeBorder(Color.movo.accent, lineWidth: 1.5)
+                        .strokeBorder(Color.movo.accent, lineWidth: Stroke.medium)
                 )
             
             Image(systemName: "checkmark")

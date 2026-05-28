@@ -15,21 +15,20 @@ struct OTPDigitBox: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.movo.surface) // ✅ background
+            RoundedRectangle(cornerRadius: Radius.md)
+                .fill(Color.movo.cardSurface)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: Radius.md)
                         .stroke(
-                            isActive ? Color.movo.accent : Color.gray.opacity(0.4),
-                            lineWidth: 1.5
+                            isActive ? Color.movo.accent : Color.movo.border,
+                            lineWidth: isActive ? Stroke.medium : Stroke.hairline
                         )
                 )
                 .frame(height: 55)
 
             Text(digit)
-                .font(.title2)
-                .foregroundColor(.white) // 👈 safer for older iOS
-                .fontWeight(.semibold)
+                .textStyle(Typography.heroTitle)
+                .foregroundColor(Color.movo.textPrimary)
         }
         .frame(maxWidth: .infinity)
     }

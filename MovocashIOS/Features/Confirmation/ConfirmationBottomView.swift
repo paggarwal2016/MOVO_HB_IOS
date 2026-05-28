@@ -39,7 +39,7 @@ struct ConfirmationBottomSheet: View {
         VStack(alignment: .leading, spacing: 0) {
 
             Text(titleText)
-                .font(.system(size: 20, weight: .bold))
+                .textStyle(Typography.heroTitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .padding(.top, Spacing.lg)
                 .padding(.horizontal, Spacing.lg)
@@ -65,7 +65,7 @@ struct ConfirmationBottomSheet: View {
                 PrimaryButton(
                     title: "Confirm",
                     backgroundColor: Color.movo.accent,
-                    textColor: .black,
+                    textColor: Color.movo.onAccent,
                     isLoading: isLoading
                 ) {
                     onConfirm()
@@ -76,7 +76,6 @@ struct ConfirmationBottomSheet: View {
             .padding(.top, Spacing.md)
             .padding(.bottom, Spacing.xl)
         }
-        .preferredColorScheme(.dark)
     }
 
     // MARK: - Amount
@@ -84,15 +83,17 @@ struct ConfirmationBottomSheet: View {
     private var amountDisplay: some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
             Text("$")
-                .font(.system(size: 22, weight: .semibold))
+                .textStyle(Typography.sectionTitle)
                 .foregroundColor(Color.movo.textSecondary)
                 .baselineOffset(14)
             let parts = amount.split(separator: ".")
             Text(parts.first.map(String.init) ?? "0")
-                .font(.system(size: 48, weight: .bold).monospacedDigit())
+                .textStyle(Typography.displayLarge)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textPrimary)
             Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                .textStyle(Typography.sectionTitle)
+                .monospacedDigit()
                 .foregroundColor(Color.movo.textSecondary)
                 .baselineOffset(14)
         }
@@ -133,15 +134,14 @@ struct ConfirmationBottomSheet: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(0.6)
+                    .textStyle(Typography.eyebrow)
                     .foregroundColor(Color.movo.textTertiary)
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 13, weight: .regular))
+                        .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                 }
             }

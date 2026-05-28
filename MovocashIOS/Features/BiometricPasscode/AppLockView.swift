@@ -88,7 +88,7 @@ struct AppLockView: View {
                 .font(.title2.bold())
             Text("Enter your passcode")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.movo.textSecondary)
         }
     }
 
@@ -142,7 +142,7 @@ struct AppLockView: View {
         } label: {
             Text(vm.isAlphanumeric ? "Use 6-digit PIN" : "Use alphanumeric passcode")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.movo.textSecondary)
         }
         .accessibilityLabel(vm.isAlphanumeric ? "Switch to 6-digit PIN" : "Switch to alphanumeric passcode")
     }

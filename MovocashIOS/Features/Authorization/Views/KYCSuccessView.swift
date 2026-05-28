@@ -23,8 +23,7 @@ struct KYCSuccessView: View {
 
                 VStack(spacing: Spacing.xl) {
                     Text("Congrats! You're officially registered.")
-                        .font(.system(size: 26, weight: .bold))
-                        .tracking(-0.5)
+                        .textStyle(Typography.heroTitle)
                         .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
@@ -104,6 +103,6 @@ private extension KYCSuccessView {
     func sparkle(size: CGFloat) -> some View {
         Text("✦")
             .font(.system(size: size))
-            .foregroundColor(.secondary.opacity(0.85))
+            .foregroundColor(Color.movo.textTertiary.opacity(0.85))
     }
 }

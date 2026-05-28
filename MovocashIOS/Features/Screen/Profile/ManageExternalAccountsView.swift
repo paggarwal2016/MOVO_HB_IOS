@@ -18,6 +18,11 @@ struct ManageExternalAccountsView: View {
     @State private var showWithdraw = false
     @State private var isLinkedAccountLoading = false
 
+    // Bank-link success flow
+    @State private var showBankLinkedSuccess = false
+    @State private var newlyLinkedAccount: ACHAccount? = nil
+    @State private var showBankLinkedInfo = false
+
     init(achVM: ACHViewModel, primaryAccount: SavingsAccountInfo?, container: AppContainer) {
         self.achVM = achVM
         self.primaryAccount = primaryAccount
@@ -62,7 +67,6 @@ struct ManageExternalAccountsView: View {
             }
         }
         .background(Color.movo.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
         .navigationDestination(isPresented: $showWithdraw) {
             if let primary = primaryAccount {
                 FundAccountView(
@@ -81,6 +85,43 @@ struct ManageExternalAccountsView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationBarBackButtonHidden(true)
             }
+        }
+        // MARK: - Bank Linked Success
+        // Presented after a successful Plaid link from connectBankRow.
+        //
+        // Navigation pattern: set showWithdraw = true BEFORE dismissing the cover
+        // so SwiftUI pushes FundAccountView into the navigation stack in the same
+        // render pass. The cover dismisses and FundAccountView is already waiting
+        // behind it — no onDismiss closure or timing hacks needed.
+        .fullScreenCover(isPresented: $showBankLinkedSuccess) {
+            BankLinkedSuccessScreen(
+                account: newlyLinkedAccount,
+                onDone: {
+                    if primaryAccount != nil {
+                        showWithdraw = true
+                    }
+                    showBankLinkedSuccess = false
+                }
+            )
+        }
+        .sheet(isPresented: $showBankLinkedInfo) {
+            BankLinkedInfoScreen(
+                container: container,
+                plaidVM: plaidVM,
+                primaryAccount: primaryAccount,
+                allowFunding: false,
+                onSuccess: {
+                    Task {
+                        isLinkedAccountLoading = true
+                        await achVM.fetchAccounts()
+                        isLinkedAccountLoading = false
+                    }
+                }
+            )
+            .presentationDetents([.height(500)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.cardSurface)
         }
     }
 
@@ -130,7 +171,7 @@ struct ManageExternalAccountsView: View {
                 } else {
                     Image(systemName: "building.columns")
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Color.movo.textSecondary)
+                        .foregroundColor(Color.movo.textSecondary)
                 }
             }
             .overlay(
@@ -142,19 +183,19 @@ struct ManageExternalAccountsView: View {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 HStack(spacing: Spacing.sm) {
                     Text(account.institutionName)
-                        .font(Typography.body.font)
-                        .foregroundStyle(Color.movo.textPrimary)
+                        .textStyle(Typography.body)
+                        .foregroundColor(Color.movo.textPrimary)
                     if account.isDefault {
                         StatusPill("PRIMARY", variant: .accent)
                     }
                 }
                 Text("\(account.accountName) · ••\(account.accountNumber.suffix(4))")
-                    .font(Typography.caption.font)
-                    .foregroundStyle(Color.movo.textTertiary)
+                    .textStyle(Typography.caption)
+                    .foregroundColor(Color.movo.textTertiary)
                 if account.plaidAccountBalance > 0 {
                     Text(account.formattedBalance)
-                        .font(Typography.caption.font)
-                        .foregroundStyle(Color.movo.textTertiary)
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textTertiary)
                 }
             }
 
@@ -173,7 +214,7 @@ struct ManageExternalAccountsView: View {
                     } label: {
                         Image(systemName: "star")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.movo.textSecondary)
+                            .foregroundColor(Color.movo.textSecondary)
                             .frame(width: 36, height: 36)
                             .background(Color.movo.elevated,
                                         in: RoundedRectangle(cornerRadius: Radius.sm))
@@ -197,7 +238,7 @@ struct ManageExternalAccountsView: View {
                 } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.movo.danger)
+                        .foregroundColor(Color.movo.danger)
                         .frame(width: 36, height: 36)
                         .background(Color.movo.dangerTint,
                                     in: RoundedRectangle(cornerRadius: Radius.sm))
@@ -218,25 +259,7 @@ struct ManageExternalAccountsView: View {
 
     private var connectBankRow: some View {
         Button {
-            Task {
-                isLinkedAccountLoading = true
-                do {
-                    if !KYCManager.shared.isConfigured {
-                        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                    }
-                } catch {
-                    isLinkedAccountLoading = false
-                    AlertManager.shared.showError("Unable to initialize. Please try again.")
-                    return
-                }
-                isLinkedAccountLoading = false
-                await plaidVM.startPlaidLink()
-                if plaidVM.linkedAccount != nil {
-                    isLinkedAccountLoading = true
-                    await achVM.fetchAccounts()
-                    isLinkedAccountLoading = false
-                }
-            }
+            showBankLinkedInfo = true
         } label: {
             HStack(spacing: Spacing.md) {
                 ZStack {
@@ -245,15 +268,15 @@ struct ManageExternalAccountsView: View {
                         .frame(width: 44, height: 44)
                     Image(systemName: "plus")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.movo.accent)
+                        .foregroundColor(Color.movo.accent)
                 }
                 Text(plaidVM.state == .loading ? "Connecting..." : "Link your external account")
-                    .font(Typography.body.font)
-                    .foregroundStyle(Color.movo.accent)
+                    .textStyle(Typography.body)
+                    .foregroundColor(Color.movo.accent)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.movo.accent)
+                    .foregroundColor(Color.movo.accent)
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)
@@ -275,8 +298,8 @@ struct ManageExternalAccountsView: View {
             HStack {
                 Spacer()
                 Text("Withdraw Funds")
-                    .font(Typography.body.font)
-                    .foregroundStyle(Color.movo.textPrimary)
+                    .textStyle(Typography.body)
+                    .foregroundColor(Color.movo.textPrimary)
                 Spacer()
             }
             .padding(.vertical, Spacing.lg)
@@ -298,17 +321,16 @@ struct ManageExternalAccountsView: View {
                     .frame(width: 72, height: 72)
                 Image(systemName: "building.columns")
                     .font(.system(size: 28, weight: .light))
-                    .foregroundStyle(Color.movo.textTertiary)
+                    .foregroundColor(Color.movo.textTertiary)
             }
             VStack(spacing: Spacing.xs) {
                 Text("No linked accounts")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.movo.textPrimary)
+                    .textStyle(Typography.cardHero)
+                    .foregroundColor(Color.movo.textPrimary)
                 Text("Link a bank account from your profile\nto get started.")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(Color.movo.textTertiary)
+                    .textStyle(Typography.subtitle)
+                    .foregroundColor(Color.movo.textTertiary)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(3)
             }
         }
         .frame(maxWidth: .infinity)

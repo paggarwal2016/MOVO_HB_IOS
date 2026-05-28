@@ -41,32 +41,8 @@ final class DashboardViewModel: BaseViewModel {
         guard !Task.isCancelled else { return }
         do {
             dashboard = try await perform { try await network.request(DashboardAPI.dashboard) }
-            await activatePrimaryVCardIfNeeded()
         } catch {
             // Error is already presented via ToastManager in perform(_:)
-        }
-    }
-
-    // Silently activates the primary vcard when `is_p_vcard_activated` is "Inactive".
-    // Only called from fetchDashboard — not exposed for general use.
-    private func activatePrimaryVCardIfNeeded() async {
-        guard let account = rawPrimaryAccount,
-              account.isPVCardActivated == "Inactive" else { return }
-
-        let pin = String(format: "%04d", Int.random(in: 0...9999))
-        let request = VCardsRequest(pin: pin, accountId: account.id, userAction: "VCARD-ACTIVATE", isPrimary: true)
-
-        do {
-            let _: CreateVCardEncryptedResponse = try await network.request(
-                VCardAPI.postVCards(request: request)
-            )
-        } catch is CancellationError {
-            return
-        } catch {
-            SecureLogger.debug(
-                "Primary vcard activation failed: \(error.localizedDescription)",
-                category: .general
-            )
         }
     }
 
@@ -83,9 +59,6 @@ final class DashboardViewModel: BaseViewModel {
             let result: DashboardResponse = try await network.request(DashboardAPI.dashboard)
             dashboard = result
             lastRefreshedAt = Date()
-            Task.detached(priority: .background) {
-                await self.activatePrimaryVCardIfNeeded()
-            }
         } catch is CancellationError {
             // User dismissed the pull gesture — keep existing data silently
         } catch {
@@ -188,5 +161,6 @@ private extension SavingsAccountInfo {
         clientId = a.clientId
         nickname = a.nickname.flatMap { $0.isEmpty ? nil : $0 }
         isPrimary = a.isPrimary
+        routingNumber = a.routingNumber.flatMap { $0.isEmpty ? nil : $0 }
     }
 }

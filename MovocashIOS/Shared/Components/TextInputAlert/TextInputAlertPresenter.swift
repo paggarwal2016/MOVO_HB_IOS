@@ -120,11 +120,8 @@ struct TextInputAlertPresenter<Content: View>: View {
             HStack(spacing: 0) {
                 Button { cancel() } label: {
                     Text(config.secondaryLabel)
-                        .fontWeight(.medium)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(config.secondaryColor)
                 }
+                .buttonStyle(MovoTextButtonStyle())
 
                 Divider().frame(height: 44)
 
@@ -132,13 +129,10 @@ struct TextInputAlertPresenter<Content: View>: View {
                     guard !inputText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
                     commit()
                 } label: {
-                    let empty = inputText.trimmingCharacters(in: .whitespaces).isEmpty
                     Text(config.primaryLabel)
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(empty ? config.primaryColor.opacity(0.4) : config.primaryColor)
                 }
+                .buttonStyle(MovoCompactButtonStyle())
+                .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             .background(Color(.systemBackground))
         }

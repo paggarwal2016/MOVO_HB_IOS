@@ -15,15 +15,15 @@ struct EmptyStateView: View {
             ZStack {
                 Image(systemName: image)
                     .font(.system(size: 30, weight: .light))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.movo.textSecondary)
             }
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.headline)
+                    .textStyle(Typography.sectionTitle)
                     .foregroundStyle(.primary)
                 Text(description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .textStyle(Typography.subtitle)
+                    .foregroundStyle(Color.movo.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }

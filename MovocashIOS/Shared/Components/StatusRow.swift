@@ -35,7 +35,7 @@ struct StatusRow: View {
         } label: {
             HStack {
                 Text(label)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.movo.textTertiary)
                     .font(.subheadline)
                 
                 Spacer()
@@ -56,7 +56,7 @@ struct StatusRow: View {
                 if action != nil {
                     Image(systemName: "chevron.right")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Color.movo.textDisabled)
                 }
             }
         }

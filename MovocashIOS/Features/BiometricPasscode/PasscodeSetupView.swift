@@ -19,7 +19,7 @@ struct PasscodeSetupView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemBackground).ignoresSafeArea()
+            Color.movo.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
 
@@ -45,18 +45,18 @@ struct PasscodeSetupView: View {
                 Spacer()
 
                 // Header
-                VStack(spacing: 8) {
+                VStack(spacing: Spacing.sm) {
                     Image(systemName: stepIcon)
                         .font(.system(size: 44, weight: .light))
-                        .foregroundStyle(Color.primary)
+                        .foregroundStyle(Color.movo.textPrimary)
                         .accessibilityHidden(true)
                     Text(stepTitle)
-                        .font(.title2.bold())
+                        .textStyle(Typography.sectionTitle)
                     Text(stepSubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .textStyle(Typography.body)
+                        .foregroundStyle(Color.movo.textTertiary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
+                        .padding(.horizontal, Spacing.xxxl)
                 }
 
                 Spacer().frame(height: 40)
@@ -74,10 +74,10 @@ struct PasscodeSetupView: View {
 
                 // Status / error
                 Text(vm.statusMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
+                    .textStyle(Typography.caption)
+                    .foregroundStyle(Color.movo.danger)
                     .frame(height: 24)
-                    .padding(.top, 16)
+                    .padding(.top, Spacing.lg)
 
                 Spacer().frame(height: 32)
 
@@ -89,7 +89,7 @@ struct PasscodeSetupView: View {
                         onBiometric: nil,
                         biometricIcon: ""
                     )
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, Spacing.xxl)
                 }
 
                 Spacer()
@@ -121,7 +121,7 @@ struct PasscodeSetupView: View {
     private var successBadge: some View {
         Image(systemName: "checkmark.circle.fill")
             .font(.system(size: 72))
-            .foregroundStyle(.green)
+            .foregroundStyle(Color.movo.success)
             .transition(.scale.combined(with: .opacity))
             .animation(.spring(response: 0.4), value: vm.setupStep)
     }

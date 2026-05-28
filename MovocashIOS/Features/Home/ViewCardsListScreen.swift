@@ -69,7 +69,7 @@ struct ViewCardsListScreen: View {
             .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.surface)
+            .presentationBackground(Color.movo.cardSurface)
         }
         .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {
@@ -101,7 +101,10 @@ struct ViewCardsListScreen: View {
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
-            CircularNavButton(systemName: "plus") { showCreateCard = true }
+            Button { showCreateCard = true } label: {
+                CircleIconAvatar(systemName: "plus", size: 32, tint: .neutral)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)

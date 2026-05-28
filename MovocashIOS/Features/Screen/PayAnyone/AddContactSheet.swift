@@ -59,7 +59,7 @@ public struct AddContactSheet: View {
             cta
         }
         .padding(.top, Spacing.xxl)
-        .background(Color.movo.surface.ignoresSafeArea())
+        .background(Color.movo.cardSurface.ignoresSafeArea())
         .onAppear {
             // Brief delay so the sheet animation completes before keyboard appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
@@ -142,7 +142,7 @@ public struct AddContactSheet: View {
             .padding(.vertical, Spacing.md + 1)
             .background(
                 RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.surface)
+                    .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.button)
                             .strokeBorder(
@@ -163,7 +163,7 @@ public struct AddContactSheet: View {
                         .padding(.trailing, Spacing.sm + 2)
                         .overlay(
                             Rectangle()
-                                .fill(Color.movo.border)
+                                .fill(Color.movo.cardBorder)
                                 .frame(width: Stroke.hairline)
                                 .padding(.vertical, Spacing.xs),
                             alignment: .trailing
@@ -188,7 +188,7 @@ public struct AddContactSheet: View {
                 .padding(.vertical, Spacing.md + 1)
                 .background(
                     RoundedRectangle(cornerRadius: Radius.button)
-                        .fill(Color.movo.surface)
+                        .fill(Color.movo.cardSurface)
                         .overlay(
                             RoundedRectangle(cornerRadius: Radius.button)
                                 .strokeBorder(

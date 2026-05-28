@@ -38,7 +38,7 @@ struct PasscodeChangeView: View {
                             .font(.title2.bold())
                         Text(stepSubtitle)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.movo.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
                     }

@@ -84,38 +84,28 @@ struct RootView: View {
                         onContinue: { email in
                             authVM.email = email
                             Task {
+                                SpinnerView.showFullScreen()
                                 do {
                                     try await authVM.sendEmailOTP()
-                                    appState.flow = .emailOTP
+                                    SpinnerView.hideFullScreen()
+                                    AlertManager.shared.showCustom(
+                                        title: "Check your email",
+                                        message: "We sent a verification link to \(email).",
+                                        primary: "Continue",
+                                        onPrimary: {
+                                            Task {
+                                                let passkeyDone = await authVM.isPasskeyRegistered()
+                                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                            }
+                                        }
+                                    )
                                 } catch {
+                                    SpinnerView.hideFullScreen()
                                     AlertManager.shared.showError(error.localizedDescription)
                                 }
                             }
                         },
                         onSignIn: { appState.flow = .loginPhone }
-                    )
-
-                case .emailOTP:
-                    OTPScreen(
-                        title: "Verify email",
-                        subtitle: "A 6-digit verification code was sent to \(authVM.email)",
-                        maxLength: 6,
-                        isLoading: authVM.state == .loading,
-                        onVerify: { code in
-                            await authVM.verifyEmailOTP(code: code) {
-                                Task { @MainActor in
-                                    // New user — show BiometricEnrollView (which also
-                                    // registers device passkey) if not yet done; otherwise
-                                    // skip straight to onboarding.
-                                    let passkeyDone = await authVM.isPasskeyRegistered()
-                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
-                                }
-                            }
-                        },
-                        onResend: {
-                            try await authVM.sendEmailOTP()
-                        },
-                        onBack: { appState.flow = .signupDetails }
                     )
 
                 case .getStartedInfo:
@@ -155,7 +145,7 @@ struct RootView: View {
                 case .enableBiometrics:
                     BiometricEnrollView(
                         lockManager: lockManager,
-                        onEnable: { Task { await advanceAfterSecurity() } },
+                        onEnable: { return await advanceAfterSecurity() },
                         onSkip:   { Task { await advanceAfterSecurity() } }
                     )
 
@@ -288,17 +278,33 @@ struct RootView: View {
             }
         }
         .onChangeCompat(of: appState.otpVerified) { verified in
-            guard verified else { return }
+            // Guard: OTPScreen.onVerify is the primary routing handler for the OTP flow.
+            // This observer is the fallback for paths that set otpVerified without going
+            // through OTPScreen (e.g. deep links). If the flow has already moved away
+            // from .otp, OTPScreen.onVerify already handled routing — skip here to
+            // avoid double-execution and potential race overrides.
+            guard verified, appState.flow == .otp else { return }
             if appState.context == .getStarted {
                 // New registration — collect email + phone before security setup
                 appState.flow = .signupDetails
             } else {
-                // Login flow — skip passcode, enroll biometric if available
+                // Login flow.
                 UserDefaults.standard.set(true, forKey: "kycCompleted")
-                if lockManager.isBiometricHardwarePresent && !RSAKeyManager.shared.keysExist() {
-                    appState.flow = .enableBiometrics
-                } else {
-                    appState.flow = .home
+                Task {
+                    if lockManager.isBiometricHardwarePresent {
+                        // Check enrollment per-user — not per-device — so User B is never
+                        // skipped because User A enrolled on the same device previously.
+                        let enrolledForUser = await authVM.isBiometricEnrolledForCurrentUser()
+                        if !enrolledForUser {
+                            // This user has not enrolled biometrics yet — show the screen.
+                            appState.flow = .enableBiometrics
+                            return
+                        }
+                    }
+                    // Biometrics either enrolled or no hardware present.
+                    // Passkey may still be missing — always verify before routing home.
+                    let passkeyDone = await authVM.isPasskeyRegistered()
+                    appState.flow = passkeyDone ? .home : .enableBiometrics
                 }
             }
         }
@@ -354,11 +360,23 @@ struct RootView: View {
     /// Called after the user enables or skips biometrics.
     /// Registers the device passkey (mandatory — blocks navigation on failure),
     /// then routes: registration → KYC onboarding  |  login → Home.
-    private func advanceAfterSecurity() async {
+    /// Returns true if passkey succeeded and navigation was triggered; false otherwise.
+    /// BiometricEnrollView uses the return value to reset its enroll state on failure.
+    @discardableResult
+    private func advanceAfterSecurity() async -> Bool {
         lockManager.resetToUnlocked()
 
+        // Show a loader immediately so the screen doesn't appear frozen during
+        // the JWT decode → SDK configure → passkey UI presentation sequence.
+        SpinnerView.showFullScreen()
+        await Task.yield()
+
         let registered = await registerPasskeyIfNeeded()
-        guard registered else { return }   // error already shown — stay on screen
+
+        // Hide before navigating so the next screen isn't revealed behind the spinner.
+        SpinnerView.hideFullScreen()
+
+        guard registered else { return false }   // error already shown — stay on screen
 
         switch appState.context {
         case .getStarted:
@@ -367,25 +385,30 @@ struct RootView: View {
             UserDefaults.standard.set(true, forKey: "kycCompleted")
             appState.flow = .home
         }
+        return true
     }
 
     /// Registers the device passkey via MobileBankingSDK (one-time per user/device).
     /// Returns true if already registered or successfully registered now.
     /// Returns false if registration failed — caller must not advance the flow.
     private func registerPasskeyIfNeeded() async -> Bool {
+        // Fail-closed: if we cannot decode the token we cannot confirm identity,
+        // so block navigation rather than silently proceeding.
         guard let token = try? await container.keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
               let userIdInt = payload["userId"] as? Int
         else {
-            // Cannot decode user — let through; server will enforce on next API call.
-            SecureLogger.warning("Passkey check: unable to decode userId from token", category: .auth)
-            return true
+            SecureLogger.error("Passkey check: unable to decode userId from token — blocking navigation", category: .auth)
+            AlertManager.shared.showError("Device registration failed. Please try again.")
+            return false
         }
 
         let userId = String(userIdInt)
         let passkeyKey = "passkey_registered_\(userId)"
-        guard !UserDefaults.standard.bool(forKey: passkeyKey) else {
+
+        // Keychain is the source of truth (survives OS memory pressure; UserDefaults does not).
+        if case .found = container.keychain.getSync(passkeyKey) {
             return true   // already registered on this device
         }
 
@@ -408,16 +431,20 @@ struct RootView: View {
         }
 
         let deviceId = await DeviceManager.shared.deviceID()
+
         do {
             try await PlaidService.shared.registerDevicePasskey(
                 userId: userId,
                 deviceId: deviceId,
                 presentingViewController: presenter
             )
-            UserDefaults.standard.set(true, forKey: passkeyKey)
+            try? await container.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
             SecureLogger.info("Device passkey registered for user \(userId)", category: .auth)
             return true
         } catch {
+            // Single attempt only — no automatic retry. If the user cancelled the
+            // passkey prompt or a network error occurred, surface the error and let
+            // them retry manually by tapping the button again.
             SecureLogger.error("Passkey registration failed: \(error.localizedDescription)", category: .auth)
             AlertManager.shared.showError("Device registration failed. Please try again.")
             return false

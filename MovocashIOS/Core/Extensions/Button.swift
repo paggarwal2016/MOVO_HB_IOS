@@ -21,7 +21,7 @@ struct PrimaryButton: View {
     var alignment: ContentAlignment = .center
     
     var backgroundColor: Color = Color.movo.accent
-    var textColor: Color = .black
+    var textColor: Color = Color.movo.onAccent
     var isLoading: Bool = false
     var isEnabled: Bool = true
     var action: () -> Void
@@ -57,7 +57,7 @@ struct PrimaryButton: View {
                             }
                             
                             Text(title)
-                                .font(.system(size: 16, weight: .semibold))
+                                .textStyle(Typography.buttonLarge)
                         }
                         
                         // Left aligned → push content to left
@@ -78,7 +78,7 @@ struct PrimaryButton: View {
                 ? backgroundColor
                 : backgroundColor.opacity(0.4)
             )
-            .cornerRadius(14)
+            .cornerRadius(Radius.heroCard)
             .shadow(
                 color: isEnabled
                 ? backgroundColor.opacity(0.25)
@@ -97,8 +97,8 @@ struct PrimaryButton: View {
 
 struct BackButton: View {
     
-    var color: Color = .black
-    var backgroundColor: Color = Color.gray.opacity(0.1)
+    var color: Color = Color.movo.textPrimary
+    var backgroundColor: Color = Color.movo.elevated
     var action: () -> Void
     
     var body: some View {
@@ -135,7 +135,7 @@ struct FilledButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding()
             .background(Color.primary)
-            .foregroundColor(.white)
+            .foregroundColor(Color.movo.onAccent)
             .cornerRadius(8)
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
     }

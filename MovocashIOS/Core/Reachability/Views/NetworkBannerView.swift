@@ -16,11 +16,11 @@ struct NetworkBannerView: View {
         HStack(spacing: Spacing.md) {
             Image(systemName: isConnected ? "wifi" : "wifi.slash")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isConnected ? Color.green : Color.white)
+                .foregroundStyle(isConnected ? Color.movo.success : Color.movo.textPrimary)
 
             Text(isConnected ? "Back online" : "No internet connection")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.white)
+                .textStyle(Typography.bodyCompact)
+                .foregroundStyle(Color.movo.textPrimary)
 
             Spacer()
 
@@ -33,7 +33,7 @@ struct NetworkBannerView: View {
         .background(Color.movo.background)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(isConnected ? Color.green.opacity(0.5) : Color.white.opacity(0.15))
+                .fill(isConnected ? Color.movo.success.opacity(0.5) : Color.movo.textPrimary.opacity(0.15))
                 .frame(height: Stroke.thin)
         }
     }
@@ -46,7 +46,7 @@ private struct OfflinePulseDot: View {
 
     var body: some View {
         Circle()
-            .fill(Color.white)
+            .fill(Color.movo.textPrimary)
             .frame(width: 6, height: 6)
             .opacity(pulsing ? 0.35 : 1.0)
             .animation(

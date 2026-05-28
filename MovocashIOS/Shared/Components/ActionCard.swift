@@ -38,7 +38,7 @@ struct ActionCard: View {
                     HStack(spacing: 6) {
                         if isLoading {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: theme.background.color))
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.onAccent))
                                 .scaleEffect(0.8)
                         } else {
                             Text(buttonLabel)
@@ -185,15 +185,12 @@ struct PayAnyoneAddContactView: View {
 
             // Header
             HStack {
-                Text(title.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(1.2)
-                    .foregroundColor(Color.movo.textTertiary)
+                Eyebrow(title)
                 Spacer()
                 if showSeeAll {
                     Button(action: { onSeeAllTap?() }) {
                         Text("See all")
-                            .font(.system(size: 11, weight: .medium))
+                            .textStyle(Typography.caption)
                             .foregroundColor(Color.movo.accent)
                     }
                     .buttonStyle(.plain)
@@ -213,15 +210,14 @@ struct PayAnyoneAddContactView: View {
                 bubble(initial: "+", label: "Add", expand: showSeeAll, action: onAddTap)
             }
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.lg)
+        .padding(Spacing.cardPadding)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.surface)
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.cardSurface)
                 .overlay(
-                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
                 )
         )
     }
@@ -229,15 +225,20 @@ struct PayAnyoneAddContactView: View {
     private func bubble(initial: String, label: String, expand: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: Spacing.xs) {
-                ZStack {
-                    Circle()
-                        .fill(Color.movo.elevatedHigh)
-                        .overlay(Circle().strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline))
-                    Text(initial)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(Color.movo.textPrimary)
+                if initial == "+" {
+                    CircleIconAvatar(systemName: "plus", size: 44, tint: .accent)
+                        .frame(width: 52, height: 52)
+                } else {
+                    ZStack {
+                        Circle()
+                            .fill(Color.movo.elevatedHigh)
+                            .overlay(Circle().strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline))
+                        Text(initial)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Color.movo.textPrimary)
+                    }
+                    .frame(width: 52, height: 52)
                 }
-                .frame(width: 52, height: 52)
                 Text(label)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(Color.movo.textSecondary)

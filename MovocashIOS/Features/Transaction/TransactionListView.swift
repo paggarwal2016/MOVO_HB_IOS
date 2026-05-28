@@ -107,7 +107,6 @@ struct TransactionListView: View {
             }
         }
         .background(Color.movo.background)
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $showFilterSheet) {
             TransactionFilterView(filter: $pendingFilter, showLast4: mode == .common) {
                 activeFilter = pendingFilter
@@ -161,17 +160,19 @@ struct TransactionListView: View {
         HStack(spacing: 5) {
             if totalOut > 0 {
                 Text("−$\(f.string(from: NSDecimalNumber(decimal: totalOut)) ?? "0.00")")
-                    .font(.system(size: 10, weight: .regular).monospacedDigit())
+                    .textStyle(Typography.mono)
+                    .monospacedDigit()
                     .foregroundColor(Color.movo.textDisabled)
             }
             if totalOut > 0 && totalIn > 0 {
                 Text("·")
-                    .font(.system(size: 10))
+                    .textStyle(Typography.mono)
                     .foregroundColor(Color.movo.textDisabled)
             }
             if totalIn > 0 {
                 Text("+$\(f.string(from: NSDecimalNumber(decimal: totalIn)) ?? "0.00")")
-                    .font(.system(size: 10, weight: .regular).monospacedDigit())
+                    .textStyle(Typography.mono)
+                    .monospacedDigit()
                     .foregroundColor(Color.movo.textDisabled)
             }
         }
@@ -184,8 +185,7 @@ struct TransactionListView: View {
                     // Section header — scrolls with content
                     HStack {
                         Text(group.label.uppercased())
-                            .font(.system(size: 11, weight: .semibold))
-                            .tracking(0.8)
+                            .textStyle(Typography.eyebrow)
                             .foregroundColor(Color.movo.textTertiary)
                         Spacer()
                         dayTotalsLabel(for: group.items)
@@ -351,7 +351,8 @@ struct TransactionListView: View {
         
         private var amountView: some View {
             Text(item.amountFormatted)
-                .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                .textStyle(Typography.body)
+                .monospacedDigit()
                 .foregroundColor(isFailed ? Color.movo.textDisabled : (item.isCredit ? Color.movo.accent : Color.movo.textPrimary))
                 .strikethrough(isFailed, color: Color.movo.textDisabled)
         }
@@ -382,7 +383,7 @@ struct TransactionListView: View {
                 Text(noFilters
                      ? "Your transactions will appear here once activity begins."
                      : "Try adjusting your search or clearing the filters.")
-                .font(Typography.caption.font)
+                .textStyle(Typography.caption)
                 .foregroundColor(Color.movo.textTertiary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.huge)
@@ -396,8 +397,8 @@ struct TransactionListView: View {
                     Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 } label: {
                     Text("Clear Filters")
-                        .font(Typography.button.font)
-                        .foregroundColor(Color.movo.background)
+                        .textStyle(Typography.buttonLarge)
+                        .foregroundColor(Color.movo.onAccent)
                         .padding(.horizontal, Spacing.xl)
                         .padding(.vertical, Spacing.md)
                         .background(Color.movo.accent, in: Capsule())
@@ -418,15 +419,15 @@ struct TransactionListView: View {
                         .fill(Color.movo.elevated)
                         .frame(width: 38, height: 38)
                     VStack(alignment: .leading, spacing: 6) {
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: Radius.xs)
                             .fill(Color.movo.elevated)
                             .frame(width: 130, height: 12)
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: Radius.xs)
                             .fill(Color.movo.surface)
                             .frame(width: 85, height: 10)
                     }
                     Spacer()
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: Radius.xs)
                         .fill(Color.movo.elevated)
                         .frame(width: 55, height: 12)
                 }
@@ -501,7 +502,7 @@ extension TransactionListView {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.surface)
+                    .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.button)
                             .strokeBorder(searchFocused ? Color.movo.accentBorder : Color.movo.border,
@@ -548,17 +549,17 @@ extension TransactionListView {
                             .font(.system(size: 11, weight: .medium))
                     }
                     Text(filter.label)
-                        .font(.system(size: 11, weight: .medium))
-                    
+                        .textStyle(Typography.captionSmall)
+
                     if let count {
                         Text("\(count)")
-                            .font(.system(size: 9, weight: .semibold))
+                            .textStyle(Typography.micro)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 1)
                             .background(
                                 Capsule().fill(isActive ? Color.movo.accent : Color.movo.accent.opacity(0.15))
                             )
-                            .foregroundColor(isActive ? Color.movo.background : Color.movo.accent)
+                            .foregroundColor(isActive ? Color.movo.onAccent : Color.movo.accent)
                     }
                 }
                 .foregroundColor(isActive ? Color.movo.accent : Color.movo.textSecondary)
@@ -588,9 +589,9 @@ extension TransactionListView {
             VStack(alignment: .leading, spacing: Spacing.xs + 2) {
                 Eyebrow(label)
                 Text(formattedValue)
-                    .font(.system(size: 16, weight: .semibold).monospacedDigit())
+                    .textStyle(Typography.cardTitle)
+                    .monospacedDigit()
                     .foregroundColor(isInflow ? Color.movo.accent : Color.movo.textPrimary)
-                    .tracking(-0.2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -628,12 +629,12 @@ extension TransactionListView {
                         if activeCount > 0 {
                             Text("\(activeCount)")
                                 .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(Color.movo.background)
+                                .foregroundColor(Color.movo.onAccent)
                                 .frame(width: 14, height: 14)
                                 .background(
                                     Circle()
                                         .fill(Color.movo.accent)
-                                        .overlay(Circle().strokeBorder(Color.movo.background, lineWidth: 1.5))
+                                        .overlay(Circle().strokeBorder(Color.movo.background, lineWidth: Stroke.medium))
                                 )
                                 .offset(x: 4, y: -4)
                         }

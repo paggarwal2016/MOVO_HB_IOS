@@ -37,6 +37,14 @@ extension Color {
         public static var dangerTint:    Color { MovoTheme.color.dangerTint.color }
         public static var warning:       Color { MovoTheme.color.warning.color }
         public static var onAccent:      Color { MovoTheme.color.onAccent.color }
+        public static var cardSurface:   Color { MovoTheme.color.cardSurface.color }
+        public static var cardBorder:    Color { MovoTheme.color.cardBorder.color }
+
+        // Card artwork — brand-locked. Use only in the physical card artwork view.
+        public static var cardArtwork:       Color { MovoTheme.color.cardArtwork.color }
+        public static var onCardArtwork:     Color { MovoTheme.color.onCardArtwork.color }
+        public static var cardArtworkMuted:  Color { MovoTheme.color.cardArtworkMuted.color }
+        public static var cardArtworkBorder: Color { MovoTheme.color.cardArtworkBorder.color }
     }
 }
 
@@ -366,5 +374,34 @@ public struct Eyebrow: View {
         Text(text.uppercased())
             .textStyle(Typography.eyebrow)
             .foregroundColor(color)
+    }
+}
+
+// MARK: - Card artwork shadow
+
+/// Two-layer drop shadow tuned for the MOVO card visualization.
+/// Heavier in dark mode (premium float), lighter in light mode (subtle lift).
+public struct CardArtworkShadow: ViewModifier {
+    @Environment(\.colorScheme) private var scheme
+
+    public init() {}
+
+    public func body(content: Content) -> some View {
+        if scheme == .dark {
+            content
+                .shadow(color: .black.opacity(0.6), radius: 25, x: 0, y: 20)
+                .shadow(color: .black.opacity(0.4), radius: 6,  x: 0, y: 4)
+        } else {
+            content
+                .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.08), radius: 3,  x: 0, y: 2)
+        }
+    }
+}
+
+extension View {
+    /// Applies the brand-locked two-layer drop shadow used by the MOVO card visualization.
+    public func cardArtworkShadow() -> some View {
+        modifier(CardArtworkShadow())
     }
 }

@@ -47,7 +47,6 @@ struct MovocashIOSApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(kycVM: kycVM)
-                .preferredColorScheme(.dark)
                 .environmentObject(appState)
                 .environmentObject(container)
                 .environmentObject(lockManager)

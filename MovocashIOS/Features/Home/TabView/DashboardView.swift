@@ -54,6 +54,8 @@ struct DashboardView: View {
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
     @State private var isLinkingPlaid = false
+    @State private var showPlaidInfo = false
+    @State private var plaidInfoAllowFunding = true
 
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -62,7 +64,7 @@ struct DashboardView: View {
     // MARK: - Body
 
     private var isSheetActive: Bool {
-        showCreateCashCard || showMoveMoney || showPrimaryAccountDetails
+        showCreateCashCard || showMoveMoney || showPrimaryAccountDetails || showPlaidInfo
     }
 
     var body: some View {
@@ -72,6 +74,7 @@ struct DashboardView: View {
                 scrollContent
             }
             if dashboardVM.isRefreshing {
+                // Scrim — black-on-alpha is intentional; works on both light and dark backgrounds.
                 Color.black.opacity(0.35)
                     .ignoresSafeArea()
                 SpinnerView()
@@ -88,7 +91,7 @@ struct DashboardView: View {
             .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.surface)
+            .presentationBackground(Color.movo.cardSurface)
         }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
@@ -196,7 +199,7 @@ struct DashboardView: View {
             )
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.surface)
+            .presentationBackground(Color.movo.cardSurface)
         }
         .navigationDestination(isPresented: $showViewCardList) {
             ViewCardsListScreen(
@@ -241,12 +244,26 @@ struct DashboardView: View {
                         await dashboardVM.refresh()
                     }
                 })
-                .presentationDetents([.height(260)])
+                .presentationDetents([.height(385)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
-                .presentationBackground(Color.movo.surface)
+                .presentationBackground(Color.movo.cardSurface)
             }
         }
+        .sheet(isPresented: $showPlaidInfo) {
+            BankLinkedInfoScreen(
+                container: container,
+                plaidVM: achVM,
+                primaryAccount: dashboardVM.primaryAccount,
+                allowFunding: plaidInfoAllowFunding,
+                onSuccess: { needsDashboardRefresh = true }
+            )
+            .presentationDetents([.height(500)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.cardSurface)
+        }
+        
         .onChange(of: needsDashboardRefresh) { shouldRefresh in
             guard shouldRefresh else { return }
             needsDashboardRefresh = false
@@ -376,37 +393,13 @@ struct DashboardView: View {
                 accounts: data.linkedAccounts ?? [],
                 isLoading: isLinkingPlaid || achVM.state == .loading,
                 onLinkAccount: {
-                    Task {
-                        isLinkingPlaid = true
-                        defer { isLinkingPlaid = false }
-                        do {
-                            if !KYCManager.shared.isConfigured {
-                                try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                            }
-                        } catch {
-                            AlertManager.shared.showError("Unable to initialize. Please try again.")
-                            return
-                        }
-                        await achVM.startPlaidLink()
-                        if achVM.linkedAccount != nil { await dashboardVM.refresh() }
-                    }
+                    plaidInfoAllowFunding = false
+                    showPlaidInfo = true
                     SecureLogger.debug("Link your bank tapped", category: .general)
                 },
                 onConnectAnother: {
-                    Task {
-                        isLinkingPlaid = true
-                        defer { isLinkingPlaid = false }
-                        do {
-                            if !KYCManager.shared.isConfigured {
-                                try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                            }
-                        } catch {
-                            AlertManager.shared.showError("Unable to initialize. Please try again.")
-                            return
-                        }
-                        await achVM.startPlaidLink()
-                        if achVM.linkedAccount != nil { await dashboardVM.refresh() }
-                    }
+                    plaidInfoAllowFunding = false
+                    showPlaidInfo = true
                     SecureLogger.debug("Connect another bank tapped", category: .general)
                 }
             )
@@ -461,15 +454,17 @@ struct DashboardView: View {
 
     private func handleQuickAction(_ action: String) {
         switch action {
-        case "TRANSACTIONS":          showTransactions = true
+        case "ACTIVITY":          showTransactions = true
         case "MOVE-MONEY":            showMoveMoney = true
-        case "ISSUE-A-PHYSICAL-CARD": break
+        case "FUND-ACCOUNT":          plaidInfoAllowFunding = true; showPlaidInfo = true
         default:                      break
         }
     }
 }
 
+
 // MARK: - Extracted Subview (Prevents re-renders during scroll)
+
 struct PrimaryAccountContent: View {
     let account: SavingsAccountInfo
     let accountData: DashboardAccount
@@ -487,41 +482,72 @@ struct PrimaryAccountContent: View {
         )
 
         HStack(spacing: 10) {
-            // Move Money — accent pill
-            Button { onQuickAction("MOVE-MONEY") } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("MOVE MONEY")
-                        .font(.system(size: 13, weight: .semibold))
-                        .tracking(0.4)
+            if let moneyAction = accountData.actions.first(where: {
+                $0.action == "MOVE-MONEY" || $0.action == "FUND-ACCOUNT"
+            }) {
+                QuickActionButton(action: moneyAction, style: .accent) {
+                    onQuickAction(moneyAction.action)
                 }
-                .foregroundColor(Color.movo.onAccent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(RoundedRectangle(cornerRadius: Radius.xl).fill(Color.movo.accent))
             }
-            .buttonStyle(.plain)
 
-            // Activity — dark pill
-            Button { onQuickAction("TRANSACTIONS") } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "clock")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("ACTIVITY")
-                        .font(.system(size: 13, weight: .semibold))
-                        .tracking(0.4)
+            if let txAction = accountData.actions.first(where: { $0.action == "ACTIVITY" }) {
+                QuickActionButton(action: txAction, style: .secondary) {
+                    onQuickAction(txAction.action)
                 }
-                .foregroundColor(Color.movo.textPrimary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: Radius.xl)
-                        .fill(Color.movo.elevated)
-                        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-                )
             }
-            .buttonStyle(.plain)
+        }
+    }
+}
+
+
+// MARK: - Quick Action Pill Button
+
+private struct QuickActionButton: View {
+    enum Style { case accent, secondary }
+
+    let action: DashboardAction
+    let style: Style
+    let onTap: () -> Void
+
+    private var icon: String {
+        switch action.action {
+        case "FUND-ACCOUNT":  return "arrow.down.to.line"
+        case "MOVE-MONEY":    return "arrow.left.arrow.right"
+        case "ACTIVITY":      return "clock"
+        default:              return "circle"
+        }
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(action.label.uppercased())
+                    .font(.system(size: 13, weight: .semibold))
+                    .tracking(0.4)
+            }
+            .foregroundColor(style == .accent ? Color.movo.background : Color.movo.textPrimary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(pillBackground)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var pillBackground: some View {
+        switch style {
+        case .accent:
+            RoundedRectangle(cornerRadius: Radius.xl)
+                .fill(Color.movo.accent)
+        case .secondary:
+            RoundedRectangle(cornerRadius: Radius.xl)
+                .fill(Color.movo.elevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.xl)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
         }
     }
 }

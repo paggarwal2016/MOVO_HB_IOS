@@ -74,6 +74,18 @@ public enum Typography {
         usage: "Sheet header amount"
     )
 
+    /// 72pt bold tabular — main integer in the amount-entry field (e.g., "1234" in "$1234.00")
+    public static let amountInput = TextStyle(
+        size: 72, weight: .bold, tracking: -2.5, lineHeight: 1.0,
+        usage: "Amount entry integer (Fund / Transfer / Pay screens)"
+    )
+
+    /// 32pt semibold — currency prefix \"$\" and cents suffix \".00\" flanking amountInput
+    public static let amountPrefix = TextStyle(
+        size: 32, weight: .semibold, tracking: -0.8, lineHeight: 1.0,
+        usage: "Amount entry currency symbol and decimal cents"
+    )
+
     // ─────────────────────────────────────────────────────────────
     // HEADLINES — for screen titles and section heroes
     // ─────────────────────────────────────────────────────────────

@@ -41,7 +41,7 @@ struct CustomCardView: View {
     
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 15)
-            .fill(Color.black)
+            .fill(Color.movo.cardArtwork)
             .shadow(color: .black.opacity(0.35), radius: 12, x: 0, y: 8)
     }
     

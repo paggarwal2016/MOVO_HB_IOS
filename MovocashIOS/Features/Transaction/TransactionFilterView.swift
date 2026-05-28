@@ -82,7 +82,7 @@ struct TransactionFilterView: View {
 
             if activeCount > 0 {
                 Text("\(activeCount) active")
-                    .font(Typography.caption.font)
+                    .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.accent)
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, Spacing.xs)
@@ -93,8 +93,9 @@ struct TransactionFilterView: View {
             Spacer()
 
             Button("Reset", action: onReset)
-                .font(Typography.body.font)
-                .foregroundColor(Color.movo.textSecondary)
+                .buttonStyle(.plain)
+                .textStyle(Typography.bodyCompact)
+                .foregroundColor(Color.movo.accent)
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.top, Spacing.lg)
@@ -112,7 +113,7 @@ struct TransactionFilterView: View {
                       text: $filter.merchantName,
                       prompt: Text("Search by name or merchant")
                           .foregroundColor(Color.movo.textDisabled))
-                .font(Typography.caption.font)
+                .textStyle(Typography.caption)
                 .foregroundColor(Color.movo.textPrimary)
                 .tint(Color.movo.accent)
                 .autocorrectionDisabled()
@@ -128,7 +129,7 @@ struct TransactionFilterView: View {
         .padding(.vertical, Spacing.md + 2)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
@@ -163,8 +164,8 @@ struct TransactionFilterView: View {
             applyPreset(preset)
         } label: {
             Text(preset.rawValue)
-                .font(selected ? Typography.bodyCompact.font : Typography.caption.font)
-                .foregroundColor(selected ? Color.movo.background : Color.movo.textSecondary)
+                .textStyle(selected ? Typography.bodyCompact : Typography.caption)
+                .foregroundColor(selected ? Color.movo.onAccent : Color.movo.textSecondary)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.sm + 1)
                 .background(
@@ -185,9 +186,8 @@ struct TransactionFilterView: View {
         )
         return VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(label)
-                .font(Typography.eyebrow.font)
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
-                .tracking(0.8)
             Group {
                 if let range {
                     DatePicker("", selection: selection, in: range, displayedComponents: .date)
@@ -196,7 +196,6 @@ struct TransactionFilterView: View {
                 }
             }
             .labelsHidden()
-            .colorScheme(.dark)
             .tint(Color.movo.accent)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -204,7 +203,7 @@ struct TransactionFilterView: View {
         .padding(.vertical, Spacing.md + 2)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
@@ -218,7 +217,7 @@ struct TransactionFilterView: View {
                 sectionHeader("AMOUNT")
                 Spacer()
                 Text("$\(Int(minSlider)) – $\(Int(maxSlider))\(maxSlider >= 500 ? "+" : "")")
-                    .font(Typography.bodyCompact.font)
+                    .textStyle(Typography.bodyCompact)
                     .foregroundColor(Color.movo.textPrimary)
             }
 
@@ -227,9 +226,9 @@ struct TransactionFilterView: View {
                 .padding(.vertical, Spacing.xs)
 
             HStack {
-                Text("$0").font(Typography.caption.font).foregroundColor(Color.movo.textDisabled)
+                Text("$0").textStyle(Typography.caption).foregroundColor(Color.movo.textDisabled)
                 Spacer()
-                Text("$500+").font(Typography.caption.font).foregroundColor(Color.movo.textDisabled)
+                Text("$500+").textStyle(Typography.caption).foregroundColor(Color.movo.textDisabled)
             }
 
             HStack(spacing: Spacing.md) {
@@ -242,12 +241,11 @@ struct TransactionFilterView: View {
     private var amountTextField: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("AMOUNT")
-                .font(Typography.eyebrow.font)
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
-                .tracking(0.8)
             HStack(spacing: Spacing.xs) {
                 Text("$")
-                    .font(Typography.caption.font)
+                    .textStyle(Typography.caption)
                     .foregroundColor(Color.movo.textTertiary)
                 TextField("",
                           text: Binding(
@@ -265,7 +263,7 @@ struct TransactionFilterView: View {
         .padding(.vertical, Spacing.md + 2)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
@@ -274,9 +272,8 @@ struct TransactionFilterView: View {
     private var last4TextField: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("CARD LAST 4")
-                .font(Typography.eyebrow.font)
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
-                .tracking(0.8)
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "creditcard")
                     .foregroundColor(Color.movo.textTertiary)
@@ -297,7 +294,7 @@ struct TransactionFilterView: View {
         .padding(.vertical, Spacing.md + 2)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface)
+                .fill(Color.movo.cardSurface)
                 .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
@@ -313,8 +310,8 @@ struct TransactionFilterView: View {
                     let selected = filter.transactionStatus == value
                     Button { filter.transactionStatus = value } label: {
                         Text(label)
-                            .font(selected ? Typography.bodyCompact.font : Typography.caption.font)
-                            .foregroundColor(selected ? Color.movo.background : Color.movo.textSecondary)
+                            .textStyle(selected ? Typography.bodyCompact : Typography.caption)
+                            .foregroundColor(selected ? Color.movo.onAccent : Color.movo.textSecondary)
                             .padding(.horizontal, Spacing.md + 2)
                             .padding(.vertical, Spacing.sm + 1)
                             .background(
@@ -336,28 +333,15 @@ struct TransactionFilterView: View {
     private var bottomBar: some View {
         HStack(spacing: Spacing.md) {
             Button("Cancel", action: onCancel)
-                .font(Typography.buttonLarge.font)
-                .foregroundColor(Color.movo.textPrimary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.lg)
-                .background(
-                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .fill(Color.movo.elevated)
-                        .overlay(RoundedRectangle(cornerRadius: Radius.heroCard)
-                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-                )
+                .buttonStyle(OutlineButtonStyle())
 
             Button {
                 commit()
                 onApply()
             } label: {
                 Text("Apply Filters")
-                    .font(Typography.buttonLarge.font)
-                    .foregroundColor(Color.movo.background)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.lg)
-                    .background(Color.movo.accent, in: RoundedRectangle(cornerRadius: Radius.heroCard))
             }
+            .buttonStyle(MovoPrimaryButtonStyle())
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.vertical, Spacing.lg)
@@ -373,9 +357,8 @@ struct TransactionFilterView: View {
 
     private func sectionHeader(_ text: String) -> some View {
         Text(text)
-            .font(Typography.micro.font)
+            .textStyle(Typography.micro)
             .foregroundColor(Color.movo.textTertiary)
-            .tracking(0.8)
     }
 
     // MARK: - Helpers
@@ -445,7 +428,7 @@ private struct RangeSliderView: View {
 
                 // Min thumb
                 Circle()
-                    .fill(Color.movo.textPrimary)
+                    .fill(Color.movo.surface)
                     .frame(width: thumbDiameter, height: thumbDiameter)
                     .shadow(color: Color.movo.background.opacity(0.4), radius: 4, y: 2)
                     .overlay(Circle().strokeBorder(Color.movo.accent, lineWidth: Stroke.thin))
@@ -465,7 +448,7 @@ private struct RangeSliderView: View {
 
                 // Max thumb
                 Circle()
-                    .fill(Color.movo.textPrimary)
+                    .fill(Color.movo.surface)
                     .frame(width: thumbDiameter, height: thumbDiameter)
                     .shadow(color: Color.movo.background.opacity(0.4), radius: 4, y: 2)
                     .overlay(Circle().strokeBorder(Color.movo.accent, lineWidth: Stroke.thin))

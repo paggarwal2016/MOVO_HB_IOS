@@ -15,6 +15,7 @@ struct ProfileScreen: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var lockManager: AppLockManager
+    @EnvironmentObject private var authVM: AuthViewModel
     
     @ObservedObject var dashboardVM: DashboardViewModel
     @ObservedObject var achVM: ACHViewModel
@@ -135,13 +136,18 @@ private extension ProfileScreen {
         }) {
             BiometricEnrollView(
                 lockManager: lockManager,
-                onEnable: { showBiometricEnrollSheet = false },
+                onEnable: { showBiometricEnrollSheet = false; return true },
                 onSkip:   { isBiometricOn = false; showBiometricEnrollSheet = false }
             )
         }
         .alert("Disable \(effectiveBiometricType.displayName)?",
                isPresented: $showDisableBiometricAlert) {
-            Button("Disable", role: .destructive) { lockManager.revokeBiometricSafely() }
+            Button("Disable", role: .destructive) {
+                lockManager.revokeBiometricSafely()
+                // Clear the per-user Keychain enrollment flag so the next login
+                // correctly re-prompts this user to re-enroll biometrics.
+                Task { await authVM.clearBiometricEnrollmentForCurrentUser() }
+            }
             Button("Cancel",  role: .cancel) { isBiometricOn = true }
         } message: {
             Text("You'll need to re-enroll to use \(effectiveBiometricType.displayName) again.")
