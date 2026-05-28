@@ -256,7 +256,7 @@ struct DashboardView: View {
                 primaryAccount: dashboardVM.primaryAccount,
                 onSuccess: { needsDashboardRefresh = true }
             )
-            .presentationDetents([.height(480)])
+            .presentationDetents([.height(500)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
