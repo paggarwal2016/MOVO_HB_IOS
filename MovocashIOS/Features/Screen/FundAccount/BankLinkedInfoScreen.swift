@@ -13,6 +13,7 @@ struct BankLinkedInfoScreen: View {
     let container: AppContainer
     @ObservedObject var plaidVM: PlaidAchViewModel
     var primaryAccount: SavingsAccountInfo? = nil
+    var allowFunding: Bool = true
     var onSuccess: () -> Void = {}
 
     @State private var isConnecting = false
@@ -149,11 +150,8 @@ struct BankLinkedInfoScreen: View {
             SpinnerView.hideFullScreen()
         }
         // MARK: - BankLinkedSuccessScreen
-        // Shown after the bank account is linked. container + primaryAccount +
-        // linkedAccounts are forwarded so the "Add funds" button inside
-        // BankLinkedSuccessScreen can present FundAccountView directly.
-        // onDone fires after the transfer completes (or if the user skips
-        // funding) — dismiss the whole sheet chain back to the dashboard.
+        // allowFunding=true  → "Add funds" CTA → FundAccountView (fund flow)
+        // allowFunding=false → "Done" CTA → dismisses back to dashboard (link-only flow)
         .fullScreenCover(isPresented: $showSuccessScreen) {
             BankLinkedSuccessScreen(
                 account: fetchedAchAccounts.first,
@@ -162,8 +160,8 @@ struct BankLinkedInfoScreen: View {
                     onSuccess()
                     dismiss()
                 },
-                container: container,
-                primaryAccount: primaryAccount,
+                container: allowFunding ? container : nil,
+                primaryAccount: allowFunding ? primaryAccount : nil,
                 linkedAccounts: fetchedAchAccounts
             )
         }

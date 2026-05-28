@@ -180,11 +180,11 @@ final class AuthViewModel: ObservableObject {
                 AuthAPI.emailOTP(request: EmailVerifyRequest(email: email, userAction: "VERIFY-EMAIL"))
             )
             state = .otpSent
-            ToastManager.shared.show(
-                response.message ?? "Code sent to \(email)",
-                style: .success,
-                position: .bottom
-            )
+//            ToastManager.shared.show(
+//                "Email verified successfully",
+//                style: .success,
+//                position: .bottom
+//            )
         } catch {
             state = .idle
             throw error

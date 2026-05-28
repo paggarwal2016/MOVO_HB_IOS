@@ -84,8 +84,25 @@ struct RootView: View {
                         onContinue: { email in
                             authVM.email = email
                             Task {
-                                let passkeyDone = await authVM.isPasskeyRegistered()
-                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                SpinnerView.showFullScreen()
+                                do {
+                                    try await authVM.sendEmailOTP()
+                                    SpinnerView.hideFullScreen()
+                                    AlertManager.shared.showCustom(
+                                        title: "Check your email",
+                                        message: "We sent a verification link to \(email).",
+                                        primary: "Continue",
+                                        onPrimary: {
+                                            Task {
+                                                let passkeyDone = await authVM.isPasskeyRegistered()
+                                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                            }
+                                        }
+                                    )
+                                } catch {
+                                    SpinnerView.hideFullScreen()
+                                    AlertManager.shared.showError(error.localizedDescription)
+                                }
                             }
                         },
                         onSignIn: { appState.flow = .loginPhone }
