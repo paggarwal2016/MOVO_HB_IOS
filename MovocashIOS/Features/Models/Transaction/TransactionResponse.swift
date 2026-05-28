@@ -15,12 +15,19 @@ nonisolated struct TransactionResponse: Decodable {
     let balance: Decimal
 
     init(from decoder: Decoder) throws {
-        let container       = try decoder.container(keyedBy: CodingKeys.self)
-        transactions        = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
-        let settledBalStr   = try container.decodeIfPresent(String.self, forKey: .settledBalance) ?? "0"
-        let balanceStr      = try container.decodeIfPresent(String.self, forKey: .balance) ?? "0"
-        settledBalance      = Decimal(string: settledBalStr) ?? 0
-        balance             = Decimal(string: balanceStr) ?? 0
+        let container  = try decoder.container(keyedBy: CodingKeys.self)
+        transactions   = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
+        settledBalance = Self.decodeDecimal(from: container, key: .settledBalance)
+        balance        = Self.decodeDecimal(from: container, key: .balance)
+    }
+
+    private static func decodeDecimal(
+        from container: KeyedDecodingContainer<CodingKeys>,
+        key: CodingKeys
+    ) -> Decimal {
+        if let d = try? container.decodeIfPresent(Double.self, forKey: key) { return Decimal(d) }
+        if let s = try? container.decodeIfPresent(String.self, forKey: key) { return Decimal(string: s) ?? 0 }
+        return 0
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -45,8 +52,13 @@ struct Transaction: Decodable, Identifiable, Sendable {
         status          = try container.decodeIfPresent(String.self, forKey: .status)
         location        = try container.decodeIfPresent(String.self, forKey: .location)
         description     = try container.decodeIfPresent(String.self, forKey: .description)
-        let amountStr   = try container.decodeIfPresent(String.self, forKey: .amount) ?? "0"
-        amount          = Decimal(string: amountStr) ?? 0
+        if let d = try? container.decodeIfPresent(Double.self, forKey: .amount) {
+            amount = Decimal(string: String(d)) ?? Decimal(d)
+        } else if let s = try? container.decodeIfPresent(String.self, forKey: .amount) {
+            amount = Decimal(string: s) ?? 0
+        } else {
+            amount = 0
+        }
         to              = try container.decodeIfPresent(String.self, forKey: .to)
         from            = try container.decodeIfPresent(String.self, forKey: .from)
         type            = try container.decodeIfPresent(TransactionType.self, forKey: .type) ?? .unknown
@@ -61,7 +73,6 @@ struct Transaction: Decodable, Identifiable, Sendable {
         let f = DateFormatter()
         f.dateFormat = "M/d/yyyy HH:mm:ss"
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
         return f
     }()
 

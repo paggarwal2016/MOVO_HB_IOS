@@ -452,12 +452,20 @@ struct CardDetailSheet: View {
             let formatter = NumberFormatter()
             formatter.numberStyle = .currency
             formatter.currencyCode = "USD"
-            let prefix = item.amount < 0 ? "−" : "+"
-            let value = abs(item.amount)
-            let formatted = formatter.string(from: value as NSDecimalNumber) ?? "—"
+            let prefix = item.isCredit ? "+" : "−"
+            let formatted = formatter.string(from: item.amount as NSDecimalNumber) ?? "—"
             return "\(prefix)\(formatted)"
         }
         
+        private var formattedDate: String {
+            let calendar = Calendar.current
+            if calendar.isDateInToday(item.date)     { return "Today" }
+            if calendar.isDateInYesterday(item.date) { return "Yesterday" }
+            let f = DateFormatter()
+            f.dateFormat = "MMM d"
+            return f.string(from: item.date)
+        }
+
         private var amountColor: Color {
             item.type == .deposit ? Color.movo.accent : Color.movo.textPrimary
         }
@@ -496,7 +504,7 @@ struct CardDetailSheet: View {
                     Text(item.title)
                         .textStyle(Typography.bodyCompact)
                         .foregroundColor(Color.movo.textPrimary)
-                    Text("12/05/2026")
+                    Text(formattedDate)
                         .textStyle(Typography.captionSmall)
                         .foregroundColor(Color.movo.textTertiary)
                 }

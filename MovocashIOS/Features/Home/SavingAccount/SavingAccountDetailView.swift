@@ -12,12 +12,15 @@ import SwiftUI
 struct SavingAccountDetailView: View {
 
     let accountId: Int
+    private let container: AppContainer
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @StateObject private var transVM: TransactionViewModel
+    @State private var showAll = false
 
     init(accountId: Int, showAccountCard: Bool = true, container: AppContainer) {
         self.accountId = accountId
+        self.container = container
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
     }
 
@@ -46,6 +49,14 @@ struct SavingAccountDetailView: View {
                         .fontWeight(.semibold)
                 }
             }
+            .sheet(isPresented: $showAll) {
+                TransactionListView(
+                    container: container,
+                    accountId: accountId,
+                    mode: .individual,
+                    initialMax: 500
+                )
+            }
         }
         .task { await loadDetail() }
     }
@@ -69,12 +80,25 @@ struct SavingAccountDetailView: View {
 
     private var transactionList: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 8) {
-                ForEach(transVM.transactions) { item in
-                    TransactionRow(item: item)
+            VStack(spacing: 0) {
+                if transVM.transactions.count >= 10 {
+                    HStack {
+                        Spacer()
+                        Button("See all") { showAll = true }
+                            .font(Typography.captionSmall.font)
+                            .foregroundColor(Color.movo.accent)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 8)
                 }
+
+                VStack(spacing: 8) {
+                    ForEach(transVM.transactions) { item in
+                        TransactionRow(item: item)
+                    }
+                }
+                .padding(.horizontal, 10)
             }
-            .padding(.horizontal, 10)
             .padding(.vertical, 10)
         }
         .background(Color(.systemGroupedBackground))
@@ -83,7 +107,7 @@ struct SavingAccountDetailView: View {
     // MARK: - Load
 
     private func loadDetail() async {
-        await transVM.loadTransactions(max: 500, accountId: accountId)
+        await transVM.loadTransactions(max: 10, accountId: accountId)
     }
 }
 
@@ -92,6 +116,12 @@ struct SavingAccountDetailView: View {
 
 struct TransactionRow: View {
     let item: TransactionItem
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, h:mm a"
+        return f
+    }()
 
     var body: some View {
         HStack(spacing: 10) {
@@ -114,8 +144,11 @@ struct TransactionRow: View {
                     Text(item.subtitle)
                         .font(.caption)
                         .foregroundStyle(Color.movo.textSecondary)
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.caption2)
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(Color.movo.textSecondary)
+                    Text(Self.dateFormatter.string(from: item.date))
+                        .font(.caption)
                         .foregroundStyle(Color.movo.textSecondary)
                 }
             }

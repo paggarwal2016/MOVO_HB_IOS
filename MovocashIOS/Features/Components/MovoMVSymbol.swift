@@ -1,36 +1,37 @@
 //
 //  MovoMVSymbol.swift
-//  MovocashIOS
+//  Movo
 //
-//  Created by Vinu on 12/05/26.
+//  Created by tracing the official "MV" logomark.
 //
 
-import Foundation
 import SwiftUI
 
-// MARK: - MV Symbol (Canvas-drawn, scales to any size)
-
-/// Movo's "MV" logomark — a layered double-M composed of four disjoint pieces:
-/// an outer M outline, a floating inner chevron, and two inner legs with
-/// chamfered (slanted) tops.
+/// Movo's "MV" logomark — a layered double-M composed of two layers:
+/// a primary "body" (the outer M outline plus two inner legs), and a
+/// secondary "chevron" (the floating inner V), tinted with the accent color.
 ///
-/// Use any of SwiftUI's standard fill / foreground modifiers to color it:
+/// The defaults match the official wordmark (dark navy body, teal chevron),
+/// which is designed to sit on a light background. Override `color` when
+/// rendering on dark surfaces:
 ///
 /// ```swift
-/// MovoMVSymbol()
-///     .fill(.white)
-///     .frame(width: 44, height: 44)
-///     .background(.black, in: RoundedRectangle(cornerRadius: 10))
+/// MovoMVSymbol()                                  // navy body + teal chevron — for light backgrounds
+/// MovoMVSymbol(color: .white)                     // for dark backgrounds (splash, dark mode)
+/// MovoMVSymbol(color: .white, accent: .yellow)    // fully custom
 /// ```
 ///
-/// The artwork's intrinsic aspect ratio is ≈ 1.018 (very slightly wider than tall).
-/// It is centered inside the available rect with that aspect ratio preserved, so
-/// the symbol stays proportional regardless of how the parent frames it.
-
+/// The artwork's intrinsic aspect ratio (≈ 1.018) is preserved automatically;
+/// it stays proportional and centered in any frame.
 struct MovoMVSymbol: View {
 
     /// Intrinsic aspect ratio (width / height) of the original artwork.
     static let aspectRatio: CGFloat = 3717.0 / 3650.0
+
+    /// Movo's brand body color (dark navy from the official wordmark).
+    static let defaultBody = Color(red: 0x1A / 255.0,
+                                   green: 0x1A / 255.0,
+                                   blue: 0x22 / 255.0)
 
     /// Movo's signature teal accent.
     static let defaultAccent = Color(red: 0x62 / 255.0,
@@ -40,7 +41,8 @@ struct MovoMVSymbol: View {
     var color: Color
     var accent: Color
 
-    init(color: Color = Color.movo.textPrimary, accent: Color = Color.movo.accent) {
+    init(color: Color = MovoMVSymbol.defaultBody,
+         accent: Color = MovoMVSymbol.defaultAccent) {
         self.color = color
         self.accent = accent
     }
@@ -53,7 +55,6 @@ struct MovoMVSymbol: View {
         .aspectRatio(Self.aspectRatio, contentMode: .fit)
     }
 }
-
 
 // MARK: - Shapes
 
@@ -120,6 +121,38 @@ struct MovoMVChevronShape: Shape {
     }
 }
 
+// MARK: - Preview
+
+#Preview("MovoMVSymbol") {
+    VStack(spacing: 32) {
+        // Canonical: dark navy body + teal chevron on a LIGHT background
+        // (matches the official wordmark).
+        MovoMVSymbol()
+            .padding(20)
+            .frame(width: 160, height: 160)
+            .background(.white, in: RoundedRectangle(cornerRadius: 32))
+
+        // For dark backgrounds (splash, dark-mode icons), override to white.
+        MovoMVSymbol(color: .white)
+            .padding(20)
+            .frame(width: 160, height: 160)
+            .background(.black, in: RoundedRectangle(cornerRadius: 32))
+
+        // A range of sizes on light.
+        HStack(spacing: 20) {
+            ForEach([24.0, 40.0, 64.0, 96.0], id: \.self) { size in
+                MovoMVSymbol()
+                    .frame(width: size, height: size)
+            }
+        }
+
+        // Non-square frame — symbol stays proportional and centered.
+        MovoMVSymbol()
+            .frame(width: 240, height: 90)
+            .border(.gray.opacity(0.2))
+    }
+    .padding()
+}
 struct AmbientGlowView: View {
     
     var color: Color = .movo.accent
