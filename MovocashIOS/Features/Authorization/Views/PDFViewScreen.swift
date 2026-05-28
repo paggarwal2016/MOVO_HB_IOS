@@ -252,6 +252,10 @@ private struct WebKitView: UIViewRepresentable {
             controller.addUserScript(layoutScript)
         }
 
+        // Script C: collapse table rows whose leading cells are empty so the
+        // content cell spans the full row width instead of sitting in column 3.
+        controller.addUserScript(makeTableCollapseScript())
+
         let scrollScript = WKUserScript(
             source: """
             window.addEventListener('scroll', function() {
@@ -392,6 +396,34 @@ private struct WebKitView: UIViewRepresentable {
         })();
         """
         return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+    }
+
+    /// Builds Script C: runs after the DOM is ready and collapses table rows where
+    /// leading cells are empty. Removes those empty cells and spans the first content
+    /// cell across all vacated columns so it fills the full row width.
+    private func makeTableCollapseScript() -> WKUserScript {
+        let source = """
+        (function() {
+          document.querySelectorAll('tr').forEach(function(row) {
+            var cells = Array.prototype.slice.call(row.cells);
+            if (cells.length < 2) return;
+            var emptyCount = 0;
+            for (var i = 0; i < cells.length - 1; i++) {
+              if (cells[i].textContent.trim() === '') {
+                emptyCount++;
+              } else {
+                break;
+              }
+            }
+            if (emptyCount === 0) return;
+            for (var i = 0; i < emptyCount; i++) {
+              row.removeChild(cells[i]);
+            }
+            cells[emptyCount].colSpan = emptyCount + 1;
+          });
+        })();
+        """
+        return WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {

@@ -48,7 +48,7 @@ th, td { text-align: left; padding: var(--space-sm) var(--space-md); border-bott
 /* Fee name column */
 th:nth-child(1), td:nth-child(1) { width: 30%; }
 /* Amount column — enough for values like "$10.00"; never needs to be wide */
-th:nth-child(2), td:nth-child(2) { width: calc(22% + 2px); }
+th:nth-child(2), td:nth-child(2) { width: 20%; }
 /* Details column takes the remaining 48% — most room for description text */
 th { font-weight: var(--weight-semi); color: var(--fg); background: var(--surface); font-size: var(--size-eyebrow); letter-spacing: var(--track-eyebrow); text-transform: uppercase; }
 td { color: var(--fg-secondary); }
