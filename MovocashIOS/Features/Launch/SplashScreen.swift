@@ -32,6 +32,6 @@ struct SplashScreen: View {
 /// transition from LaunchScreen to SwiftUI splash is visually seamless.
 struct MovoSplashLogo: View {
     var body: some View {
-        MovoLogoMark(size: 120, color: .white)
+        MovoMVSymbol().frame(width: 120, height: 120)
     }
 }

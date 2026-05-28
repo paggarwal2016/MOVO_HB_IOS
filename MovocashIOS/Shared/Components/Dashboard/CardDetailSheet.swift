@@ -535,7 +535,7 @@ struct CardDetailSheet: View {
             onDeleted()
         } catch {
             guard !Task.isCancelled else { return }
-            ToastManager.shared.show("Failed to delete card.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
         isDeleting = false
     }
