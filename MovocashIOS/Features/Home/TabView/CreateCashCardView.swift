@@ -62,7 +62,7 @@ struct CreateCashCardView: View {
                 .padding(.bottom, Spacing.xxxl)
         }
         .padding(.top, Spacing.xxl)
-        .background(Color.movo.cardSurface.ignoresSafeArea())
+        .background(Color.movo.surface.ignoresSafeArea())
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 focusedField = .nickname
@@ -145,7 +145,7 @@ private extension CreateCashCardView {
             .disabled(isLoading)
             .padding(.horizontal, Spacing.md)
             .frame(height: 48)
-            .background(Color.movo.background, in: RoundedRectangle(cornerRadius: Radius.card))
+            .background(Color.movo.elevated, in: RoundedRectangle(cornerRadius: Radius.card))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.card).stroke(
                     focusedField == .nickname ? Color.movo.accentBorder : Color.movo.borderStrong,
@@ -332,7 +332,7 @@ private struct PinCell: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: Radius.card)
-                .fill(Color.movo.background)
+                .fill(Color.movo.elevated)
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.card)
                         .stroke(borderColor, lineWidth: isActive ? Stroke.medium : Stroke.thin)

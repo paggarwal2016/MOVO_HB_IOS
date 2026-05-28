@@ -270,7 +270,7 @@ struct CardDetailSheet: View {
                 HStack(alignment: .center) {
                     HStack(spacing: 6) {
 
-                        MovoMVSymbol()
+                        MovoMVSymbol(color: Color.movo.onCardArtwork)
                             .frame(width: 22, height: 22)
 
                         Text("MOVOCASH")
@@ -341,7 +341,7 @@ struct CardDetailSheet: View {
         
         private var cardBackground: some View {
             ZStack {
-                // Base gradient — fixed brand-locked values (heritage black card, constant in both modes)
+                // Base gradient — brand-locked card art (constant in both light and dark mode)
                 LinearGradient(
                     colors: [Color.movo.cardArtworkBorder, Color.movo.cardArtwork],
                     startPoint: .topLeading,

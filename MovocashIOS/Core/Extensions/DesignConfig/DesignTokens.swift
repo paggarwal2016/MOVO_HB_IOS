@@ -101,10 +101,10 @@ public enum DesignTokens {
 
         // Card artwork — LOCKED (heritage Amex-style black card; constant across both modes).
         // Use ONLY in the physical card artwork view. Do not use for any other UI surface.
-        public static let cardArtwork       = ColorToken(hex: 0x1A1A22, name: "cardArtwork")
+        public static let cardArtwork       = ColorToken(hex: 0x060608, name: "cardArtwork")
         public static let onCardArtwork     = ColorToken(hex: 0xF2F3F6, name: "onCardArtwork")
         public static let cardArtworkMuted  = ColorToken(hex: 0xA8ACBA, name: "cardArtworkMuted")
-        public static let cardArtworkBorder = ColorToken(hex: 0x2A2A35, name: "cardArtworkBorder")
+        public static let cardArtworkBorder = ColorToken(hex: 0x1C1C25, name: "cardArtworkBorder")
     }
 
     // MARK: - Spacing scale (4-pt grid)

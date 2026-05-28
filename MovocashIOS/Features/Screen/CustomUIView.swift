@@ -42,9 +42,9 @@ struct CardChip: View {
             RoundedRectangle(cornerRadius: 5)
                 .fill(LinearGradient(
                     colors: [
-                        Color.movo.textSecondary,
-                        Color.movo.textTertiary,
-                        Color.movo.textDisabled
+                        Color.movo.onCardArtwork,
+                        Color.movo.cardArtworkMuted,
+                        Color.movo.cardArtworkMuted.opacity(0.6)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -82,7 +82,7 @@ struct ContactlessIcon: View {
                 path.addArc(center: .init(x: cx, y: cy), radius: r,
                             startAngle: .degrees(-50), endAngle: .degrees(50), clockwise: false)
                 context.stroke(path,
-                               with: .color(Color.movo.textSecondary.opacity(alpha)),
+                               with: .color(Color.movo.onCardArtwork.opacity(alpha)),
                                style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
             }
         }
@@ -143,25 +143,25 @@ struct MastercardMark: View {
         VStack(spacing: 2) {
             ZStack {
                 Circle()
-                    .fill(Color.movo.textSecondary.opacity(0.55))
+                    .fill(Color.movo.onCardArtwork.opacity(0.55))
                     .frame(width: 18, height: 18)
                     .offset(x: -6)
                 Circle()
-                    .fill(Color.movo.textTertiary.opacity(0.55))
+                    .fill(Color.movo.cardArtworkMuted.opacity(0.55))
                     .frame(width: 18, height: 18)
                     .offset(x: 6)
                     .blendMode(.screen)
             }
             .frame(width: 30, height: 18)
-            
+
             VStack(spacing: 0) {
                 Text("mastercard")
                     .font(.system(size: 7))
                     .tracking(0.4)
-                    .foregroundColor(Color.movo.textSecondary)
+                    .foregroundColor(Color.movo.onCardArtwork)
                 Text("platinum")
                     .font(.system(size: 6))
-                    .foregroundColor(Color.movo.textTertiary)
+                    .foregroundColor(Color.movo.cardArtworkMuted)
             }
         }
     }
