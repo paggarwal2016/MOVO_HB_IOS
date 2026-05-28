@@ -476,7 +476,7 @@ struct PrimaryAccountContent: View {
     var body: some View {
         BalanceCardView(
             account: account,
-            showViewCard: accountData.isPVCardActivated == "Active" && hasVCards,
+            showViewCard: hasVCards, // showViewCard: accountData.isPVCardActivated == "Active" && hasVCards,
             onCardTap: onCardTap,
             onViewCardTap: onViewCardTap
         )
