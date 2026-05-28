@@ -39,7 +39,7 @@ struct BankLinkedInfoScreen: View {
                     .fill(Color.movo.accent)
                     .frame(width: 48, height: 48)
                     .overlay(
-                        MovoMVSymbol(color: Color.movo.onAccent)
+                        MovoMVSymbol()
                             .frame(width: 28, height: 28)
                     )
                 

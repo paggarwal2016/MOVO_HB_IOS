@@ -19,16 +19,23 @@ struct SaveUserRequest: Encodable {
     let city: String
     let state: String
     let zip: String
+    let driversLicenseNumber: String
+    let driversLicenseExpiration: String
+    let driversLicenseState: String
     let profilePicture: String
     let isDeactivated: Bool
     let smsVerified: Bool
     let smsVerifiedDate: String?
     let emailVerified: Bool
+    let emailVerifiedDate: String?
     let cipAllowed: Bool
     let cipRequired: Bool
     let isAdditionalKycRequired: Bool
     let isPlaidAuthRequired: Bool
     let isTwoFactorEnabled: Bool
+    let tosAcceptedDate: String?
+    let virtualCardTosAcceptedDate: String?
+    let eDeliveryAcceptedDate: String?
     let fcmToken: String
     let userAction: String
 }
