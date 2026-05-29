@@ -67,6 +67,7 @@ struct ProfileScreen: View {
                     emptyState
                 }
             }
+            StatusBarScrim()
             if isLoggingOut {
                 Color.black.opacity(0.45).ignoresSafeArea()
                 SpinnerView()

@@ -74,6 +74,8 @@ struct CardDetailSheet: View {
                 }
             }
 
+            StatusBarScrim()
+
             if isLoading || isDeleting {
                 Color.black.opacity(0.45).ignoresSafeArea()
                 SpinnerView()

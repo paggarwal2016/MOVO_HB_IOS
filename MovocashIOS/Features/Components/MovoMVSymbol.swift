@@ -7,49 +7,56 @@
 
 import SwiftUI
 
-/// Movo's "MV" logomark — a layered double-M composed of two layers:
-/// a primary "body" (the outer M outline plus two inner legs), and a
-/// secondary "chevron" (the floating inner V), tinted with the accent color.
+/// Movo's "MV" logomark — a layered double-M composed of two parts:
+/// a primary "body" (outer M outline plus two inner legs) and a floating
+/// "chevron" (the inner V).
 ///
-/// The defaults match the official wordmark (dark navy body, teal chevron),
-/// which is designed to sit on a light background. Override `color` when
-/// rendering on dark surfaces:
+/// The body accepts any `ShapeStyle`, so it can be filled with a flat color,
+/// a gradient, a material, etc. The default is a polished-platinum
+/// `LinearGradient` designed to read well against dark surfaces (e.g. the
+/// splash screen). The chevron is a flat color, defaulting to brand teal.
 ///
 /// ```swift
-/// MovoMVSymbol()                                  // navy body + teal chevron — for light backgrounds
-/// MovoMVSymbol(color: .white)                     // for dark backgrounds (splash, dark mode)
-/// MovoMVSymbol(color: .white, accent: .yellow)    // fully custom
+/// MovoMVSymbol()                                       // platinum gradient + teal
+/// MovoMVSymbol(bodyStyle: Color.white)                 // flat white body
+/// MovoMVSymbol(bodyStyle: LinearGradient(...))         // custom gradient
+/// MovoMVSymbol(bodyStyle: Color.black, accent: .red)   // fully overridden
 /// ```
 ///
-/// The artwork's intrinsic aspect ratio (≈ 1.018) is preserved automatically;
-/// it stays proportional and centered in any frame.
+/// The artwork's intrinsic aspect ratio (≈ 1.018) is preserved automatically.
 struct MovoMVSymbol: View {
 
     /// Intrinsic aspect ratio (width / height) of the original artwork.
     static let aspectRatio: CGFloat = 3717.0 / 3650.0
 
-    /// Movo's brand body color (dark navy from the official wordmark).
-    static let defaultBody = Color(red: 0x1A / 255.0,
-                                   green: 0x1A / 255.0,
-                                   blue: 0x22 / 255.0)
+    /// Polished-platinum gradient: darker top, bright highlight near the
+    /// upper-middle, slightly darker bottom. Mimics light catching metal.
+static let defaultBodyGradient = LinearGradient(
+    colors: [
+        Color(red: 0x5C / 255.0, green: 0x62 / 255.0, blue: 0x68 / 255.0),
+        Color(red: 0x3A / 255.0, green: 0x40 / 255.0, blue: 0x46 / 255.0),
+    ],
+    startPoint: .top,
+    endPoint: .bottom
+)
 
     /// Movo's signature teal accent.
     static let defaultAccent = Color(red: 0x62 / 255.0,
                                      green: 0x9F / 255.0,
                                      blue: 0x86 / 255.0)
 
-    var color: Color
+    var bodyStyle: AnyShapeStyle
     var accent: Color
 
-    init(color: Color = MovoMVSymbol.defaultBody,
+    init(bodyStyle: any ShapeStyle = MovoMVSymbol.defaultBodyGradient,
          accent: Color = MovoMVSymbol.defaultAccent) {
-        self.color = color
+        self.bodyStyle = AnyShapeStyle(bodyStyle)
         self.accent = accent
     }
 
     var body: some View {
         ZStack {
-            MovoMVBodyShape().fill(color)
+            MovoMVBodyShape().fill(bodyStyle)
             MovoMVChevronShape().fill(accent)
         }
         .aspectRatio(Self.aspectRatio, contentMode: .fit)
@@ -125,31 +132,33 @@ struct MovoMVChevronShape: Shape {
 
 #Preview("MovoMVSymbol") {
     VStack(spacing: 32) {
-        // Canonical: dark navy body + teal chevron on a LIGHT background
-        // (matches the official wordmark).
+        // Canonical: platinum gradient + teal chevron on dark surface.
         MovoMVSymbol()
             .padding(20)
-            .frame(width: 160, height: 160)
-            .background(.white, in: RoundedRectangle(cornerRadius: 32))
-
-        // For dark backgrounds (splash, dark-mode icons), override to white.
-        MovoMVSymbol(color: .white)
-            .padding(20)
-            .frame(width: 160, height: 160)
+            .frame(width: 180, height: 180)
             .background(.black, in: RoundedRectangle(cornerRadius: 32))
 
-        // A range of sizes on light.
-        HStack(spacing: 20) {
-            ForEach([24.0, 40.0, 64.0, 96.0], id: \.self) { size in
+        // Compared on a light surface (gradient still reads).
+        MovoMVSymbol()
+            .padding(20)
+            .frame(width: 180, height: 180)
+            .background(.white, in: RoundedRectangle(cornerRadius: 32))
+
+        // Size sweep — see how the gradient renders at small sizes.
+        HStack(spacing: 16) {
+            ForEach([28.0, 44.0, 64.0, 96.0], id: \.self) { size in
                 MovoMVSymbol()
                     .frame(width: size, height: size)
+                    .padding(6)
+                    .background(.black, in: RoundedRectangle(cornerRadius: size * 0.2))
             }
         }
 
-        // Non-square frame — symbol stays proportional and centered.
-        MovoMVSymbol()
-            .frame(width: 240, height: 90)
-            .border(.gray.opacity(0.2))
+        // Override example: flat color body.
+        MovoMVSymbol(bodyStyle: Color.white)
+            .frame(width: 100, height: 100)
+            .padding(10)
+            .background(.indigo, in: RoundedRectangle(cornerRadius: 20))
     }
     .padding()
 }

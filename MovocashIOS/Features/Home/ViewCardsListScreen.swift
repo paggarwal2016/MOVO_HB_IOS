@@ -57,6 +57,7 @@ struct ViewCardsListScreen: View {
                     cardsList
                 }
             }
+            StatusBarScrim()
         }
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showCreateCard) {

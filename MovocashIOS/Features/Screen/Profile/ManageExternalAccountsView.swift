@@ -55,6 +55,8 @@ struct ManageExternalAccountsView: View {
                 }
             }
 
+            StatusBarScrim()
+
             if !achVM.accounts.isEmpty {
                 withdrawButton
                     .padding(.horizontal, Spacing.lg)

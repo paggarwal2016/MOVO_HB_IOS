@@ -77,32 +77,32 @@ struct PayAnyoneView: View {
                             balanceCard
                                 .padding(.horizontal, Spacing.lg)
                                 .padding(.bottom, Spacing.lg)
-                            
+
                             if contactVM.frequents.count > 0 {
                                 frequentContactsSection
                                     .padding(.bottom, Spacing.lg)
                             }
-                            
+
                             contactsListCard
                                 .padding(.bottom, Spacing.lg)
-                            
+
                             if !isAuthorized {
                                 orDivider
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 18)
-                                
+
                                 permissionCompactCard
                                     .padding(.horizontal, 14)
                                     .padding(.bottom, 18)
                             }
-                            
+
                         } else {
                             heroIllustration
                                 .padding(.top, 18)
                                 .padding(.bottom, 12)
                             introBlock
                                 .padding(.bottom, 18)
-                            
+
                             addContactView
                                 .padding(.horizontal, 14)
                                 .padding(.bottom, 14)
@@ -114,11 +114,13 @@ struct PayAnyoneView: View {
                                 .padding(.bottom, 18)
                         }
                     }
-                    
+
                     Spacer().frame(height: 20)
                 }
             }
-            
+
+            StatusBarScrim()
+
             if isInitialLoading {
                 SpinnerView()
             }

@@ -90,6 +90,7 @@ struct AllFrequentsView: View {
                     }
                     } // end else
                 }
+                StatusBarScrim()
             }
             .background(Color.movo.background)
             .navigationBarHidden(true)

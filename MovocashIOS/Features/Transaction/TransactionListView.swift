@@ -94,7 +94,7 @@ struct TransactionListView: View {
     var body: some View {
         ZStack {
             MovoBackground()
-            
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     navBar
@@ -106,10 +106,12 @@ struct TransactionListView: View {
                         .padding(.bottom, Spacing.md)
                     filterChipsRow
                         .padding(.bottom, Spacing.md - 2)
-                    
+
                     transactionContent
                 }
             }
+
+            StatusBarScrim()
         }
         .background(Color.movo.background)
         .sheet(isPresented: $showFilterSheet) {

@@ -73,6 +73,7 @@ struct DashboardView: View {
             VStack(spacing: 0) {
                 scrollContent
             }
+           StatusBarScrim()
             if dashboardVM.isRefreshing {
                 // Scrim — black-on-alpha is intentional; works on both light and dark backgrounds.
                 Color.black.opacity(0.35)
@@ -308,23 +309,25 @@ struct DashboardView: View {
         }
     }
 
-    private var scrollContent: some View {
-        ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 20) {
-                headerView
-                savingsSection
-            }
-            .padding(.top, 16)
-            .padding(.bottom, 24)
-            .frame(maxWidth: .infinity)
+private var scrollContent: some View {
+    ScrollView(showsIndicators: false) {
+        LazyVStack(spacing: 20) {
+            headerView
+            savingsSection
         }
-        .refreshable {
-            await Task {
-                await dashboardVM.refresh()
-                await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
-            }.value
-        }
+        .padding(.top, 56)
+        .padding(.bottom, 24)
+        .frame(maxWidth: .infinity)
+        .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 0) }
     }
+    .ignoresSafeArea(edges: .top)
+    .refreshable {
+        await Task {
+            await dashboardVM.refresh()
+            await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+        }.value
+    }
+}
 
     @ViewBuilder
     private var savingsSection: some View {
