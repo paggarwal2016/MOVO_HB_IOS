@@ -33,11 +33,11 @@ struct MovoMVSymbol: View {
     /// upper-middle, slightly darker bottom. Mimics light catching metal.
 static let defaultBodyGradient = LinearGradient(
     colors: [
-        Color(red: 0x5C / 255.0, green: 0x62 / 255.0, blue: 0x68 / 255.0),
+        Color(red: 0x6A / 255.0, green: 0x70 / 255.0, blue: 0x77 / 255.0),  // was 0x8A/0x90/0x97
         Color(red: 0x3A / 255.0, green: 0x40 / 255.0, blue: 0x46 / 255.0),
     ],
-    startPoint: .top,
-    endPoint: .bottom
+    startPoint: .topLeading,
+    endPoint: .bottomTrailing
 )
 
     /// Movo's signature teal accent.
