@@ -82,4 +82,15 @@ enum TransactionRequest {
         let phoneNumber: String
         let userAction: String
     }
+    
+    struct Complete: Encodable {
+        let transferId: String
+        let amount: String
+        let fromAccountId: Int
+        let toAccountId: Int
+        let toClientId: Int
+        let phoneNumber: String
+        let nickname: String
+        let userAction: String = "SAVE-TRANSFER-DATA"
+    }
 }

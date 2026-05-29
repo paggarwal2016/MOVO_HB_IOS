@@ -159,7 +159,11 @@ private struct SecuredModifier: ViewModifier {
     let forwardDismiss: Bool
 
     func body(content: Content) -> some View {
-        if forwardDismiss {
+        if !AppConfig.isScreenProtectionEnabled {
+            // Protection disabled: render content normally (no secure re-hosting),
+            // allowing screenshots and screen recording.
+            content
+        } else if forwardDismiss {
             // Forward the presenting context's dismiss into the re-hosted
             // content via the custom key, applied inline so it survives
             // re-hosting.

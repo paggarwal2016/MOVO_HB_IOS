@@ -387,7 +387,26 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 presentingViewController: approvalPresenter
             )
 
-            // Step 5 — Publish success
+            let completeRequest = TransactionRequest.Complete(
+                transferId:    approvalResult.intent.id,
+                amount:        amountText,
+                fromAccountId: fromCard.savingsAccountId ?? 0,
+                toAccountId:   0,
+                toClientId:    0,
+                phoneNumber:   normalizedPhone,
+                nickname:      toName
+            )
+            // Best-effort: capture and log the response so failures are visible,
+            // but never rethrow — a failure here must not break the approved transfer.
+            do {
+                let data = try await self.network.requestData(TransactionAPI.complete(completeRequest))
+                let body = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
+                SecureLogger.debug("intent-complete response: \(body)", category: .payment)
+            } catch {
+                SecureLogger.error("intent-complete failed: \(error.localizedDescription)", category: .payment)
+            }
+
+            // Step 6 — Publish success
             self.peerTransferSuccess = SuccessConfirmation(
                 channel: .peer,
                 amount: Decimal(string: amountText) ?? 0,

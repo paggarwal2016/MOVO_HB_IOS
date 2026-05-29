@@ -135,6 +135,13 @@ private extension ScreenSecurityManager {
 private extension ScreenSecurityManager {
 
     func updateShield() {
+        guard AppConfig.isScreenProtectionEnabled else {
+            // Protection disabled via AppConfig: never show the shield, so
+            // recording and the app switcher show the live screen.
+            SecureWindowShield.shared.hide()
+            return
+        }
+
         guard !isProtectionSuspended else {
             SecureWindowShield.shared.hide()
             return
