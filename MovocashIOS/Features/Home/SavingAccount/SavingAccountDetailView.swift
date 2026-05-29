@@ -15,6 +15,7 @@ struct SavingAccountDetailView: View {
     private let container: AppContainer
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var transVM: TransactionViewModel
     @State private var showAll = false
 
@@ -44,7 +45,7 @@ struct SavingAccountDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { (securedDismiss ?? dismiss)() }
                         .foregroundStyle(Color.primary)
                         .fontWeight(.semibold)
                 }

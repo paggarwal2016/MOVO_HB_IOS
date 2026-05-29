@@ -126,6 +126,11 @@ extension KYCManager {
             // Dedicated window — the SDK and all its internal alert presentations
             // are completely isolated from the SwiftUI UIHostingController window,
             // preventing "already presenting" conflicts on cancel/error paths.
+            // Suspend the global screen shield: the SDK's camera permission
+            // alerts fire willResignActive, which would otherwise draw the
+            // background shield on top of this trusted full-screen flow.
+            ScreenSecurityManager.shared.beginProtectionSuspension()
+
             let window = UIWindow(windowScene: scene)
             window.windowLevel = .normal + 1
             window.backgroundColor = .clear
@@ -151,6 +156,8 @@ extension KYCManager {
     private func tearDownKYCWindow() {
         kycWindow?.isHidden = true
         kycWindow = nil
+        // Re-enable screen protection now that the KYC flow has ended.
+        ScreenSecurityManager.shared.endProtectionSuspension()
     }
 }
 

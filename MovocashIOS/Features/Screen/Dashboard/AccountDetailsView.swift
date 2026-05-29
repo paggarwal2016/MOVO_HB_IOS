@@ -13,7 +13,8 @@ struct AccountDetailsView: View {
     let account: SavingsAccountInfo
     var onNicknameUpdated: ((String) -> Void)?
 
-    @Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @State private var copiedField: String?
     @State private var showEditNickname = false
     @State private var displayNickname: String
@@ -65,7 +66,7 @@ struct AccountDetailsView: View {
             Spacer()
             CircularNavButton(systemName: "pencil") { showEditNickname = true }
                 .accessibilityLabel("Edit nickname")
-            CircularNavButton(systemName: "xmark") { dismiss() }
+            CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
                 .accessibilityLabel("Close")
         }
         .padding(.horizontal, Spacing.xl)

@@ -58,6 +58,8 @@ struct MovocashIOSApp: App {
                 .networkMonitor(state: appState)
                 .globalToast()
                 .globalAlert()
+                .sensitiveScreen() // Layer 2: shield during recording + app-switcher (whole app)
+                .secured(forwardDismiss: false) // Layer 1: blank screenshots & recordings of the main hierarchy
                 .task {
                     await StartupRouter.postBootstrap(
                         appState: appState,

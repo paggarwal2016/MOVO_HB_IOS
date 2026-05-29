@@ -49,6 +49,7 @@
 		14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3E2F7BB64000607891 /* FirebaseMessaging */; };
 		14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */; };
 		14C383882FBB0C0D002C2215 /* StartupRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C383872FBB0C0D002C2215 /* StartupRouter.swift */; };
+		14C56CAD2FC96FBF000A397E /* SecureContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C56CAC2FC96FBF000A397E /* SecureContainerView.swift */; };
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
@@ -142,6 +143,7 @@
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14C383872FBB0C0D002C2215 /* StartupRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRouter.swift; sourceTree = "<group>"; };
+		14C56CAC2FC96FBF000A397E /* SecureContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureContainerView.swift; sourceTree = "<group>"; };
 		14C623DE2F6AC39100D0B719 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		14C623E02F6AC7AC00D0B719 /* StatusRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusRow.swift; sourceTree = "<group>"; };
 		14D36C582F7AAF150024760F /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
@@ -343,6 +345,7 @@
 				148622D62F61546D00792DB2 /* RSA */,
 				1486221C2F60159000792DB2 /* BiometricPasscode */,
 				1468195A2F4DE6CF00BED014 /* DeviceManager.swift */,
+				14C56CAC2FC96FBF000A397E /* SecureContainerView.swift */,
 				1468195B2F4DE6CF00BED014 /* JailbreakDetector.swift */,
 				1468195C2F4DE6CF00BED014 /* KeychainManager.swift */,
 				142864562F92251B006F8C39 /* TokenRefreshable.swift */,
@@ -774,6 +777,7 @@
 				14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */,
 				1468198E2F4DE6CF00BED014 /* KeychainManager.swift in Sources */,
 				142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */,
+				14C56CAD2FC96FBF000A397E /* SecureContainerView.swift in Sources */,
 				14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */,
 				14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */,
 				14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */,
