@@ -70,6 +70,7 @@
 		14DCE2D32F5AF6E8008A8DC4 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */; };
 		14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */; };
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
+		99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */ = {isa = PBXBuildFile; fileRef = 99C2EAA22FC9AAB600384E28 /* terms-layout.css */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -167,6 +168,7 @@
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
+		99C2EAA22FC9AAB600384E28 /* terms-layout.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "terms-layout.css"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -485,6 +487,7 @@
 		146819762F4DE6CF00BED014 /* MovocashIOS */ = {
 			isa = PBXGroup;
 			children = (
+				99C2EAA32FC9AAB600384E28 /* Resources */,
 				14E42FF32FAA2D0C00B2025C /* MovocashIOS.entitlements */,
 				14B2CB892FA8BF7B0068FC23 /* Font */,
 				14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */,
@@ -556,6 +559,14 @@
 			children = (
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		99C2EAA32FC9AAB600384E28 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				99C2EAA22FC9AAB600384E28 /* terms-layout.css */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -706,6 +717,7 @@
 				146819902F4DE6CF00BED014 /* Assets.xcassets in Resources */,
 				140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */,
 				14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */,
+				99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
