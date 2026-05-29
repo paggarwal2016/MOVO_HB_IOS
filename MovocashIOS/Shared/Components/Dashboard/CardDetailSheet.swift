@@ -16,6 +16,7 @@ struct CardDetailSheet: View {
     var onDeleted: () -> Void
     
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
@@ -110,7 +111,7 @@ struct CardDetailSheet: View {
             showAllTransactions = false
             isLoading = false
             isDeleting = false
-            dismiss()
+            (securedDismiss ?? dismiss)()
         }
         .sheet(isPresented: $showTransfer) {
             let accounts = savingVM.accountList?.data.accounts ?? []
@@ -233,7 +234,7 @@ struct CardDetailSheet: View {
 
     private var navBar: some View {
         HStack {
-            CircularNavButton(systemName: "chevron.left") { dismiss() }
+            CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
             Spacer()
             Text("My Card")
                 .textStyle(Typography.cardTitle)
@@ -541,7 +542,7 @@ struct CardDetailSheet: View {
             )
             guard !Task.isCancelled else { return }
             ToastManager.shared.show("Card deleted.", style: .success, position: .bottom)
-            dismiss()
+            (securedDismiss ?? dismiss)()
             onDeleted()
         } catch {
             guard !Task.isCancelled else { return }

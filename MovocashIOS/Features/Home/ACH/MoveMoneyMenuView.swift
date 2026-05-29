@@ -22,6 +22,7 @@ struct MoveMoneyMenuView: View {
 
     @State private var detentHeight: CGFloat = 160
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
 
     var body: some View {
         VStack(spacing: 0) {
@@ -55,7 +56,7 @@ struct MoveMoneyMenuView: View {
                 isLast: true
             )
             
-            Button(action: { dismiss() }) {
+            Button(action: { (securedDismiss ?? dismiss)() }) {
                 Text("Cancel")
             }
             .buttonStyle(OutlineButtonStyle())

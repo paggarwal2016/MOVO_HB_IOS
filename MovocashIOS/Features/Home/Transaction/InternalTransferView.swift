@@ -21,6 +21,7 @@ enum TransferFlowMode {
 struct InternalTransferView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var vcardVM: VCardViewModel
 
@@ -210,7 +211,7 @@ struct InternalTransferView: View {
             showConfirmSheet = false
             showCardSheet = false
             showFromCardSheet = false
-            dismiss()
+            (securedDismiss ?? dismiss)()
         }
     }
 
@@ -224,7 +225,7 @@ struct InternalTransferView: View {
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
-            CircularNavButton(systemName: "xmark") { dismiss() }
+            CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.md)
@@ -612,7 +613,7 @@ struct InternalTransferView: View {
         guard success else { return }
 
         ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)
-        dismiss()
+        (securedDismiss ?? dismiss)()
         onDismiss()
     }
 }
@@ -691,6 +692,7 @@ private struct CardPickerSheet: View {
     let cards: [VCardListResponse]
     @Binding var selected: VCardListResponse?
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
 
     var body: some View {
         NavigationStack {
@@ -749,7 +751,7 @@ private struct CardPickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { (securedDismiss ?? dismiss)() }
                         .textStyle(Typography.buttonLarge)
                         .foregroundColor(Color.movo.accent)
                 }

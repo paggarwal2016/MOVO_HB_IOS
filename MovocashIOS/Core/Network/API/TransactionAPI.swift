@@ -14,6 +14,7 @@ enum TransactionAPI: Endpoint {
     case withdrawals(TransactionRequest.Withdrawal)
     case internals(TransactionRequest.Internal)
     case checkType(TransactionRequest.CheckMode)
+    case complete(TransactionRequest.Complete)
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -25,6 +26,7 @@ enum TransactionAPI: Endpoint {
         case .withdrawals:      return "/transactions/withdrawal"
         case .internals:        return "/transactions/internal"
         case .checkType:        return "/transactions/check-intent"
+        case .complete:         return "/transactions/intent-complete"
         }
     }
 
@@ -32,7 +34,7 @@ enum TransactionAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .lists, .filtered:       return .GET
-        case .withdrawals, .internals, .checkType: return .POST
+        case .withdrawals, .internals, .checkType, .complete: return .POST
         }
     }
     
@@ -49,7 +51,7 @@ enum TransactionAPI: Endpoint {
             ]
         case .filtered(let filter):
             return filter.queryItems
-        case .withdrawals, .internals, .checkType:
+        case .withdrawals, .internals, .checkType, .complete:
             return nil
         }
     }
@@ -70,6 +72,8 @@ enum TransactionAPI: Endpoint {
         case .internals(let request):
             return try JSONEncoder().encode(request)
         case .checkType(let request):
+            return try JSONEncoder().encode(request)
+        case .complete(let request):
             return try JSONEncoder().encode(request)
         }
     }

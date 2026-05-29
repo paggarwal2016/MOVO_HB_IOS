@@ -20,6 +20,7 @@ struct TransactionListView: View {
     
     @StateObject private var transactionVM: TransactionViewModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @FocusState private var searchFocused: Bool
     
     private let accountId: Int
@@ -133,7 +134,7 @@ struct TransactionListView: View {
         .task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             showFilterSheet = false
-            dismiss()
+            (securedDismiss ?? dismiss)()
         }
     }
     
@@ -458,7 +459,7 @@ extension TransactionListView {
     
     private var navBar: some View {
         HStack {
-            CircularNavButton(systemName: "chevron.left") { dismiss() }
+            CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
             Spacer()
             Text("Transactions")
                 .textStyle(Typography.cardTitle)

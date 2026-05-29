@@ -38,6 +38,16 @@ final class AppConfig {
     static let baseURL: URL    = AppEnvironment.baseURL
     static let sdkURL: String  = AppEnvironment.sdkURL
     static let officeId: String = "3"
+
+    /// Master switch for on-device screen protection.
+    ///
+    /// When `true`, protection is applied automatically:
+    ///   • screenshots & screen recordings of protected content come out black,
+    ///   • a shield covers the screen during recording and in the app switcher.
+    ///
+    /// When `false`, all of the above is disabled — screenshots and screen
+    /// sharing are allowed.
+    static let isScreenProtectionEnabled: Bool = false
 }
 
 
