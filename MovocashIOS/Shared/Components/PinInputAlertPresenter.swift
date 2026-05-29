@@ -169,6 +169,8 @@ struct PinInputAlertPresenter<Content: View>: View {
                     Divider()
                     buttonsView
                 }
+                // Screenshot/recording protection for sensitive content
+                .secured()
                 .presentationDetents([.height(380)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(config.cornerRadius)

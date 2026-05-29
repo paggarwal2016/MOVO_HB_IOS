@@ -19,6 +19,7 @@ enum FundAccountMode {
 struct FundAccountView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var vm: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
     @StateObject private var transactionVM: TransactionViewModel
@@ -135,7 +136,7 @@ struct FundAccountView: View {
             isSubmitting = false
             showConfirmSheet = false
             showAccountSheet = false
-            dismiss()
+            (securedDismiss ?? dismiss)()
         }
         .sheet(isPresented: $showConfirmSheet) {
             let fromName = isProfileMode ? primaryAccount.displayName : (selectedAccount?.accountName ?? "—")
@@ -210,7 +211,7 @@ struct FundAccountView: View {
         }
         .fullScreenCover(item: $successData, onDismiss: {
             onSuccess()
-            dismiss()
+            (securedDismiss ?? dismiss)()
         }) { data in
             SuccessConfirmationView(
                 viewModel: SuccessConfirmationViewModel(success: data) {
@@ -224,7 +225,7 @@ struct FundAccountView: View {
 
     private var navBar: some View {
         HStack {
-            CircularNavButton(systemName: "chevron.left") { dismiss() }
+            CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
             Spacer()
             Text(isProfileMode ? "Withdraw Funds" : "Fund Account")
                 .textStyle(Typography.cardTitle)
@@ -540,6 +541,7 @@ struct BankAccountPickerSheet: View {
     let accounts: [ACHAccount]
     @Binding var selected: ACHAccount?
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
 
     var body: some View {
         NavigationStack {
@@ -608,7 +610,7 @@ struct BankAccountPickerSheet: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { (securedDismiss ?? dismiss)() }
                         .textStyle(Typography.buttonLarge)
                         .foregroundColor(Color.movo.accent)
                 }

@@ -29,6 +29,7 @@ struct QuickTransferView: View {
     }
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
     @FocusState private var amountFocused: Bool
@@ -125,7 +126,7 @@ struct QuickTransferView: View {
             sendTask = nil
             showConfirmSheet = false
             showAccountSheet = false
-            dismiss()
+            (securedDismiss ?? dismiss)()
         }
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(
@@ -161,7 +162,7 @@ struct QuickTransferView: View {
                 viewModel: SuccessConfirmationViewModel(success: data) {
                     achVM.peerTransferSuccess = nil
                     onSuccess()
-                    dismiss()
+                    (securedDismiss ?? dismiss)()
                 }
             )
         }
@@ -174,7 +175,7 @@ struct QuickTransferView: View {
 
     private var navBar: some View {
         HStack {
-            Button(action: { dismiss() }) {
+            Button(action: { (securedDismiss ?? dismiss)() }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Color.movo.textPrimary)

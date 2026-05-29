@@ -10,6 +10,7 @@ import SwiftUI
 struct BankLinkedInfoScreen: View {
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.securedDismiss) private var securedDismiss
     let container: AppContainer
     @ObservedObject var plaidVM: PlaidAchViewModel
     var primaryAccount: SavingsAccountInfo? = nil
@@ -25,7 +26,7 @@ struct BankLinkedInfoScreen: View {
             
             HStack {
                 Spacer()
-                CircularNavButton(systemName: "xmark") { dismiss() }
+                CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
                     .accessibilityLabel("Close")
                     .padding(.leading, Spacing.md)
             }
@@ -158,7 +159,7 @@ struct BankLinkedInfoScreen: View {
                 onDone: {
                     showSuccessScreen = false
                     onSuccess()
-                    dismiss()
+                    (securedDismiss ?? dismiss)()
                 },
                 container: allowFunding ? container : nil,
                 primaryAccount: allowFunding ? primaryAccount : nil,

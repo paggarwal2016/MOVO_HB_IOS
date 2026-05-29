@@ -67,6 +67,7 @@ struct ViewCardsListScreen: View {
                     await createCard(nickname: nickname, pin: pin)
                 }
             )
+            .secured()
             .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
