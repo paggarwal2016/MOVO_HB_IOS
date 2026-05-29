@@ -2,7 +2,7 @@
 //  AddContactSheet.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 08/05/26.
+//  Created by Movo Developer on 08/05/26.
 //
 
 import Foundation
@@ -31,7 +31,10 @@ public struct AddContactSheet: View {
         self.countryCode = countryCode
         self.onSave = onSave
         self.onCancel = onCancel
-        _vm = StateObject(wrappedValue: container)
+        // `container` is owned by the presenting view's @StateObject. Observe it
+        // here — do NOT re-wrap in @StateObject, which would take a second
+        // ownership of the same instance and over-release it (EXC_BAD_ACCESS).
+        _vm = ObservedObject(wrappedValue: container)
     }
     
     // MARK: Configuration
@@ -39,13 +42,13 @@ public struct AddContactSheet: View {
     public let countryCode: String
     public let onSave: (Result) -> Void
     public let onCancel: (() -> Void)?
-    
+
     // MARK: State
-    
+
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @StateObject private var vm: ContactViewModel
+    @ObservedObject private var vm: ContactViewModel
     @FocusState private var focusedField: Field?
-    
+
     private enum Field { case nickname, phone }
     
     // MARK: Body
@@ -226,15 +229,17 @@ public struct AddContactSheet: View {
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.xl)
     }
-    
+
     // MARK: Actions
-    
+
     private func addTapped() {
         guard let result = vm.buildResult(countryCode: countryCode) else {
             vm.helperIsError = true
             return
         }
         focusedField = nil
+        // Hand off to the caller, which owns the async create-contact Task and
+        // the loading spinner, then dismiss immediately (proven crash-free flow).
         onSave(result)
         dismiss()
     }

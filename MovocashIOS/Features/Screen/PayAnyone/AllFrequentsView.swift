@@ -2,7 +2,7 @@
 //  AllFrequentsView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 09/05/26.
+//  Created by Movo Developer on 09/05/26.
 //
 
 import Foundation
