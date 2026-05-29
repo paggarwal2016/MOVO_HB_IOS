@@ -2,7 +2,7 @@
 //  ConfirmationScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 08/05/26.
+//  Created by Movo Developer on 08/05/26.
 //
 
 import SwiftUI
@@ -299,7 +299,7 @@ private struct SuccessBackdrop: View {
 
 // MARK: - Checkmark Halo
 
-private struct CheckmarkHalo: View {
+struct CheckmarkHalo: View {
     var body: some View {
         ZStack {
             Circle()

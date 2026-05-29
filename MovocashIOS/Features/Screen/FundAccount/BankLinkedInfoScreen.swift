@@ -2,7 +2,7 @@
 //  BankLinkedInfoScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 27/05/26.
+//  Created by Movo Developer on 27/05/26.
 //
 
 import SwiftUI

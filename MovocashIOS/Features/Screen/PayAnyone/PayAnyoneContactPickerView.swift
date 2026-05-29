@@ -26,6 +26,22 @@ struct PayAnyoneContactPickerView: View {
     @State private var loadTask: Task<Void, Never>?
     @State private var createContactTask: Task<Void, Never>?
 
+    /// Newly added contact, drives the full-screen success cover.
+    @State private var addedContact: AddedContact? = nil
+    /// True while the create-contact API call is in flight — shows the spinner.
+    @State private var isCreatingContact = false
+    /// Contact to open in QuickTransferView once the success cover dismisses
+    /// (set when the user taps "Quick send"); deferred to onDismiss to avoid a
+    /// present/dismiss race with the navigation push.
+    @State private var pendingQuickSendContact: ContactRecord? = nil
+
+    /// Lightweight payload for the success cover.
+    private struct AddedContact: Identifiable {
+        let id = UUID()
+        let nickname: String
+        let phoneE164: String
+    }
+
     init(container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
         self.container = container
         self.cards = cards
@@ -79,6 +95,10 @@ struct PayAnyoneContactPickerView: View {
                         }
                     }
                 }
+
+                if isCreatingContact {
+                    SpinnerView()
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: ContactRecord.self) { contact in
@@ -106,26 +126,53 @@ struct PayAnyoneContactPickerView: View {
             }
             .sheet(isPresented: $showCreateContact) {
                 AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
+                    // Sheet dismisses itself immediately; this view owns the async
+                    // work and the spinner. Shows the success cover on completion.
                     createContactTask = Task {
+                        isCreatingContact = true
                         let success = await contactVM.createContact(
                             nickname: data.nickname,
                             phoneNumber: data.phoneE164
                         )
                         guard !Task.isCancelled else { return }
                         contactVM.clear()
-                        showCreateContact = false
+                        isCreatingContact = false
                         if success {
-                            ToastManager.shared.show(
-                                "\(data.nickname) added to contacts",
-                                style: .success,
-                                position: .bottom
+                            addedContact = AddedContact(
+                                nickname: data.nickname,
+                                phoneE164: data.phoneE164
                             )
                         }
                     }
-                }, onCancel: { showCreateContact = false })
+                })
                 .presentationDetents([.height(320)])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.movo.cardSurface)
+            }
+            .fullScreenCover(item: $addedContact, onDismiss: {
+                // After the cover closes, push the transfer if "Quick send" was tapped.
+                if let contact = pendingQuickSendContact {
+                    pendingQuickSendContact = nil
+                    selectedFrequent = contact
+                }
+            }) { added in
+                ContactAddedSuccess(
+                    name: added.nickname,
+                    phone: added.phoneE164,
+                    onQuickSend: {
+                        pendingQuickSendContact = ContactRecord(
+                            id: added.phoneE164,
+                            isFav: false,
+                            nickname: added.nickname,
+                            createdAt: Date(),
+                            phoneNumber: added.phoneE164,
+                            isAdded: true,
+                            updatedAt: Date()
+                        )
+                        addedContact = nil
+                    },
+                    onMaybeLater: { addedContact = nil }
+                )
             }
             .sheet(isPresented: $showAllFrequents) {
                 AllFrequentsView(
@@ -144,6 +191,9 @@ struct PayAnyoneContactPickerView: View {
                 loadTask = nil
                 createContactTask?.cancel()
                 createContactTask = nil
+                isCreatingContact = false
+                addedContact = nil
+                pendingQuickSendContact = nil
                 isInitialLoading = false
                 showCreateContact = false
                 showAllFrequents = false
@@ -354,14 +404,14 @@ struct PayAnyoneContactPickerView: View {
                     Text(contact.nickname ?? "")
                         .textStyle(Typography.bodyCompact)
                         .foregroundColor(Color.movo.textPrimary)
-                    if contact.isAdded {
-                        Text("MOVO")
-                            .textStyle(Typography.micro)
-                            .foregroundColor(Color.movo.accent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
-                    }
+//                    if contact.isAdded {
+//                        Text("MOVO")
+//                            .textStyle(Typography.micro)
+//                            .foregroundColor(Color.movo.accent)
+//                            .padding(.horizontal, 6)
+//                            .padding(.vertical, 2)
+//                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
+//                    }
                 }
                 Text(contact.phoneNumber ?? "")
                     .textStyle(Typography.caption)
@@ -384,14 +434,14 @@ struct PayAnyoneContactPickerView: View {
                     Text(contact.nickname ?? "")
                         .textStyle(Typography.bodyCompact)
                         .foregroundColor(Color.movo.textPrimary)
-                    if contact.isAdded {
-                        Text("MOVO")
-                            .textStyle(Typography.micro)
-                            .foregroundColor(Color.movo.accent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
-                    }
+//                    if contact.isAdded {
+//                        Text("MOVO")
+//                            .textStyle(Typography.micro)
+//                            .foregroundColor(Color.movo.accent)
+//                            .padding(.horizontal, 6)
+//                            .padding(.vertical, 2)
+//                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
+//                    }
                 }
                 Text(contact.phoneNumber ?? "")
                     .textStyle(Typography.caption)

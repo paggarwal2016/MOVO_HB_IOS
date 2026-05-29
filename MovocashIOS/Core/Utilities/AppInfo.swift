@@ -11,7 +11,7 @@ import UIKit
 enum AppInfo {
     
     nonisolated static var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "4.3.3"
     }
     
     nonisolated static var buildNumber: String {

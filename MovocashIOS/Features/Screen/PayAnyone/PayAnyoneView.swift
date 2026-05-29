@@ -2,7 +2,7 @@
 //  PayAnyoneView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 05/05/26.
+//  Created by Movo Developer on 05/05/26.
 //
 
 import Foundation
@@ -32,6 +32,22 @@ struct PayAnyoneView: View {
     @State private var selectedFrequent: ContactRecord? = nil
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
+
+    /// Newly added contact, drives the full-screen success cover.
+    @State private var addedContact: AddedContact? = nil
+    /// True while the create-contact API call is in flight — shows the spinner.
+    @State private var isCreatingContact = false
+    /// Contact to open in QuickTransferView once the success cover dismisses
+    /// (set when the user taps "Quick send"). Deferring to onDismiss avoids a
+    /// present/dismiss race between the cover and the navigation push.
+    @State private var pendingQuickSendContact: ContactRecord? = nil
+
+    /// Lightweight payload for the success cover.
+    private struct AddedContact: Identifiable {
+        let id = UUID()
+        let nickname: String
+        let phoneE164: String
+    }
 
     init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil) {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
@@ -121,7 +137,7 @@ struct PayAnyoneView: View {
 
             StatusBarScrim()
 
-            if isInitialLoading {
+            if isInitialLoading || isCreatingContact {
                 SpinnerView()
             }
         }
@@ -174,25 +190,54 @@ struct PayAnyoneView: View {
         }
         .sheet(isPresented: $showCreateContactScreen) {
             AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
+                // Sheet dismisses itself immediately; this view owns the async
+                // work and the spinner. Shows the success cover on completion.
                 Task {
+                    isCreatingContact = true
                     let success = await contactVM.createContact(
                         nickname: data.nickname,
                         phoneNumber: data.phoneE164
                     )
                     contactVM.clear()
-                    showCreateContactScreen = false
+                    isCreatingContact = false
                     if success {
-                        ToastManager.shared.show(
-                            "\(data.nickname) added to contacts",
-                            style: .success,
-                            position: .bottom
+                        addedContact = AddedContact(
+                            nickname: data.nickname,
+                            phoneE164: data.phoneE164
                         )
                     }
                 }
-            }, onCancel: { showCreateContactScreen = false })
+            })
             .presentationDetents([.height(320)])
             .presentationDragIndicator(.visible)
             .presentationBackground(Color.movo.cardSurface)
+        }
+        // MARK: - Contact added success
+        // Shown after the add sheet closes. "Quick send" defers the transfer
+        // navigation to onDismiss so the cover fully closes first.
+        .fullScreenCover(item: $addedContact, onDismiss: {
+            if let contact = pendingQuickSendContact {
+                pendingQuickSendContact = nil
+                selectedFrequent = contact
+            }
+        }) { added in
+            ContactAddedSuccess(
+                name: added.nickname,
+                phone: added.phoneE164,
+                onQuickSend: {
+                    pendingQuickSendContact = ContactRecord(
+                        id: added.phoneE164,
+                        isFav: false,
+                        nickname: added.nickname,
+                        createdAt: Date(),
+                        phoneNumber: added.phoneE164,
+                        isAdded: true,
+                        updatedAt: Date()
+                    )
+                    addedContact = nil
+                },
+                onMaybeLater: { addedContact = nil }
+            )
         }
     }
     
@@ -419,14 +464,14 @@ struct PayAnyoneView: View {
                     Text(contact.nickname ?? "")
                         .textStyle(Typography.bodyCompact)
                         .foregroundColor(Color.movo.textPrimary)
-                    if contact.isAdded {
-                        Text("MOVO")
-                            .textStyle(Typography.micro)
-                            .foregroundColor(Color.movo.accent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
-                    }
+//                    if contact.isAdded {
+//                        Text("MOVO")
+//                            .textStyle(Typography.micro)
+//                            .foregroundColor(Color.movo.accent)
+//                            .padding(.horizontal, 6)
+//                            .padding(.vertical, 2)
+//                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
+//                    }
                 }
                 Text(contact.phoneNumber ?? "")
                     .textStyle(Typography.caption)
