@@ -58,7 +58,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let flagKey = "app.hasLaunchedBefore"
         guard !UserDefaults.standard.bool(forKey: flagKey) else { return }
 
-        KeychainManager.shared.clearAuthTokens()
+        // Wipe all app Keychain entries except device_id. This is a superset of
+        // clearAuthTokens() and also removes per-user biometric enrollment flags
+        // (biometric_enrolled_<userId>) that persist across uninstalls and otherwise
+        // cause the login flow to incorrectly route returning users to the enrollment
+        // screen after a fresh install.
+        KeychainManager.shared.clearAllExceptDeviceId()
         RSAKeyManager.shared.deleteKeyPair()
         try? PasscodeManager().clearAll()
 

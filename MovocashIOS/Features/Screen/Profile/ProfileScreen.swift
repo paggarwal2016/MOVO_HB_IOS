@@ -137,8 +137,15 @@ private extension ProfileScreen {
         }) {
             BiometricEnrollView(
                 lockManager: lockManager,
-                onEnable: { showBiometricEnrollSheet = false; return true },
-                onSkip:   { isBiometricOn = false; showBiometricEnrollSheet = false }
+                onEnable: {
+                    // Explicitly hold the toggle ON before closing the sheet so the
+                    // onDismiss read of lockManager.isBiometricEnabled never races
+                    // against a timing window where the key write hasn't propagated.
+                    isBiometricOn = true
+                    showBiometricEnrollSheet = false
+                    return true
+                },
+                onSkip: { isBiometricOn = false; showBiometricEnrollSheet = false }
             )
         }
         .alert("Disable \(effectiveBiometricType.displayName)?",

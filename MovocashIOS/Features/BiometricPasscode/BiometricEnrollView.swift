@@ -170,7 +170,18 @@ struct BiometricEnrollView: View {
         //   (b) Login where biometrics were enrolled in a prior session but passkey
         //       never completed — jump straight to passkey without re-enrolling.
         let alreadyEnrolledForUser = await authVM.isBiometricEnrolledForCurrentUser()
-        if lockManager.isBiometricAvailable && alreadyEnrolledForUser {
+
+        // Guard: per-user flag says enrolled but the Secure Enclave key is missing.
+        // This happens after an app reinstall, a failed revoke, or any path that
+        // deleted the key without clearing the flag. Clear the stale flag so the
+        // full enrollment flow runs and creates a fresh key.
+        if alreadyEnrolledForUser && !lockManager.isBiometricEnabled {
+            await authVM.clearBiometricEnrollmentForCurrentUser()
+        }
+
+        // Fast path only when BOTH the per-user flag AND the Secure Enclave key exist.
+        // If the key is missing the condition above cleared the flag, so this is skipped.
+        if lockManager.isBiometricAvailable && alreadyEnrolledForUser && lockManager.isBiometricEnabled {
             isEnrolling = true
             defer { isEnrolling = false }
             let passkeySucceeded = await onEnable()

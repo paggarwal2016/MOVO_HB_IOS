@@ -36,7 +36,7 @@ struct BankLinkedInfoScreen: View {
 
                 // MOVO tile
                 RoundedRectangle(cornerRadius: Radius.xl)
-                    .fill(Color.movo.accent)
+                    .fill(Color.movo.elevated)
                     .frame(width: 48, height: 48)
                     .overlay(
                         MovoMVSymbol()
