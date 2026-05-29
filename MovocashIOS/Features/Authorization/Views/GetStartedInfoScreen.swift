@@ -45,7 +45,7 @@ struct GetStartedInfoScreen: View {
 //                  documentType: .privacy),
 //        LegalItem(subtitle: "Herring Bank's privacy practices",
 //                  documentType: .herringPrivacy),
-        LegalItem(subtitle: "Rules and conditions for using Movo",
+        LegalItem(subtitle: "Deposit account agreement and disclosures",
                   documentType: .tos),
 //        LegalItem(subtitle: "Digital agreement and consent",
 //                  documentType: .cardholderAgreement)
@@ -165,8 +165,8 @@ private extension GetStartedInfoScreen {
     var documentsSection: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack(spacing: DesignTokens.Spacing.sm) {
-                DocumentBadgeIcon(size: 18, stroke: Color.movo.textTertiary)
-                Text("Documents to review")
+                DocumentBadgeIcon(size: 18, stroke: Color.movo.accent)
+                Text("Account Disclosures")
                     .textStyle(Typography.eyebrow)
                     .textCase(.uppercase)
                     .foregroundStyle(Color.movo.textTertiary)

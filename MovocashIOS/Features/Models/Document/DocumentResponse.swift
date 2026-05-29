@@ -27,7 +27,7 @@ enum DocumentType: Sendable, Hashable, Identifiable {
 
     var title: String {
         switch self {
-        case .tos:                 return "Terms of Service"
+        case .tos:                 return "Account Disclosures"
         case .privacy:             return "Privacy Policy"
         case .herringPrivacy:      return "Herring Privacy Policy"
         case .cardholderAgreement: return "Cardholder Agreement"

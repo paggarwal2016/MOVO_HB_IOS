@@ -761,7 +761,7 @@ extension PayAnyoneView {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .heavy))
-                    Text("Add Contact")
+                    Text("Quick Pay")
                         .textStyle(Typography.button)
                 }
             }

@@ -357,7 +357,7 @@ struct AddContactCardView: View {
                                 .tint(Color.movo.background)
                                 .scaleEffect(0.8)
                         } else {
-                            Text("Add Contact")
+                            Text("Quick Pay")
                                 .font(Typography.button.font)
                                 .foregroundColor(Color.movo.background)
                         }

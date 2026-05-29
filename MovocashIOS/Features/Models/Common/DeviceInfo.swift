@@ -27,7 +27,7 @@ struct DeviceInfo: Encodable, Sendable {
             deviceId: "0AB777A4-C6F4-42E2-9097-2197D4617862",   // permanent — Keychain persisted
             deviceType: "ios",
             osVersion: "18.5",
-            appVersion: "4.3.3",
+            appVersion: "5.0.0",
             applicationName: "movo-ios"
         )
     }

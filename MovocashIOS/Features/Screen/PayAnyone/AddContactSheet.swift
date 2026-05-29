@@ -221,7 +221,7 @@ public struct AddContactSheet: View {
     
     private var cta: some View {
         Button(action: addTapped) {
-            Text("Add Contact")
+            Text("Quick Pay")
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         .disabled(!vm.canSubmit)
