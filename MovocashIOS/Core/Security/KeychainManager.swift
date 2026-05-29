@@ -198,6 +198,46 @@ final class KeychainManager: KeychainManagerProtocol {
         SecureLogger.info("Auth tokens cleared on fresh install", category: .auth)
     }
 
+    /// Wipes every generic-password entry under this service except `device_id`,
+    /// then re-saves the device identity token if one existed.
+    ///
+    /// Call on fresh install — Keychain survives app uninstalls on iOS, so stale
+    /// entries from a previous install (auth tokens, per-user biometric enrollment
+    /// flags `biometric_enrolled_<userId>`, passcode hash) persist and cause the
+    /// login flow to misroute returning users as still-enrolled. Removing all
+    /// service-scoped entries guarantees a clean slate identical to a true first run.
+    func clearAllExceptDeviceId() {
+        // Capture device_id before the wipe so it can be restored afterwards.
+        var savedDeviceId: String?
+        if case .found(let id) = getSync("device_id"), !id.isEmpty {
+            savedDeviceId = id
+        }
+
+        // Delete every generic-password item stored under this app's service.
+        let deleteQuery: [String: Any] = [
+            kSecClass as String:       kSecClassGenericPassword,
+            kSecAttrService as String: service,
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+
+        // Restore device_id so the device fingerprint is preserved across reinstalls.
+        if let id = savedDeviceId, let data = id.data(using: .utf8) {
+            let saveQuery: [String: Any] = [
+                kSecClass as String:          kSecClassGenericPassword,
+                kSecAttrService as String:    service,
+                kSecAttrAccount as String:    "device_id",
+                kSecValueData as String:      data,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            ]
+            SecItemAdd(saveQuery as CFDictionary, nil)
+        }
+
+        SecureLogger.info(
+            "Fresh install: all Keychain entries wiped (device_id preserved)",
+            category: .auth
+        )
+    }
+
     // MARK: Helpers
 
     private func baseQuery(for key: String) -> [String: Any] {

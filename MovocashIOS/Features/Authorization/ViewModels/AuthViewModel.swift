@@ -176,15 +176,10 @@ final class AuthViewModel: ObservableObject {
         guard state != .loading else { return }
         state = .loading
         do {
-            let response: SuccessResponse = try await network.request(
+            let _: SuccessResponse = try await network.request(
                 AuthAPI.emailOTP(request: EmailVerifyRequest(email: email, userAction: "VERIFY-EMAIL"))
             )
             state = .otpSent
-//            ToastManager.shared.show(
-//                "Email verified successfully",
-//                style: .success,
-//                position: .bottom
-//            )
         } catch {
             state = .idle
             throw error
