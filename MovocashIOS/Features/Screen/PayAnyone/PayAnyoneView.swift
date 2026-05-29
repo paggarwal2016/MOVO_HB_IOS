@@ -464,14 +464,14 @@ struct PayAnyoneView: View {
                     Text(contact.nickname ?? "")
                         .textStyle(Typography.bodyCompact)
                         .foregroundColor(Color.movo.textPrimary)
-                    if contact.isAdded {
-                        Text("MOVO")
-                            .textStyle(Typography.micro)
-                            .foregroundColor(Color.movo.accent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
-                    }
+//                    if contact.isAdded {
+//                        Text("MOVO")
+//                            .textStyle(Typography.micro)
+//                            .foregroundColor(Color.movo.accent)
+//                            .padding(.horizontal, 6)
+//                            .padding(.vertical, 2)
+//                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
+//                    }
                 }
                 Text(contact.phoneNumber ?? "")
                     .textStyle(Typography.caption)

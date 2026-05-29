@@ -132,7 +132,7 @@ struct ContactAddedSuccess: View {
                 .textStyle(Typography.body)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, Spacing.xxl)
+                .padding(.horizontal, Spacing.huge)
 
                 Spacer()
 
