@@ -40,18 +40,7 @@ struct ContactAddedSuccess: View {
     var body: some View {
         ZStack {
 
-            // Theme background — adapts to system light / dark
-            Color.movo.background
-                .ignoresSafeArea()
-
-            // Accent glow overlay
-            RadialGradient(
-                colors: [Color.movo.accent.opacity(0.20), Color.clear],
-                center: .top,
-                startRadius: 0,
-                endRadius: 400
-            )
-            .ignoresSafeArea()
+            SuccessBackdrop()
 
             VStack(spacing: 0) {
 
@@ -59,21 +48,10 @@ struct ContactAddedSuccess: View {
 
                 // MARK: - Success Icon
 
-                ZStack {
-                    Circle()
-                        .stroke(Color.movo.accentBorder, lineWidth: Stroke.thin)
-                        .frame(width: 160, height: 160)
+                CheckmarkHalo()
+                    .frame(width: 88, height: 88)
 
-                    Circle()
-                        .stroke(Color.movo.border, lineWidth: Stroke.thick)
-                        .frame(width: 130, height: 130)
-
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 52, weight: .medium))
-                        .foregroundColor(Color.movo.accent)
-                }
-
-                Spacer().frame(height: Spacing.huge)
+                Spacer().frame(height: Spacing.xxl)
 
                 // MARK: - Eyebrow pill
 
@@ -101,14 +79,14 @@ struct ContactAddedSuccess: View {
                         Circle()
                             .fill(Color.movo.accentTint)
                             .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
-                            .frame(width: 54, height: 54)
+                            .frame(width: 44, height: 44)
 
                         Text(initials)
                             .textStyle(Typography.cardTitle)
                             .foregroundColor(Color.movo.accent)
                     }
 
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
 
                         Text(name)
                             .textStyle(Typography.cardTitle)
@@ -126,7 +104,8 @@ struct ContactAddedSuccess: View {
 
                     Spacer()
                 }
-                .padding(Spacing.xl)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.md)
                 .background(
                     RoundedRectangle(cornerRadius: Radius.sheet)
                         .fill(Color.movo.surface)
@@ -177,12 +156,21 @@ struct ContactAddedSuccess: View {
             }
         }
     }
-}
+    
+    private struct SuccessBackdrop: View {
+        
+        var body: some View {
+            RadialGradient(
+                colors: [
+                    Color.movo.accent.opacity(0.14),
+                    Color.movo.background
+                ],
+                center: UnitPoint(x: 0.5, y: 0.20),
+                startRadius: 0,
+                endRadius: 360
+            )
+            .ignoresSafeArea()
+        }
+    }
 
-#Preview {
-    ContactAddedSuccess(
-        name: "John Doe",
-        phone: "+1 (555) 012-3456",
-        isMovoMember: true
-    )
 }

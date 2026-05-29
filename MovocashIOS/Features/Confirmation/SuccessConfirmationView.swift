@@ -299,7 +299,7 @@ private struct SuccessBackdrop: View {
 
 // MARK: - Checkmark Halo
 
-private struct CheckmarkHalo: View {
+struct CheckmarkHalo: View {
     var body: some View {
         ZStack {
             Circle()
