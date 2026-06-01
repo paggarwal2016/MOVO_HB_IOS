@@ -53,6 +53,8 @@ struct DashboardView: View {
     @State private var needsDashboardRefresh = false
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
+    /// The card just created — drives the success screen. Non-nil presents it.
+    @State private var createdCard: VCardListResponse? = nil
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
     @State private var plaidInfoAllowFunding = true
@@ -93,6 +95,15 @@ struct DashboardView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
+        }
+        .fullScreenCover(item: $createdCard) { card in
+            CashCardCreateSuccess(
+                cardHolder: card.cardHolderShort,
+                lastFour:   card.lastFour ?? "••••",
+                expiry:     card.expiryMMYY,
+                linkedTo:   card.savingsAccountNickname ?? "—",
+                onDone:     { createdCard = nil }
+            )
         }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
@@ -446,11 +457,12 @@ private var scrollContent: some View {
 
     private func createCashCard(nickname: String, pin: String) async {
         do {
-            _ = try await vm.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
+            let card = try await vm.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
             showCreateCashCard = false
-            ToastManager.shared.show("Cash card \"\(nickname)\" created!", style: .success, position: .bottom)
             await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
             await dashboardVM.refresh()
+            // Present the success screen for the newly created card.
+            createdCard = card
         } catch {
             // error surfaced via BaseViewModel toast
         }

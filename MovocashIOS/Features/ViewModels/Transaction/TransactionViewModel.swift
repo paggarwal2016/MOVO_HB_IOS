@@ -26,6 +26,14 @@ final class TransactionViewModel: BaseViewModel {
     /// Distinct from `state == .loading`, which is reserved for the first page.
     @Published private(set) var isLoadingMore = false
 
+    /// Total number of records on the server for the active filter (from `metadata.totalRecords`).
+    /// `nil` if the server omitted it.
+    @Published private(set) var totalRecords: Int? = nil
+
+    /// Account balances from the latest transactions response.
+    @Published private(set) var balance: Decimal = 0
+    @Published private(set) var settledBalance: Decimal = 0
+
     // MARK: - Computed
 
     var filteredTransactions: [TransactionItem] {
@@ -112,17 +120,24 @@ final class TransactionViewModel: BaseViewModel {
 
     // MARK: - Load Transactions
 
-    /// Loads the first page for `filter`, replacing the current list and resetting
-    /// pagination. Call this on initial load and whenever the filter or sort changes.
-    func loadTransactionsFiltered(filter: TransactionFilter) async {
-        var first = filter
-        first.limit  = pageSize
-        first.offset = 0
-        first.max    = pageSize
+    /// Loads the first page for `filter`, replacing the current list.
+    ///
+    /// - Parameter paginated: When `true` (default) the list pages in `pageSize` chunks
+    ///   and `loadNextPage()` can fetch more. When `false` it fetches exactly the filter's
+    ///   `limit`/`max` count once and disables infinite scroll — used for fixed previews
+    ///   like "latest 10" on the card detail sheet.
+    func loadTransactionsFiltered(filter: TransactionFilter, paginated: Bool = true) async {
+        let count = paginated ? pageSize : (filter.limit ?? filter.max)
 
-        activePageFilter = first
+        var first = filter
+        first.limit  = count
+        first.offset = 0
+        first.max    = count
+
+        // A nil activePageFilter makes loadNextPage() a no-op (no pagination).
+        activePageFilter = paginated ? first : nil
         pageOffset = 0
-        hasMorePages = true
+        hasMorePages = false
 
         do {
             let response: TransactionResponse = try await perform {
@@ -130,8 +145,13 @@ final class TransactionViewModel: BaseViewModel {
             }
             let items = response.transactions.map { $0.toItem() }
             transactions = items
+            balance = response.balance
+            settledBalance = response.settledBalance
             pageOffset = items.count
-            hasMorePages = items.count == pageSize
+            totalRecords = response.metadata?.totalRecords
+            hasMorePages = paginated
+                ? remainingPages(loaded: items.count, pageCount: items.count, metadata: response.metadata)
+                : false
             analytics.log(AnalyticsEvent.transactionListViewed, params: [
                 AnalyticsParam.accountId: filter.accountId,
                 AnalyticsParam.count: items.count
@@ -140,6 +160,13 @@ final class TransactionViewModel: BaseViewModel {
         } catch {
             hasMorePages = false
         }
+    }
+
+    /// Decides whether more pages remain. Prefers `metadata.totalRecords`; falls back
+    /// to "the page was full" when the server omits totals.
+    private func remainingPages(loaded: Int, pageCount: Int, metadata: TransactionResponse.Metadata?) -> Bool {
+        if let total = metadata?.totalRecords { return loaded < total }
+        return pageCount == pageSize
     }
 
     /// Fetches the next page and appends it. Safe to call repeatedly — it no-ops when
@@ -159,8 +186,12 @@ final class TransactionViewModel: BaseViewModel {
             let response: TransactionResponse = try await network.request(TransactionAPI.filtered(next))
             let items = response.transactions.map { $0.toItem() }
             transactions.append(contentsOf: items)
-            pageOffset += items.count
-            hasMorePages = items.count == pageSize
+            balance = response.balance
+            settledBalance = response.settledBalance
+            pageOffset = transactions.count
+            if let total = response.metadata?.totalRecords { totalRecords = total }
+            // An empty page also means we've reached the end (guards against off-by-one totals).
+            hasMorePages = !items.isEmpty && remainingPages(loaded: transactions.count, pageCount: items.count, metadata: response.metadata)
         } catch {
             // Keep the pages already loaded; the next scroll will retry.
         }

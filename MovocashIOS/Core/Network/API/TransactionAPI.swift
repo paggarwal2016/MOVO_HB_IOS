@@ -22,18 +22,19 @@ enum TransactionAPI: Endpoint {
     // MARK: - URL Path
     var path: String {
         switch self {
-        case .lists, .filtered: return "/transactions"
-        case .withdrawals:      return "/transactions/withdrawal"
-        case .internals:        return "/transactions/internal"
-        case .checkType:        return "/transactions/check-intent"
-        case .complete:         return "/transactions/intent-complete"
+        case .lists, .filtered:   return "/transactions"
+        case .withdrawals:        return "/transactions/withdrawal"
+        case .internals:          return "/transactions/internal"
+        case .checkType:          return "/transactions/check-intent"
+        case .complete:           return "/transactions/intent-complete"
         }
     }
 
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .lists, .filtered:       return .GET
+        case .lists:       return .PUT
+        case .filtered:    return .PUT
         case .withdrawals, .internals, .checkType, .complete: return .POST
         }
     }
@@ -65,8 +66,11 @@ enum TransactionAPI: Endpoint {
     
     private func encodeBody() throws -> Data? {
         switch self {
-        case .lists, .filtered:
+        case .lists:
             return nil
+        case .filtered:
+            let request = UserActionRequest(userAction: "GET-TRANSACATIONS0DETAILS")
+            return try JSONEncoder().encode(request)
         case .withdrawals(let request):
             return try JSONEncoder().encode(request)
         case .internals(let request):

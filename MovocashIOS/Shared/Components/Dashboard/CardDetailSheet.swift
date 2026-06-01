@@ -139,7 +139,12 @@ struct CardDetailSheet: View {
             let needsAccounts = savingVM.accountList == nil
             async let transactions: () = {
                 guard let accountId else { return }
-                await txVM.loadTransactions(max: 10, accountId: accountId)
+                var filter = TransactionFilter(accountId: accountId)
+                filter.max       = 10
+                filter.limit     = 10
+                filter.sortBy    = .createdAt
+                filter.sortOrder = .desc
+                await txVM.loadTransactionsFiltered(filter: filter, paginated: false)
             }()
             async let accounts: () = {
                 guard needsAccounts else { return }

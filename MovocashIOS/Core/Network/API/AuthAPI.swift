@@ -58,27 +58,20 @@ enum AuthAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .messengerOTP:
-            return .default
-        case .tokenSMS:
-            return .movoInfos
-        case .emailOTP:
+            return [.officeId]
+        case .tokenSMS,
+             .tokenRSA,
+             .nonceRSA:
+            return [.officeId, .movoInfo]
+        case .emailOTP,
+             .emailVerify,
+             .tokenAccess,
+             .acceptAgreements,
+             .enrollRSA,
+             .logout:
             return .movoAuthorized
-        case .emailVerify:
-            return .movoAuthorized
-        case .tokenAccess:
-            return .movoAuthorized
-        case .acceptAgreements:
-            return .movoAuthorized
-        case .enrollRSA:
-            return .movoAuthorized
-        case .nonceRSA:
-            return .movoInfos
-        case .tokenRSA:
-            return .movoInfos
         case .configure:
             return .default
-        case .logout:
-            return .movoAuthorized
         }
     }
     

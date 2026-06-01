@@ -173,7 +173,7 @@ final class VCardViewModel: BaseViewModel {
         }
     }
     
-    func createVCard(request: CreateVCardRequest) async throws -> VCardsList {
+    func createVCard(request: CreateVCardRequest) async throws -> VCardListResponse {
         do {
             let envelope: CreateVCardEncryptedResponse = try await perform {
                 try await self.network.request(VCardAPI.createVCard(request: request))
@@ -187,7 +187,7 @@ final class VCardViewModel: BaseViewModel {
                 print("[VCard decrypt]", json)
             }
 #endif
-            let card = try JSONDecoder().decode(VCardsList.self, from: plainData)
+            let card = try JSONDecoder().decode(VCardListResponse.self, from: plainData)
             analytics.log(AnalyticsEvent.vcardCreated, params: [
                 AnalyticsParam.accountName: request.nickname
             ])

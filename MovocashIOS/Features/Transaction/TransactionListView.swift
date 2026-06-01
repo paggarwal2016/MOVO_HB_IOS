@@ -151,9 +151,9 @@ struct TransactionListView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     navBar
-                    monthSummary
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.bottom, Spacing.lg - 2)
+//                    monthSummary
+//                        .padding(.horizontal, Spacing.lg)
+//                        .padding(.bottom, Spacing.lg - 2)
                     searchAndFilterRow
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.md)
@@ -691,7 +691,7 @@ extension TransactionListView {
                     FilterChip(
                         filter:   chip,
                         isActive: activeChipFilter == chip,
-                        count:    chip == .all ? transactionVM.totalCount : nil,
+                        count:    chip == .all ? (transactionVM.totalRecords ?? transactionVM.totalCount) : nil,
                         action:   { activeChipFilter = chip }
                     )
                 }
