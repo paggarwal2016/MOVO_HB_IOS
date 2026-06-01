@@ -155,12 +155,35 @@ enum StartupRouter {
         keychain: KeychainManagerProtocol,
         kycManager: KYCManagerProtocol,
         analytics: AnalyticsTracking,
+        configure: (() async throws -> Void)? = nil,
         biometricAuthenticate: (() async -> Bool)? = nil
     ) async {
         guard !appState.hasCompletedBootstrap else { return }
         appState.hasCompletedBootstrap = true
 
         let start = Date()
+
+        // MoVO session config — fetches the movo-info signing key. This must complete
+        // before any other API call (login, biometric, KYC), so it runs first while the
+        // splash is still showing. Bounded retries cover transient failures; if it still
+        // fails the app proceeds rather than blocking launch indefinitely.
+        if let configure {
+            for attempt in 1...3 {
+                do {
+                    try await configure()
+                    SecureLogger.info("MoVO session config loaded", category: .auth)
+                    break
+                } catch {
+                    SecureLogger.error(
+                        "MoVO session config attempt \(attempt) failed: \(error.localizedDescription)",
+                        category: .auth
+                    )
+                    if attempt < 3 {
+                        try? await Task.sleep(nanoseconds: UInt64(attempt) * 500_000_000)
+                    }
+                }
+            }
+        }
 
         if appState.isAuthenticated {
             if case .found(let token) = keychain.getSync("access_token") {
