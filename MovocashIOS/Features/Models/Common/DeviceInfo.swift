@@ -20,15 +20,15 @@ struct DeviceInfo: Encodable, Sendable {
 
     // Generated once per app session — same across all requests, resets on relaunch
     private static let sessionUUID: String = UUID().uuidString
-
-    static var current: DeviceInfo { // TODO : Vinu
+    
+    static var current: DeviceInfo {
         DeviceInfo(
-            uuid: "E9A0632F-9C79-4553-A9CC-217CB4D18DD9",// trackable — stable per session
-            deviceId: "0AB777A4-C6F4-42E2-9097-2197D4617862",   // permanent — Keychain persisted
-            deviceType: "ios",
-            osVersion: "18.5",
-            appVersion: "5.0.0",
-            applicationName: "movo-ios"
+            uuid: sessionUUID,
+            deviceId: DeviceManager.shared.syncDeviceID,
+            deviceType: AppInfo.platform,
+            osVersion: AppInfo.osVersion,
+            appVersion: AppInfo.version,
+            applicationName: AppInfo.applicationName
         )
     }
 
@@ -39,15 +39,3 @@ struct DeviceInfo: Encodable, Sendable {
         return data.base64EncodedString()
     }
 }
-
-
-//static var current: DeviceInfo { // TODO : Vinu
-//    DeviceInfo(
-//        uuid: sessionUUID                            // trackable — stable per session
-//        deviceId: DeviceManager.shared.syncDeviceID,   // permanent — Keychain persisted
-//        deviceType: AppInfo.platform,
-//        osVersion: AppInfo.osVersion,
-//        appVersion: AppInfo.version,
-//        applicationName: AppInfo.applicationName
-//    )
-//}

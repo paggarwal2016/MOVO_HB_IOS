@@ -66,6 +66,9 @@ struct MovocashIOSApp: App {
                         keychain: KeychainManager.shared,
                         kycManager: container.kycManager,
                         analytics: container.analytics,
+                        configure: {
+                            try await authVM.configure()
+                        },
                         biometricAuthenticate: {
                             #if targetEnvironment(simulator)
                             return false

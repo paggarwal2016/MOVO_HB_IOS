@@ -25,7 +25,6 @@ enum SealedCryptoError: Error, LocalizedError, Equatable {
     case malformedInput
     case malformedCiphertext
     case decryptionFailed
-    case encryptionFailed
 
     var errorDescription: String? {
         switch self {
@@ -34,7 +33,6 @@ enum SealedCryptoError: Error, LocalizedError, Equatable {
         case .malformedInput:      return "Input is not valid standard base64."
         case .malformedCiphertext: return "Ciphertext too short — possible truncation or tampering."
         case .decryptionFailed:    return "Decryption failed: key mismatch or MAC verification error."
-        case .encryptionFailed:    return "Encryption failed: internal libsodium error."
         }
     }
 }
@@ -117,26 +115,16 @@ enum SealedCryptoService {
         return Data(plaintext)
     }
 
-    // MARK: - Encrypt
+    // MARK: - HMAC
 
-    /// Seals plaintext into a libsodium anonymous sealed box.
-    /// Only the holder of the matching secret key can open the result.
-    ///
-    /// - Parameter message: Plaintext `Data` to seal.
-    /// - Returns: Standard base64 encoded ciphertext.
-    static func encrypt(message: Data) throws -> String {
-        var sk = try loadSecretKey()
-        defer { sodium.utils.zero(&sk) }
-
-        let pk = try derivePublicKey(from: sk)
-
-        guard let sealed = sodium.box.seal(
-            message:            [UInt8](message),
-            recipientPublicKey: pk
-        ) else {
-            throw SealedCryptoError.encryptionFailed
-        }
-
-        return Data(sealed).base64EncodedString()
+    /// HMAC-SHA256 of `message` keyed by the server-issued `movoSessionConfig`.
+    /// Used to sign the `movo-info` JWT. The key string's UTF-8 bytes form the HMAC
+    /// key, following the standard JWT HS256 convention.
+    static func hmacSHA256(message: Data, key: String) -> Data {
+        let mac = HMAC<SHA256>.authenticationCode(
+            for: message,
+            using: SymmetricKey(data: Data(key.utf8))
+        )
+        return Data(mac)
     }
 }

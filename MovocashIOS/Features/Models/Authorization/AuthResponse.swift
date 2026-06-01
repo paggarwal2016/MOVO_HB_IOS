@@ -36,3 +36,7 @@ nonisolated struct AuthTokenSMSResponse: Decodable {
     let sessionId: String
     let message: String?
 }
+
+nonisolated struct ConfigureResponse: Decodable {
+    let movoSessionConfig: String
+}

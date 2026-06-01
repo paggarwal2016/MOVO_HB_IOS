@@ -217,6 +217,16 @@ final class AuthViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Configure
+
+    /// Fetches the session signing key from `/get/config` and persists it to the Keychain.
+    /// The stored key is used to HMAC-SHA256 sign the `movo-info` JWT on every request
+    /// that requires the MoVO Info header.
+    func configure() async throws {
+        let info: ConfigureResponse = try await network.request(AuthAPI.configure)
+        try await keychain.save(info.movoSessionConfig, for: "movo_session_config", protection: .backgroundSafe)
+    }
+
     func reset() {
         phoneNumber = ""
         phoneDisplayText = ""

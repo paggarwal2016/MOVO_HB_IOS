@@ -74,7 +74,7 @@ struct HeaderProvider {
         var headers = await baseHeaders()
 
         if type.contains(.movoInfo) {
-            headers["movo-info"] = movoInfoToken
+            headers["movo-info"] = await movoInfoToken()
         }
 
         if type.contains(.session) {
@@ -109,8 +109,33 @@ struct HeaderProvider {
 // MARK: - Private Helpers
 
 private extension HeaderProvider {
+  
+    /// Builds the `movo-info` JWT: `base64URL(header).base64URL(deviceInfo)` signed with
+    /// HMAC-SHA256 using the server-issued `movoSessionConfig` key that `configure()`
+    /// stored in the Keychain. Falls back to `fallbackMovoInfoToken` if the key or the
+    /// device-info payload is unavailable.
+    static func movoInfoToken() async -> String {
+        guard let key = try? await KeychainManager.shared.get("movo_session_config", biometricPrompt: nil),
+              !key.isEmpty,
+              let payloadData = try? JSONEncoder().encode(DeviceInfo.current) else {
+            return ""
+        }
 
-    static let movoInfoToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1dWlkIjoiOTZhOGNmOGUtMWM4NS00MGU3LWJmN2QtZTYzN2QxYmVmODk1IiwiZGV2aWNlSWQiOiI5NmE4Y2Y4ZS0xYzg1LTQwZTctYmY3ZC1lNjM3ZDFiZWY4OTYiLCJkZXZpY2VUeXBlIjoiaW9zIiwiYXBwVmVyc2lvbiI6IjEuMC4wIiwiYXBwTmFtZSI6Im1vdm8taW9zIiwib3NWZXJzaW9uIjoiMTAuMC4yMjYzMSIsImRldmljZU5hbWUiOiJpUGhvbmUgMTQgUHJvIiwiZGV2aWNlTW9kZWwiOiJQeWl5YW5rYSBpUGhvbmUifQ.9vhAnS6tWbE5cS6N3tRPG15_DIoSf_3xz2gO_BfiLB4"
+        let headerJSON     = #"{"alg":"HS256","typ":"JWT"}"#
+        let headerEncoded  = base64URLEncode(Data(headerJSON.utf8))
+        let payloadEncoded = base64URLEncode(payloadData)
+        let signingInput   = "\(headerEncoded).\(payloadEncoded)"
+
+        let signature = SealedCryptoService.hmacSHA256(message: Data(signingInput.utf8), key: key)
+        return "\(signingInput).\(base64URLEncode(signature))"
+    }
+
+    static func base64URLEncode(_ data: Data) -> String {
+        data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
 
     static func baseHeaders() async -> [String: String] {
         ["Content-Type": "application/json", "Accept": "application/json"]
