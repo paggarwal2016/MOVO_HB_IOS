@@ -109,70 +109,29 @@ struct HeaderProvider {
 // MARK: - Private Helpers
 
 private extension HeaderProvider {
-  
-    /// Builds the `movo-info` JWT: `base64URL(header).base64URL(deviceInfo)` signed with
-    /// HMAC-SHA256 using the server-issued `movoSessionConfig` key that `configure()`
-    /// stored in the Keychain. Falls back to `fallbackMovoInfoToken` if the key or the
-    /// device-info payload is unavailable.
+
+    /// Builds the `movo-info` header: the device-info JSON encrypted with RSA-OAEP
+    /// (SHA-256) using the server's public key (`movoSessionConfig`, stored in the
+    /// Keychain by `configure()`), returned as a raw standard-base64 blob — the exact
+    /// format the server's `base64decode` + RSA decrypt expects. Returns an empty
+    /// string if the key or device-info payload is unavailable.
     static func movoInfoToken() async -> String {
-        guard let key = try? await KeychainManager.shared.get("movo_session_config", biometricPrompt: nil),
-              !key.isEmpty,
-              let payloadData = try? JSONEncoder().encode(DeviceInfo.current) else {
+        guard let publicKey = try? await KeychainManager.shared.get("movo_session_config", biometricPrompt: nil),
+              !publicKey.isEmpty else {
+            SecureLogger.error("movo-info: signing key missing — configure() not completed", category: .network)
             return ""
         }
 
-        let headerJSON     = #"{"alg":"HS256","typ":"JWT"}"#
-        let headerEncoded  = base64URLEncode(Data(headerJSON.utf8))
-        let payloadEncoded = base64URLEncode(payloadData)
-        let signingInput   = "\(headerEncoded).\(payloadEncoded)"
-
-        let signature = SealedCryptoService.hmacSHA256(message: Data(signingInput.utf8), key: key)
-        return "\(signingInput).\(base64URLEncode(signature))"
-    }
-
-    static func base64URLEncode(_ data: Data) -> String {
-        data.base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
+        do {
+            let payloadData = try JSONEncoder().encode(DeviceInfo.current)
+            return try SealedCryptoService.rsaOAEPEncrypt(payloadData, publicKeyBase64: publicKey)
+        } catch {
+            SecureLogger.error("movo-info: encryption failed — \(error.localizedDescription)", category: .network)
+            return ""
+        }
     }
 
     static func baseHeaders() async -> [String: String] {
         ["Content-Type": "application/json", "Accept": "application/json"]
     }
 }
-
-
-// MARK: - Private Helpers
-
-//private extension HeaderProvider {
-//
-//    static func buildMovoInfoJWT() -> String {
-//        let uuid        = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
-//        let appVersion  = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
-//        let osVersion   = UIDevice.current.systemVersion
-//
-//        let headerJSON  = #"{"alg":"HS256","typ":"JWT"}"#
-//        let payloadJSON = "{\"uuid\":\"\(uuid)\",\"deviceId\":\"\(uuid)\",\"deviceType\":\"ios\",\"appVersion\":\"\(appVersion)\",\"applicationName\":\"movo-ios\",\"osVersion\":\"\(osVersion)\"}"
-//
-//        let headerEncoded  = base64URLEncode(Data(headerJSON.utf8))
-//        let payloadEncoded = base64URLEncode(Data(payloadJSON.utf8))
-//        let signingInput   = "\(headerEncoded).\(payloadEncoded)"
-//
-//        guard let sig = try? SealedCryptoService.hmacSign(Data(signingInput.utf8)) else {
-//            return signingInput
-//        }
-//        return "\(signingInput).\(base64URLEncode(sig))"
-//    }
-//
-//    static func base64URLEncode(_ data: Data) -> String {
-//        data.base64EncodedString()
-//            .replacingOccurrences(of: "+", with: "-")
-//            .replacingOccurrences(of: "/", with: "_")
-//            .replacingOccurrences(of: "=", with: "")
-//    }
-//
-//    static func baseHeaders() async -> [String: String] {
-//        ["Content-Type": "application/json", "Accept": "application/json"]
-//    }
-//}
