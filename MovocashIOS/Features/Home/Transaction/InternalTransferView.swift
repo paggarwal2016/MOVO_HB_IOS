@@ -617,16 +617,6 @@ struct InternalTransferView: View {
             toClientId: toClientId,
             toAccountId: selectedToCard?.savingsAccountId
         )
-        let success = await transVM.submitInternalTransfer(request: request)
-
-        // If the task was cancelled mid-flight (session expired), do nothing —
-        // the .onReceive handler already dismissed this view.
-        guard !Task.isCancelled else { return }
-        guard success else { return }
-
-        ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)
-        (securedDismiss ?? dismiss)()
-        onDismiss()
     }
 }
 
