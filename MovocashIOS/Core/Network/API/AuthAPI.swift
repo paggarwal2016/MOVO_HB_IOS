@@ -18,6 +18,7 @@ enum AuthAPI: Endpoint {
     case enrollRSA(request: RSAEnrollRequest)
     case tokenRSA(request: RSATokenRequest)
     case nonceRSA(request: RSANonceRequest)
+    case configure
     case logout
     
     var isAuth: Bool { true }
@@ -37,6 +38,7 @@ enum AuthAPI: Endpoint {
         case .enrollRSA:         return "/rsa"
         case .tokenRSA:          return "/auth/token-rsa"
         case .nonceRSA:          return "/rsa/nonce"
+        case .configure:         return "/get/config"
         case .logout:            return "/auth/logout"
         }
     }
@@ -47,6 +49,8 @@ enum AuthAPI: Endpoint {
         case .messengerOTP, .tokenSMS, .tokenAccess,
                 .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements:
             return .POST
+        case .configure:
+            return .GET
         }
     }
 
@@ -71,6 +75,8 @@ enum AuthAPI: Endpoint {
             return .movoInfos
         case .tokenRSA:
             return .movoInfos
+        case .configure:
+            return .default
         case .logout:
             return .movoAuthorized
         }
@@ -86,7 +92,7 @@ enum AuthAPI: Endpoint {
         }
     }
     
-    private func encodeBody() throws -> Data {
+    private func encodeBody() throws -> Data? {
         switch self {
         case .messengerOTP(let request):
             return try JSONEncoder().encode(request)
@@ -109,6 +115,8 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .nonceRSA(let request):
             return try JSONEncoder().encode(request)
+        case .configure:
+            return nil
         case .logout:
             let request = UserActionRequest(
                 userAction: "LOGOUT")
