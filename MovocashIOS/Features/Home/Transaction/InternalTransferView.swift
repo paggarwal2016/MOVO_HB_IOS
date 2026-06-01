@@ -24,6 +24,7 @@ struct InternalTransferView: View {
     @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var vcardVM: VCardViewModel
+    @StateObject private var achVM: PlaidAchViewModel
 
     private let mode: TransferFlowMode
     private let toClientId: Int
@@ -105,6 +106,7 @@ struct InternalTransferView: View {
         _selectedFromAccount = State(initialValue: fromAccount)
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
+        _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         self.onDismiss = onDismiss
         let fixedToCard: VCardListResponse?
         if case .fixedBoth(let toCard) = mode { fixedToCard = toCard } else { fixedToCard = nil }
@@ -138,7 +140,7 @@ struct InternalTransferView: View {
                     .padding(.top, Spacing.xs)
                     .padding(.bottom, Spacing.xs)
             }
-            if transVM.state == .loading {
+            if transVM.state == .loading || achVM.state == .loading {
                 Color.black.opacity(0.5).ignoresSafeArea()
                 SpinnerView()
             }
@@ -193,6 +195,15 @@ struct InternalTransferView: View {
             .presentationDetents([.height(descriptionText.isEmpty ? 420 : 490)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
+        }
+        .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
+            SuccessConfirmationView(
+                viewModel: SuccessConfirmationViewModel(success: data) {
+                    achVM.peerTransferSuccess = nil
+                    dismiss()
+                    onDismiss()
+                }
+            )
         }
         .task {
             if case .fixedBoth = mode { return }
@@ -592,29 +603,20 @@ struct InternalTransferView: View {
     // MARK: - Submit
 
     private func submitTransfer() async {
-        guard let fromAccountId = selectedFromCard?.savingsAccountId,
-              let toCard = selectedToCard,
-              let toAccountId = toCard.savingsAccountId else { return }
-        let request = TransactionRequest.Internal(
-            description: descriptionText,
-            amount: amount,
-            toAccountId: toAccountId,
-            toClientId: toClientId,
-            fromAccountId: fromAccountId,
-            phoneNumber: nil,
-            userAction: "Internal-Transfer",
-            nickname: ""
-        )
-        let success = await transVM.submitInternalTransfer(request: request)
-
-        // If the task was cancelled mid-flight (session expired), do nothing —
-        // the .onReceive handler already dismissed this view.
+        guard let fromCard = selectedFromCard else { return }
         guard !Task.isCancelled else { return }
-        guard success else { return }
 
-        ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)
-        (securedDismiss ?? dismiss)()
-        onDismiss()
+        await achVM.sendMoneyToContact(
+            fromCard: fromCard,
+            toName: selectedToCard?.savingsAccountNickname ?? selectedToCard?.name ?? "",
+            normalizedPhone: "",
+            amount: amount,
+            amountText: amountText,
+            description: descriptionText.isEmpty ? nil : descriptionText,
+            isInternal: true,
+            toClientId: toClientId,
+            toAccountId: selectedToCard?.savingsAccountId
+        )
     }
 }
 

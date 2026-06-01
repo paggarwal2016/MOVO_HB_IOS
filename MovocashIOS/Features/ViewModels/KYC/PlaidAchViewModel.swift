@@ -306,7 +306,9 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         amount: Double,
         amountText: String,
         description: String?,
-        isInternal: Bool = false
+        isInternal: Bool = false,
+        toClientId: Int? = nil,
+        toAccountId: Int? = nil
     ) async {
         await perform {
             // Step 1 — Configure KYC SDK on every transfer so the SDK always holds
@@ -360,8 +362,10 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 details: isInternal
                     ? .internalTransfer(
                         amount: amount,
-                        fromAccountId: fromCard.savingsAccountId ?? 0,
-                        phoneNumber: normalizedPhone,
+                        fromAccountId: fromCard.savingsAccountId,
+                        phoneNumber: normalizedPhone.isEmpty ? nil : normalizedPhone,
+                        toClientId: toClientId,
+                        toAccountId: toAccountId,
                         description: description
                     )
                     : .externalTransfer(
