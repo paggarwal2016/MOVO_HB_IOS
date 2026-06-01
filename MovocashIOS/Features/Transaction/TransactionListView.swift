@@ -14,6 +14,53 @@ enum TransactionMode {
     case common
 }
 
+// MARK: - Transaction Sort
+
+/// User-selectable sort options mapped to the server `sortBy` / `sortOrder` params.
+enum TransactionSort: String, CaseIterable, Identifiable {
+    case newest
+    case oldest
+    case amountHigh
+    case amountLow
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .newest:     return "Newest first"
+        case .oldest:     return "Oldest first"
+        case .amountHigh: return "Amount: High to Low"
+        case .amountLow:  return "Amount: Low to High"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .newest:     return "arrow.down"
+        case .oldest:     return "arrow.up"
+        case .amountHigh: return "dollarsign.arrow.circlepath"
+        case .amountLow:  return "dollarsign.circle"
+        }
+    }
+
+    var sortBy: TransactionFilter.SortBy {
+        switch self {
+        case .newest, .oldest:        return .createdAt
+        case .amountHigh, .amountLow: return .amount
+        }
+    }
+
+    var sortOrder: TransactionFilter.SortOrder {
+        switch self {
+        case .newest, .amountHigh: return .desc
+        case .oldest, .amountLow:  return .asc
+        }
+    }
+
+    /// Amount sorts render as a flat list; date sorts keep the day-grouped sections.
+    var isAmountSort: Bool { self == .amountHigh || self == .amountLow }
+}
+
 // MARK: - TransactionListView
 
 struct TransactionListView: View {
@@ -29,13 +76,16 @@ struct TransactionListView: View {
     @State private var pendingFilter:   TransactionFilter
     @State private var showFilterSheet  = false
     @State private var activeChipFilter: TransactionChipFilter = .all
-    
+    @State private var activeSort: TransactionSort = .newest
+
     init(container: AppContainer, accountId: Int, mode: TransactionMode = .common, initialMax: Int = 100) {
         self.accountId = accountId
         self.mode = mode
         _transactionVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         var base = TransactionFilter(accountId: accountId)
         base.max = initialMax
+        base.sortBy = TransactionSort.newest.sortBy
+        base.sortOrder = TransactionSort.newest.sortOrder
         _activeFilter  = State(initialValue: base)
         _pendingFilter = State(initialValue: base)
     }
@@ -59,14 +109,16 @@ struct TransactionListView: View {
         let grouped = Dictionary(grouping: chipFilteredTransactions) {
             calendar.startOfDay(for: $0.date)
         }
+        let ascending = activeSort == .oldest
         return grouped.map { date, items in
             let label: String
             if calendar.isDateInToday(date)          { label = "Today" }
             else if calendar.isDateInYesterday(date) { label = "Yesterday" }
             else                                     { label = formatter.string(from: date) }
-            return (label: label, date: date, items: items.sorted { $0.date > $1.date })
+            let sortedItems = items.sorted { ascending ? $0.date < $1.date : $0.date > $1.date }
+            return (label: label, date: date, items: sortedItems)
         }
-        .sorted { $0.date > $1.date }
+        .sorted { ascending ? $0.date < $1.date : $0.date > $1.date }
     }
     
     private var totalMoneyIn: Decimal {
@@ -121,7 +173,7 @@ struct TransactionListView: View {
                 Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
             } onReset: {
-                pendingFilter = TransactionFilter(accountId: accountId)
+                pendingFilter = freshFilter()
                 activeFilter  = pendingFilter
                 Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
@@ -144,11 +196,62 @@ struct TransactionListView: View {
     private var transactionContent: some View {
         if transactionVM.state == .loading && transactionVM.transactions.isEmpty {
             loadingSkeleton
-        } else if displayGroups.isEmpty {
+        } else if chipFilteredTransactions.isEmpty {
             emptyState
+        } else if activeSort.isAmountSort {
+            flatList
         } else {
             transactionList
         }
+    }
+
+    /// Bottom sentinel that drives infinite scroll. Placed as the last element of a
+    /// LazyVStack so its `onAppear` fires only when scrolled near the end. Shows a
+    /// spinner while the next page loads.
+    @ViewBuilder
+    private var paginationFooter: some View {
+        if transactionVM.isLoadingMore {
+            ProgressView()
+                .tint(Color.movo.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.md)
+        }
+        Color.clear
+            .frame(height: 1)
+            .onAppear { Task { await transactionVM.loadNextPage() } }
+    }
+
+    // MARK: - Flat List (amount sort)
+
+    private var flatList: some View {
+        let items = chipFilteredTransactions
+        return LazyVStack(spacing: 0) {
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    TransactionRow(item: item, action: {})
+
+                    if index < items.count - 1 {
+                        Rectangle()
+                            .fill(Color.movo.border)
+                            .frame(height: Stroke.hairline)
+                            .padding(.leading, Spacing.md + 2 + 38 + Spacing.md)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .fill(Color.movo.surface.opacity(0.85))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
+            .padding(.horizontal, Spacing.lg)
+
+            paginationFooter
+        }
+        .padding(.bottom, Spacing.md)
     }
     
     // MARK: - Transaction List
@@ -225,10 +328,12 @@ struct TransactionListView: View {
                     .padding(.horizontal, Spacing.lg)
                 }
             }
+
+            paginationFooter
         }
         .padding(.bottom, Spacing.md)
     }
-    
+
     // MARK: - Transaction Row
     
     private struct TransactionRow: View {
@@ -403,7 +508,7 @@ struct TransactionListView: View {
             
             if activeFilter.hasActiveFilters || activeChipFilter != .all {
                 Button {
-                    activeFilter      = TransactionFilter(accountId: accountId)
+                    activeFilter      = freshFilter()
                     pendingFilter     = activeFilter
                     activeChipFilter  = .all
                     Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
@@ -522,11 +627,61 @@ extension TransactionListView {
                     )
             )
             
+            sortMenu
+
             FilterIconButton(activeCount: activeFilterCount) {
                 pendingFilter   = activeFilter
                 showFilterSheet = true
             }
         }
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            ForEach(TransactionSort.allCases) { option in
+                Button {
+                    applySort(option)
+                } label: {
+                    if option == activeSort {
+                        Label(option.label, systemImage: "checkmark")
+                    } else {
+                        Label(option.label, systemImage: option.systemImage)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.movo.textSecondary)
+                .frame(width: 38, height: 38)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.button)
+                        .fill(Color.movo.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        )
+                )
+        }
+    }
+
+    /// A cleared filter that preserves the current sort selection.
+    private func freshFilter() -> TransactionFilter {
+        var f = TransactionFilter(accountId: accountId)
+        f.sortBy    = activeSort.sortBy
+        f.sortOrder = activeSort.sortOrder
+        return f
+    }
+
+    /// Applies a new sort: updates the active/pending filters and reloads from page 0.
+    private func applySort(_ option: TransactionSort) {
+        guard option != activeSort else { return }
+        activeSort = option
+        activeFilter.sortBy     = option.sortBy
+        activeFilter.sortOrder  = option.sortOrder
+        pendingFilter.sortBy    = option.sortBy
+        pendingFilter.sortOrder = option.sortOrder
+        Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
     }
     
     private var filterChipsRow: some View {

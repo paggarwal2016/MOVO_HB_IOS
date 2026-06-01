@@ -22,6 +22,10 @@ final class TransactionViewModel: BaseViewModel {
     /// `nil` while the check is in-flight or if it has not yet been called.
     @Published var checkIntentResult: CheckIntentResponse? = nil
 
+    /// True while a subsequent page is being appended (drives the bottom spinner).
+    /// Distinct from `state == .loading`, which is reserved for the first page.
+    @Published private(set) var isLoadingMore = false
+
     // MARK: - Computed
 
     var filteredTransactions: [TransactionItem] {
@@ -61,6 +65,17 @@ final class TransactionViewModel: BaseViewModel {
     private let network: NetworkServiceProtocol
     private let analytics: AnalyticsTracking
 
+    // MARK: - Pagination State
+
+    /// Page size sent as both `limit` and `max` so the two server params never disagree.
+    private let pageSize = 25
+    /// Number of items fetched so far — sent as the next request's `offset`.
+    private var pageOffset = 0
+    /// `false` once a page returns fewer than `pageSize` items (end reached).
+    private var hasMorePages = true
+    /// The filter for the current result set, reused (with new offset) for each page.
+    private var activePageFilter: TransactionFilter?
+
     // MARK: - Init
 
     init(
@@ -97,18 +112,57 @@ final class TransactionViewModel: BaseViewModel {
 
     // MARK: - Load Transactions
 
+    /// Loads the first page for `filter`, replacing the current list and resetting
+    /// pagination. Call this on initial load and whenever the filter or sort changes.
     func loadTransactionsFiltered(filter: TransactionFilter) async {
+        var first = filter
+        first.limit  = pageSize
+        first.offset = 0
+        first.max    = pageSize
+
+        activePageFilter = first
+        pageOffset = 0
+        hasMorePages = true
+
         do {
             let response: TransactionResponse = try await perform {
-                try await self.network.request(TransactionAPI.filtered(filter))
+                try await self.network.request(TransactionAPI.filtered(first))
             }
-            transactions = response.transactions.map { $0.toItem() }
+            let items = response.transactions.map { $0.toItem() }
+            transactions = items
+            pageOffset = items.count
+            hasMorePages = items.count == pageSize
             analytics.log(AnalyticsEvent.transactionListViewed, params: [
                 AnalyticsParam.accountId: filter.accountId,
-                AnalyticsParam.count: response.transactions.count
+                AnalyticsParam.count: items.count
             ])
         } catch is CancellationError {
         } catch {
+            hasMorePages = false
+        }
+    }
+
+    /// Fetches the next page and appends it. Safe to call repeatedly — it no-ops when
+    /// already loading, when the first page is still loading, or when the end is reached.
+    func loadNextPage() async {
+        guard hasMorePages, !isLoadingMore, state != .loading,
+              var next = activePageFilter else { return }
+
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+
+        next.limit  = pageSize
+        next.offset = pageOffset
+        next.max    = pageSize
+
+        do {
+            let response: TransactionResponse = try await network.request(TransactionAPI.filtered(next))
+            let items = response.transactions.map { $0.toItem() }
+            transactions.append(contentsOf: items)
+            pageOffset += items.count
+            hasMorePages = items.count == pageSize
+        } catch {
+            // Keep the pages already loaded; the next scroll will retry.
         }
     }
 
