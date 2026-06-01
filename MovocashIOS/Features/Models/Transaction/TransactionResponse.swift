@@ -13,12 +13,22 @@ nonisolated struct TransactionResponse: Decodable {
     let transactions: [Transaction]
     let settledBalance: Decimal
     let balance: Decimal
+    let metadata: Metadata?
+
+    /// Server pagination metadata. `totalRecords` is the authoritative way to know
+    /// whether more pages remain.
+    nonisolated struct Metadata: Decodable {
+        let offset: Int?
+        let limit: Int?
+        let totalRecords: Int?
+    }
 
     init(from decoder: Decoder) throws {
         let container  = try decoder.container(keyedBy: CodingKeys.self)
         transactions   = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
         settledBalance = Self.decodeDecimal(from: container, key: .settledBalance)
         balance        = Self.decodeDecimal(from: container, key: .balance)
+        metadata       = try container.decodeIfPresent(Metadata.self, forKey: .metadata)
     }
 
     private static func decodeDecimal(
@@ -31,7 +41,7 @@ nonisolated struct TransactionResponse: Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case transactions, settledBalance, balance
+        case transactions, settledBalance, balance, metadata
     }
 }
 
@@ -62,11 +72,14 @@ struct Transaction: Decodable, Identifiable, Sendable {
         to              = try container.decodeIfPresent(String.self, forKey: .to)
         from            = try container.decodeIfPresent(String.self, forKey: .from)
         type            = try container.decodeIfPresent(TransactionType.self, forKey: .type) ?? .unknown
-        date            = try container.decodeIfPresent(String.self, forKey: .date) ?? ""
+        // The API field is `createdAt`; keep `date` as a fallback for older payloads.
+        date            = try container.decodeIfPresent(String.self, forKey: .createdAt)
+            ?? container.decodeIfPresent(String.self, forKey: .date)
+            ?? ""
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, status, location, description, amount, to, from, type, date
+        case id, status, location, description, amount, to, from, type, date, createdAt
     }
 
     private static let dateFormatter: DateFormatter = {

@@ -10,6 +10,20 @@ import Foundation
 // MARK: - Transaction Filter
 
 struct TransactionFilter {
+
+    /// Allowed `sortBy` values (matches the API contract).
+    enum SortBy: String {
+        case createdAt
+        case amount
+        case id
+    }
+
+    /// Allowed `sortOrder` values (matches the API contract).
+    enum SortOrder: String {
+        case asc
+        case desc
+    }
+
     var max: Int = 100
     var accountId: Int
     var merchantName: String = ""
@@ -21,6 +35,12 @@ struct TransactionFilter {
     var onDate: String = ""
     var fromDate: String = ""
     var toDate: String = ""
+
+    // Pagination & sorting
+    var limit: Int? = nil
+    var offset: Int? = nil
+    var sortBy: SortBy? = nil
+    var sortOrder: SortOrder? = nil
 
     var hasActiveFilters: Bool {
         !merchantName.isEmpty || !transactionStatus.isEmpty || !last4.isEmpty ||
@@ -42,6 +62,10 @@ struct TransactionFilter {
         if !onDate.isEmpty              { items.append(.init(name: "onDate",             value: onDate)) }
         if !fromDate.isEmpty            { items.append(.init(name: "fromDate",           value: fromDate)) }
         if !toDate.isEmpty              { items.append(.init(name: "toDate",             value: toDate)) }
+        if let v = limit                { items.append(.init(name: "limit",             value: "\(v)")) }
+        if let v = offset               { items.append(.init(name: "offset",            value: "\(v)")) }
+        if let v = sortBy               { items.append(.init(name: "sortBy",            value: v.rawValue)) }
+        if let v = sortOrder            { items.append(.init(name: "sortOrder",         value: v.rawValue)) }
         return items
     }
 }

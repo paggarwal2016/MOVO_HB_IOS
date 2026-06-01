@@ -98,6 +98,23 @@ extension VCardListResponse {
         expiration ?? "--/--"
     }
 
+    /// Expiry as `MM/YY` from the API's `YYYY-MM` value, e.g. "2028-05" → "05/28".
+    var expiryMMYY: String {
+        let parts = (expiration ?? "").split(separator: "-")
+        if parts.count == 2, parts[0].count == 4 {
+            return "\(parts[1])/\(parts[0].suffix(2))"
+        }
+        return expiration ?? "--/--"
+    }
+
+    /// Cardholder in "FIRST L." form, e.g. "LAYTON C.".
+    var cardHolderShort: String {
+        let first = firstName ?? name?.split(separator: " ").first.map(String.init) ?? ""
+        let lastInitial = (lastName ?? "").first.map { "\($0)." } ?? ""
+        let combined = [first, lastInitial].filter { !$0.isEmpty }.joined(separator: " ")
+        return combined.isEmpty ? displayName : combined
+    }
+
     var displayBalance: String {
         let amount = savingsAccountAvailableBalance ?? savingsAccountBalance ?? 0
         return String(format: "$ %.2f", amount)
