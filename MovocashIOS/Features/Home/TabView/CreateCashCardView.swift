@@ -9,9 +9,15 @@ import SwiftUI
 
 struct CreateCashCardView: View {
 
-    // MARK: - Callbacks
-    let onCancel: () -> Void
-    let onCreate: (_ nickname: String, _ pin: String) async -> Void
+    // MARK: - Dependencies & Callbacks
+
+    /// View model that performs the create-card network call.
+    let vm: VCardViewModel
+    /// Dismisses this sheet (used by the close button).
+    let onClose: () -> Void
+    /// Invoked with the newly created card on a successful create. The presenter
+    /// is responsible for dismissing this sheet and presenting the confirmation.
+    let onCreated: (VCardListResponse) -> Void
 
     // MARK: - State
     @State private var nickname = ""
@@ -104,7 +110,7 @@ private extension CreateCashCardView {
 
             Spacer()
 
-            Button(action: onCancel) {
+            Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.movo.textSecondary)
@@ -253,11 +259,18 @@ private extension CreateCashCardView {
         focusedField = nil
         isLoading = true
         SpinnerView.showFullScreen()
+        let request = CreateVCardRequest(
+            nickname: nickname.trimmingCharacters(in: .whitespaces),
+            pin: pin,
+            userAction: "VCARD-CREATION"
+        )
         Task {
-            await onCreate(nickname.trimmingCharacters(in: .whitespaces), pin)
+            let card = try? await vm.createVCard(request: request)
+            // Error (card == nil) is surfaced via BaseViewModel toast.
             await MainActor.run {
                 isLoading = false
                 SpinnerView.hideFullScreen()
+                if let card { onCreated(card) }
             }
         }
     }

@@ -40,7 +40,7 @@ enum SavingsAccountAPI: Endpoint {
     }
 
     // MARK: - Header Configure
-    var headerType: HeaderType { .movoAuthorized }
+    var headerType: HeaderType { [.session, .movoInfo, .officeId] }
 
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? {

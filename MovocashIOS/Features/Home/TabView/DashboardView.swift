@@ -53,7 +53,10 @@ struct DashboardView: View {
     @State private var needsDashboardRefresh = false
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
-    /// The card just created — drives the success screen. Non-nil presents it.
+    /// Holds the newly created card while the create sheet dismisses; the sheet's
+    /// onDismiss then presents the confirmation for it.
+    @State private var pendingCreatedCard: VCardListResponse? = nil
+    /// The card whose confirmation screen is currently presented.
     @State private var createdCard: VCardListResponse? = nil
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
@@ -84,11 +87,21 @@ struct DashboardView: View {
             }
         }
         .dimmingOverlay(isActive: isSheetActive)
-        .sheet(isPresented: $showCreateCashCard) {
+        .sheet(isPresented: $showCreateCashCard, onDismiss: {
+            // Once the create sheet has fully dismissed, present the confirmation
+            // for the just-created card (if any).
+            if let card = pendingCreatedCard {
+                pendingCreatedCard = nil
+                createdCard = card
+            }
+        }) {
             CreateCashCardView(
-                onCancel: { showCreateCashCard = false },
-                onCreate: { nickname, pin in
-                    await createCashCard(nickname: nickname, pin: pin)
+                vm: vm,
+                onClose: { showCreateCashCard = false },
+                onCreated: { card in
+                    // Stash the card and dismiss the create sheet in the background.
+                    pendingCreatedCard = card
+                    showCreateCashCard = false
                 }
             )
             .presentationDetents([.height(480)])
@@ -98,11 +111,15 @@ struct DashboardView: View {
         }
         .fullScreenCover(item: $createdCard) { card in
             CashCardCreateSuccess(
-                cardHolder: card.cardHolderShort,
-                lastFour:   card.lastFour ?? "••••",
-                expiry:     card.expiryMMYY,
-                linkedTo:   card.savingsAccountNickname ?? "—",
-                onDone:     { createdCard = nil }
+                card: card,
+                onDone: {
+                    createdCard = nil
+                    // Notify the dashboard to refresh in the background.
+                    Task {
+                        await dashboardVM.refresh()
+                        await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+                    }
+                }
             )
         }
         .sheet(isPresented: $showAccountDetail) {
@@ -454,19 +471,6 @@ private var scrollContent: some View {
     }
 
     // MARK: - Actions
-
-    private func createCashCard(nickname: String, pin: String) async {
-        do {
-            let card = try await vm.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
-            showCreateCashCard = false
-            await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
-            await dashboardVM.refresh()
-            // Present the success screen for the newly created card.
-            createdCard = card
-        } catch {
-            // error surfaced via BaseViewModel toast
-        }
-    }
 
     private func handleQuickAction(_ action: String) {
         switch action {

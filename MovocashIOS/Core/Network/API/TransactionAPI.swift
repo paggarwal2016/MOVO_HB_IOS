@@ -40,7 +40,7 @@ enum TransactionAPI: Endpoint {
     }
     
     // MARK: - Header Configure
-    var headerType: HeaderType { .movoAuthorizedWithIdempotency }
+    var headerType: HeaderType { [.session, .movoInfo, .Idempotency, .officeId] }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? {
