@@ -31,7 +31,7 @@ enum DocumentAPI: Endpoint {
     var method: HTTPMethod { .PUT }
     
     // MARK: - Header Configure
-    var headerType: HeaderType { [.session, .movoInfo] }
+    var headerType: HeaderType { [.session, .movoInfo, .officeId] }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { nil }

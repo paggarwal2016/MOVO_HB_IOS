@@ -40,6 +40,11 @@ struct ViewCardsListScreen: View {
     @State private var showCardDetail = false
     @State private var showCreateCard = false
     @State private var deletedCardIds: Set<String> = []
+    /// Holds the newly created card while the create sheet dismisses; the sheet's
+    /// onDismiss then presents the confirmation for it.
+    @State private var pendingCreatedCard: VCardListResponse? = nil
+    /// The card whose confirmation screen is currently presented.
+    @State private var createdCard: VCardListResponse? = nil
 
     // Use VM cards after first load, filtered by optimistic deletes.
     private var displayCards: [VCardListResponse] {
@@ -60,11 +65,21 @@ struct ViewCardsListScreen: View {
             StatusBarScrim()
         }
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showCreateCard) {
+        .sheet(isPresented: $showCreateCard, onDismiss: {
+            // Once the create sheet has fully dismissed, present the confirmation
+            // for the just-created card (if any).
+            if let card = pendingCreatedCard {
+                pendingCreatedCard = nil
+                createdCard = card
+            }
+        }) {
             CreateCashCardView(
-                onCancel: { showCreateCard = false },
-                onCreate: { nickname, pin in
-                    await createCard(nickname: nickname, pin: pin)
+                vm: cardVM,
+                onClose: { showCreateCard = false },
+                onCreated: { card in
+                    // Stash the card and dismiss the create sheet in the background.
+                    pendingCreatedCard = card
+                    showCreateCard = false
                 }
             )
             .secured()
@@ -72,6 +87,19 @@ struct ViewCardsListScreen: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
+        }
+        .fullScreenCover(item: $createdCard) { card in
+            CashCardCreateSuccess(
+                card: card,
+                onDone: {
+                    createdCard = nil
+                    // Notify in the background so the list refreshes.
+                    Task {
+                        await cardVM.loadCards()
+                        onDeleted?()
+                    }
+                }
+            )
         }
         .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {
@@ -132,22 +160,6 @@ struct ViewCardsListScreen: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 32)
-        }
-    }
-    
-    // MARK: - Create Card
-    
-    private func createCard(nickname: String, pin: String) async {
-        do {
-            _ = try await cardVM.createVCard(
-                request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION")
-            )
-            showCreateCard = false
-            ToastManager.shared.show("Card \"\(nickname)\" created!", style: .success, position: .bottom)
-            await cardVM.loadCards()
-            onDeleted?()
-        } catch {
-            // error surfaced via BaseViewModel toast
         }
     }
     

@@ -14,6 +14,8 @@ struct DeviceInfo: Encodable, Sendable {
     let uuid: String
     let deviceId: String
     let deviceType: String
+    let deviceName: String
+    let deviceModel: String
     let osVersion: String
     let appVersion: String
     let applicationName: String
@@ -26,6 +28,8 @@ struct DeviceInfo: Encodable, Sendable {
             uuid: sessionUUID,
             deviceId: DeviceManager.shared.syncDeviceID,
             deviceType: AppInfo.platform,
+            deviceName: AppInfo.deviceName,
+            deviceModel: AppInfo.deviceModel,
             osVersion: AppInfo.osVersion,
             appVersion: AppInfo.version,
             applicationName: AppInfo.applicationName

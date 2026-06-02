@@ -45,10 +45,8 @@ enum AchAPI: Endpoint {
         switch self {
         case .initiateTransfer:
             return [.session, .movoInfo, .Idempotency, .officeId]
-        case .getAccounts:
-            return .movoAuthorized
-        case .deleteAccount, .updateAccount:
-            return .movoAuthorized
+        case .getAccounts, .deleteAccount, .updateAccount:
+            return [.session, .movoInfo, .officeId]
         }
     }
     

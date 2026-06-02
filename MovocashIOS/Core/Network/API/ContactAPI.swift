@@ -36,18 +36,18 @@ enum ContactAPI: Endpoint {
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .addFavourite:    return .POST
-        case .deleteFavourite: return .DELETE
-        case .create:          return .POST
+        case .addFavourite:     return .POST
+        case .deleteFavourite:  return .DELETE
+        case .create:           return .POST
         case .makeFavourite:    return .PATCH
-        case .getContacts:     return .PUT
-        case .getFavourites:   return .PUT
-        case .getRecent:       return .PUT
+        case .getContacts:      return .PUT
+        case .getFavourites:    return .PUT
+        case .getRecent:        return .PUT
         }
     }
 
     // MARK: - Header Configure
-    var headerType: HeaderType { [.session, .movoInfo] }
+    var headerType: HeaderType { [.session, .movoInfo, .officeId] }
 
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { return nil }

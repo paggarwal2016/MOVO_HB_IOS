@@ -30,6 +30,14 @@ enum AppInfo {
         UIDevice.current.systemVersion
     }
     
+    static var deviceName: String {
+        UIDevice.current.name
+    }
+    
+    static var deviceModel: String {
+        UIDevice.current.model
+    }
+    
     static let applicationName: String = "movo-ios"
     
     static var platform: String {

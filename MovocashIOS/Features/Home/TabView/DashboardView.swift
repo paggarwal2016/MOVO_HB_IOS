@@ -53,7 +53,10 @@ struct DashboardView: View {
     @State private var needsDashboardRefresh = false
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
-    /// The card just created — drives the success screen. Non-nil presents it.
+    /// Holds the newly created card while the create sheet dismisses; the sheet's
+    /// onDismiss then presents the confirmation for it.
+    @State private var pendingCreatedCard: VCardListResponse? = nil
+    /// The card whose confirmation screen is currently presented.
     @State private var createdCard: VCardListResponse? = nil
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
@@ -84,11 +87,21 @@ struct DashboardView: View {
             }
         }
         .dimmingOverlay(isActive: isSheetActive)
-        .sheet(isPresented: $showCreateCashCard) {
+        .sheet(isPresented: $showCreateCashCard, onDismiss: {
+            // Once the create sheet has fully dismissed, present the confirmation
+            // for the just-created card (if any).
+            if let card = pendingCreatedCard {
+                pendingCreatedCard = nil
+                createdCard = card
+            }
+        }) {
             CreateCashCardView(
-                onCancel: { showCreateCashCard = false },
-                onCreate: { nickname, pin in
-                    await createCashCard(nickname: nickname, pin: pin)
+                vm: vm,
+                onClose: { showCreateCashCard = false },
+                onCreated: { card in
+                    // Stash the card and dismiss the create sheet in the background.
+                    pendingCreatedCard = card
+                    showCreateCashCard = false
                 }
             )
             .presentationDetents([.height(480)])
@@ -98,11 +111,15 @@ struct DashboardView: View {
         }
         .fullScreenCover(item: $createdCard) { card in
             CashCardCreateSuccess(
-                cardHolder: card.cardHolderShort,
-                lastFour:   card.lastFour ?? "••••",
-                expiry:     card.expiryMMYY,
-                linkedTo:   card.savingsAccountNickname ?? "—",
-                onDone:     { createdCard = nil }
+                card: card,
+                onDone: {
+                    createdCard = nil
+                    // Notify the dashboard to refresh in the background.
+                    Task {
+                        await dashboardVM.refresh()
+                        await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+                    }
+                }
             )
         }
         .sheet(isPresented: $showAccountDetail) {
@@ -443,7 +460,7 @@ private var scrollContent: some View {
             CardSelectorView(
                 cards: vm.cards,
                 sectionTitle: data.title,
-                onTap: { showCreateCashCard = true },
+                onTap: { handleCreateCardTap() },
                 onEyeTap: { card in
                     selectedCard = card
                 },
@@ -455,16 +472,53 @@ private var scrollContent: some View {
 
     // MARK: - Actions
 
-    private func createCashCard(nickname: String, pin: String) async {
-        do {
-            let card = try await vm.createVCard(request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION"))
-            showCreateCashCard = false
-            await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
-            await dashboardVM.refresh()
-            // Present the success screen for the newly created card.
-            createdCard = card
-        } catch {
-            // error surfaced via BaseViewModel toast
+    /// Handles the "+" (create card) tap in the My Cards section.
+    /// When the primary account has a zero available balance, card creation is
+    /// gated behind a prompt to fund the account first.
+    private func handleCreateCardTap() {
+        let account = dashboardVM.primaryAccount
+        let availableBalance = account?.availableBalance ?? 0
+        let accountBalance   = account?.accountBalance ?? 0
+        let hasLinkedAccount = !(dashboardVM.linkedAccounts?.linkedAccounts ?? []).isEmpty
+
+        // Sufficient balance → proceed straight to card creation.
+        guard availableBalance == 0 else {
+            showCreateCashCard = true
+            return
+        }
+
+        if !hasLinkedAccount && accountBalance == 0 {
+            // No funds and no linked bank → prompt the user to fund/link first.
+            ToastManager.shared.show(ToastConfig(
+                message: "Add funds to your account to create a new card.",
+                style: .warning,
+                position: .center,
+                duration: nil,
+                title: "Insufficient balance",
+                imageSystemName: "creditcard.fill",
+                primaryAction: ToastAction(label: "Fund") {
+                    plaidInfoAllowFunding = true
+                    showPlaidInfo = true
+                },
+                secondaryAction: ToastAction(label: "Cancel") { },
+                dimsBackground: true
+            ))
+        } else {
+            // Available balance is 0 but funding is possible (a linked bank exists,
+            // or the account carries a balance) → prompt first, then open the Fund screen.
+            ToastManager.shared.show(ToastConfig(
+                message: "Add funds to your account to create a new card.",
+                style: .warning,
+                position: .center,
+                duration: nil,
+                title: "Insufficient balance",
+                imageSystemName: "creditcard.fill",
+                primaryAction: ToastAction(label: "Fund") {
+                    showFundAccount = true
+                },
+                secondaryAction: ToastAction(label: "Cancel") { },
+                dimsBackground: true
+            ))
         }
     }
 
