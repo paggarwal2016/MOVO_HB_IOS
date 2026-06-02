@@ -17,6 +17,10 @@ final class AuthViewModel: ObservableObject {
     @Published var email: String = ""
     @Published var context: PhoneFlowType?
     private var isEnrolling = false
+    /// In-flight biometric login. Runs as an unstructured task so a re-render of the
+    /// hosting view (which cancels its `.task`) can't abort an authentication already
+    /// underway. Concurrent callers join this task instead of starting a second flow.
+    private var biometricLoginTask: Task<Bool, Never>?
     
     private let network: NetworkServiceProtocol
     private let keychain: KeychainManagerProtocol
@@ -333,6 +337,26 @@ extension AuthViewModel {
     // Returns true on success. Caller unlocks the app silently after success.
     @discardableResult
     func loginWithBiometric(appState: AppState) async -> Bool {
+        // Join an attempt that's already running rather than starting a second flow
+        // (which would trigger a duplicate nonce request / Face ID prompt).
+        if let existing = biometricLoginTask {
+            return await existing.value
+        }
+        // Run the flow in an unstructured task: it does NOT inherit cancellation from
+        // the caller, so if the hosting view's `.task` is cancelled by a re-render the
+        // login still completes instead of throwing CancellationError mid-flight.
+        let task = Task { [weak self] () -> Bool in
+            guard let self else { return false }
+            return await self.performBiometricLogin(appState: appState)
+        }
+        biometricLoginTask = task
+        let result = await task.value
+        biometricLoginTask = nil
+        return result
+    }
+
+    @discardableResult
+    private func performBiometricLogin(appState: AppState) async -> Bool {
 
         let deviceId = await DeviceManager.shared.deviceID()
 
@@ -374,6 +398,12 @@ extension AuthViewModel {
             let passkeyDone = await isPasskeyRegistered()
             appState.flow = passkeyDone ? .home : .enableBiometrics
             return true
+        } catch is CancellationError {
+            // The hosting view's .task was cancelled (e.g. the gate view re-rendered
+            // mid-flow). This isn't a real auth failure — stay silent; the view's
+            // re-triggered attempt will complete the login.
+            SecureLogger.info("biometric login cancelled (task lifecycle) — ignoring", category: .auth)
+            return false
         } catch {
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
             ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
