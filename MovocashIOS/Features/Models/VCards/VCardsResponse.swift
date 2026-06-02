@@ -67,6 +67,8 @@ nonisolated struct VCardListResponse: Codable, Sendable {
     let lastFour: String?
     let expiration: String?
     let cardNumber: String?
+    /// Whether the card is active. Disabled cards are filtered out of the dashboard list.
+    let enabled: Bool?
 }
 
 extension VCardListResponse: Identifiable {

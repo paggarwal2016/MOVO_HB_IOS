@@ -86,7 +86,7 @@ struct QuickTransferView: View {
                         accountCard
                     }
                     .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
+                    .padding(.top, Spacing.lg)
                     .padding(.bottom, Spacing.lg)
                 }
                 .onTapGesture { amountFocused = false }
@@ -194,9 +194,6 @@ struct QuickTransferView: View {
 
             Color.clear.frame(width: 36, height: 36)
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.top, Spacing.lg)
-        .padding(.bottom, Spacing.md)
     }
 
     // MARK: - Recipient

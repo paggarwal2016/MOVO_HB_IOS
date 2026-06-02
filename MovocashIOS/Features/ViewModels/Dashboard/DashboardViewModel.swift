@@ -17,6 +17,16 @@ final class DashboardViewModel: BaseViewModel {
     @Published var primaryLinkedCard: VCardListResponse? = nil
     @Published var isRefreshing: Bool = false
 
+    // MARK: - VCard State (derived from the MYCARDS encryptedData payload)
+
+    /// Non-primary cards, used by the card carousel and downstream screens.
+    @Published var apiCards: [VCardListResponse] = []
+    /// True once a dashboard load has resolved the cards payload (drives skeleton vs content).
+    @Published var hasLoadedCards: Bool = false
+
+    /// Alias kept for call sites that read `cards`.
+    var cards: [VCardListResponse] { apiCards }
+
     // MARK: - Refresh Staleness Tracking
 
     private(set) var lastRefreshedAt: Date = .distantPast
@@ -41,6 +51,7 @@ final class DashboardViewModel: BaseViewModel {
         guard !Task.isCancelled else { return }
         do {
             dashboard = try await perform { try await network.request(DashboardAPI.dashboard) }
+            decryptAndSplitCards()
         } catch {
             // Error is already presented via ToastManager in perform(_:)
         }
@@ -58,6 +69,7 @@ final class DashboardViewModel: BaseViewModel {
         do {
             let result: DashboardResponse = try await network.request(DashboardAPI.dashboard)
             dashboard = result
+            decryptAndSplitCards()
             lastRefreshedAt = Date()
         } catch is CancellationError {
             // User dismissed the pull gesture — keep existing data silently
@@ -74,6 +86,42 @@ final class DashboardViewModel: BaseViewModel {
     func refreshIfStale(within interval: TimeInterval = 30) async {
         guard Date().timeIntervalSince(lastRefreshedAt) > interval else { return }
         await refresh()
+    }
+
+    // MARK: - Cards (decrypt MYCARDS payload)
+
+    /// Decrypts the MYCARDS `encryptedData` into `[VCardListResponse]` and splits it the
+    /// same way `VCardViewModel.loadCards` did: the card linked to the primary account
+    /// becomes `primaryLinkedCard`; the remainder populate `apiCards`.
+    private func decryptAndSplitCards() {
+        defer { hasLoadedCards = true }
+
+        guard let encrypted = myCards?.encryptedData, !encrypted.isEmpty else {
+            primaryLinkedCard = nil
+            apiCards = []
+            return
+        }
+
+        do {
+            let plainData = try SealedCryptoService.decrypt(encryptedBase64: encrypted)
+#if DEBUG
+            if let json = String(data: plainData, encoding: .utf8) {
+                print("[Dashboard cards decrypt]", json)
+            }
+#endif
+            let decoded = try JSONDecoder().decode([VCardListResponse].self, from: plainData)
+            // Only enabled (active) cards are shown and used on the dashboard.
+            let all = decoded.filter { $0.enabled == true }
+            if let accountId = primaryAccount?.id {
+                primaryLinkedCard = all.first { $0.savingsAccountId == accountId }
+                apiCards = all.filter { $0.savingsAccountId != accountId }
+            } else {
+                primaryLinkedCard = nil
+                apiCards = all
+            }
+        } catch {
+            // Leave previously loaded cards in place on a transient decrypt/decode failure.
+        }
     }
 
     // MARK: - Section Accessors

@@ -307,7 +307,8 @@ struct ToastView: View {
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                 .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
         )
-        .shadow(color: Color.movo.background.opacity(0.6), radius: 16, x: 0, y: 6)
+        // Soft modal shadow — matches the app's alert dialogs (PinInputAlert / TextInputAlert).
+        .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
     }
 
     @ViewBuilder

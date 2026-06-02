@@ -32,7 +32,8 @@ final class VCardViewModel: BaseViewModel {
 
     func loadCards(primaryAccountId: Int? = nil) async {
         do {
-            let all = try await getVCardsAll()
+            // Only enabled (active) cards are shown and used.
+            let all = try await getVCardsAll().filter { $0.enabled == true }
             if let accountId = primaryAccountId {
                 primaryLinkedCard = all.first { $0.savingsAccountId == accountId }
                 apiCards = all.filter { $0.savingsAccountId != accountId }

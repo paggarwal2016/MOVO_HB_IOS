@@ -15,11 +15,16 @@ struct CreateCashCardView: View {
     let vm: VCardViewModel
     /// Dismisses this sheet (used by the close button).
     let onClose: () -> Void
-    /// Invoked with the newly created card on a successful create. The presenter
-    /// is responsible for dismissing this sheet and presenting the confirmation.
-    let onCreated: (VCardListResponse) -> Void
+    /// Invoked when the user taps Done on the success screen. The presenter
+    /// dismisses this sheet (which tears down the success cover with it) and
+    /// refreshes its data.
+    let onFinished: () -> Void
 
     // MARK: - State
+
+    /// The just-created card. Setting it presents the success cover on top of
+    /// this screen; the create form stays silently behind the full-screen cover.
+    @State private var createdCard: VCardListResponse? = nil
     @State private var nickname = ""
     @State private var pin = ""
     @State private var confirmPin = ""
@@ -76,6 +81,13 @@ struct CreateCashCardView: View {
         }
         .onDisappear {
             SpinnerView.hideFullScreen()
+        }
+        // Present the success screen immediately on top of this create screen.
+        // The create form stays silently behind the full-screen cover. Tapping Done
+        // dismisses the cover first; its onDismiss then dismisses the create sheet
+        // (the sheet can't dismiss while the cover is still presented over it).
+        .fullScreenCover(item: $createdCard, onDismiss: { onFinished() }) { card in
+            CashCardCreateSuccess(card: card, onDone: { createdCard = nil })
         }
     }
 }
@@ -270,7 +282,7 @@ private extension CreateCashCardView {
             await MainActor.run {
                 isLoading = false
                 SpinnerView.hideFullScreen()
-                if let card { onCreated(card) }
+                if let card { createdCard = card }
             }
         }
     }
