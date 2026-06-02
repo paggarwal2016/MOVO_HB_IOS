@@ -368,11 +368,22 @@ struct CardDetailSheet: View {
     }
     
     
+    /// Card number grouped into blocks of four digits, e.g. "5194 5301 0000 9977".
+    private var formattedCardNumber: String {
+        guard let number = card.cardNumber, !number.isEmpty else { return "" }
+        return stride(from: 0, to: number.count, by: 4).map { offset in
+            let start = number.index(number.startIndex, offsetBy: offset)
+            let end = number.index(start, offsetBy: 4, limitedBy: number.endIndex) ?? number.endIndex
+            return String(number[start..<end])
+        }
+        .joined(separator: " ")
+    }
+
     private var cardNumberRow: some View {
         HStack(alignment: .center, spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 4) {
                 Eyebrow("Card number")
-                Text(card.cardNumber ?? "''")
+                Text(formattedCardNumber)
                     .font(.system(size: 15, weight: .medium, design: .monospaced))
                     .foregroundColor(Color.movo.textPrimary)
                     .tracking(1.5)
