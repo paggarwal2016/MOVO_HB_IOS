@@ -17,11 +17,12 @@ final class AuthViewModel: ObservableObject {
     @Published var email: String = ""
     @Published var context: PhoneFlowType?
     private var isEnrolling = false
-    /// In-flight biometric login. Runs as an unstructured task so a re-render of the
-    /// hosting view (which cancels its `.task`) can't abort an authentication already
-    /// underway. Concurrent callers join this task instead of starting a second flow.
+    /// In-flight biometric login. Runs as a detached task so neither the hosting
+    /// view's `.task` cancellation nor the caller's actor context can abort an
+    /// authentication already underway. Concurrent callers join this task instead
+    /// of starting a second flow.
     private var biometricLoginTask: Task<Bool, Never>?
-    
+
     private let network: NetworkServiceProtocol
     private let keychain: KeychainManagerProtocol
     private let sessionManager: SessionManager
@@ -47,20 +48,22 @@ final class AuthViewModel: ObservableObject {
         self.analytics = analytics
         self.lockManager = lockManager
     }
-    
+
     // MARK: - Send OTP
-    
+
     func sendOTP() async throws {
         guard state != .loading else { return }
         state = .loading
-        
+
         do {
             let response: SuccessResponse = try await network.request(
                 AuthAPI.messengerOTP(request:
-                                        MessengerOTPRequest(phoneNumber: phoneNumber,
-                                                            context: context?.rawValue ?? "",
-                                                            userAction: "SEND_OTP",
-                                                            deviceInfo: .current))
+                    MessengerOTPRequest(
+                        phoneNumber: phoneNumber,
+                        context: context?.rawValue ?? "",
+                        userAction: "SEND_OTP",
+                        deviceInfo: .current
+                    ))
             )
             state = .otpSent
             showOTP = true
@@ -74,9 +77,9 @@ final class AuthViewModel: ObservableObject {
             throw error
         }
     }
-    
+
     // MARK: - Validate OTP
-    
+
     func validateOTP(code: String) async throws -> AuthTokenSMSResponse {
         guard state != .loading else { throw ModelError.alreadyLoading }
         state = .loading
@@ -96,9 +99,9 @@ final class AuthViewModel: ObservableObject {
             throw error
         }
     }
-    
+
     // MARK: - Complete OTP Verification Flow
-    
+
     func completeOTPVerification(code: String, appState: AppState, onNavigate: @escaping (AuthFlow) async -> Void) async {
         analytics.trackLoginAttempt(method: .otp)
         do {
@@ -128,44 +131,44 @@ final class AuthViewModel: ObservableObject {
             alertManager.showError(error.localizedDescription)
         }
     }
-    
+
     // MARK: - Phone Input Formatting
-    
+
     private var phonePreviousText: String = ""
-    
+
     func handlePhoneInput(_ newValue: String) {
         let isDeleting = newValue.count < phonePreviousText.count
         var digits = PhoneFormatter.raw(newValue)
-        
+
         if digits.count > 10 {
             phoneDisplayText = phonePreviousText
             return
         }
-        
+
         if isDeleting && PhoneFormatter.raw(phonePreviousText) == digits {
             digits = String(digits.dropLast())
         }
-        
+
         let formatted = PhoneFormatter.formatted(digits)
-        
+
         phoneDisplayText = formatted
         phoneNumber = digits
         phonePreviousText = formatted
     }
-    
+
     // MARK: - Submit Phone Number
-    
+
     func submitPhoneNumber(appState: AppState) async {
         let phone = PhoneNumberValidator.sanitize(phoneNumber)
-        
+
         guard PhoneNumberValidator.isValidUSNumber(phone) else {
             alertManager.showError("Enter a valid phone number")
             return
         }
-        
+
         phoneNumber = PhoneNumberValidator.normalize(phone)
         context = appState.context
-        
+
         do {
             try await sendOTP()
             appState.flow = .otp
@@ -173,7 +176,7 @@ final class AuthViewModel: ObservableObject {
             alertManager.showError(error.localizedDescription)
         }
     }
-    
+
     // MARK: - Send Email OTP
 
     func sendEmailOTP() async throws {
@@ -324,7 +327,11 @@ extension AuthViewModel {
 
             // POST /rsa — register public key with the server
             let _: SuccessResponse = try await network.request(
-                AuthAPI.enrollRSA(request: RSAEnrollRequest(publicKey: publicKey, deviceId: deviceId, userAction: "RSA_CREATION"))
+                AuthAPI.enrollRSA(request: RSAEnrollRequest(
+                    publicKey: publicKey,
+                    deviceId: deviceId,
+                    userAction: "RSA_CREATION"
+                ))
             )
             SecureLogger.info("RSA key enrolled successfully", category: .auth)
         } catch {
@@ -342,17 +349,17 @@ extension AuthViewModel {
         if let existing = biometricLoginTask {
             return await existing.value
         }
-        // Run the flow in an unstructured task: it does NOT inherit cancellation from
-        // the caller, so if the hosting view's `.task` is cancelled by a re-render the
-        // login still completes instead of throwing CancellationError mid-flight.
-        let task = Task { [weak self] () -> Bool in
+
+        // Run the flow in a detached task: it does NOT inherit cancellation from the
+        // caller's task, so if the hosting view's `.task` is cancelled by a re-render
+        // the login still completes instead of throwing CancellationError mid-flight.
+        let task = Task.detached(priority: .userInitiated) { [weak self] () -> Bool in
             guard let self else { return false }
             return await self.performBiometricLogin(appState: appState)
         }
         biometricLoginTask = task
-        let result = await task.value
-        biometricLoginTask = nil
-        return result
+        defer { biometricLoginTask = nil }
+        return await task.value
     }
 
     @discardableResult
@@ -391,18 +398,27 @@ extension AuthViewModel {
             try await sessionManager.startSession(accessToken: tokenResponse.accessToken, appState: appState)
 
             SecureLogger.info("tokenRSA + tokenAccess success — session started", category: .auth)
-            lockManager.unlockAfterRSAAuth()
-            UserDefaults.standard.set(true, forKey: "kycCompleted")
-            // Always verify passkey before routing home — the user may have enrolled
-            // biometrics on a previous session without completing passkey registration.
+
+            // Step 6 — check passkey status before navigating
+            // Done before the MainActor hop so we don't hold the main thread during the
+            // Keychain read.
             let passkeyDone = await isPasskeyRegistered()
-            appState.flow = passkeyDone ? .home : .enableBiometrics
+
+            // Step 7 — all UI mutations and navigation on MainActor.
+            // appState is an @MainActor-bound ObservableObject; mutating it from a
+            // detached task without this hop is a data race.
+            await MainActor.run {
+                lockManager.unlockAfterRSAAuth()
+                UserDefaults.standard.set(true, forKey: "kycCompleted")
+                appState.flow = passkeyDone ? .home : .enableBiometrics
+            }
+
             return true
+
         } catch is CancellationError {
-            // The hosting view's .task was cancelled (e.g. the gate view re-rendered
-            // mid-flow). This isn't a real auth failure — stay silent; the view's
-            // re-triggered attempt will complete the login.
-            SecureLogger.info("biometric login cancelled (task lifecycle) — ignoring", category: .auth)
+            // With Task.detached this should never fire. If you see this log, something
+            // inside the flow is explicitly cancelling the task — investigate immediately.
+            SecureLogger.warning("⚠️ Unexpected CancellationError in detached biometric task — investigate", category: .auth)
             return false
         } catch {
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
