@@ -13,7 +13,9 @@ struct ViewCardsListScreen: View {
     let primaryAccountId: Int?
     let primaryLinkedCard: VCardListResponse?
     let container: AppContainer
-    var onDeleted: (() -> Void)?
+    /// Invoked when the user navigates back after creating or deleting a card,
+    /// so the presenter (dashboard) can refresh to reflect the latest data.
+    var onChanged: (() -> Void)?
 
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var cardVM: VCardViewModel
@@ -23,28 +25,25 @@ struct ViewCardsListScreen: View {
         primaryAccountId: Int?,
         primaryLinkedCard: VCardListResponse? = nil,
         container: AppContainer,
-        onDeleted: (() -> Void)? = nil
+        onChanged: (() -> Void)? = nil
     ) {
         self.cards = cards
         self.primaryAccountId = primaryAccountId
         self.primaryLinkedCard = primaryLinkedCard
         self.container = container
-        self.onDeleted = onDeleted
+        self.onChanged = onChanged
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
-    
+
     @SwiftUI.Environment(\.dismiss) private var dismiss
 
     @State private var selectedCard: VCardListResponse?
     @State private var showCardDetail = false
     @State private var showCreateCard = false
     @State private var deletedCardIds: Set<String> = []
-    /// Holds the newly created card while the create sheet dismisses; the sheet's
-    /// onDismiss then presents the confirmation for it.
-    @State private var pendingCreatedCard: VCardListResponse? = nil
-    /// The card whose confirmation screen is currently presented.
-    @State private var createdCard: VCardListResponse? = nil
+    /// Set when a card is created or deleted here; triggers a dashboard refresh on exit.
+    @State private var hasChanges = false
 
     // Use VM cards after first load, filtered by optimistic deletes.
     private var displayCards: [VCardListResponse] {
@@ -63,23 +62,24 @@ struct ViewCardsListScreen: View {
                 }
             }
             StatusBarScrim()
+            if cardVM.state == .loading {
+                // Scrim — black-on-alpha is intentional; works on both light and dark backgrounds.
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                SpinnerView()
+            }
         }
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showCreateCard, onDismiss: {
-            // Once the create sheet has fully dismissed, present the confirmation
-            // for the just-created card (if any).
-            if let card = pendingCreatedCard {
-                pendingCreatedCard = nil
-                createdCard = card
-            }
-        }) {
+        .sheet(isPresented: $showCreateCard) {
             CreateCashCardView(
                 vm: cardVM,
                 onClose: { showCreateCard = false },
-                onCreated: { card in
-                    // Stash the card and dismiss the create sheet in the background.
-                    pendingCreatedCard = card
+                onFinished: {
+                    // Done on the success screen — dismiss the sheet (and the
+                    // success cover with it), then reload this list in the background.
                     showCreateCard = false
+                    hasChanges = true
+                    Task { await cardVM.loadCards(primaryAccountId: primaryAccountId) }
                 }
             )
             .secured()
@@ -87,19 +87,6 @@ struct ViewCardsListScreen: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
-        }
-        .fullScreenCover(item: $createdCard) { card in
-            CashCardCreateSuccess(
-                card: card,
-                onDone: {
-                    createdCard = nil
-                    // Notify in the background so the list refreshes.
-                    Task {
-                        await cardVM.loadCards()
-                        onDeleted?()
-                    }
-                }
-            )
         }
         .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {
@@ -113,12 +100,17 @@ struct ViewCardsListScreen: View {
                         if let id = selectedCard?.id {
                             deletedCardIds.insert(id)
                         }
-                        onDeleted?()
+                        hasChanges = true
+                        Task { await cardVM.loadCards(primaryAccountId: primaryAccountId) }
                     }
                 )
             }
         }
         .globalAlert()
+        .onDisappear {
+            // Refresh the dashboard on the way back only if something changed here.
+            if hasChanges { onChanged?() }
+        }
     }
     
     // MARK: - Nav Bar

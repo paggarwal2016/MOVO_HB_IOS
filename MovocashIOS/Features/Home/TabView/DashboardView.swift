@@ -53,11 +53,6 @@ struct DashboardView: View {
     @State private var needsDashboardRefresh = false
     @State private var quickTransferContact: ContactRecord? = nil
     @State private var selectedCard: VCardListResponse? = nil
-    /// Holds the newly created card while the create sheet dismisses; the sheet's
-    /// onDismiss then presents the confirmation for it.
-    @State private var pendingCreatedCard: VCardListResponse? = nil
-    /// The card whose confirmation screen is currently presented.
-    @State private var createdCard: VCardListResponse? = nil
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
     @State private var plaidInfoAllowFunding = true
@@ -83,44 +78,29 @@ struct DashboardView: View {
                 // Scrim — black-on-alpha is intentional; works on both light and dark backgrounds.
                 Color.black.opacity(0.35)
                     .ignoresSafeArea()
+                // Center the spinner — the ZStack is top-aligned, so without this the
+                // indicator would pin to the top and cover the header.
                 SpinnerView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .dimmingOverlay(isActive: isSheetActive)
-        .sheet(isPresented: $showCreateCashCard, onDismiss: {
-            // Once the create sheet has fully dismissed, present the confirmation
-            // for the just-created card (if any).
-            if let card = pendingCreatedCard {
-                pendingCreatedCard = nil
-                createdCard = card
-            }
-        }) {
+        .sheet(isPresented: $showCreateCashCard) {
             CreateCashCardView(
                 vm: vm,
                 onClose: { showCreateCashCard = false },
-                onCreated: { card in
-                    // Stash the card and dismiss the create sheet in the background.
-                    pendingCreatedCard = card
+                onFinished: {
+                    // Done on the success screen — dismiss the sheet (and the
+                    // success cover with it), then refresh in the background. The
+                    // refresh re-decrypts the MYCARDS payload and repopulates cards.
                     showCreateCashCard = false
+                    Task { await dashboardVM.refresh() }
                 }
             )
             .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
-        }
-        .fullScreenCover(item: $createdCard) { card in
-            CashCardCreateSuccess(
-                card: card,
-                onDone: {
-                    createdCard = nil
-                    // Notify the dashboard to refresh in the background.
-                    Task {
-                        await dashboardVM.refresh()
-                        await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
-                    }
-                }
-            )
         }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {
@@ -142,9 +122,9 @@ struct DashboardView: View {
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
-                    preselectedFromCard: vm.primaryLinkedCard,
-                    primaryLinkedCard: vm.primaryLinkedCard,
-                    initialCards: vm.apiCards,
+                    preselectedFromCard: dashboardVM.primaryLinkedCard,
+                    primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                    initialCards: dashboardVM.apiCards,
                     container: container,
                     onDismiss: { needsDashboardRefresh = true }
                 )
@@ -153,7 +133,7 @@ struct DashboardView: View {
         .sheet(isPresented: $showContactList) {
             PayAnyoneContactPickerView(
                 container: container,
-                cards: vm.cards,
+                cards: dashboardVM.cards,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
@@ -164,7 +144,7 @@ struct DashboardView: View {
             AllFrequentsView(
                 contactVM: contactVM,
                 container: container,
-                cards: vm.cards,
+                cards: dashboardVM.cards,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
@@ -175,7 +155,7 @@ struct DashboardView: View {
             QuickTransferView(
                 contact: contact,
                 container: container,
-                cards: vm.cards,
+                cards: dashboardVM.cards,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
@@ -201,9 +181,9 @@ struct DashboardView: View {
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
-                    preselectedFromCard: vm.primaryLinkedCard,
-                    primaryLinkedCard: vm.primaryLinkedCard,
-                    initialCards: vm.apiCards,
+                    preselectedFromCard: dashboardVM.primaryLinkedCard,
+                    primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                    initialCards: dashboardVM.apiCards,
                     container: container,
                     onDismiss: { needsDashboardRefresh = true }
                 )
@@ -233,11 +213,11 @@ struct DashboardView: View {
         }
         .navigationDestination(isPresented: $showViewCardList) {
             ViewCardsListScreen(
-                cards: vm.cards,
+                cards: dashboardVM.cards,
                 primaryAccountId: dashboardVM.primaryAccount?.id,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 container: container,
-                onDeleted: {}
+                onChanged: { needsDashboardRefresh = true }
             )
         }
         .navigationDestination(isPresented: $showTransactions) {
@@ -260,8 +240,8 @@ struct DashboardView: View {
                     primaryLinkedCard: dashboardVM.primaryLinkedCard,
                     savingVM: savingVM,
                     container: container,
-                    canDelete: card.id != vm.primaryLinkedCard?.id,
-                    onDeleted: {}
+                    canDelete: card.id != dashboardVM.primaryLinkedCard?.id,
+                    onDeleted: { needsDashboardRefresh = true }
                 )
             }
         }
@@ -298,9 +278,6 @@ struct DashboardView: View {
             guard shouldRefresh else { return }
             needsDashboardRefresh = false
             Task { await dashboardVM.refresh() }
-        }
-        .onChange(of: vm.primaryLinkedCard?.id) { _ in
-            dashboardVM.primaryLinkedCard = vm.primaryLinkedCard
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             // Reset every navigation flag so the inner NavigationStack has no active
@@ -353,7 +330,6 @@ private var scrollContent: some View {
     .refreshable {
         await Task {
             await dashboardVM.refresh()
-            await vm.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
         }.value
     }
 }
@@ -380,10 +356,10 @@ private var scrollContent: some View {
                 PrimaryAccountContent(
                     account: account,
                     accountData: accountData,
-                    hasVCards: vm.primaryLinkedCard != nil,
+                    hasVCards: dashboardVM.primaryLinkedCard != nil,
                     onCardTap: { showPrimaryAccountDetails = true },
                     onViewCardTap: {
-                        selectedCard = vm.primaryLinkedCard
+                        selectedCard = dashboardVM.primaryLinkedCard
                     },
                     onQuickAction: handleQuickAction
                 )
@@ -446,10 +422,10 @@ private var scrollContent: some View {
 
     @ViewBuilder
     private func myCardsSectionView(_ data: DashboardMyCards) -> some View {
-        if !vm.hasLoadedCards {
+        if !dashboardVM.hasLoadedCards {
             CardSkeletonView()
                 .frame(maxWidth: .infinity)
-        } else if vm.cards.isEmpty {
+        } else if dashboardVM.cards.isEmpty {
             CreateCardView(
                 title: data.title,
                 message: data.description,
@@ -458,7 +434,7 @@ private var scrollContent: some View {
             .frame(maxWidth: .infinity)
         } else {
             CardSelectorView(
-                cards: vm.cards,
+                cards: dashboardVM.cards,
                 sectionTitle: data.title,
                 onTap: { handleCreateCardTap() },
                 onEyeTap: { card in
@@ -496,7 +472,7 @@ private var scrollContent: some View {
                 duration: nil,
                 title: "Insufficient balance",
                 imageSystemName: "creditcard.fill",
-                primaryAction: ToastAction(label: "Fund") {
+                primaryAction: ToastAction(label: "Add money") {
                     plaidInfoAllowFunding = true
                     showPlaidInfo = true
                 },
@@ -513,7 +489,7 @@ private var scrollContent: some View {
                 duration: nil,
                 title: "Insufficient balance",
                 imageSystemName: "creditcard.fill",
-                primaryAction: ToastAction(label: "Fund") {
+                primaryAction: ToastAction(label: "Add money") {
                     showFundAccount = true
                 },
                 secondaryAction: ToastAction(label: "Cancel") { },

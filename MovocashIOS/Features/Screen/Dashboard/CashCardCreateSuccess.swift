@@ -48,7 +48,7 @@ struct CashCardCreateSuccess: View {
                 
                 Spacer().frame(height: Spacing.xxl)
 
-                Text("Your virtual debit card is ready. Add it to Apple Wallet anytime.")
+                Text("Your virtual cash card is ready.\nAdd it to Apple Wallet anytime.")
                     .foregroundColor(Color.movo.textTertiary)
                     .textStyle(Typography.body)
                     .multilineTextAlignment(.center)

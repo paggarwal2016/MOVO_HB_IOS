@@ -83,7 +83,6 @@ struct HomeTabBarView: View {
             guard !hasLoadedOnce else { return }
             hasLoadedOnce = true
             await dashboardVM.fetchDashboard()
-            await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
         }
         .onAppear(perform: handleOnAppear)
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
@@ -96,7 +95,6 @@ struct HomeTabBarView: View {
             guard newTab == .home else { return }
             Task {
                 await dashboardVM.refreshIfStale(within: 15)
-                await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
             }
         }
     }
@@ -302,7 +300,7 @@ private extension HomeTabBarView {
     func destination(for tab: Tab) -> some View {
         switch tab {
         case .home:     DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM)
-        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: vCardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard)
+        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: dashboardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard)
         case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
         }
     }
