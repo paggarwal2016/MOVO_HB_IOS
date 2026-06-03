@@ -157,6 +157,7 @@ struct TransactionListView: View {
                     searchAndFilterRow
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.md)
+                    appliedFiltersSummaryBar
                     filterChipsRow
                         .padding(.bottom, Spacing.md - 2)
 
@@ -170,11 +171,15 @@ struct TransactionListView: View {
         .sheet(isPresented: $showFilterSheet) {
             TransactionFilterView(filter: $pendingFilter, showLast4: mode == .common) {
                 activeFilter = pendingFilter
+                // Move the chip row to the tab that matches the applied status
+                // filter (All / Pending / Settled).
+                activeChipFilter = chipFilter(for: activeFilter.transactionStatus)
                 Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
             } onReset: {
                 pendingFilter = freshFilter()
                 activeFilter  = pendingFilter
+                activeChipFilter = .all
                 Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
             } onCancel: {
@@ -633,6 +638,174 @@ extension TransactionListView {
                 pendingFilter   = activeFilter
                 showFilterSheet = true
             }
+        }
+    }
+
+    // MARK: - Applied Filters
+
+    /// Scrollable row of removable chips, one per active Filter-sheet selection,
+    /// shown below the search bar. Tapping a chip's ✕ clears that filter from the
+    /// active (and pending) filter state and reloads the list from the API.
+    /// Hidden when no filters are applied.
+    @ViewBuilder
+    private var appliedFiltersSummaryBar: some View {
+        let chips = appliedFilterChips
+        if !chips.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(chips) { chip in
+                        AppliedFilterChipView(label: chip.label) {
+                            removeFilter(chip)
+                        }
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+            }
+            .padding(.bottom, Spacing.sm)
+        }
+    }
+
+    /// Clears one filter dimension from both the active and pending filters, then
+    /// reloads transactions so the list reflects the change immediately.
+    private func removeFilter(_ chip: AppliedFilterChip) {
+        chip.clear(&activeFilter)
+        chip.clear(&pendingFilter)
+        // Clearing the status filter returns the chip row to the All tab so a
+        // lingering tab selection doesn't keep filtering the results.
+        if chip.id == "status" { activeChipFilter = .all }
+        Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
+    }
+
+    /// Maps an applied `transactionStatus` to the matching chip-row tab. Statuses
+    /// without a dedicated chip (e.g. "Failed") fall back to All so the client-side
+    /// chip filter doesn't hide the server's results.
+    private func chipFilter(for status: String) -> TransactionChipFilter {
+        switch status.lowercased() {
+        case "pending": return .pending
+        case "settled": return .settled
+        default:        return .all
+        }
+    }
+
+    private static let summaryDateParser: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f
+    }()
+
+    private static let summaryDateDisplay: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMM d"; return f
+    }()
+
+    /// Turns an "yyyy-MM-dd" filter date into a friendly label, falling back to
+    /// the raw string if it can't be parsed.
+    private func friendlyFilterDate(_ raw: String) -> String {
+        guard let date = Self.summaryDateParser.date(from: raw) else { return raw }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date)     { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        return Self.summaryDateDisplay.string(from: date)
+    }
+
+    /// Display value for the Date chip (single day, range, or open-ended).
+    private var dateChipValue: String {
+        if !activeFilter.onDate.isEmpty { return friendlyFilterDate(activeFilter.onDate) }
+        let from = activeFilter.fromDate
+        let to   = activeFilter.toDate
+        if !from.isEmpty, !to.isEmpty {
+            return from == to
+                ? friendlyFilterDate(from)
+                : "\(friendlyFilterDate(from)) – \(friendlyFilterDate(to))"
+        } else if !from.isEmpty {
+            return "From \(friendlyFilterDate(from))"
+        } else {
+            return "Until \(friendlyFilterDate(to))"
+        }
+    }
+
+    /// Display value for the Amount chip (exact, range, or open-ended).
+    private var amountChipValue: String {
+        if let amount = activeFilter.amount { return "$\(Int(amount))" }
+        let lo = activeFilter.minAmount.map { "$\(Int($0))" }
+        let hi = activeFilter.maxAmount.map { "$\(Int($0))" }
+        switch (lo, hi) {
+        case let (l?, h?):  return "\(l) – \(h)"
+        case let (l?, nil): return "≥ \(l)"
+        case let (nil, h?): return "≤ \(h)"
+        default:            return ""
+        }
+    }
+
+    /// One chip per active filter dimension, each carrying the closure that
+    /// clears it from a `TransactionFilter`.
+    private var appliedFilterChips: [AppliedFilterChip] {
+        var chips: [AppliedFilterChip] = []
+
+        if !activeFilter.onDate.isEmpty || !activeFilter.fromDate.isEmpty || !activeFilter.toDate.isEmpty {
+            chips.append(AppliedFilterChip(id: "date", label: "Date: \(dateChipValue)") {
+                $0.onDate = ""; $0.fromDate = ""; $0.toDate = ""
+            })
+        }
+        if !activeFilter.transactionStatus.isEmpty {
+            chips.append(AppliedFilterChip(id: "status", label: "Status: \(activeFilter.transactionStatus)") {
+                $0.transactionStatus = ""
+            })
+        }
+        if activeFilter.amount != nil || activeFilter.minAmount != nil || activeFilter.maxAmount != nil {
+            chips.append(AppliedFilterChip(id: "amount", label: "Amount: \(amountChipValue)") {
+                $0.amount = nil; $0.minAmount = nil; $0.maxAmount = nil
+            })
+        }
+        if !activeFilter.merchantName.isEmpty {
+            chips.append(AppliedFilterChip(id: "search", label: "Search: \(activeFilter.merchantName)") {
+                $0.merchantName = ""
+            })
+        }
+        if !activeFilter.last4.isEmpty {
+            chips.append(AppliedFilterChip(id: "card", label: "Card: ••\(activeFilter.last4)") {
+                $0.last4 = ""
+            })
+        }
+        return chips
+    }
+
+    /// A single removable applied-filter chip descriptor.
+    private struct AppliedFilterChip: Identifiable {
+        let id: String
+        let label: String
+        let clear: (inout TransactionFilter) -> Void
+    }
+
+    private struct AppliedFilterChipView: View {
+        let label: String
+        let onRemove: () -> Void
+
+        var body: some View {
+            HStack(spacing: 5) {
+                Text(label)
+                    .textStyle(Typography.captionSmall)
+                    .foregroundColor(Color.movo.accent)
+                    .lineLimit(1)
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(Color.movo.accent)
+                        // Padding + contentShape widen the tap target beyond the
+                        // 9pt glyph without enlarging the visible chip.
+                        .padding(.vertical, 4)
+                        .padding(.trailing, 2)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.leading, Spacing.md)
+            .padding(.trailing, Spacing.sm + 2)
+            .padding(.vertical, 7)
+            .background(
+                Capsule()
+                    .fill(Color.movo.accentTint)
+                    .overlay(
+                        Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
+                    )
+            )
         }
     }
 

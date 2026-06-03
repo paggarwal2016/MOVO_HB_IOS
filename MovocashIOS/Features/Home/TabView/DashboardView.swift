@@ -23,12 +23,15 @@ struct DashboardView: View {
     @StateObject private var contactVM: ContactViewModel
     @ObservedObject var dashboardVM: DashboardViewModel
 
+    @Binding var selectedTab: Tab
+
     private let container: AppContainer
 
-    init(container: AppContainer, dashboardVM: DashboardViewModel, vm: VCardViewModel) {
+    init(container: AppContainer, dashboardVM: DashboardViewModel, vm: VCardViewModel, selectedTab: Binding<Tab>) {
         self.container = container
         self.dashboardVM = dashboardVM
         self.vm = vm
+        _selectedTab = selectedTab
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
@@ -309,9 +312,7 @@ struct DashboardView: View {
             userName: dashboardVM.userDetails?.firstName ?? "",
             userImage: dashboardVM.userDetails?.profilePicture ?? ""
         ) {
-//            sessionManager.logoutWithConfirmation(appState: appState) {
-//                lockManager.logout()
-//            }
+            selectedTab = .profile
         }
     }
 
