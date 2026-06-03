@@ -21,6 +21,8 @@ struct ProfileScreen: View {
     @ObservedObject var achVM: ACHViewModel
 
     private let container: AppContainer
+    /// Title shown in the nav bar — passed from the tab's MENU label.
+    private let screenTitle: String
 
     @State private var isBiometricOn             = false
     @State private var showDisableBiometricAlert = false
@@ -32,10 +34,11 @@ struct ProfileScreen: View {
     @State private var showDeleteAlert           = false
     @State private var hasLoadedOnce             = false
 
-    init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel) {
+    init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel, screenTitle: String = "Settings") {
         self.container   = container
         self.dashboardVM = dashboardVM
         self.achVM = achVM
+        self.screenTitle = screenTitle
     }
     
     private var effectiveBiometricType: BiometricType {
@@ -58,13 +61,15 @@ struct ProfileScreen: View {
     var body: some View {
         ZStack {
             MovoBackground()
-            Group {
-                if let profile = effectiveProfile {
-                    profileContent(profile)
-                } else if userVM.state == .loading {
-                    profileSkeleton
-                } else {
-                    emptyState
+            VStack(spacing: 0) {
+                Group {
+                    if let profile = effectiveProfile {
+                        profileContent(profile)
+                    } else if userVM.state == .loading {
+                        profileSkeleton
+                    } else {
+                        emptyState
+                    }
                 }
             }
             StatusBarScrim()
@@ -89,7 +94,9 @@ struct ProfileScreen: View {
 // MARK: - Profile Content
 
 private extension ProfileScreen {
-    
+
+    // MARK: - Title Bar
+
     func profileContent(_ profile: UserProfileResponse) -> some View {
         ScrollView {
             VStack(spacing: Spacing.xl) {

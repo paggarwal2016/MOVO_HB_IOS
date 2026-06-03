@@ -9,6 +9,13 @@ import SwiftUI
 
 struct DashboardView: View {
 
+    /// Identifiable payload for the contact picker sheet. Holds the API-driven
+    /// title from the dashboard PAYANYONE section.
+    private struct ContactPickerContext: Identifiable {
+        let id = UUID()
+        let title: String
+    }
+
     // MARK: - Environment
 
     @EnvironmentObject var appState: AppState
@@ -26,11 +33,15 @@ struct DashboardView: View {
     @Binding var selectedTab: Tab
 
     private let container: AppContainer
+    /// Title passed from the tab's MENU label (API-driven). Not currently rendered
+    /// — the Home header shows the logo — but available for display if needed.
+    private let screenTitle: String
 
-    init(container: AppContainer, dashboardVM: DashboardViewModel, vm: VCardViewModel, selectedTab: Binding<Tab>) {
+    init(container: AppContainer, dashboardVM: DashboardViewModel, vm: VCardViewModel, selectedTab: Binding<Tab>, screenTitle: String = "Home") {
         self.container = container
         self.dashboardVM = dashboardVM
         self.vm = vm
+        self.screenTitle = screenTitle
         _selectedTab = selectedTab
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
@@ -47,7 +58,6 @@ struct DashboardView: View {
     @State private var showFunds = false
     @State private var showMoveMoney = false
     @State private var showFundAccount = false
-    @State private var showContactList = false
     @State private var showAllFrequents = false
     @State private var showInternalTransfer = false
     @State private var showViewCardList = false
@@ -55,6 +65,10 @@ struct DashboardView: View {
     // triggers a single dashboard refresh on return.
     @State private var needsDashboardRefresh = false
     @State private var quickTransferContact: ContactRecord? = nil
+    /// Drives the contact picker sheet. Carries the API-driven title from the
+    /// dashboard PAYANYONE section so it is captured at present time (avoids a
+    /// state-vs-present race that would otherwise show the default title).
+    @State private var contactPickerContext: ContactPickerContext? = nil
     @State private var selectedCard: VCardListResponse? = nil
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
@@ -133,15 +147,17 @@ struct DashboardView: View {
                 )
             }
         }
-        .sheet(isPresented: $showContactList) {
+        .sheet(item: $contactPickerContext) { context in
             PayAnyoneContactPickerView(
                 container: container,
                 cards: dashboardVM.cards,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                title: context.title,
                 onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+            .presentationBackground(Color.movo.background)
         }
         .sheet(isPresented: $showAllFrequents) {
             AllFrequentsView(
@@ -202,7 +218,7 @@ struct DashboardView: View {
                 },
                 onTransferMoney: {
                     showMoveMoney = false
-                    Task { try? await Task.sleep(nanoseconds: 350_000_000); showContactList = true }
+                    Task { try? await Task.sleep(nanoseconds: 350_000_000); contactPickerContext = ContactPickerContext(title: "Pay Anyone") }
                 },
                 onInternalTransfer: {
                     showMoveMoney = false
@@ -292,7 +308,7 @@ struct DashboardView: View {
             showViewCardList = false
             showViewCard = false
             showMoveMoney = false
-            showContactList = false
+            contactPickerContext = nil
             showAllFrequents = false
             showFundAccount = false
             showInternalTransfer = false
@@ -372,14 +388,16 @@ private var scrollContent: some View {
                     description: data.description ?? "Tap to send. They get it the moment you do.",
                     buttonLabel: data.actions.first?.label ?? "Add payee"
                 ) {
-                    showContactList = true
+                    contactPickerContext = ContactPickerContext(title: data.title ?? "Pay Anyone")
                     SecureLogger.debug("Quick transfer tapped", category: .general)
                 }
             } else {
                 PayAnyoneAddContactView(
                     title: data.title ?? "Pay Anyone",
                     contacts: data.favContactList,
-                    onAddTap: { showContactList = true },
+                    onAddTap: {
+                        contactPickerContext = ContactPickerContext(title: data.title ?? "Pay Anyone")
+                    },
                     onContactTap: { record in
                         quickTransferContact = ContactRecord(
                             id: record.id,
@@ -501,7 +519,7 @@ private var scrollContent: some View {
 
     private func handleQuickAction(_ action: String) {
         switch action {
-        case "ACTIVITY":          showTransactions = true
+        case "ACTIVITY":              showTransactions = true
         case "MOVE-MONEY":            showMoveMoney = true
         case "FUND-ACCOUNT":          plaidInfoAllowFunding = true; showPlaidInfo = true
         default:                      break

@@ -13,34 +13,10 @@ import UIKit
 
 enum Tab: Hashable {
     case home
-    case accounts
+    case quick
     case profile
 
-    var label: String {
-        switch self {
-        case .home:     return "Home"
-        case .accounts: return "Pay Anyone"
-        case .profile:  return "Settings"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .home:     return "house"
-        case .accounts: return "person.2"
-        case .profile:  return "gearshape"
-        }
-    }
-
-    // Maps the action string from the MENU section of the dashboard API
-    init?(action: String) {
-        switch action {
-        case "Home":      self = .home
-        case "PayAnyone": self = .accounts
-        case "Settings":  self = .profile
-        default:          return nil
-        }
-    }
+    static let slots: [Tab] = [.home, .quick, .profile]
 }
 
 
@@ -264,19 +240,28 @@ private extension HomeTabBarView {
 
 private extension HomeTabBarView {
 
+    static let tabIcons = ["house", "person.2", "gearshape"]
+
     var resolvedTabs: [Tab] {
-        let mapped = dashboardVM.menuItems.compactMap { Tab(action: $0.action) }
-        return mapped.isEmpty ? [.home, .accounts, .profile] : mapped
+        let count = dashboardVM.menuItems.count
+        guard count > 0 else { return Tab.slots }
+        return Array(Tab.slots.prefix(count))
     }
 
-    func tabLabel(for tab: Tab) -> String {
-        dashboardVM.menuItems.first { Tab(action: $0.action) == tab }?.label ?? tab.label
+    func tabLabel(at index: Int) -> String {
+        guard index >= 0, index < dashboardVM.menuItems.count else { return "" }
+        return dashboardVM.menuItems[index].label
+    }
+
+    func tabIcon(at index: Int) -> String {
+        guard index >= 0, index < Self.tabIcons.count else { return "circle" }
+        return Self.tabIcons[index]
     }
 
     var realTabView: some View {
         TabView(selection: $selectedTab) {
-            ForEach(resolvedTabs, id: \.self) { tab in
-                tabContent(for: tab)
+            ForEach(Array(resolvedTabs.enumerated()), id: \.element) { index, tab in
+                tabContent(for: tab, at: index)
             }
         }
         .tint(Color.movo.accent)
@@ -285,23 +270,31 @@ private extension HomeTabBarView {
     }
 
     @ViewBuilder
-    func tabContent(for tab: Tab) -> some View {
+    func tabContent(for tab: Tab, at index: Int) -> some View {
         NavigationStack {
-            destination(for: tab)
+            destination(at: index)
         }
         .tabItem {
-            Label(tabLabel(for: tab), systemImage: tab.icon)
+            Label(tabLabel(at: index), systemImage: tabIcon(at: index))
                 .environment(\.symbolVariants, SymbolVariants.none)
         }
         .tag(tab)
     }
 
+    /// Destination screen for the tab at the given position. The screen title is
+    /// the API-driven label for that slot.
     @ViewBuilder
-    func destination(for tab: Tab) -> some View {
-        switch tab {
-        case .home:     DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM, selectedTab: $selectedTab)
-        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: dashboardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard)
-        case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
+    func destination(at index: Int) -> some View {
+        let title = tabLabel(at: index)
+        switch index {
+        case 0:
+            DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM, selectedTab: $selectedTab, screenTitle: title)
+        case 1:
+            PayAnyoneView(container: container, selectedTab: $selectedTab, cards: dashboardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard, screenTitle: title)
+        case 2:
+            ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM, screenTitle: title)
+        default:
+            EmptyView()
         }
     }
 }

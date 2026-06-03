@@ -571,7 +571,7 @@ extension TransactionListView {
         HStack {
             CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
             Spacer()
-            Text("Transactions")
+            Text("Activity")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
