@@ -29,6 +29,7 @@ struct ProfileScreen: View {
     @State private var showBiometricEnrollSheet  = false
     @State private var showSecuritySettings      = false
     @State private var showManageAccounts        = false
+    @State private var showDeletedCards          = false
     @State private var isLoggingOut              = false
     @State private var showSignOutAlert          = false
     @State private var showDeleteAlert           = false
@@ -122,6 +123,9 @@ private extension ProfileScreen {
                 
                 securityCard
                 linkedBankCard
+                if !dashboardVM.deletedCards.isEmpty {
+                    Cards
+                }
                 signOutButton
                 deleteAccountButton
                 footerText
@@ -178,6 +182,11 @@ private extension ProfileScreen {
             )
             .toolbar(.hidden, for: .navigationBar)
             .navigationBarBackButtonHidden(true)
+        }
+        .navigationDestination(isPresented: $showDeletedCards) {
+            DeletedCardsView(cards: dashboardVM.deletedCards)
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
         }
         .alert("Sign Out?", isPresented: $showSignOutAlert) {
             Button("Sign Out", role: .destructive) {
@@ -410,6 +419,46 @@ private extension ProfileScreen {
             .overlay(RoundedRectangle(cornerRadius: Radius.card)
                 .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         }
+    }
+    
+    var Cards: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            eyebrowLabel("CARDS")
+            VStack(spacing: 0) {
+                deletedCardsRow
+            }
+            .background(Color.movo.surface)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+        }
+    }
+
+    var deletedCardsRow: some View {
+        Button {
+            showDeletedCards = true
+        } label: {
+            HStack(spacing: Spacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Radius.sm)
+                        .fill(Color.movo.elevated)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "creditcard.trianglebadge.exclamationmark")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.movo.accent)
+                }
+                Text("Deleted cards")
+                    .font(Typography.body.font)
+                    .foregroundStyle(Color.movo.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.movo.accent)
+            }
+            .padding(.vertical, Spacing.rowPaddingVertical)
+            .padding(.horizontal, Spacing.lg)
+        }
+        .buttonStyle(.plain)
     }
     
     

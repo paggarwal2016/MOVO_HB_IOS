@@ -11,12 +11,33 @@ import UIKit
 
 // MARK: - Tab Definition
 
+/// Selection identity + local icon for a bottom tab bar slot.
+///
+/// The set, order, and labels of the tabs come entirely from the MENU section of
+/// the dashboard API. The Nth menu item is rendered using the Nth slot here (its
+/// icon + destination); any item beyond the known slots becomes `.other(index)`
+/// so it still renders with a placeholder. The app owns only the icon — the
+/// label always comes from the API.
 enum Tab: Hashable {
     case home
-    case quick
+    case payAnyone
+    case quickPay
     case profile
+    case other(Int)
 
-    static let slots: [Tab] = [.home, .quick, .profile]
+    /// Canonical slots, in render order, paired by position with the API menu.
+    static let slots: [Tab] = [.home, .payAnyone, .quickPay, .profile]
+
+    /// Local icon for the slot. Slots without a mapped image use a placeholder.
+    var icon: String {
+        switch self {
+        case .home:      return "house"
+        case .payAnyone: return "person.2"
+        case .quickPay:  return "bolt"
+        case .profile:   return "gearshape"
+        case .other:     return "square.dashed"
+        }
+    }
 }
 
 
@@ -90,7 +111,39 @@ private extension HomeTabBarView {
                 ScrollView(showsIndicators: false) {
                     skeletonBody
                 }
+                skeletonTabBar
             }
+        }
+    }
+
+    // MARK: Tab bar
+
+    /// Placeholder bottom tab bar shown while the dashboard loads, so the real
+    /// tab bar doesn't pop in once `realTabView` appears. The item count is a
+    /// best-guess placeholder; the live tab bar is API-driven.
+    var skeletonTabBar: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.movo.border)
+                .frame(height: Stroke.hairline)
+
+            HStack(spacing: 0) {
+                ForEach(0..<4, id: \.self) { _ in
+                    VStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.movo.elevated)
+                            .frame(width: 26, height: 26)
+                            .shimmer()
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.movo.elevated)
+                            .frame(width: 38, height: 7)
+                            .shimmer()
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.top, Spacing.sm)
+            .padding(.bottom, Spacing.xs)
         }
     }
 
@@ -240,27 +293,26 @@ private extension HomeTabBarView {
 
 private extension HomeTabBarView {
 
-    static let tabIcons = ["house", "person.2", "gearshape"]
-
+    /// Tabs to render — one per API MENU item, in API order. The Nth menu item is
+    /// paired with the Nth canonical slot (icon + destination); any item beyond
+    /// the known slots renders as `.other` with a placeholder. Nothing is capped:
+    /// the menu is exactly what the API returns.
     var resolvedTabs: [Tab] {
-        let count = dashboardVM.menuItems.count
-        guard count > 0 else { return Tab.slots }
-        return Array(Tab.slots.prefix(count))
+        dashboardVM.menuItems.indices.map { index in
+            index < Tab.slots.count ? Tab.slots[index] : .other(index)
+        }
     }
 
+    /// API-driven label for the tab at the given position. The name always comes
+    /// from the API — never hardcoded.
     func tabLabel(at index: Int) -> String {
         guard index >= 0, index < dashboardVM.menuItems.count else { return "" }
         return dashboardVM.menuItems[index].label
     }
 
-    func tabIcon(at index: Int) -> String {
-        guard index >= 0, index < Self.tabIcons.count else { return "circle" }
-        return Self.tabIcons[index]
-    }
-
     var realTabView: some View {
         TabView(selection: $selectedTab) {
-            ForEach(Array(resolvedTabs.enumerated()), id: \.element) { index, tab in
+            ForEach(Array(resolvedTabs.enumerated()), id: \.offset) { index, tab in
                 tabContent(for: tab, at: index)
             }
         }
@@ -272,29 +324,44 @@ private extension HomeTabBarView {
     @ViewBuilder
     func tabContent(for tab: Tab, at index: Int) -> some View {
         NavigationStack {
-            destination(at: index)
+            destination(for: tab, title: tabLabel(at: index))
         }
         .tabItem {
-            Label(tabLabel(at: index), systemImage: tabIcon(at: index))
+            Label(tabLabel(at: index), systemImage: tab.icon)
                 .environment(\.symbolVariants, SymbolVariants.none)
         }
         .tag(tab)
     }
 
-    /// Destination screen for the tab at the given position. The screen title is
-    /// the API-driven label for that slot.
+    /// Destination for a tab. Slots without a dedicated screen (Quick Pay and any
+    /// unmapped/extra menu item) render a placeholder until wired to a real screen.
     @ViewBuilder
-    func destination(at index: Int) -> some View {
-        let title = tabLabel(at: index)
-        switch index {
-        case 0:
+    func destination(for tab: Tab, title: String) -> some View {
+        switch tab {
+        case .home:
             DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM, selectedTab: $selectedTab, screenTitle: title)
-        case 1:
+        case .payAnyone:
             PayAnyoneView(container: container, selectedTab: $selectedTab, cards: dashboardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard, screenTitle: title)
-        case 2:
+        case .profile:
             ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM, screenTitle: title)
-        default:
-            EmptyView()
+        case .quickPay, .other:
+            placeholderTab(title: title)
+        }
+    }
+
+    /// Placeholder shown for a menu slot that has no dedicated screen yet.
+    @ViewBuilder
+    func placeholderTab(title: String) -> some View {
+        ZStack {
+            MovoBackground()
+            VStack(spacing: Spacing.md) {
+                Image(systemName: "square.dashed")
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
+                Text(title)
+                    .textStyle(Typography.subtitle)
+                    .foregroundColor(Color.movo.textSecondary)
+            }
         }
     }
 }

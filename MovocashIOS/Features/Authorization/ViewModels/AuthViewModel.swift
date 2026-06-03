@@ -210,6 +210,26 @@ final class AuthViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Email Verification Status
+
+    /// Fetches the latest profile and reports the email verification status.
+    /// The backend marks the email verified once the user opens the secure link
+    /// sent by `sendEmailOTP()`. Used by the email-verification waiting screen to
+    /// gate progression into the rest of registration / KYC.
+    ///
+    /// Distinguishes a confirmed "not verified yet" (`.notVerified`) from an
+    /// inability to reach the server (`.failed`) so the UI never tells the user
+    /// their email is unverified when the real problem was connectivity. Either
+    /// non-verified outcome keeps the user on the verification step.
+    func checkEmailVerified() async -> EmailVerificationCheck {
+        do {
+            let response: UserProfileAPIResponse = try await network.request(UserAPI.getProfile)
+            return response.data.emailVerified ? .verified : .notVerified
+        } catch {
+            return .failed
+        }
+    }
+
     // MARK: - Accept Agreements
 
     func acceptAgreements() async throws {
@@ -437,4 +457,13 @@ enum AuthState: Equatable {
     case verified
     case success
     case error(String)
+}
+
+/// Result of an email-verification status check.
+/// `notVerified` = server reached, email confirmed not-yet-verified.
+/// `failed` = could not reach the server / decode the response.
+enum EmailVerificationCheck: Equatable {
+    case verified
+    case notVerified
+    case failed
 }

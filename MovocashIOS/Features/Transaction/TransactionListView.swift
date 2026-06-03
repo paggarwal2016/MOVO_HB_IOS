@@ -77,6 +77,7 @@ struct TransactionListView: View {
     @State private var showFilterSheet  = false
     @State private var activeChipFilter: TransactionChipFilter = .all
     @State private var activeSort: TransactionSort = .newest
+    @State private var showSortMenu = false
 
     init(container: AppContainer, accountId: Int, mode: TransactionMode = .common, initialMax: Int = 100) {
         self.accountId = accountId
@@ -810,18 +811,8 @@ extension TransactionListView {
     }
 
     private var sortMenu: some View {
-        Menu {
-            ForEach(TransactionSort.allCases) { option in
-                Button {
-                    applySort(option)
-                } label: {
-                    if option == activeSort {
-                        Label(option.label, systemImage: "checkmark")
-                    } else {
-                        Label(option.label, systemImage: option.systemImage)
-                    }
-                }
-            }
+        Button {
+            showSortMenu = true
         } label: {
             Image(systemName: "arrow.up.arrow.down")
                 .font(.system(size: 14, weight: .semibold))
@@ -836,6 +827,48 @@ extension TransactionListView {
                         )
                 )
         }
+        .buttonStyle(.plain)
+        // Custom popover instead of a native `Menu` so the option text can be
+        // styled with the app typography — a native menu is system-rendered and
+        // ignores custom fonts/colors. `.presentationCompactAdaptation(.popover)`
+        // keeps it as an anchored dropdown on iPhone rather than a sheet.
+        .popover(isPresented: $showSortMenu) {
+            sortMenuContent
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private var sortMenuContent: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(TransactionSort.allCases.enumerated()), id: \.offset) { index, option in
+                Button {
+                    applySort(option)
+                    showSortMenu = false
+                } label: {
+                    HStack(spacing: Spacing.md) {
+                        Image(systemName: option == activeSort ? "checkmark" : option.systemImage)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(option == activeSort ? Color.movo.accent : Color.movo.textSecondary)
+                            .frame(width: 20)
+                        Text(option.label)
+                            .textStyle(Typography.subtitle)
+                            .foregroundColor(option == activeSort ? Color.movo.textPrimary : Color.movo.textSecondary)
+                        Spacer(minLength: Spacing.xl)
+                    }
+                    .padding(.vertical, Spacing.sm + 2)
+                    .padding(.horizontal, Spacing.md)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if index < TransactionSort.allCases.count - 1 {
+                    Divider().overlay(Color.movo.border)
+                }
+            }
+        }
+        .frame(minWidth: 240)
+        .background(Color.movo.surface)
+        .presentationBackground(Color.movo.surface)
     }
 
     /// A cleared filter that preserves the current sort selection.

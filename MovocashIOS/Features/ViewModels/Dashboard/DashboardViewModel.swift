@@ -21,6 +21,8 @@ final class DashboardViewModel: BaseViewModel {
 
     /// Non-primary cards, used by the card carousel and downstream screens.
     @Published var apiCards: [VCardListResponse] = []
+    /// Disabled (deleted) cards — `enabled == false`. Surfaced in Profile.
+    @Published var deletedCards: [VCardListResponse] = []
     /// True once a dashboard load has resolved the cards payload (drives skeleton vs content).
     @Published var hasLoadedCards: Bool = false
 
@@ -99,6 +101,7 @@ final class DashboardViewModel: BaseViewModel {
         guard let encrypted = myCards?.encryptedData, !encrypted.isEmpty else {
             primaryLinkedCard = nil
             apiCards = []
+            deletedCards = []
             return
         }
 
@@ -110,6 +113,8 @@ final class DashboardViewModel: BaseViewModel {
             }
 #endif
             let decoded = try JSONDecoder().decode([VCardListResponse].self, from: plainData)
+            // Disabled (deleted) cards — kept separately for the Profile > Deleted Cards screen.
+            deletedCards = decoded.filter { $0.enabled == false }
             // Only enabled (active) cards are shown and used on the dashboard.
             let all = decoded.filter { $0.enabled == true }
             if let accountId = primaryAccount?.id {
