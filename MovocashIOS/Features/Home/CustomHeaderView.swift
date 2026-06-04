@@ -27,7 +27,7 @@ struct CustomHeaderView: View {
         HStack(alignment: .center) {
             
             MovoMVSymbol()
-                .frame(width: 35, height: 35)
+                .frame(width: 30, height: 30)
             
             
             // Left — WELCOME + first name

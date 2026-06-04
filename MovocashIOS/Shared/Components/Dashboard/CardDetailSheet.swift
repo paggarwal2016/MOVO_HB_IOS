@@ -70,7 +70,7 @@ struct CardDetailSheet: View {
                     if txVM.transactions.count > 0 {
                         recentActivitySection
                     }
-                    if canDelete { deleteSection }
+                   // if canDelete { deleteSection }
                     Spacer().frame(height: Spacing.xxl)
                 }
             }

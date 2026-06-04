@@ -123,9 +123,9 @@ private extension ProfileScreen {
                 
                 securityCard
                 linkedBankCard
-                if !dashboardVM.deletedCards.isEmpty {
-                    Cards
-                }
+//                if !dashboardVM.deletedCards.isEmpty {
+//                    Cards
+//                }
                 signOutButton
                 deleteAccountButton
                 footerText
