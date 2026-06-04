@@ -147,18 +147,29 @@ struct DashboardView: View {
                 )
             }
         }
+//        .sheet(item: $contactPickerContext) { context in
+//            PayAnyoneContactPickerView(
+//                container: container,
+//                cards: dashboardVM.cards,
+//                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+//                title: context.title,
+//                onSuccess: { needsDashboardRefresh = true }
+//            )
+//            .presentationDetents([.large])
+//            .presentationDragIndicator(.visible)
+//            .presentationBackground(Color.movo.background)
+//        }
         .sheet(item: $contactPickerContext) { context in
-            PayAnyoneContactPickerView(
+            QuickPayView(
                 container: container,
-                cards: dashboardVM.cards,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                title: context.title,
                 onSuccess: { needsDashboardRefresh = true }
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
             .presentationBackground(Color.movo.background)
         }
+
         .sheet(isPresented: $showAllFrequents) {
             AllFrequentsView(
                 contactVM: contactVM,

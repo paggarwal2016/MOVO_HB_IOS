@@ -81,8 +81,13 @@ struct QuickTransferView: View {
                     VStack(spacing: Spacing.xl) {
                         navBar
                         recipientSection
-                        amountSection
-                        noteCard
+                        AmountEntrySection(
+                            amountText: $amountText,
+                            amountFocused: $amountFocused,
+                            availableText: "\(availableBalanceDisplay) available",
+                            maxValue: availableBalanceDouble
+                        )
+                        NoteCard(text: $descriptionText)
                         accountCard
                     }
                     .padding(.horizontal, Spacing.lg)
@@ -227,123 +232,6 @@ struct QuickTransferView: View {
             }
         }
         .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Amount Section
-
-    private var amountSection: some View {
-        VStack(spacing: Spacing.md) {
-            amountDisplay
-
-            Text("\(availableBalanceDisplay) available")
-                .textStyle(Typography.caption)
-                .foregroundColor(Color.movo.textTertiary)
-
-            quickChips
-        }
-    }
-
-    private var amountDisplay: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("$")
-                .textStyle(Typography.amountPrefix)
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
-
-            let parts = amountText.split(separator: ".")
-            Text(parts.first.map(String.init) ?? "0")
-                .textStyle(Typography.amountInput)
-                .monospacedDigit()
-                .foregroundColor(Color.movo.textPrimary)
-
-            Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                .textStyle(Typography.amountPrefix)
-                .monospacedDigit()
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { amountFocused = true }
-        .overlay(
-            TextField("", text: $amountText)
-                .keyboardType(.decimalPad)
-                .focused($amountFocused)
-                .opacity(0)
-        )
-    }
-
-    private let presets: [(String, Double?)] = [
-        ("$10", 10), ("$25", 25), ("$50", 50), ("$100", 100)
-    ]
-
-    private var quickChips: some View {
-        HStack(spacing: Spacing.sm) {
-            ForEach(presets, id: \.0) { label, value in
-                let selected = isPresetSelected(value)
-                Button { applyPreset(value) } label: {
-                    Text(label)
-                        .textStyle(Typography.body)
-                        .foregroundColor(selected ? Color.movo.accent : Color.movo.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Spacing.md)
-                        .background(
-                            Capsule()
-                                .fill(selected ? Color.movo.accentTint : Color.movo.elevated)
-                                .overlay(
-                                    Capsule().strokeBorder(
-                                        selected ? Color.movo.accentBorder : Color.clear,
-                                        lineWidth: Stroke.hairline
-                                    )
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private func isPresetSelected(_ value: Double?) -> Bool {
-        guard amount > 0 else { return false }
-        if let v = value { return amount == v }
-        return amount == availableBalanceDouble && !amountText.isEmpty
-    }
-
-    private func applyPreset(_ value: Double?) {
-        amountFocused = false
-        if let v = value {
-            amountText = v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : "\(v)"
-        } else {
-            guard let card = selectedCard else { return }
-            let raw = NSDecimalNumber(decimal: card.balance).stringValue
-            amountText = raw
-        }
-    }
-
-    // MARK: - Note Card
-
-    private var noteCard: some View {
-        HStack(spacing: Spacing.md) {
-            Image(systemName: "bubble.left")
-                .font(.system(size: 15, weight: .regular))
-                .foregroundColor(Color.movo.textDisabled)
-
-            TextField("", text: $descriptionText,
-                      prompt: Text("What's it for? (optional)")
-                          .foregroundColor(Color.movo.textDisabled))
-                .textStyle(Typography.subtitle)
-                .foregroundColor(Color.movo.textPrimary)
-                .autocorrectionDisabled()
-        }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.lg)
-                .fill(Color.movo.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.lg)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                )
-        )
     }
 
     // MARK: - Account Card
@@ -527,29 +415,14 @@ struct QuickTransferView: View {
     // MARK: - Send Button
 
     private var sendButton: some View {
-        Button {
+        PayActionButton(amount: amount, isEnabled: isValid) {
             UIApplication.shared.dismissKeyboard()
             amountFocused = false
             Task {
                 await sendMoney()
             }
             //showReview()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "arrow.up.forward")
-                    .font(.system(size: 13, weight: .semibold))
-                Text(amount > 0 ? "Pay $\(String(format: "%.2f", amount))" : "Pay")
-                    .textStyle(Typography.buttonLarge)
-            }
-            .foregroundColor(isValid ? Color.movo.onAccent : Color.movo.textDisabled)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(
-                Capsule().fill(isValid ? Color.movo.accent : Color.movo.elevated)
-            )
         }
-        .disabled(!isValid)
-        .buttonStyle(.plain)
     }
 
     // MARK: - Actions
