@@ -184,7 +184,7 @@ final class AuthViewModel: ObservableObject {
         state = .loading
         do {
             let _: SuccessResponse = try await network.request(
-                AuthAPI.emailOTP(request: EmailVerifyRequest(email: email, userAction: "VERIFY-EMAIL"))
+                AuthAPI.emailVerify(request: EmailVerifyRequest(email: email, userAction: "VERIFY-EMAIL"))
             )
             state = .otpSent
         } catch {
@@ -200,7 +200,7 @@ final class AuthViewModel: ObservableObject {
         state = .loading
         do {
             let _: SuccessResponse = try await network.request(
-                AuthAPI.emailVerify(request: EmailOTPRequest(code: code, userAction: "VERIFY-OTP"))
+                AuthAPI.emailVerify(request: EmailVerifyRequest(email: email, userAction: "VERIFY-EMAIL"))
             )
             state = .verified
             onSuccess()

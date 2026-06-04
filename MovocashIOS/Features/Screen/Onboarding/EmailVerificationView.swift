@@ -38,8 +38,6 @@ struct EmailVerificationView: View {
     /// protect the user's mailbox and stay within backend rate limits.
     private static let resendCooldownSeconds = 30
 
-    @SwiftUI.Environment(\.scenePhase) private var scenePhase
-
     @State private var isChecking = false
     @State private var isResending = false
     @State private var resendCooldown = 0
@@ -73,17 +71,6 @@ struct EmailVerificationView: View {
         .onDisappear {
             cooldownTask?.cancel()
             cooldownTask = nil
-        }
-        // Re-check silently when the user returns from their mail app after tapping
-        // the verification link. onChange does not fire for the initial active
-        // phase, so this only runs on a genuine foreground return.
-        .onChange(of: scenePhase) { newPhase in
-            guard newPhase == .active, !isChecking else { return }
-            Task {
-                isChecking = true
-                await onCheck(false)
-                isChecking = false
-            }
         }
     }
 
@@ -121,7 +108,7 @@ struct EmailVerificationView: View {
                     .foregroundStyle(Color.movo.textPrimary)
                     .lineSpacing(2)
 
-                Text("We sent a verification link to \(email). Open it to confirm your email, then come back and tap Continue.")
+                Text("We sent a verification link to \(email). Open it to confirm your email, then come back and tap Verified.")
                     .textStyle(Typography.body)
                     .foregroundStyle(Color.movo.textTertiary)
                     .lineSpacing(2)
@@ -141,7 +128,7 @@ struct EmailVerificationView: View {
                 isChecking = false
             }
         } label: {
-            Text("I've verified — Continue")
+            Text("Verified")
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         .disabled(isChecking || isResending)

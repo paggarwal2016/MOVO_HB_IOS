@@ -85,16 +85,32 @@ struct RootView: View {
                             authVM.email = email
                             Task {
                                 SpinnerView.showFullScreen()
-                                do {
-                                    // Send the verification email/link, then move to the
-                                    // dedicated waiting screen which gates progression on
-                                    // the backend's emailVerified status.
-                                    try await authVM.sendEmailOTP()
+                                // Check the profile's email-verified status first.
+                                //  • already verified → skip verification, go straight to
+                                //    the next onboarding step (biometric / passcode).
+                                //  • not verified    → send the verification email and
+                                //    show the verification waiting screen.
+                                switch await authVM.checkEmailVerified() {
+                                case .verified:
+                                    let passkeyDone = await authVM.isPasskeyRegistered()
                                     SpinnerView.hideFullScreen()
-                                    appState.flow = .emailVerification
-                                } catch {
+                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                case .notVerified:
+                                    do {
+                                        try await authVM.sendEmailOTP()
+                                        SpinnerView.hideFullScreen()
+                                        appState.flow = .emailVerification
+                                    } catch {
+                                        SpinnerView.hideFullScreen()
+                                        AlertManager.shared.showError(error.localizedDescription)
+                                    }
+                                case .failed:
                                     SpinnerView.hideFullScreen()
-                                    AlertManager.shared.showError(error.localizedDescription)
+                                    ToastManager.shared.show(
+                                        "Couldn't check your verification status. Please try again.",
+                                        style: .error,
+                                        position: .bottom
+                                    )
                                 }
                             }
                         },
