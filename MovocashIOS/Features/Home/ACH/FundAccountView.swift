@@ -12,6 +12,10 @@ import SwiftUI
 enum FundAccountMode {
     case dashboard
     case profile
+    /// Post-KYC onboarding deposit. Behaves like `.dashboard` (external → MOVO) but
+    /// self-loads both the external accounts and the MOVO primary via API, and lands
+    /// on the dashboard when finished (success or back).
+    case onboardingDeposit
 }
 
 // MARK: - View
@@ -23,30 +27,43 @@ struct FundAccountView: View {
     @StateObject private var vm: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
     @StateObject private var transactionVM: TransactionViewModel
+    @StateObject private var vcardVM: VCardViewModel
 
-    let primaryAccount: SavingsAccountInfo
     let onSuccess: () -> Void
     let onAccountLinked: () -> Void
     private let initialAccounts: [ACHAccount]
     private let mode: FundAccountMode
+    /// MOVO primary supplied by the caller. In `.onboardingDeposit` mode this is nil
+    /// and the screen self-loads it (see `loadedPrimaryAccount` / `loadOnboardingAccounts`).
+    private let injectedPrimaryAccount: SavingsAccountInfo?
 
-    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, mode: FundAccountMode = .dashboard, onSuccess: @escaping () -> Void = {}, onAccountLinked: @escaping () -> Void = {}) {
+    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo? = nil, mode: FundAccountMode = .dashboard, onSuccess: @escaping () -> Void = {}, onAccountLinked: @escaping () -> Void = {}) {
         self.initialAccounts = initialAccounts
         self.mode = mode
         _vm = StateObject(wrappedValue: container.makeACHViewModel())
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _transactionVM = StateObject(wrappedValue: container.makeTransactionViewModel())
-        self.primaryAccount = primaryAccount
+        _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
+        self.injectedPrimaryAccount = primaryAccount
         self.onSuccess = onSuccess
         self.onAccountLinked = onAccountLinked
     }
+
+    /// Resolved MOVO primary — injected by the caller, or self-loaded in onboarding mode.
+    private var primaryAccount: SavingsAccountInfo? { injectedPrimaryAccount ?? loadedPrimaryAccount }
 
     private var isProfileMode: Bool {
         if case .profile = mode { return true }
         return false
     }
 
+    private var isOnboarding: Bool {
+        if case .onboardingDeposit = mode { return true }
+        return false
+    }
+
     @State private var selectedAccount: ACHAccount?
+    @State private var loadedPrimaryAccount: SavingsAccountInfo?
     @State private var amount: String = "0"
     @State private var showConfirmSheet: Bool = false
     @State private var showAccountSheet: Bool = false
@@ -60,7 +77,7 @@ struct FundAccountView: View {
 
     private var amountExceedsBalance: Bool {
         if isProfileMode {
-            return enteredAmount > primaryAccount.availableBalance
+            return enteredAmount > (primaryAccount?.availableBalance ?? 0)
         }
         guard let account = selectedAccount else { return false }
         return enteredAmount > account.plaidAccountBalance
@@ -120,7 +137,11 @@ struct FundAccountView: View {
             }
         }
         .task {
-            await vm.fetchAccounts()
+            if isOnboarding {
+                await loadOnboardingAccounts()
+            } else {
+                await vm.fetchAccounts()
+            }
         }
         .onChange(of: vm.accounts) { accounts in
             guard selectedAccount == nil else { return }
@@ -139,10 +160,10 @@ struct FundAccountView: View {
             (securedDismiss ?? dismiss)()
         }
         .sheet(isPresented: $showConfirmSheet) {
-            let fromName = isProfileMode ? primaryAccount.displayName : (selectedAccount?.accountName ?? "—")
-            let fromMask = isProfileMode ? primaryAccount.maskedAccountNumber : selectedAccount.map { "••\($0.accountNumber.suffix(4))" }
-            let toName   = isProfileMode ? (selectedAccount?.accountName ?? "—") : primaryAccount.displayName
-            let toMask   = isProfileMode ? selectedAccount.map { "••\($0.accountNumber.suffix(4))" } : primaryAccount.maskedAccountNumber
+            let fromName = isProfileMode ? (primaryAccount?.displayName ?? "MOVO") : (selectedAccount?.accountName ?? "—")
+            let fromMask = isProfileMode ? primaryAccount?.maskedAccountNumber : selectedAccount.map { "••\($0.accountNumber.suffix(4))" }
+            let toName   = isProfileMode ? (selectedAccount?.accountName ?? "—") : (primaryAccount?.displayName ?? "MOVO")
+            let toMask   = isProfileMode ? selectedAccount.map { "••\($0.accountNumber.suffix(4))" } : primaryAccount?.maskedAccountNumber
             ConfirmationBottomSheet(
                 channel: .external,
                 amount: amount,
@@ -160,10 +181,11 @@ struct FundAccountView: View {
                         var success = false
                         var referenceCode = "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"
                         if isProfileMode {
+                            guard let primary = primaryAccount else { isSubmitting = false; return }
                             let request = TransactionRequest.Withdrawal(
                                 accountId: account.achAccountId,
                                 transactionAmount: Double(amount) ?? 0,
-                                savingsAccountId: primaryAccount.id
+                                savingsAccountId: primary.id
                             )
                             if let response = try? await transactionVM.postWithdrawal(request: request) {
                                 success = true
@@ -221,11 +243,30 @@ struct FundAccountView: View {
         }
     }
 
+    // MARK: - Onboarding self-load
+
+    /// Onboarding-only: load both sides of the transfer from the network.
+    ///  • FROM — external linked accounts via `vm.fetchAccounts()` (ACH).
+    ///  • TO   — MOVO primary via `VCardAPI.getVCardsPrimary` (`fetchPrimaryCard()`),
+    ///    mapped to a display `SavingsAccountInfo`.
+    private func loadOnboardingAccounts() async {
+        await vm.fetchAccounts()
+        guard loadedPrimaryAccount == nil else { return }
+        if let card = try? await vcardVM.fetchPrimaryCard() {
+            loadedPrimaryAccount = SavingsAccountInfo(primaryCard: card)
+        }
+    }
+
     // MARK: - Nav Bar
 
     private var navBar: some View {
         HStack {
-            CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
+            CircularNavButton(systemName: "chevron.left") {
+                // Onboarding: leaving the fund step lands on the dashboard rather than
+                // popping back to the bank-link screen.
+                if isOnboarding { onSuccess() }
+                else { (securedDismiss ?? dismiss)() }
+            }
             Spacer()
             Text(isProfileMode ? "Withdraw Funds" : "Fund Account")
                 .textStyle(Typography.cardTitle)
@@ -284,9 +325,9 @@ struct FundAccountView: View {
                     // Withdraw: FROM = Movo primary (fixed)
                     accountRow(
                         avatar: movoAvatar,
-                        name: primaryAccount.displayName,
-                        number: primaryAccount.maskedAccountNumber,
-                        amount: primaryAccount.formattedBalance,
+                        name: primaryAccount?.displayName ?? "MOVO",
+                        number: primaryAccount?.maskedAccountNumber ?? "",
+                        amount: primaryAccount?.formattedBalance ?? "",
                         showChevron: false,
                         isPrimary: true
                     )
@@ -394,9 +435,9 @@ struct FundAccountView: View {
                 } else {
                     accountRow(
                         avatar: movoAvatar,
-                        name: primaryAccount.displayName,
-                        number: primaryAccount.maskedAccountNumber,
-                        amount: primaryAccount.formattedBalance,
+                        name: primaryAccount?.displayName ?? "MOVO",
+                        number: primaryAccount?.maskedAccountNumber ?? "",
+                        amount: primaryAccount?.formattedBalance ?? "",
                         showChevron: false,
                         isPrimary: true
                     )
@@ -616,5 +657,25 @@ struct BankAccountPickerSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - SavingsAccountInfo from primary VCard
+
+private extension SavingsAccountInfo {
+    /// Builds a display-oriented MOVO primary from the primary VCard
+    /// (`VCardAPI.getVCardsPrimary`). Used only by FundAccountView's onboarding "to"
+    /// row, which needs the account name, masked number and available balance.
+    init(primaryCard card: VCardListResponse) {
+        id = card.savingsAccountId ?? 0
+        accountNumber = card.lastFour ?? ""
+        clientName = card.name ?? ""
+        status = .active
+        accountBalance = Decimal(card.savingsAccountBalance ?? 0)
+        availableBalance = Decimal(card.savingsAccountAvailableBalance ?? card.savingsAccountBalance ?? 0)
+        clientId = 0
+        nickname = card.savingsAccountNickname.flatMap { $0.isEmpty ? nil : $0 }
+        isPrimary = true
+        routingNumber = nil
     }
 }
