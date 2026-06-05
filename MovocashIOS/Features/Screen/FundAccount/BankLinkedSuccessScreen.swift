@@ -19,6 +19,10 @@ struct BankLinkedSuccessScreen: View {
     var container: AppContainer? = nil
     var primaryAccount: SavingsAccountInfo? = nil
     var linkedAccounts: [ACHAccount] = []
+    /// Hide the balance when the account came straight from the Plaid link
+    /// metadata (no balance yet) so we don't show a misleading $0.00. A real
+    /// balance appears once the full account list is refreshed.
+    var showBalance: Bool = true
 
     @State private var showFundAccount = false
 
@@ -41,7 +45,8 @@ struct BankLinkedSuccessScreen: View {
     }
 
     private var balanceText: String {
-        account?.formattedBalance ?? ""
+        guard showBalance else { return "" }
+        return account?.formattedBalance ?? ""
     }
 
     // MARK: - Body

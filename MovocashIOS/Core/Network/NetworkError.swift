@@ -10,6 +10,10 @@ import Foundation
 extension Notification.Name {
     static let sessionExpired = Notification.Name("sessionExpired")
     static let dashboardShouldRefresh = Notification.Name("dashboardShouldRefresh")
+    /// Collapse the entire presented/navigation stack back to the dashboard in a
+    /// single transition. Observed by RootView (root swap), HomeTabBarView (tab),
+    /// DashboardView and ManageExternalAccountsView (reset their nav pushes).
+    static let returnToDashboard = Notification.Name("returnToDashboard")
 }
 
 enum NetworkError: LocalizedError, Sendable {

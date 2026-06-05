@@ -15,7 +15,8 @@ struct FundAccountInfoView: View {
 
     @StateObject private var plaidVM: PlaidAchViewModel
     @State private var showBankLink = false
-    @State private var proceedToFund = false
+    @State private var continueToPlaid = false
+    @State private var startPlaidFlow = false
     @State private var showFund = false
 
     init(container: AppContainer,
@@ -81,22 +82,27 @@ struct FundAccountInfoView: View {
         // "Fund account" → link a bank via Plaid (link-only; success screen shows
         // "Done"). When the link succeeds, advance into the onboarding fund step.
         .sheet(isPresented: $showBankLink, onDismiss: {
-            if proceedToFund {
-                proceedToFund = false
-                showFund = true
+            // Start Plaid only after the info sheet is fully gone.
+            if continueToPlaid {
+                continueToPlaid = false
+                startPlaidFlow = true
             }
         }) {
-            BankLinkedInfoScreen(
-                container: container,
-                plaidVM: plaidVM,
-                allowFunding: false,
-                onSuccess: { proceedToFund = true }
-            )
-            .presentationDetents([.height(500)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
+            BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
+                .presentationDetents([.height(500)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
+                .presentationBackground(Color.movo.cardSurface)
         }
+        // After Plaid links and the success screen is dismissed ("Done"),
+        // advance into the onboarding fund step.
+        .plaidLinkFlow(
+            isActive: $startPlaidFlow,
+            plaidVM: plaidVM,
+            container: container,
+            allowFunding: false,
+            onDone: { showFund = true }
+        )
         // The onboarding fund step. Self-loads from/to accounts and lands on the
         // dashboard on success or back.
         .fullScreenCover(isPresented: $showFund) {

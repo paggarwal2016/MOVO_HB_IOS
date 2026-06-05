@@ -73,6 +73,10 @@ struct DashboardView: View {
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
     @State private var plaidInfoAllowFunding = true
+    // Set when the user taps "Continue" on the info sheet; consumed in onDismiss
+    // to start the Plaid flow once the sheet is gone.
+    @State private var continueToPlaid = false
+    @State private var startPlaidFlow = false
 
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -290,19 +294,27 @@ struct DashboardView: View {
                 .presentationBackground(Color.movo.cardSurface)
             }
         }
-        .sheet(isPresented: $showPlaidInfo) {
-            BankLinkedInfoScreen(
-                container: container,
-                plaidVM: achVM,
-                primaryAccount: dashboardVM.primaryAccount,
-                allowFunding: plaidInfoAllowFunding,
-                onSuccess: { needsDashboardRefresh = true }
-            )
-            .presentationDetents([.height(500)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
+        .sheet(isPresented: $showPlaidInfo, onDismiss: {
+            // Start Plaid only after the info sheet is fully gone.
+            if continueToPlaid {
+                continueToPlaid = false
+                startPlaidFlow = true
+            }
+        }) {
+            BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
+                .presentationDetents([.height(500)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
+                .presentationBackground(Color.movo.cardSurface)
         }
+        .plaidLinkFlow(
+            isActive: $startPlaidFlow,
+            plaidVM: achVM,
+            container: container,
+            primaryAccount: dashboardVM.primaryAccount,
+            allowFunding: plaidInfoAllowFunding,
+            onDone: { needsDashboardRefresh = true }
+        )
         
         .onChange(of: needsDashboardRefresh) { shouldRefresh in
             guard shouldRefresh else { return }

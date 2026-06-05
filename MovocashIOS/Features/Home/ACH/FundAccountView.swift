@@ -352,9 +352,9 @@ struct FundAccountView: View {
                                 AlertManager.shared.showError("Unable to initialize. Please try again.")
                                 return
                             }
-                            await plaidVM.startPlaidLink()
-                            if plaidVM.linkedAccount != nil {
-                                await vm.fetchAccounts()
+                            let linked = await plaidVM.startPlaidLink()
+                            if let linked {
+                                vm.addLinkedAccount(linked)
                                 onAccountLinked()
                             }
                         }
