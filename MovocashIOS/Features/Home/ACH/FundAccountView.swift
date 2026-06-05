@@ -231,13 +231,14 @@ struct FundAccountView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
         }
-        .fullScreenCover(item: $successData, onDismiss: {
-            onSuccess()
-            (securedDismiss ?? dismiss)()
-        }) { data in
+        .fullScreenCover(item: $successData) { data in
             SuccessConfirmationView(
                 viewModel: SuccessConfirmationViewModel(success: data) {
-                    successData = nil
+                    // Done → return straight to the dashboard, collapsing the whole
+                    // stack in a single transition. Observers (RootView /
+                    // HomeTabBarView / DashboardView / ManageExternalAccountsView)
+                    // tear down this screen and refresh — no cascading dismisses.
+                    NotificationCenter.default.post(name: .returnToDashboard, object: nil)
                 }
             )
         }

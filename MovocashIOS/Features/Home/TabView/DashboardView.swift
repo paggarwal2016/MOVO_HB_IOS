@@ -339,6 +339,14 @@ struct DashboardView: View {
             showCreateCashCard = false
             quickTransferContact = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Collapse any dashboard-originated push (e.g. FundAccountView) back to
+            // the dashboard in one transition, then refresh.
+            showFundAccount = false
+            showInternalTransfer = false
+            showPlaidInfo = false
+            needsDashboardRefresh = true
+        }
         .onAppear {
             showCreateCashCard = false
         }

@@ -316,6 +316,13 @@ struct RootView: View {
                 break
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Onboarding flows live on a non-home branch; swap the root to home so
+            // the whole onboarding stack tears down in one transition.
+            if appState.flow != .home {
+                appState.flow = .home
+            }
+        }
         .task(id: appState.flow) {
             guard appState.flow == .kyc else { return }
 

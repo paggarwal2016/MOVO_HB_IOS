@@ -137,6 +137,11 @@ struct ManageExternalAccountsView: View {
                 Task { await achVM.fetchAccounts() }
             }
         )
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Pop the withdraw push (FundAccountView) so the profile stack doesn't
+            // keep it behind the dashboard tab the user is being taken to.
+            showWithdraw = false
+        }
     }
 
     // MARK: - Nav Bar

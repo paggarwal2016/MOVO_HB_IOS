@@ -88,6 +88,10 @@ struct HomeTabBarView: View {
             vCardVM.cancelAllTasks()
             selectedTab = .home
         }
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Land on the dashboard tab (covers the profile-originated flows).
+            selectedTab = .home
+        }
         .onChange(of: selectedTab) { newTab in
             guard newTab == .home else { return }
             Task {
