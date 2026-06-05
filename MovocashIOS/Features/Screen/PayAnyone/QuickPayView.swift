@@ -84,13 +84,13 @@ struct QuickPayView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
 
-                        recipientSection
                         AmountEntrySection(
                             amountText: $amountText,
                             amountFocused: $amountFocused,
                             availableText: "\(availableBalanceDisplay) available",
                             maxValue: availableBalanceDouble
                         )
+                        recipientSection
                         NoteCard(text: $descriptionText)
                     }
                     .padding(.horizontal, Spacing.lg)

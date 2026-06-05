@@ -305,7 +305,7 @@ struct TransactionListView: View {
                             .textStyle(Typography.eyebrow)
                             .foregroundColor(Color.movo.textTertiary)
                         Spacer()
-                        dayTotalsLabel(for: group.items)
+                        //dayTotalsLabel(for: group.items)
                     }
                     .padding(.horizontal, Spacing.lg)
                     
@@ -788,7 +788,7 @@ extension TransactionListView {
                 Button(action: onRemove) {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(Color.movo.accent)
+                        .foregroundColor(Color.movo.textSecondary)
                         // Padding + contentShape widen the tap target beyond the
                         // 9pt glyph without enlarging the visible chip.
                         .padding(.vertical, 4)
