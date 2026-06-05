@@ -12,7 +12,7 @@ enum AuthAPI: Endpoint {
     case messengerOTP(request: MessengerOTPRequest)
     case tokenSMS(request: TokenSMSRequest)
     case emailOTP(request: EmailVerifyRequest)
-    case emailVerify(request: EmailOTPRequest)
+    case emailVerify(request: EmailVerifyRequest)
     case tokenAccess
     case acceptAgreements
     case enrollRSA(request: RSAEnrollRequest)

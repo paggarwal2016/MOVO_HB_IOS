@@ -13,7 +13,7 @@ struct CustomHeaderView: View {
 
     var userName: String = ""
     var userImage: String = ""
-    var onLogout: () -> Void
+    var onProfileTap: () -> Void
 
     private let theme = MovoTheme.color
 
@@ -25,22 +25,27 @@ struct CustomHeaderView: View {
 
     var body: some View {
         HStack(alignment: .center) {
+            
+            MovoMVSymbol()
+                .frame(width: 30, height: 30)
+            
+            
             // Left — WELCOME + first name
-            VStack(alignment: .leading, spacing: 3) {
-                Text("WELCOME")
-                    .textStyle(Typography.eyebrow)
-                    .foregroundStyle(theme.textTertiary.color)
-
-                Text(userName)
-                    .textStyle(Typography.sectionTitle)
-                    .foregroundStyle(theme.textPrimary.color)
-                    .lineLimit(1)
-            }
+//            VStack(alignment: .leading, spacing: 3) {
+//                Text("WELCOME")
+//                    .textStyle(Typography.eyebrow)
+//                    .foregroundStyle(theme.textTertiary.color)
+//
+//                Text(userName)
+//                    .textStyle(Typography.sectionTitle)
+//                    .foregroundStyle(theme.textPrimary.color)
+//                    .lineLimit(1)
+//            }
 
             Spacer()
 
-            // Right — initial avatar (taps to logout)
-            Button(action: onLogout) {
+            // Right — initial avatar (taps to open the Settings/profile tab)
+            Button(action: onProfileTap) {
                 ZStack {
                     Circle()
                         .fill(Color.movo.surface)

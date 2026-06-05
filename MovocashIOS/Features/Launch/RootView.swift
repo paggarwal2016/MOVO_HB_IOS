@@ -85,27 +85,88 @@ struct RootView: View {
                             authVM.email = email
                             Task {
                                 SpinnerView.showFullScreen()
-                                do {
-                                    try await authVM.sendEmailOTP()
+                                // Check the profile's email-verified status first.
+                                //  • already verified → skip verification, go straight to
+                                //    the next onboarding step (biometric / passcode).
+                                //  • not verified    → send the verification email and
+                                //    show the verification waiting screen.
+                                switch await authVM.checkEmailVerified() {
+                                case .verified:
+                                    let passkeyDone = await authVM.isPasskeyRegistered()
                                     SpinnerView.hideFullScreen()
-                                    AlertManager.shared.showCustom(
-                                        title: "Check your email",
-                                        message: "We sent a verification link to \(email).",
-                                        primary: "Continue",
-                                        onPrimary: {
-                                            Task {
-                                                let passkeyDone = await authVM.isPasskeyRegistered()
-                                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
-                                            }
-                                        }
+                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                case .notVerified:
+                                    do {
+                                        try await authVM.sendEmailOTP()
+                                        SpinnerView.hideFullScreen()
+                                        appState.flow = .emailVerification
+                                    } catch {
+                                        SpinnerView.hideFullScreen()
+                                        AlertManager.shared.showError(error.localizedDescription)
+                                    }
+                                case .failed:
+                                    SpinnerView.hideFullScreen()
+                                    ToastManager.shared.show(
+                                        "Couldn't check your verification status. Please try again.",
+                                        style: .error,
+                                        position: .bottom
                                     )
-                                } catch {
-                                    SpinnerView.hideFullScreen()
-                                    AlertManager.shared.showError(error.localizedDescription)
                                 }
                             }
                         },
                         onSignIn: { appState.flow = .loginPhone }
+                    )
+
+                case .emailVerification:
+                    EmailVerificationView(
+                        email: authVM.email,
+                        onCheck: { isExplicit in
+                            // Full-screen loader for explicit taps only; the silent
+                            // foreground re-check stays invisible so returning to the
+                            // app after opening the link feels seamless.
+                            if isExplicit { SpinnerView.showFullScreen() }
+                            let result = await authVM.checkEmailVerified()
+                            switch result {
+                            case .verified:
+                                let passkeyDone = await authVM.isPasskeyRegistered()
+                                if isExplicit { SpinnerView.hideFullScreen() }
+                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                            case .notVerified:
+                                if isExplicit {
+                                    SpinnerView.hideFullScreen()
+                                    showEmailNotVerifiedToast()
+                                }
+                            case .failed:
+                                if isExplicit {
+                                    SpinnerView.hideFullScreen()
+                                    ToastManager.shared.show(
+                                        "Couldn't check your verification status. Please try again.",
+                                        style: .error,
+                                        position: .bottom
+                                    )
+                                }
+                            }
+                        },
+                        onResend: {
+                            SpinnerView.showFullScreen()
+                            do {
+                                try await authVM.sendEmailOTP()
+                                SpinnerView.hideFullScreen()
+                                ToastManager.shared.show(
+                                    "Verification email sent to \(authVM.email)",
+                                    style: .success,
+                                    position: .bottom
+                                )
+                            } catch {
+                                SpinnerView.hideFullScreen()
+                                ToastManager.shared.show(
+                                    error.localizedDescription,
+                                    style: .error,
+                                    position: .bottom
+                                )
+                            }
+                        },
+                        onBack: { appState.flow = .signupDetails }
                     )
 
                 case .getStartedInfo:
@@ -203,8 +264,15 @@ struct RootView: View {
 
                 case .kycSuccess:
                     KYCSuccessView {
-                        appState.flow = .home
+                        appState.flow = .fundAccountInfo
                     }
+
+                case .fundAccountInfo:
+                    FundAccountInfoView(
+                        container: container,
+                        onSkip: { appState.flow = .home },
+                        onFinish: { appState.flow = .home }
+                    )
 
                 case .home:
                     HomeTabBarView(container: container)
@@ -246,6 +314,13 @@ struct RootView: View {
                 }
             default:
                 break
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Onboarding flows live on a non-home branch; swap the root to home so
+            // the whole onboarding stack tears down in one transition.
+            if appState.flow != .home {
+                appState.flow = .home
             }
         }
         .task(id: appState.flow) {
@@ -362,7 +437,39 @@ struct RootView: View {
     /// then routes: registration → KYC onboarding  |  login → Home.
     /// Returns true if passkey succeeded and navigation was triggered; false otherwise.
     /// BiometricEnrollView uses the return value to reset its enroll state on failure.
-    @discardableResult
+    /// Shown when the explicit "Continue" check finds the email still unverified
+    /// (link not yet opened, or token expired). Offers to resend the link.
+    private func showEmailNotVerifiedToast() {
+        ToastManager.shared.show(ToastConfig(
+            message: "We haven't received your confirmation yet. Open the link we emailed you, or resend it.",
+            style: .warning,
+            position: .center,
+            duration: nil,
+            title: "Email not verified",
+            imageSystemName: "envelope.badge",
+            primaryAction: ToastAction(label: "Resend email") {
+                Task {
+                    do {
+                        try await authVM.sendEmailOTP()
+                        ToastManager.shared.show(
+                            "Verification email sent to \(authVM.email)",
+                            style: .success,
+                            position: .bottom
+                        )
+                    } catch {
+                        ToastManager.shared.show(
+                            error.localizedDescription,
+                            style: .error,
+                            position: .bottom
+                        )
+                    }
+                }
+            },
+            secondaryAction: ToastAction(label: "Dismiss") { },
+            dimsBackground: true
+        ))
+    }
+
     private func advanceAfterSecurity() async -> Bool {
         lockManager.resetToUnlocked()
 

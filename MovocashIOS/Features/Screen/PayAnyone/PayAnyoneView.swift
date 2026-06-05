@@ -21,6 +21,8 @@ struct PayAnyoneView: View {
 
     let cards: [VCardListResponse]
     let primaryLinkedCard: VCardListResponse?
+    /// Title shown in the nav bar — passed from the tab's MENU label.
+    let screenTitle: String
 
     @State private var localPrimaryCard: VCardListResponse?
     @Binding var selectedTab: Tab
@@ -49,12 +51,13 @@ struct PayAnyoneView: View {
         let phoneE164: String
     }
 
-    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil) {
+    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, screenTitle: String = "Pay Anyone") {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
         _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
         _selectedTab = selectedTab
         self.cards = cards
         self.primaryLinkedCard = primaryLinkedCard
+        self.screenTitle = screenTitle
         _localPrimaryCard = State(initialValue: primaryLinkedCard)
     }
     
@@ -534,7 +537,7 @@ struct PayAnyoneView: View {
     private var navBar: some View {
         HStack {
             Spacer()
-            Text("Pay Anyone")
+            Text(screenTitle)
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()

@@ -11,34 +11,31 @@ import UIKit
 
 // MARK: - Tab Definition
 
+/// Selection identity + local icon for a bottom tab bar slot.
+///
+/// The set, order, and labels of the tabs come entirely from the MENU section of
+/// the dashboard API. The Nth menu item is rendered using the Nth slot here (its
+/// icon + destination); any item beyond the known slots becomes `.other(index)`
+/// so it still renders with a placeholder. The app owns only the icon — the
+/// label always comes from the API.
 enum Tab: Hashable {
     case home
-    case accounts
+    case payAnyone
+    case quickPay
     case profile
+    case other(Int)
 
-    var label: String {
-        switch self {
-        case .home:     return "Home"
-        case .accounts: return "Pay Anyone"
-        case .profile:  return "Settings"
-        }
-    }
+    /// Canonical slots, in render order, paired by position with the API menu.
+    static let slots: [Tab] = [.home, .payAnyone, .quickPay, .profile]
 
+    /// Local icon for the slot. Slots without a mapped image use a placeholder.
     var icon: String {
         switch self {
-        case .home:     return "house"
-        case .accounts: return "person.2"
-        case .profile:  return "gearshape"
-        }
-    }
-
-    // Maps the action string from the MENU section of the dashboard API
-    init?(action: String) {
-        switch action {
-        case "Home":      self = .home
-        case "PayAnyone": self = .accounts
-        case "Settings":  self = .profile
-        default:          return nil
+        case .home:      return "house"
+        case .payAnyone: return "person.2"
+        case .quickPay:  return "bolt"
+        case .profile:   return "gearshape"
+        case .other:     return "square.dashed"
         }
     }
 }
@@ -91,6 +88,10 @@ struct HomeTabBarView: View {
             vCardVM.cancelAllTasks()
             selectedTab = .home
         }
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Land on the dashboard tab (covers the profile-originated flows).
+            selectedTab = .home
+        }
         .onChange(of: selectedTab) { newTab in
             guard newTab == .home else { return }
             Task {
@@ -114,7 +115,39 @@ private extension HomeTabBarView {
                 ScrollView(showsIndicators: false) {
                     skeletonBody
                 }
+                skeletonTabBar
             }
+        }
+    }
+
+    // MARK: Tab bar
+
+    /// Placeholder bottom tab bar shown while the dashboard loads, so the real
+    /// tab bar doesn't pop in once `realTabView` appears. The item count is a
+    /// best-guess placeholder; the live tab bar is API-driven.
+    var skeletonTabBar: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.movo.border)
+                .frame(height: Stroke.hairline)
+
+            HStack(spacing: 0) {
+                ForEach(0..<4, id: \.self) { _ in
+                    VStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.movo.elevated)
+                            .frame(width: 26, height: 26)
+                            .shimmer()
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.movo.elevated)
+                            .frame(width: 38, height: 7)
+                            .shimmer()
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.top, Spacing.sm)
+            .padding(.bottom, Spacing.xs)
         }
     }
 
@@ -264,19 +297,27 @@ private extension HomeTabBarView {
 
 private extension HomeTabBarView {
 
+    /// Tabs to render — one per API MENU item, in API order. The Nth menu item is
+    /// paired with the Nth canonical slot (icon + destination); any item beyond
+    /// the known slots renders as `.other` with a placeholder. Nothing is capped:
+    /// the menu is exactly what the API returns.
     var resolvedTabs: [Tab] {
-        let mapped = dashboardVM.menuItems.compactMap { Tab(action: $0.action) }
-        return mapped.isEmpty ? [.home, .accounts, .profile] : mapped
+        dashboardVM.menuItems.indices.map { index in
+            index < Tab.slots.count ? Tab.slots[index] : .other(index)
+        }
     }
 
-    func tabLabel(for tab: Tab) -> String {
-        dashboardVM.menuItems.first { Tab(action: $0.action) == tab }?.label ?? tab.label
+    /// API-driven label for the tab at the given position. The name always comes
+    /// from the API — never hardcoded.
+    func tabLabel(at index: Int) -> String {
+        guard index >= 0, index < dashboardVM.menuItems.count else { return "" }
+        return dashboardVM.menuItems[index].label
     }
 
     var realTabView: some View {
         TabView(selection: $selectedTab) {
-            ForEach(resolvedTabs, id: \.self) { tab in
-                tabContent(for: tab)
+            ForEach(Array(resolvedTabs.enumerated()), id: \.offset) { index, tab in
+                tabContent(for: tab, at: index)
             }
         }
         .tint(Color.movo.accent)
@@ -285,23 +326,46 @@ private extension HomeTabBarView {
     }
 
     @ViewBuilder
-    func tabContent(for tab: Tab) -> some View {
+    func tabContent(for tab: Tab, at index: Int) -> some View {
         NavigationStack {
-            destination(for: tab)
+            destination(for: tab, title: tabLabel(at: index))
         }
         .tabItem {
-            Label(tabLabel(for: tab), systemImage: tab.icon)
+            Label(tabLabel(at: index), systemImage: tab.icon)
                 .environment(\.symbolVariants, SymbolVariants.none)
         }
         .tag(tab)
     }
 
+    /// Destination for a tab. Slots without a dedicated screen (Quick Pay and any
+    /// unmapped/extra menu item) render a placeholder until wired to a real screen.
     @ViewBuilder
-    func destination(for tab: Tab) -> some View {
+    func destination(for tab: Tab, title: String) -> some View {
         switch tab {
-        case .home:     DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM)
-        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: dashboardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard)
-        case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
+        case .home:
+            DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM, selectedTab: $selectedTab, screenTitle: title)
+        case .payAnyone:
+            PayAnyoneView(container: container, selectedTab: $selectedTab, cards: dashboardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard, screenTitle: title)
+        case .profile:
+            ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM, screenTitle: title)
+        case .quickPay, .other:
+            placeholderTab(title: title)
+        }
+    }
+
+    /// Placeholder shown for a menu slot that has no dedicated screen yet.
+    @ViewBuilder
+    func placeholderTab(title: String) -> some View {
+        ZStack {
+            MovoBackground()
+            VStack(spacing: Spacing.md) {
+                Image(systemName: "square.dashed")
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
+                Text(title)
+                    .textStyle(Typography.subtitle)
+                    .foregroundColor(Color.movo.textSecondary)
+            }
         }
     }
 }

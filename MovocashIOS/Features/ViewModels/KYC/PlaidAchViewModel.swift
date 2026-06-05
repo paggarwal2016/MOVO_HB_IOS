@@ -130,38 +130,64 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     // MARK: - Plaid Link Flow
 
     /// Full Plaid Link flow: fetch token → present Plaid UI → link account on backend.
-    func startPlaidLink(accountID: Int? = nil) async {
+    ///
+    /// On success it returns an `ACHAccount` built from the Plaid metadata + link
+    /// response so the caller can show the next screen and bind the account into
+    /// its local store immediately — without a second `getAccounts` round-trip.
+    /// The returned account carries display fields only (balance and achAccountId
+    /// are filled by a later, explicit `fetchAccounts()`); returns nil if the user
+    /// cancelled or any step failed (errors surfaced via AlertManager).
+    /// - Parameters:
+    ///   - onPresented: fires when Plaid's UI appears (hide any loading spinner).
+    ///   - onLinking: fires after Plaid succeeds, just before the backend link
+    ///     call (re-show a loader to cover that network round-trip).
+    @discardableResult
+    func startPlaidLink(
+        accountID: Int? = nil,
+        onPresented: (() -> Void)? = nil,
+        onLinking: (() -> Void)? = nil
+    ) async -> ACHAccount? {
         let tokenResponse: GetPlaidLinkTokenResponse
         do {
             tokenResponse = try await fetchLinkToken(accountID: accountID)
         } catch {
-            return
+            SecureLogger.error("[Plaid] link token fetch failed — \(error.localizedDescription)", category: .payment)
+            return nil
         }
 
         guard !tokenResponse.linkToken.isEmpty else {
+            SecureLogger.error("[Plaid] backend returned an empty link token", category: .payment)
             AlertManager.shared.showError("Unable to start bank linking. Please try again.")
-            return
+            return nil
         }
 
         guard let presenter = await waitForPresentableViewController() else {
+            // Device/app-level: nothing available to present Plaid from.
+            SecureLogger.error("[Plaid] no presentable view controller", category: .payment)
             AlertManager.shared.showError(PlaidLinkError.noPresenter.localizedDescription)
-            return
+            return nil
         }
 
         let plaidResult: PlaidLinkResult
         do {
             plaidResult = try await plaidLinkManager.openLink(
                 token: tokenResponse.linkToken,
-                presenter: presenter
+                presenter: presenter,
+                onPresented: onPresented
             )
         } catch {
             if case PlaidLinkError.linkExited(nil) = error {
-                SecureLogger.info("Plaid Link closed by user", category: .payment)
-                return
+                SecureLogger.info("[Plaid] Link closed by user", category: .payment)
+                return nil
             }
+            SecureLogger.error("[Plaid] openLink failed — \(error.localizedDescription)", category: .payment)
             AlertManager.shared.showError(error.localizedDescription)
-            return
+            return nil
         }
+
+        // Plaid succeeded and is dismissing — surface a loader for the backend
+        // link round-trip so the screen isn't blank until the success screen.
+        onLinking?()
 
         let request = LinkPlaidAccountRequestBody(
             public_token: plaidResult.publicToken,
@@ -169,7 +195,35 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             shouldGetIdentity: nil
         )
 
-        await linkPlaidAccount(request: request)
+        do {
+            // `run` surfaces the error alert and rethrows on failure.
+            SecureLogger.info("[Plaid] linking account on backend (POST /ach/plaid/link)", category: .payment)
+            let response = try await run { try await self.service.linkPlaidAccount(request: request) }
+            self.linkedAccount = response
+            SecureLogger.info("[Plaid] backend link succeeded — status=\(response.status) accountsAdded=\(response.accountsAdded.count)", category: .payment)
+            return Self.makeLinkedAccount(from: plaidResult.metadata)
+        } catch {
+            SecureLogger.error("[Plaid] backend link failed — \(error.localizedDescription)", category: .payment)
+            return nil
+        }
+    }
+
+    /// Builds a display `ACHAccount` from the Plaid link metadata. Balance and
+    /// achAccountId are unknown at link time (0) and get populated by an explicit
+    /// `fetchAccounts()` when the full list is next needed.
+    private static func makeLinkedAccount(from metadata: LinkPlaidLinkMetadata) -> ACHAccount {
+        let account = metadata.accounts.first
+        return ACHAccount(
+            plaidAccountId: account?.id ?? "",
+            plaidAccountBalance: 0,
+            isPlaidLoginRequired: false,
+            isDefault: false,
+            institutionLogo: "",
+            accountNumber: account?.mask ?? "",
+            accountName: account?.name ?? "Checking",
+            institutionName: metadata.institution.name,
+            achAccountId: 0
+        )
     }
 
     // MARK: - Transactions

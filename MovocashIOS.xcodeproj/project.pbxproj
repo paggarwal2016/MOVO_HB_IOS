@@ -10,14 +10,13 @@
 		140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */; };
 		140D48C82FA0DD4E007C3C0E /* KYCSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */; };
 		140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */; };
-		1411454F2FBD82E100FF193D /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 1411454E2FBD82E100FF193D /* MobileBankingSDK */; };
+		14108A632FD302A700413CD9 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14108A622FD302A700413CD9 /* MobileBankingSDK */; };
 		1417849C2FA34B8E000E802C /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1417849B2FA34B8E000E802C /* CardView.swift */; };
 		1417849E2FA34CC9000E802C /* CreateCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1417849D2FA34CC9000E802C /* CreateCardView.swift */; };
 		141784A02FA34B8E000E802C /* CardDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 141784A12FA34B8E000E802C /* CardDetailSheet.swift */; };
 		1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296C2F9616D600A72366 /* SignUpViewModel.swift */; };
 		142029732F96256900A72366 /* GetStartedInfoScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029702F96256800A72366 /* GetStartedInfoScreen.swift */; };
 		142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142864562F92251B006F8C39 /* TokenRefreshable.swift */; };
-		1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791A2F6D430500EADEA2 /* ProfileImageView.swift */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
 		146819772F4DE6CF00BED014 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194F2F4DE6CF00BED014 /* Environment.swift */; };
 		146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819552F4DE6CF00BED014 /* NetworkServiceProtocol.swift */; };
@@ -44,6 +43,7 @@
 		14716FFE2F86671600198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FFA2F86671600198064 /* PlaidService.swift */; };
 		147170012F8667AF00198064 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 147170002F8667AF00198064 /* LinkKit */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
+		149C19EC2FD1937A00FFC014 /* CommonCustomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */; };
 		14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */; };
 		14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */; };
 		14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3E2F7BB64000607891 /* FirebaseMessaging */; };
@@ -114,7 +114,6 @@
 		1420296C2F9616D600A72366 /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewModel.swift; sourceTree = "<group>"; };
 		142029702F96256800A72366 /* GetStartedInfoScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedInfoScreen.swift; sourceTree = "<group>"; };
 		142864562F92251B006F8C39 /* TokenRefreshable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefreshable.swift; sourceTree = "<group>"; };
-		1445791A2F6D430500EADEA2 /* ProfileImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageView.swift; sourceTree = "<group>"; };
 		1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinInputAlertPresenter.swift; sourceTree = "<group>"; };
 		1468194F2F4DE6CF00BED014 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		146819522F4DE6CF00BED014 /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
@@ -140,6 +139,7 @@
 		146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedAccountsSectionView.swift; sourceTree = "<group>"; };
 		14716FFA2F86671600198064 /* PlaidService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidService.swift; sourceTree = "<group>"; };
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
+		149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonCustomView.swift; sourceTree = "<group>"; };
 		14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -286,7 +286,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1411454F2FBD82E100FF193D /* MobileBankingSDK in Frameworks */,
+				14108A632FD302A700413CD9 /* MobileBankingSDK in Frameworks */,
 				14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */,
 				14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */,
 				14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */,
@@ -458,6 +458,7 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */,
 				99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */,
 				14D8A4232FC5DF5700177617 /* CircleIconAvatar.swift */,
 				146893D92FA33D7A001918AE /* Dashboard */,
@@ -470,7 +471,6 @@
 				1489F2672F67D3AE0046FAD4 /* ToastManager.swift */,
 				14C623DE2F6AC39100D0B719 /* StatusBadge.swift */,
 				14C623E02F6AC7AC00D0B719 /* StatusRow.swift */,
-				1445791A2F6D430500EADEA2 /* ProfileImageView.swift */,
 				1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */,
 				14D8165E2F73C30300B7D1EF /* ActionCard.swift */,
 				14D816602F73D3B100B7D1EF /* ContactsManager.swift */,
@@ -617,7 +617,7 @@
 				14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */,
 				14BA4E3E2F7BB64000607891 /* FirebaseMessaging */,
 				147170002F8667AF00198064 /* LinkKit */,
-				1411454E2FBD82E100FF193D /* MobileBankingSDK */,
+				14108A622FD302A700413CD9 /* MobileBankingSDK */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -698,7 +698,7 @@
 			packageReferences = (
 				14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				14716FFF2F8667AF00198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
-				1411454D2FBD82E100FF193D /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				14108A612FD302A700413CD9 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -752,6 +752,7 @@
 				146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */,
 				146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */,
 				1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */,
+				149C19EC2FD1937A00FFC014 /* CommonCustomView.swift in Sources */,
 				14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */,
 				99C2EAA62FC9ABDE00384E28 /* StatusBarScrim.swift in Sources */,
 				1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */,
@@ -785,7 +786,6 @@
 				1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */,
 				1468199D2F4EDEF000BED014 /* OTPDigitBox.swift in Sources */,
 				14DCE2872F5ABA38008A8DC4 /* AppContainer.swift in Sources */,
-				1445791B2F6D430500EADEA2 /* ProfileImageView.swift in Sources */,
 				140D48C82FA0DD4E007C3C0E /* KYCSuccessView.swift in Sources */,
 				140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */,
 				1417849C2FA34B8E000E802C /* CardView.swift in Sources */,
@@ -1161,12 +1161,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		1411454D2FBD82E100FF193D /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+		14108A612FD302A700413CD9 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.14.1;
+				minimumVersion = 1.14.3;
 			};
 		};
 		14716FFF2F8667AF00198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
@@ -1188,9 +1188,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		1411454E2FBD82E100FF193D /* MobileBankingSDK */ = {
+		14108A622FD302A700413CD9 /* MobileBankingSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1411454D2FBD82E100FF193D /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			package = 14108A612FD302A700413CD9 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
 			productName = MobileBankingSDK;
 		};
 		147170002F8667AF00198064 /* LinkKit */ = {

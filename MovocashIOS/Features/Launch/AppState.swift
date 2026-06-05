@@ -9,13 +9,15 @@ import SwiftUI
 import Combine
 
 enum AuthFlow: String {
-    case splash, choice, loginPhone, getStartedPhone, otp, signupDetails, getStartedInfo, enableBiometrics, pickDocument, kyc, kycSuccess, appLock, warmRelock, home
+    case splash, choice, loginPhone, getStartedPhone, otp, signupDetails, emailVerification, getStartedInfo, enableBiometrics, pickDocument, kyc, kycSuccess, fundAccountInfo, appLock, warmRelock, home
 
     /// The screen to persist for kill→relaunch restoration during onboarding.
     /// Returns nil for screens that must not be restored (OTPs expire, home is post-dashboard).
     var restorationTarget: AuthFlow? {
         switch self {
         case .signupDetails:    return .signupDetails
+        // Email/verification token can expire; restart from email entry on relaunch.
+        case .emailVerification: return .signupDetails
         case .enableBiometrics: return .enableBiometrics
         case .getStartedInfo:   return .getStartedInfo
         case .pickDocument:     return .pickDocument

@@ -7,23 +7,20 @@
 
 import SwiftUI
 
+/// Informational sheet shown before bank linking. It does NOT run Plaid itself —
+/// tapping "Continue" signals the parent (via `onContinue`) and dismisses, so the
+/// parent can present Plaid on a clean stack and own the success screen.
 struct BankLinkedInfoScreen: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.securedDismiss) private var securedDismiss
-    let container: AppContainer
-    @ObservedObject var plaidVM: PlaidAchViewModel
-    var primaryAccount: SavingsAccountInfo? = nil
-    var allowFunding: Bool = true
-    var onSuccess: () -> Void = {}
-
-    @State private var isConnecting = false
-    @State private var fetchedAchAccounts: [ACHAccount] = []
-    @State private var showSuccessScreen = false
+    /// Called when the user taps "Continue". The parent starts the Plaid flow
+    /// after this sheet has dismissed (typically from the sheet's `onDismiss`).
+    var onContinue: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xxl) {
-            
+
             HStack {
                 Spacer()
                 CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
@@ -43,7 +40,7 @@ struct BankLinkedInfoScreen: View {
                         MovoMVSymbol()
                             .frame(width: 28, height: 28)
                     )
-                
+
                 Spacer()
 
                 // Dot connector — fills space between the two tiles
@@ -56,7 +53,7 @@ struct BankLinkedInfoScreen: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                
+
                 Spacer()
 
                 // Plaid tile
@@ -72,7 +69,7 @@ struct BankLinkedInfoScreen: View {
                             .textStyle(Typography.cardTitle)
                             .foregroundColor(Color.movo.textPrimary)
                     )
-               
+
             }
 
             // Title
@@ -98,74 +95,17 @@ struct BankLinkedInfoScreen: View {
             // Footer
             disclaimerText()
 
-            // Continue CTA
-            Button(isConnecting || plaidVM.state == .loading ? "Connecting..." : "Continue") {
-                Task {
-                    isConnecting = true
-                    defer { isConnecting = false }
-
-                    // Step 1 — Show spinner; yield one run-loop cycle so UIKit
-                    //          actually renders it before the next sync work runs.
-                    SpinnerView.showFullScreen()
-                    await Task.yield()
-
-                    do {
-                        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                    } catch {
-                        SpinnerView.hideFullScreen()
-                        AlertManager.shared.showError("Unable to initialize. Please try again.")
-                        return
-                    }
-
-                    // Step 2 — Hide spinner BEFORE Plaid SDK presents its own UI
-                    SpinnerView.hideFullScreen()
-
-                    // Step 3 — Plaid Link flow (SDK owns the screen from here)
-                    await plaidVM.startPlaidLink()
-
-                    // Step 4 — Account linked: show spinner, fetch fresh ACH list,
-                    //          then open FundAccountView directly.
-                    if plaidVM.linkedAccount != nil {
-                        SpinnerView.showFullScreen()
-                        await Task.yield()
-                        let response = try? await container.network.request(AchAPI.getAccounts) as ACHResponse
-                        SpinnerView.hideFullScreen()
-                        fetchedAchAccounts = response?.achAccounts ?? []
-                        // Always show the success screen so the user sees the
-                        // linked-account confirmation. BankLinkedSuccessScreen
-                        // handles the "Add funds" → FundAccountView step itself
-                        // when container + primaryAccount are provided.
-                        showSuccessScreen = true
-                    }
-                }
+            // Continue CTA — dismiss this sheet first, then let the parent start
+            // Plaid (see PlaidLinkFlowModifier wired on the parent).
+            Button("Continue") {
+                onContinue()
+                (securedDismiss ?? dismiss)()
             }
             .buttonStyle(MovoPrimaryButtonStyle())
-            .disabled(isConnecting || plaidVM.state == .loading)
         }
         .padding(.horizontal, Spacing.xxl)
         .padding(.top, Spacing.lg)
         .padding(.bottom, Spacing.xxl)
-        .onDisappear {
-            // Safety cleanup — ensures the spinner is never stranded if the
-            // sheet is dismissed mid-flow (e.g. force-swipe while connecting).
-            SpinnerView.hideFullScreen()
-        }
-        // MARK: - BankLinkedSuccessScreen
-        // allowFunding=true  → "Add funds" CTA → FundAccountView (fund flow)
-        // allowFunding=false → "Done" CTA → dismisses back to dashboard (link-only flow)
-        .fullScreenCover(isPresented: $showSuccessScreen) {
-            BankLinkedSuccessScreen(
-                account: fetchedAchAccounts.first,
-                onDone: {
-                    showSuccessScreen = false
-                    onSuccess()
-                    (securedDismiss ?? dismiss)()
-                },
-                container: allowFunding ? container : nil,
-                primaryAccount: allowFunding ? primaryAccount : nil,
-                linkedAccounts: fetchedAchAccounts
-            )
-        }
     }
 
     // MARK: - Disclaimer

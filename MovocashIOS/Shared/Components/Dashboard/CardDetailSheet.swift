@@ -70,7 +70,7 @@ struct CardDetailSheet: View {
                     if txVM.transactions.count > 0 {
                         recentActivitySection
                     }
-                    if canDelete { deleteSection }
+                   // if canDelete { deleteSection }
                     Spacer().frame(height: Spacing.xxl)
                 }
             }
@@ -294,7 +294,7 @@ struct CardDetailSheet: View {
                 // Balance
                 VStack(alignment: .leading, spacing: 3) {
                     Eyebrow("Available balance", color: Color.movo.cardArtworkMuted)
-                    Text(formattedBalance)
+                    Text(card.displayBalance)
                         .textStyle(Typography.cardHero)
                         .foregroundColor(Color.movo.onCardArtwork)
                         .monospacedDigit()

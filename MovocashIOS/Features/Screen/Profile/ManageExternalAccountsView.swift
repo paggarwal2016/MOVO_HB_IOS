@@ -22,6 +22,10 @@ struct ManageExternalAccountsView: View {
     @State private var showBankLinkedSuccess = false
     @State private var newlyLinkedAccount: ACHAccount? = nil
     @State private var showBankLinkedInfo = false
+    // Set when the user taps "Continue" on the info sheet; consumed in onDismiss
+    // to start the Plaid flow once the sheet is gone.
+    @State private var continueToPlaid = false
+    @State private var startPlaidFlow = false
 
     init(achVM: ACHViewModel, primaryAccount: SavingsAccountInfo?, container: AppContainer) {
         self.achVM = achVM
@@ -106,24 +110,37 @@ struct ManageExternalAccountsView: View {
                 }
             )
         }
-        .sheet(isPresented: $showBankLinkedInfo) {
-            BankLinkedInfoScreen(
-                container: container,
-                plaidVM: plaidVM,
-                primaryAccount: primaryAccount,
-                allowFunding: false,
-                onSuccess: {
-                    Task {
-                        isLinkedAccountLoading = true
-                        await achVM.fetchAccounts()
-                        isLinkedAccountLoading = false
-                    }
-                }
-            )
-            .presentationDetents([.height(500)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
+        .sheet(isPresented: $showBankLinkedInfo, onDismiss: {
+            // Start Plaid only after the info sheet is fully gone.
+            if continueToPlaid {
+                continueToPlaid = false
+                startPlaidFlow = true
+            }
+        }) {
+            BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
+                .presentationDetents([.height(500)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
+                .presentationBackground(Color.movo.cardSurface)
+        }
+        .plaidLinkFlow(
+            isActive: $startPlaidFlow,
+            plaidVM: plaidVM,
+            container: container,
+            primaryAccount: primaryAccount,
+            allowFunding: false,
+            onLinked: { account in
+                // Bind immediately for an instant list update, then refresh in the
+                // background so the row gets the real balance / achAccountId. The
+                // success screen is already on-screen, so this never blocks the UI.
+                achVM.addLinkedAccount(account)
+                Task { await achVM.fetchAccounts() }
+            }
+        )
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Pop the withdraw push (FundAccountView) so the profile stack doesn't
+            // keep it behind the dashboard tab the user is being taken to.
+            showWithdraw = false
         }
     }
 

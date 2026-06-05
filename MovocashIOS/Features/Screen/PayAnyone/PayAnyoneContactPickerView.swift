@@ -11,6 +11,9 @@ struct PayAnyoneContactPickerView: View {
     let container: AppContainer
     let cards: [VCardListResponse]
     let primaryLinkedCard: VCardListResponse?
+    /// Navigation title, supplied by the caller from the dashboard PAYANYONE
+    /// section (API-driven). Defaults to "Pay Anyone".
+    let title: String
     var onSuccess: () -> Void = {}
 
     @StateObject private var contactVM: ContactViewModel
@@ -42,10 +45,11 @@ struct PayAnyoneContactPickerView: View {
         let phoneE164: String
     }
 
-    init(container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
+    init(container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, title: String = "Pay Anyone", onSuccess: @escaping () -> Void = {}) {
         self.container = container
         self.cards = cards
         self.primaryLinkedCard = primaryLinkedCard
+        self.title = title
         self.onSuccess = onSuccess
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
     }
@@ -227,7 +231,7 @@ struct PayAnyoneContactPickerView: View {
         HStack {
             CircularNavButton(systemName: "xmark") { dismiss() }
             Spacer()
-            Text("Pay Anyone")
+            Text(title)
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
