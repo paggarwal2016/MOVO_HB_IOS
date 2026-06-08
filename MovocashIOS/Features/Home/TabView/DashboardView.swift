@@ -552,7 +552,15 @@ private var scrollContent: some View {
         switch action {
         case "ACTIVITY":              showTransactions = true
         case "MOVE-MONEY":            showMoveMoney = true
-        case "FUND-ACCOUNT":          plaidInfoAllowFunding = true; showPlaidInfo = true
+        case "FUND-ACCOUNT":
+            if (dashboardVM.linkedAccounts?.linkedAccounts ?? []).isEmpty {
+                // No linked bank → show the Plaid info sheet to link one first.
+                plaidInfoAllowFunding = true
+                showPlaidInfo = true
+            } else {
+                // Has at least one linked bank → go straight to the Fund Account screen.
+                showFundAccount = true
+            }
         default:                      break
         }
     }

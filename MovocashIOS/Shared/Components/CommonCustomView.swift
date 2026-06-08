@@ -24,7 +24,7 @@ struct CustomSheetHeader: View {
     
     var showsCloseButton: Bool = true
     
-    var horizontalPadding: CGFloat = 24
+    var horizontalPadding: CGFloat = Spacing.xxl
     var topPadding: CGFloat = 28
     var bottomPadding: CGFloat = 18
     
@@ -34,19 +34,19 @@ struct CustomSheetHeader: View {
     
     var body: some View {
         
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: Spacing.lg) {
             
             // MARK: Icon
             
             ZStack {
                 
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                     .fill(iconBackground)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: Radius.xl)
                             .stroke(
                                 iconTint.opacity(0.18),
-                                lineWidth: 1
+                                lineWidth: Stroke.thin
                             )
                     )
                 
@@ -59,8 +59,8 @@ struct CustomSheetHeader: View {
             
             // MARK: Content
             
-            VStack(alignment: .leading, spacing: 4) {
-                
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+
                 Text(title)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.movo.textPrimary)
@@ -71,7 +71,7 @@ struct CustomSheetHeader: View {
                     .lineLimit(2)
             }
             
-            Spacer(minLength: 12)
+            Spacer(minLength: Spacing.md)
             
             
             // MARK: Close

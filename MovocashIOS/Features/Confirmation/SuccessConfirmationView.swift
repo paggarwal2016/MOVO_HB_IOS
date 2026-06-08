@@ -255,7 +255,7 @@ public struct SuccessConfirmationView: View {
     }
     
     private var bottomActions: some View {
-        PrimaryButton(title: "Done", backgroundColor: Color.movo.accent, textColor: Color.movo.onAccent) {
+        PrimaryButton(title: "Let's MOVO", backgroundColor: Color.movo.accent, textColor: Color.movo.onAccent) {
             vm.done()
         }
         .padding(.horizontal, Spacing.lg)

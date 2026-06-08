@@ -200,12 +200,15 @@ struct PayAnyoneAddContactView: View {
             // Bubbles — equal width when ≥4 contacts, fixed width otherwise
             HStack(spacing: 8) {
                 ForEach(displayedContacts) { contact in
-                    let initial = String(
-                        contact.nickname?.first ?? contact.phoneNumber?.first ?? "?"
-                    ).uppercased()
-                    let label = contact.nickname?.split(separator: " ").first.map(String.init)
-                                ?? contact.nickname ?? ""
-                    bubble(initial: initial, label: label, expand: showSeeAll) { onContactTap(contact) }
+                    let hasNickname = !(contact.nickname?.isEmpty ?? true)
+                    let initial = hasNickname
+                        ? String(contact.nickname?.first ?? "?").uppercased()
+                        : ""
+                    let label = hasNickname
+                        ? (contact.nickname?.split(separator: " ").first.map(String.init)
+                           ?? contact.nickname ?? "")
+                        : (contact.phoneNumber ?? "")
+                    bubble(initial: initial, label: label, expand: showSeeAll, usesLogo: !hasNickname) { onContactTap(contact) }
                 }
                 bubble(initial: "+", label: "Add", expand: showSeeAll, action: onAddTap)
             }
@@ -222,7 +225,7 @@ struct PayAnyoneAddContactView: View {
         )
     }
 
-    private func bubble(initial: String, label: String, expand: Bool, action: @escaping () -> Void) -> some View {
+    private func bubble(initial: String, label: String, expand: Bool, usesLogo: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: Spacing.xs) {
                 if initial == "+" {
@@ -233,9 +236,14 @@ struct PayAnyoneAddContactView: View {
                         Circle()
                             .fill(Color.movo.elevatedHigh)
                             .overlay(Circle().strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline))
-                        Text(initial)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.movo.textPrimary)
+                        if usesLogo {
+                            MovoMVSymbol()
+                                .frame(width: 16, height: 16)
+                        } else {
+                            Text(initial)
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.movo.textPrimary)
+                        }
                     }
                     .frame(width: 52, height: 52)
                 }

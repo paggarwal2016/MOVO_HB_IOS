@@ -58,6 +58,13 @@ struct PlaidLinkFlowModifier: ViewModifier {
                     showBalance: false
                 )
             }
+            // Collapse this cover (and the FundAccountView cover nested inside the
+            // success screen) when any descendant posts .returnToDashboard — e.g.
+            // after a successful fund transfer. Without this the success cover stays
+            // up and the user never lands back on the dashboard.
+            .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+                showSuccess = false
+            }
     }
 
     @MainActor
