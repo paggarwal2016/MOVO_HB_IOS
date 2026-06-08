@@ -30,17 +30,15 @@ struct CustomHeaderView: View {
                 .frame(width: 30, height: 30)
             
             
-            // Left — WELCOME + first name
-//            VStack(alignment: .leading, spacing: 3) {
-//                Text("WELCOME")
-//                    .textStyle(Typography.eyebrow)
-//                    .foregroundStyle(theme.textTertiary.color)
-//
-//                Text(userName)
-//                    .textStyle(Typography.sectionTitle)
-//                    .foregroundStyle(theme.textPrimary.color)
-//                    .lineLimit(1)
-//            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("LET'S MOVO,")
+                    .textStyle(Typography.eyebrow)
+                    .foregroundStyle(Color.movo.accent)
+                    .tracking(2.5)
+                Text(userName)
+                    .textStyle(Typography.sectionTitle)
+                    .foregroundStyle(Color.movo.textPrimary)
+            }
 
             Spacer()
 
@@ -51,10 +49,16 @@ struct CustomHeaderView: View {
                         .fill(Color.movo.surface)
                         .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
                         .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.movo.accent, lineWidth: 1.5)
+                        )
 
                     Text(initial)
                         .textStyle(Typography.cardTitle)
                         .foregroundStyle(theme.textPrimary.color)
+
+                   
                 }
             }
             .buttonStyle(.plain)

@@ -72,6 +72,7 @@
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
 		99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */ = {isa = PBXBuildFile; fileRef = 99C2EAA22FC9AAB600384E28 /* terms-layout.css */; };
 		99C2EAA62FC9ABDE00384E28 /* StatusBarScrim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */; };
+		99C2EF662FD4A86200384E28 /* MovoWordmarkWatermark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2EF652FD4A86200384E28 /* MovoWordmarkWatermark.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -171,6 +172,7 @@
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
 		99C2EAA22FC9AAB600384E28 /* terms-layout.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "terms-layout.css"; sourceTree = "<group>"; };
 		99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarScrim.swift; sourceTree = "<group>"; };
+		99C2EF652FD4A86200384E28 /* MovoWordmarkWatermark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovoWordmarkWatermark.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -458,6 +460,7 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				99C2EF652FD4A86200384E28 /* MovoWordmarkWatermark.swift */,
 				149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */,
 				99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */,
 				14D8A4232FC5DF5700177617 /* CircleIconAvatar.swift */,
@@ -771,6 +774,7 @@
 				14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
 				146E02212FA4A9020000C193 /* LinkedAccountsSectionView.swift in Sources */,
+				99C2EF662FD4A86200384E28 /* MovoWordmarkWatermark.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,

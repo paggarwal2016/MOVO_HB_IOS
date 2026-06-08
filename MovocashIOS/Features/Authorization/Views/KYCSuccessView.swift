@@ -9,7 +9,24 @@ import SwiftUI
 
 struct KYCSuccessView: View {
 
-    let onBegin: () -> Void
+    let container: AppContainer
+    let onFinish: () -> Void
+    let onSkip: () -> Void
+
+    @StateObject private var plaidVM: PlaidAchViewModel
+    @State private var showBankLink = false
+    @State private var continueToPlaid = false
+    @State private var startPlaidFlow = false
+    @State private var showFund = false
+
+    init(container: AppContainer,
+         onFinish: @escaping () -> Void,
+         onSkip: @escaping () -> Void) {
+        self.container = container
+        self.onFinish = onFinish
+        self.onSkip = onSkip
+        _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+    }
 
     var body: some View {
         ZStack {
@@ -28,7 +45,7 @@ struct KYCSuccessView: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
 
-                    Text("Your identity has been verified and your account is ready to use. Welcome to Movo!")
+                    Text("Your identity's verified. Add money now to start sending to family & friends — or spending anywhere.")
                         .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                         .multilineTextAlignment(.center)
@@ -48,21 +65,62 @@ struct KYCSuccessView: View {
         }
         .background(Color.movo.background)
         .navigationBarHidden(true)
+        // "Fund My Account" → link a bank via Plaid (link-only; success screen shows
+        // "Done"). When the link succeeds, advance into the onboarding fund step.
+        .sheet(isPresented: $showBankLink, onDismiss: {
+            // Start Plaid only after the info sheet is fully gone.
+            if continueToPlaid {
+                continueToPlaid = false
+                startPlaidFlow = true
+            }
+        }) {
+            BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
+                .presentationDetents([.height(500)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
+                .presentationBackground(Color.movo.cardSurface)
+        }
+        // After Plaid links and the success screen is dismissed ("Done"),
+        // advance into the onboarding fund step.
+        .plaidLinkFlow(
+            isActive: $startPlaidFlow,
+            plaidVM: plaidVM,
+            container: container,
+            allowFunding: false,
+            onDone: { showFund = true }
+        )
+        // The onboarding fund step. Self-loads from/to accounts and lands on the
+        // dashboard on success or back.
+        .fullScreenCover(isPresented: $showFund) {
+            FundAccountView(
+                container: container,
+                mode: .onboardingDeposit,
+                onSuccess: {
+                    showFund = false
+                    onFinish()
+                }
+            )
+        }
     }
-    
+
     private var ctaFooter: some View {
-        VStack(spacing: 0) {
-            
-            Button(action: {
-                onBegin()
-            }) {
-                Text("Begin!")
+        VStack(spacing: Spacing.xl) {
+            Button(action: { showBankLink = true }) {
+                Text("Fund My Account")
             }
             .buttonStyle(MovoPrimaryButtonStyle())
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.md)
-            .padding(.bottom, Spacing.xl + 4)
+
+            Button {
+                onSkip()
+            } label: {
+                Text("Skip for now")
+                    .textStyle(Typography.body)
+                    .foregroundColor(Color.movo.textSecondary)
+            }
+            .buttonStyle(.plain)
         }
+        .padding(.horizontal, Spacing.xxl)
+        .padding(.bottom, Spacing.xxl)
         .frame(maxWidth: .infinity)
     }
 }

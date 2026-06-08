@@ -263,15 +263,10 @@ struct RootView: View {
                     EmptyView()
 
                 case .kycSuccess:
-                    KYCSuccessView {
-                        appState.flow = .fundAccountInfo
-                    }
-
-                case .fundAccountInfo:
-                    FundAccountInfoView(
+                    KYCSuccessView(
                         container: container,
-                        onSkip: { appState.flow = .home },
-                        onFinish: { appState.flow = .home }
+                        onFinish: { appState.flow = .home },
+                        onSkip: { appState.flow = .home }
                     )
 
                 case .home:
