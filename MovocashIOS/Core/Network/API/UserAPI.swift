@@ -47,7 +47,7 @@ enum UserAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .getProfile, .profileTOS, .profileVirtualCardTOS, .saveUser, .deleteProfile:
-            return [.session, .movoInfo, .officeId]
+            return [.session, .secureDeviceInfo, .officeId]
         }
     }
     

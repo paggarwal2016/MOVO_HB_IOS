@@ -192,7 +192,7 @@ final class KeychainManager: KeychainManagerProtocol {
     /// Synchronous — safe to call at launch before any async context.
     /// Clears auth tokens only; device_id is intentionally preserved.
     func clearAuthTokens() {
-        ["access_token", "auth_session_id"].forEach { key in
+        ["access_token", "auth_session_id", "device_session_pubkey", "device_session_id"].forEach { key in
             SecItemDelete(baseQuery(for: key) as CFDictionary)
         }
         SecureLogger.info("Auth tokens cleared on fresh install", category: .auth)
