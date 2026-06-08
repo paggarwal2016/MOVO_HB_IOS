@@ -246,6 +246,8 @@ final class SessionManager: ObservableObject {
         Task {
             try? await keychain.delete("access_token")
             try? await keychain.delete("auth_session_id")
+            try? await keychain.delete("device_session_pubkey")
+            try? await keychain.delete("device_session_id")
         }
     }
 
@@ -264,6 +266,8 @@ final class SessionManager: ObservableObject {
 
         try? await keychain.delete("access_token")
         try? await keychain.delete("auth_session_id")
+        try? await keychain.delete("device_session_pubkey")
+        try? await keychain.delete("device_session_id")
 
         UserDefaults.standard.removeObject(forKey: "kycInProgress")
         appState.isNewRegistration = false

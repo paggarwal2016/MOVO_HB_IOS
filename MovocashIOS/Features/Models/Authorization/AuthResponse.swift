@@ -19,6 +19,9 @@ nonisolated struct SuccessResponse: Decodable {
 
 nonisolated struct APIErrorResponse: Decodable {
     let message: String
+    /// Machine-readable error code (when the API provides one). Used to detect
+    /// the device-session-expired condition without string-matching the message.
+    let code: String?
 }
 
 
@@ -39,4 +42,5 @@ nonisolated struct AuthTokenSMSResponse: Decodable {
 
 nonisolated struct ConfigureResponse: Decodable {
     let movoSessionConfig: String
+    let sessionId: String
 }

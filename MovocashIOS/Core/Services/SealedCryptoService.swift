@@ -36,8 +36,8 @@ enum SealedCryptoError: Error, LocalizedError, Equatable {
         case .malformedInput:       return "Input is not valid standard base64."
         case .malformedCiphertext:  return "Ciphertext too short — possible truncation or tampering."
         case .decryptionFailed:     return "Decryption failed: key mismatch or MAC verification error."
-        case .publicKeyImportFailed:return "RSA public key could not be imported."
-        case .encryptionFailed:     return "RSA-OAEP encryption failed."
+        case .publicKeyImportFailed:return "Public key could not be imported."
+        case .encryptionFailed:     return "Encryption failed."
         }
     }
 }
@@ -55,9 +55,11 @@ enum SealedCryptoService {
 
     private static let sodium = Sodium()
 
-    // Curve25519 key sizes (fixed by the RFC — not magic numbers)
-    private static let secretKeyLength = 32   // crypto_box_secretkeybytes()
-    private static let sealOverhead    = 48   // crypto_box_sealbytes() = 32 pk + 16 MAC
+    // Curve25519 key sizes (fixed by the RFC — not magic numbers).
+    // `nonisolated` so the nonisolated crypto methods can read them under the
+    // project's main-actor-default isolation.
+    nonisolated private static let secretKeyLength = 32   // crypto_box_secretkeybytes()
+    nonisolated private static let sealOverhead    = 48   // crypto_box_sealbytes() = 32 pk + 16 MAC
 
     // MARK: - Private Key
 
@@ -120,109 +122,73 @@ enum SealedCryptoService {
         return Data(plaintext)
     }
 
-    // MARK: - RSA-OAEP (movo-info)
+    // MARK: - X25519 + HKDF + AES-256-GCM (secure movo-info)
 
-    /// RSA-OAEP (SHA-256) encrypts `plaintext` with the server's public key and returns
-    /// the ciphertext as a **standard base64 string** — the raw blob the server expects
-    /// as the `movo-info` header value (no JWT, no dots).
+    /// Builds the binary blob for the X25519 variant of the `movo-info` header.
+    ///
+    /// Scheme (must match the server exactly):
+    ///   1. Generate an ephemeral X25519 key pair (throwaway, per request).
+    ///   2. ECDH with the server's X25519 public key → 32-byte shared secret.
+    ///   3. HKDF-SHA256(secret, salt: empty, info: "movo-device-info") → 32-byte AES key.
+    ///   4. AES-256-GCM seal the plaintext with a random 12-byte nonce.
+    ///   5. blob = clientPublicKey[32] ‖ nonce[12] ‖ ciphertext ‖ tag[16]
     ///
     /// - Parameters:
-    ///   - plaintext: Data to encrypt (the device-info JSON). Must fit a single RSA
-    ///     block: for a 2048-bit key the OAEP-SHA256 limit is 190 bytes; 4096-bit is 446.
-    ///   - publicKeyBase64: Base64 DER of the server RSA public key
-    ///     (`movoSessionConfig` from `/get/config`; PKCS#1 or X.509 SPKI).
-    static func rsaOAEPEncrypt(_ plaintext: Data, publicKeyBase64: String) throws -> String {
-        // Accept PEM ("-----BEGIN…"), DER base64, with or without line breaks.
-        let cleaned = publicKeyBase64
-            .replacingOccurrences(of: "-----BEGIN PUBLIC KEY-----", with: "")
-            .replacingOccurrences(of: "-----END PUBLIC KEY-----", with: "")
-            .replacingOccurrences(of: "-----BEGIN RSA PUBLIC KEY-----", with: "")
-            .replacingOccurrences(of: "-----END RSA PUBLIC KEY-----", with: "")
-            .replacingOccurrences(of: "\n", with: "")
-            .replacingOccurrences(of: "\r", with: "")
-            .trimmingCharacters(in: .whitespaces)
-
-        guard let der = Data(base64Encoded: cleaned) else {
+    ///   - plaintext: The device-info JSON to encrypt.
+    ///   - serverPublicKeyBase64: `movoSessionConfig` from `/device/config` — a
+    ///     standard-base64 raw 32-byte X25519 public key (44 base64 chars).
+    /// - Returns: Standard-base64 of the assembled blob (the part after the `sessionId.`).
+    nonisolated static func sealDeviceInfo(_ plaintext: Data, serverPublicKeyBase64: String) throws -> String {
+        let cleaned = serverPublicKeyBase64.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let serverKeyData = Data(base64Encoded: cleaned),
+              serverKeyData.count == secretKeyLength else {
             throw SealedCryptoError.malformedInput
         }
 
-        let publicKey = try importRSAPublicKey(der: der)
+        let serverPublicKey: Curve25519.KeyAgreement.PublicKey
+        do {
+            serverPublicKey = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: serverKeyData)
+        } catch {
+            throw SealedCryptoError.publicKeyImportFailed
+        }
 
-        var error: Unmanaged<CFError>?
-        guard let cipher = SecKeyCreateEncryptedData(
-            publicKey,
-            .rsaEncryptionOAEPSHA256,
-            plaintext as CFData,
-            &error
-        ) else {
+        // Step 1 — ephemeral client key pair.
+        let clientPrivateKey = Curve25519.KeyAgreement.PrivateKey()
+        let clientPublicKey = clientPrivateKey.publicKey.rawRepresentation // 32 bytes
+
+        // Step 2 — ECDH shared secret.
+        let sharedSecret: SharedSecret
+        do {
+            sharedSecret = try clientPrivateKey.sharedSecretFromKeyAgreement(with: serverPublicKey)
+        } catch {
+            throw SealedCryptoError.keyDerivationFailed
+        }
+
+        // Step 3 — HKDF-SHA256 → AES-256 key. Empty salt; info pins the context.
+        let aesKey = sharedSecret.hkdfDerivedSymmetricKey(
+            using: SHA256.self,
+            salt: Data(),
+            sharedInfo: Data("movo-device-info".utf8),
+            outputByteCount: secretKeyLength
+        )
+
+        // Step 4 — AES-256-GCM. `seal` generates a random 12-byte nonce; `combined`
+        // is `nonce[12] ‖ ciphertext ‖ tag[16]`.
+        let sealedBox: AES.GCM.SealedBox
+        do {
+            sealedBox = try AES.GCM.seal(plaintext, using: aesKey)
+        } catch {
+            throw SealedCryptoError.encryptionFailed
+        }
+        guard let combined = sealedBox.combined else {
             throw SealedCryptoError.encryptionFailed
         }
 
-        return (cipher as Data).base64EncodedString()
+        // Step 5 — assemble: clientPublicKey ‖ (nonce ‖ ciphertext ‖ tag).
+        var blob = Data()
+        blob.append(clientPublicKey)
+        blob.append(combined)
+        return blob.base64EncodedString()
     }
 
-    /// Imports an RSA public key for encryption. `SecKeyCreateWithData` expects the
-    /// PKCS#1 `RSAPublicKey` DER; if the server sends an X.509 SubjectPublicKeyInfo
-    /// (the common `MIIBIj…` form), the algorithm-identifier header is stripped first.
-    private static func importRSAPublicKey(der: Data) throws -> SecKey {
-        let attributes: [String: Any] = [
-            kSecAttrKeyType as String:  kSecAttrKeyTypeRSA,
-            kSecAttrKeyClass as String: kSecAttrKeyClassPublic
-        ]
-
-        // Try the DER as-is (PKCS#1), then fall back to a stripped X.509 SPKI key.
-        for candidate in [der, pkcs1(fromSPKI: der)].compactMap({ $0 }) {
-            var error: Unmanaged<CFError>?
-            if let key = SecKeyCreateWithData(candidate as CFData, attributes as CFDictionary, &error) {
-                return key
-            }
-        }
-        throw SealedCryptoError.publicKeyImportFailed
-    }
-
-    /// If `der` is an X.509 SPKI RSA key, returns the inner PKCS#1 `RSAPublicKey` bytes.
-    /// Returns nil when no rsaEncryption OID / BIT STRING is found (not an SPKI key).
-    private static func pkcs1(fromSPKI der: Data) -> Data? {
-        let bytes = [UInt8](der)
-        // rsaEncryption OID: 1.2.840.113549.1.1.1
-        let rsaOID: [UInt8] = [0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01]
-
-        guard let oidIndex = firstIndex(of: rsaOID, in: bytes) else { return nil }
-
-        // Advance to the BIT STRING (tag 0x03) that follows the AlgorithmIdentifier.
-        var i = oidIndex + rsaOID.count
-        while i < bytes.count && bytes[i] != 0x03 { i += 1 }
-        guard i < bytes.count else { return nil }
-        i += 1 // skip the 0x03 tag
-
-        // Skip the BIT STRING length bytes (short or long form).
-        guard i < bytes.count else { return nil }
-        let lengthByte = Int(bytes[i]); i += 1
-        if lengthByte & 0x80 != 0 {
-            let lengthCount = lengthByte & 0x7f
-            guard lengthCount > 0, i + lengthCount <= bytes.count else { return nil }
-            i += lengthCount
-        }
-
-        // The BIT STRING's first content byte is the unused-bit count (0x00) — skip it.
-        guard i < bytes.count, bytes[i] == 0x00 else { return nil }
-        i += 1
-        guard i < bytes.count else { return nil }
-
-        return Data(bytes[i...])
-    }
-
-    /// First index of `pattern` within `bytes` (plain subsequence search).
-    private static func firstIndex(of pattern: [UInt8], in bytes: [UInt8]) -> Int? {
-        guard !pattern.isEmpty, bytes.count >= pattern.count else { return nil }
-        for start in 0...(bytes.count - pattern.count) {
-            var matched = true
-            for offset in 0..<pattern.count where bytes[start + offset] != pattern[offset] {
-                matched = false
-                break
-            }
-            if matched { return start }
-        }
-        return nil
-    }
 }

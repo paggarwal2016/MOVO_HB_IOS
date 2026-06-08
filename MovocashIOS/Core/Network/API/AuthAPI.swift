@@ -18,7 +18,7 @@ enum AuthAPI: Endpoint {
     case enrollRSA(request: RSAEnrollRequest)
     case tokenRSA(request: RSATokenRequest)
     case nonceRSA(request: RSANonceRequest)
-    case configure
+    case deviceConfig
     case logout
     
     var isAuth: Bool { true }
@@ -38,7 +38,7 @@ enum AuthAPI: Endpoint {
         case .enrollRSA:         return "/rsa"
         case .tokenRSA:          return "/auth/token-rsa"
         case .nonceRSA:          return "/rsa/nonce"
-        case .configure:         return "/get/config"
+        case .deviceConfig:      return "/get/config"//"/device/config"
         case .logout:            return "/auth/logout"
         }
     }
@@ -49,7 +49,7 @@ enum AuthAPI: Endpoint {
         case .messengerOTP, .tokenSMS, .tokenAccess,
                 .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements:
             return .POST
-        case .configure:
+        case .deviceConfig:
             return .GET
         }
     }
@@ -57,19 +57,19 @@ enum AuthAPI: Endpoint {
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .messengerOTP, .configure:
+        case .messengerOTP, .deviceConfig:
             return [.officeId]
         case .tokenSMS,
              .tokenRSA,
              .nonceRSA:
-            return [.officeId, .movoInfo]
+            return [.officeId, .secureDeviceInfo]
         case .emailOTP,
              .emailVerify,
              .tokenAccess,
              .acceptAgreements,
              .enrollRSA,
              .logout:
-            return [.session, .movoInfo, .officeId]
+            return [.session, .secureDeviceInfo, .officeId]
         }
     }
     
@@ -106,7 +106,7 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .nonceRSA(let request):
             return try JSONEncoder().encode(request)
-        case .configure:
+        case .deviceConfig:
             return nil
         case .logout:
             let request = UserActionRequest(

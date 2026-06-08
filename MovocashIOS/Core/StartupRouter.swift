@@ -244,7 +244,10 @@ enum StartupRouter {
 
     // MARK: - Private helpers
 
-    private static func deferToast(after delay: TimeInterval, _ block: @escaping () -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: block)
+    private static func deferToast(after delay: TimeInterval, _ block: @escaping @MainActor () -> Void) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            block()
+        }
     }
 }

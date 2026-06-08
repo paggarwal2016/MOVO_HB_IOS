@@ -40,7 +40,7 @@ enum TransactionAPI: Endpoint {
     }
     
     // MARK: - Header Configure
-    var headerType: HeaderType { [.session, .movoInfo, .Idempotency, .officeId] }
+    var headerType: HeaderType { [.session, .secureDeviceInfo, .Idempotency, .officeId] }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? {

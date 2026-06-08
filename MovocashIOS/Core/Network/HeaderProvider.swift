@@ -12,15 +12,12 @@ import UIKit
 
 /// Composable header flags. Combine with array literal syntax:
 ///
-///     return [.session, .movoInfo, .officeId]
+///     return [.session, .secureDeviceInfo, .officeId]
 ///
 struct HeaderType: OptionSet, Sendable {
     let rawValue: Int
 
     // MARK: - Individual Flags
-
-    /// Adds `movo-info` JWT header.
-    static let movoInfo  = HeaderType(rawValue: 1 << 0)
 
     /// Adds `session-id` header from Keychain.
     static let session   = HeaderType(rawValue: 1 << 1)
@@ -37,25 +34,29 @@ struct HeaderType: OptionSet, Sendable {
     /// Adds `x-encrypt-response: true` header.
     static let Idempotency = HeaderType(rawValue: 1 << 5)
 
+    /// Adds the `movo-info` header — device-info JSON encrypted with the X25519
+    /// ECDH → HKDF-SHA256 → AES-256-GCM scheme, formatted as `<sessionId>.<base64Blob>`.
+    static let secureDeviceInfo = HeaderType(rawValue: 1 << 6)
+
     // MARK: - Named Combinations
 
     /// Base headers only (Content-Type, Accept).
     static let `default`: HeaderType = []
     
     /// movo-info
-    static let movoInfos: HeaderType = [.movoInfo]
+    static let movoInfos: HeaderType = [.secureDeviceInfo]
 
     /// session-id + movo-info
-    static let movoAuthorized: HeaderType = [.session, .movoInfo]
+    static let movoAuthorized: HeaderType = [.session, .secureDeviceInfo]
 
     /// session-id + movo-info + office-id
-    static let movoAuthorizedWithOffice: HeaderType = [.session, .movoInfo, .officeId]
+    static let movoAuthorizedWithOffice: HeaderType = [.session, .secureDeviceInfo, .officeId]
 
     /// session-id + movo-info + office-id + x-encrypt-response
-    static let movoAuthorizedAll: HeaderType = [.session, .movoInfo, .officeId, .encrypted]
+    static let movoAuthorizedAll: HeaderType = [.session, .secureDeviceInfo, .officeId, .encrypted]
     
     /// session-id + movo-info + office-id + x-encrypt-response
-    static let movoAuthorizedAllWithIdempotency: HeaderType = [.session, .movoInfo, .officeId, .encrypted, .Idempotency]
+    static let movoAuthorizedAllWithIdempotency: HeaderType = [.session, .secureDeviceInfo, .officeId, .encrypted, .Idempotency]
 
     /// Authorization: Bearer
     static let authorized: HeaderType = [.bearer]
@@ -63,7 +64,17 @@ struct HeaderType: OptionSet, Sendable {
     /// Authorization: Bearer + office-id
     static let authorizedWithOffice: HeaderType = [.bearer, .officeId]
     
-    static let movoAuthorizedWithIdempotency: HeaderType = [.session, .movoInfo, .Idempotency]
+    static let movoAuthorizedWithIdempotency: HeaderType = [.session, .secureDeviceInfo, .Idempotency]
+
+    // MARK: - Membership
+
+    /// Bitwise membership test that does NOT go through the `OptionSet`
+    /// conformance (which is main-actor isolated under the project's default
+    /// isolation). `nonisolated` so it can be called from actor-isolated contexts
+    /// such as `NetworkService`.
+    nonisolated func has(_ flag: HeaderType) -> Bool {
+        (rawValue & flag.rawValue) == flag.rawValue
+    }
 }
 
 // MARK: - HeaderProvider
@@ -73,8 +84,10 @@ struct HeaderProvider {
     static func headers(for type: HeaderType) async -> [String: String] {
         var headers = await baseHeaders()
 
-        if type.contains(.movoInfo) {
-            headers["movo-info"] = await movoInfoToken()
+        if type.contains(.secureDeviceInfo) {
+            if let value = await DeviceSessionManager.shared.headerValue() {
+                headers["movo-info"] = value
+            }
         }
 
         if type.contains(.session) {
@@ -109,27 +122,6 @@ struct HeaderProvider {
 // MARK: - Private Helpers
 
 private extension HeaderProvider {
-
-    /// Builds the `movo-info` header: the device-info JSON encrypted with RSA-OAEP
-    /// (SHA-256) using the server's public key (`movoSessionConfig`, stored in the
-    /// Keychain by `configure()`), returned as a raw standard-base64 blob — the exact
-    /// format the server's `base64decode` + RSA decrypt expects. Returns an empty
-    /// string if the key or device-info payload is unavailable.
-    static func movoInfoToken() async -> String {
-        guard let publicKey = try? await KeychainManager.shared.get("movo_session_config", biometricPrompt: nil),
-              !publicKey.isEmpty else {
-            SecureLogger.error("movo-info: signing key missing — configure() not completed", category: .network)
-            return ""
-        }
-
-        do {
-            let payloadData = try JSONEncoder().encode(DeviceInfo.current)
-            return try SealedCryptoService.rsaOAEPEncrypt(payloadData, publicKeyBase64: publicKey)
-        } catch {
-            SecureLogger.error("movo-info: encryption failed — \(error.localizedDescription)", category: .network)
-            return ""
-        }
-    }
 
     static func baseHeaders() async -> [String: String] {
         ["Content-Type": "application/json", "Accept": "application/json"]

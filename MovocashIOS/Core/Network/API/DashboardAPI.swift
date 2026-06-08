@@ -28,7 +28,7 @@ enum DashboardAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .dashboard:
-            return [.session, .movoInfo, .officeId, .encrypted, .Idempotency]
+            return [.session, .secureDeviceInfo, .officeId, .encrypted, .Idempotency]
         }
     }
     

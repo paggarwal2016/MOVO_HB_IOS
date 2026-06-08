@@ -48,11 +48,11 @@ enum VCardAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .vCardsProvision:
-            return [.session, .movoInfo, .officeId]
+            return [.session, .secureDeviceInfo, .officeId]
         case .getVCardsList, .getVCardsPrimary, .viewVCard:
-            return [.session, .movoInfo, .officeId, .encrypted]
+            return [.session, .secureDeviceInfo, .officeId, .encrypted]
         case .postVCards, .createVCard:
-            return [.session, .movoInfo, .officeId, .encrypted, .Idempotency]
+            return [.session, .secureDeviceInfo, .officeId, .encrypted, .Idempotency]
         }
     }
     
