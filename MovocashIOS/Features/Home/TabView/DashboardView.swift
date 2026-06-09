@@ -8,35 +8,28 @@
 import SwiftUI
 
 struct DashboardView: View {
-
-    /// Identifiable payload for the contact picker sheet. Holds the API-driven
-    /// title from the dashboard PAYANYONE section.
-    private struct ContactPickerContext: Identifiable {
-        let id = UUID()
-        let title: String
-    }
-
+    
     // MARK: - Environment
-
+    
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
-
+    
     // MARK: - ViewModels
-
+    
     @ObservedObject var vm: VCardViewModel
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var achVM: PlaidAchViewModel
     @StateObject private var contactVM: ContactViewModel
     @ObservedObject var dashboardVM: DashboardViewModel
-
+    
     @Binding var selectedTab: Tab
-
+    
     private let container: AppContainer
     /// Title passed from the tab's MENU label (API-driven). Not currently rendered
     /// — the Home header shows the logo — but available for display if needed.
     private let screenTitle: String
-
+    
     init(container: AppContainer, dashboardVM: DashboardViewModel, vm: VCardViewModel, selectedTab: Binding<Tab>, screenTitle: String = "Home") {
         self.container = container
         self.dashboardVM = dashboardVM
@@ -47,9 +40,9 @@ struct DashboardView: View {
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
     }
-
+    
     // MARK: - Navigation State
-
+    
     @State private var showPrimaryAccountDetails = false
     @State private var showAccountDetail = false
     @State private var showTransactions = false
@@ -61,6 +54,8 @@ struct DashboardView: View {
     @State private var showAllFrequents = false
     @State private var showInternalTransfer = false
     @State private var showViewCardList = false
+    @State private var showContactList = false
+    @State private var showQuickPayView = false
     // Set to true by any child screen that completes a successful action;
     // triggers a single dashboard refresh on return.
     @State private var needsDashboardRefresh = false
@@ -68,7 +63,6 @@ struct DashboardView: View {
     /// Drives the contact picker sheet. Carries the API-driven title from the
     /// dashboard PAYANYONE section so it is captured at present time (avoids a
     /// state-vs-present race that would otherwise show the default title).
-    @State private var contactPickerContext: ContactPickerContext? = nil
     @State private var selectedCard: VCardListResponse? = nil
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
@@ -77,24 +71,24 @@ struct DashboardView: View {
     // to start the Plaid flow once the sheet is gone.
     @State private var continueToPlaid = false
     @State private var startPlaidFlow = false
-
+    
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
     }
-
+    
     // MARK: - Body
-
+    
     private var isSheetActive: Bool {
         showCreateCashCard || showMoveMoney || showPrimaryAccountDetails || showPlaidInfo
     }
-
+    
     var body: some View {
         ZStack(alignment: .top) {
             MovoBackground()
             VStack(spacing: 0) {
                 scrollContent
             }
-           StatusBarScrim()
+            StatusBarScrim()
             if dashboardVM.isRefreshing {
                 // Scrim — black-on-alpha is intentional; works on both light and dark backgrounds.
                 Color.black.opacity(0.35)
@@ -151,30 +145,27 @@ struct DashboardView: View {
                 )
             }
         }
-//        .sheet(item: $contactPickerContext) { context in
-//            PayAnyoneContactPickerView(
-//                container: container,
-//                cards: dashboardVM.cards,
-//                primaryLinkedCard: dashboardVM.primaryLinkedCard,
-//                title: context.title,
-//                onSuccess: { needsDashboardRefresh = true }
-//            )
-//            .presentationDetents([.large])
-//            .presentationDragIndicator(.visible)
-//            .presentationBackground(Color.movo.background)
-//        }
-        .sheet(item: $contactPickerContext) { context in
+        
+        .fullScreenCover(isPresented: $showContactList) {
+            PayAnyoneContactPickerView(
+                container: container,
+                cards: dashboardVM.cards,
+                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                title: dashboardVM.quickPayTitle,
+                onSuccess: { needsDashboardRefresh = true }
+            )
+        }
+        
+        .fullScreenCover(isPresented: $showQuickPayView) {
             QuickPayView(
                 container: container,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                title: dashboardVM.quickPayTitle,
                 onSuccess: { needsDashboardRefresh = true }
             )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.movo.background)
         }
-
-        .sheet(isPresented: $showAllFrequents) {
+        
+        .fullScreenCover(isPresented: $showAllFrequents) {
             AllFrequentsView(
                 contactVM: contactVM,
                 container: container,
@@ -182,10 +173,8 @@ struct DashboardView: View {
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
-        .sheet(item: $quickTransferContact) { contact in
+        .fullScreenCover(item: $quickTransferContact) { contact in
             QuickTransferView(
                 contact: contact,
                 container: container,
@@ -193,8 +182,6 @@ struct DashboardView: View {
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 onSuccess: { needsDashboardRefresh = true }
             )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
         .navigationDestination(isPresented: $showFundAccount) {
             if let account = displayAccount {
@@ -233,7 +220,7 @@ struct DashboardView: View {
                 },
                 onTransferMoney: {
                     showMoveMoney = false
-                    Task { try? await Task.sleep(nanoseconds: 350_000_000); contactPickerContext = ContactPickerContext(title: "Pay Anyone") }
+                    Task { try? await Task.sleep(nanoseconds: 350_000_000); showContactList = true }
                 },
                 onInternalTransfer: {
                     showMoveMoney = false
@@ -256,11 +243,11 @@ struct DashboardView: View {
         }
         .navigationDestination(isPresented: $showTransactions) {
             if let account = displayAccount {
-                    TransactionListView(container: container,
-                                        accountId: account.id,
-                                        mode: .common)
-                    .toolbar(.hidden, for: .navigationBar)
-                    .navigationBarBackButtonHidden(true)
+                TransactionListView(container: container,
+                                    accountId: account.id,
+                                    mode: .common)
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
             }
         }
         .navigationDestination(isPresented: Binding(
@@ -302,7 +289,7 @@ struct DashboardView: View {
             }
         }) {
             BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
-                .presentationDetents([.height(500)])
+                .presentationDetents([.height(480)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
                 .presentationBackground(Color.movo.cardSurface)
@@ -331,7 +318,8 @@ struct DashboardView: View {
             showViewCardList = false
             showViewCard = false
             showMoveMoney = false
-            contactPickerContext = nil
+            showQuickPayView = false
+            showContactList = false
             showAllFrequents = false
             showFundAccount = false
             showInternalTransfer = false
@@ -351,9 +339,9 @@ struct DashboardView: View {
             showCreateCashCard = false
         }
     }
-
+    
     // MARK: - Subviews
-
+    
     private var headerView: some View {
         CustomHeaderView(
             userName: dashboardVM.userDetails?.firstName ?? "",
@@ -362,26 +350,26 @@ struct DashboardView: View {
             selectedTab = .profile
         }
     }
-
-private var scrollContent: some View {
-    ScrollView(showsIndicators: false) {
-        LazyVStack(spacing: 20) {
-            headerView
-            savingsSection
+    
+    private var scrollContent: some View {
+        ScrollView(showsIndicators: false) {
+            LazyVStack(spacing: 20) {
+                headerView
+                savingsSection
+            }
+            .padding(.top, 56)
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity)
+            .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 0) }
         }
-        .padding(.top, 56)
-        .padding(.bottom, 24)
-        .frame(maxWidth: .infinity)
-        .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 0) }
+        .ignoresSafeArea(edges: .top)
+        .refreshable {
+            await Task {
+                await dashboardVM.refresh()
+            }.value
+        }
     }
-    .ignoresSafeArea(edges: .top)
-    .refreshable {
-        await Task {
-            await dashboardVM.refresh()
-        }.value
-    }
-}
-
+    
     @ViewBuilder
     private var savingsSection: some View {
         if let sections = dashboardVM.dashboard?.data {
@@ -392,84 +380,89 @@ private var scrollContent: some View {
             DashboardSkeletonView()
         }
     }
-
+    
     // MARK: - Section Views
-
+    
     @ViewBuilder
     private func dashboardSectionView(_ section: DashboardSection) -> some View {
         Group {
             switch section {
-        case .primaryAccount(let accountData):
-            if let account = displayAccount {
-                PrimaryAccountContent(
-                    account: account,
-                    accountData: accountData,
-                    hasVCards: dashboardVM.primaryLinkedCard != nil,
-                    onCardTap: { showPrimaryAccountDetails = true },
-                    onViewCardTap: {
-                        selectedCard = dashboardVM.primaryLinkedCard
-                    },
-                    onQuickAction: handleQuickAction
-                )
-            }
-        case .payAnyone(let data):
-            if data.favContactList.isEmpty {
-                ActionCard(
-                    title: data.title ?? "Pay anyone, instantly",
-                    description: data.description ?? "Tap to send. They get it the moment you do.",
-                    buttonLabel: data.actions.first?.label ?? "Add payee"
-                ) {
-                    contactPickerContext = ContactPickerContext(title: data.title ?? "Pay Anyone")
-                    SecureLogger.debug("Quick transfer tapped", category: .general)
+            case .primaryAccount(let accountData):
+                if let account = displayAccount {
+                    PrimaryAccountContent(
+                        account: account,
+                        accountData: accountData,
+                        hasVCards: dashboardVM.primaryLinkedCard != nil,
+                        onCardTap: { showPrimaryAccountDetails = true },
+                        onViewCardTap: {
+                            selectedCard = dashboardVM.primaryLinkedCard
+                        },
+                        onQuickAction: handleQuickAction
+                    )
                 }
-            } else {
-                PayAnyoneAddContactView(
-                    title: data.title ?? "Pay Anyone",
-                    contacts: data.favContactList,
-                    onAddTap: {
-                        contactPickerContext = ContactPickerContext(title: data.title ?? "Pay Anyone")
-                    },
-                    onContactTap: { record in
-                        quickTransferContact = ContactRecord(
-                            id: record.id,
-                            isFav: false,
-                            nickname: record.nickname,
-                            createdAt: Date(),
-                            phoneNumber: record.phoneNumber,
-                            isAdded: false,
-                            updatedAt: Date()
+            case .payAnyone(let data):
+                // Capture the API-driven title for the whole section (both branches),
+                // so the contact-picker sheet reads the correct title at present time.
+                Group {
+                    if data.favContactList.isEmpty {
+                        ActionCard(
+                            title: data.title ?? "",
+                            description: data.description ?? "Tap to send. They get it the moment you do.",
+                            buttonLabel: data.actions.first?.label ?? "Add payee"
+                        ) {
+                            showQuickPayView = true
+                            SecureLogger.debug("Quick transfer tapped", category: .general)
+                        }
+                    } else {
+                        PayAnyoneAddContactView(
+                            title: data.title ?? "",
+                            contacts: data.favContactList,
+                            onAddTap: {
+                                showContactList = true
+                            },
+                            onContactTap: { record in
+                                quickTransferContact = ContactRecord(
+                                    id: record.id,
+                                    isFav: false,
+                                    nickname: record.nickname,
+                                    createdAt: Date(),
+                                    phoneNumber: record.phoneNumber,
+                                    isAdded: false,
+                                    updatedAt: Date()
+                                )
+                            },
+                            onSeeAllTap: { showAllFrequents = true }
                         )
-                    },
-                    onSeeAllTap: { showAllFrequents = true }
-                )
-            }
-        case .linkedAccounts(let data):
-            LinkedAccountsSectionView(
-                title: data.title,
-                description: data.description,
-                buttonLabel: data.actions.first?.label ?? "Link an account",
-                accounts: data.linkedAccounts ?? [],
-                isLoading: isLinkingPlaid || achVM.state == .loading,
-                onLinkAccount: {
-                    plaidInfoAllowFunding = false
-                    showPlaidInfo = true
-                    SecureLogger.debug("Link your bank tapped", category: .general)
-                },
-                onConnectAnother: {
-                    plaidInfoAllowFunding = false
-                    showPlaidInfo = true
-                    SecureLogger.debug("Connect another bank tapped", category: .general)
+                    }
                 }
-            )
-        case .myCards(let data):
-            myCardsSectionView(data)
-        case .userDetails, .rewards, .menu, .unknown:
-            EmptyView()
-        }
+                .onAppear { dashboardVM.quickPayTitle = data.title ?? "Pay Anyone" }
+            case .linkedAccounts(let data):
+                LinkedAccountsSectionView(
+                    title: data.title,
+                    description: data.description,
+                    buttonLabel: data.actions.first?.label ?? "Link an account",
+                    accounts: data.linkedAccounts ?? [],
+                    isLoading: isLinkingPlaid || achVM.state == .loading,
+                    onLinkAccount: {
+                        plaidInfoAllowFunding = false
+                        showPlaidInfo = true
+                        SecureLogger.debug("Link your bank tapped", category: .general)
+                    },
+                    onConnectAnother: {
+                        plaidInfoAllowFunding = false
+                        showPlaidInfo = true
+                        SecureLogger.debug("Connect another bank tapped", category: .general)
+                    }
+                )
+            case .myCards(let data):
+                myCardsSectionView(data)
+            case .userDetails, .rewards, .menu, .unknown:
+                EmptyView()
+            }
         }
         .padding(.horizontal, 15)
     }
-
+    
     @ViewBuilder
     private func myCardsSectionView(_ data: DashboardMyCards) -> some View {
         if !dashboardVM.hasLoadedCards {
@@ -495,9 +488,9 @@ private var scrollContent: some View {
             .frame(maxWidth: .infinity)
         }
     }
-
+    
     // MARK: - Actions
-
+    
     /// Handles the "+" (create card) tap in the My Cards section.
     /// When the primary account has a zero available balance, card creation is
     /// gated behind a prompt to fund the account first.
@@ -506,13 +499,13 @@ private var scrollContent: some View {
         let availableBalance = account?.availableBalance ?? 0
         let accountBalance   = account?.accountBalance ?? 0
         let hasLinkedAccount = !(dashboardVM.linkedAccounts?.linkedAccounts ?? []).isEmpty
-
+        
         // Sufficient balance → proceed straight to card creation.
         guard availableBalance == 0 else {
             showCreateCashCard = true
             return
         }
-
+        
         if !hasLinkedAccount && accountBalance == 0 {
             // No funds and no linked bank → prompt the user to fund/link first.
             ToastManager.shared.show(ToastConfig(
@@ -547,7 +540,7 @@ private var scrollContent: some View {
             ))
         }
     }
-
+    
     private func handleQuickAction(_ action: String) {
         switch action {
         case "ACTIVITY":              showTransactions = true
@@ -576,7 +569,7 @@ struct PrimaryAccountContent: View {
     let onCardTap: () -> Void
     let onViewCardTap: () -> Void
     let onQuickAction: (String) -> Void
-
+    
     var body: some View {
         BalanceCardView(
             account: account,
@@ -584,7 +577,7 @@ struct PrimaryAccountContent: View {
             onCardTap: onCardTap,
             onViewCardTap: onViewCardTap
         )
-
+        
         HStack(spacing: 10) {
             if let moneyAction = accountData.actions.first(where: {
                 $0.action == "MOVE-MONEY" || $0.action == "FUND-ACCOUNT"
@@ -593,7 +586,7 @@ struct PrimaryAccountContent: View {
                     onQuickAction(moneyAction.action)
                 }
             }
-
+            
             if let txAction = accountData.actions.first(where: { $0.action == "ACTIVITY" }) {
                 QuickActionButton(action: txAction, style: .secondary) {
                     onQuickAction(txAction.action)
@@ -608,11 +601,11 @@ struct PrimaryAccountContent: View {
 
 private struct QuickActionButton: View {
     enum Style { case accent, secondary }
-
+    
     let action: DashboardAction
     let style: Style
     let onTap: () -> Void
-
+    
     private var icon: String {
         switch action.action {
         case "FUND-ACCOUNT":  return "arrow.down.to.line"
@@ -621,7 +614,7 @@ private struct QuickActionButton: View {
         default:              return "circle"
         }
     }
-
+    
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 7) {
@@ -638,7 +631,7 @@ private struct QuickActionButton: View {
         }
         .buttonStyle(.plain)
     }
-
+    
     @ViewBuilder
     private var pillBackground: some View {
         switch style {

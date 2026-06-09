@@ -16,7 +16,6 @@ import SwiftUI
 protocol KYCManagerProtocol {
     /// True once configureSDK has completed successfully since launch (or last clearSession).
     /// Allows callers to skip redundant SDK initialization.
-    var isConfigured: Bool { get }
     func configureSDK(officeId: String) async throws
     func start() async throws -> User
     func clearSession()
@@ -26,7 +25,7 @@ protocol KYCManagerProtocol {
 // MARK: - KYCManager
 
 @MainActor
-final class KYCManager: KYCManagerProtocol {
+final class KYCManager: KYCManagerProtocol, TokenRefreshable {
 
     // MARK: Shared
     static let shared = KYCManager(
@@ -43,8 +42,6 @@ final class KYCManager: KYCManagerProtocol {
     /// internal alerts never conflict with the main app window hierarchy.
     private var kycWindow: UIWindow?
 
-    private(set) var isConfigured: Bool = false
-
     // MARK: Init
     init(network: NetworkServiceProtocol, keychain: KeychainManagerProtocol, analytics: AnalyticsTracking? = nil) {
         self.network   = network
@@ -60,12 +57,14 @@ extension KYCManager {
     func configureSDK(officeId: String) async throws {
         SecureLogger.info("Configuring KYC SDK", category: .kyc)
 
+        // Fetch a fresh access token from /auth/token-access and pass the API
+        // response straight into the SDK so it never runs on a stale token.
         let token: String
         do {
-            token = try await keychain.get("access_token", biometricPrompt: nil)
+            token = try await freshAccessToken()
         } catch {
-            SecureLogger.error("Missing access token — aborting KYC configure", category: .kyc)
-            analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "missing_token"])
+            SecureLogger.error("Token refresh failed — aborting KYC configure", category: .kyc)
+            analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "token_refresh_failed"])
             throw KYCError.notConfigured
         }
 
@@ -84,7 +83,6 @@ extension KYCManager {
         )
 
         SecureLogger.info("KYC SDK configured successfully", category: .kyc)
-        isConfigured = true
     }
 
     func updateToken(_ token: String) {
@@ -94,7 +92,6 @@ extension KYCManager {
 
     func clearSession() {
         MobileBankingSDK.clearSession()
-        isConfigured = false
         SecureLogger.info("KYC session cleared", category: .kyc)
     }
 }

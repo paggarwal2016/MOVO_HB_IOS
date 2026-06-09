@@ -11,6 +11,8 @@ import MobileBankingSDK
 struct QuickPayView: View {
 
     let primaryLinkedCard: VCardListResponse?
+    /// Sheet header title (API-driven from the dashboard PAYANYONE section).
+    let title: String
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
@@ -31,8 +33,10 @@ struct QuickPayView: View {
 
     init(container: AppContainer,
          primaryLinkedCard: VCardListResponse? = nil,
+         title: String = "Quick Pay",
          onSuccess: @escaping () -> Void = {}) {
         self.primaryLinkedCard = primaryLinkedCard
+        self.title = title
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
@@ -71,7 +75,7 @@ struct QuickPayView: View {
             VStack(spacing: 0) {
 
                 CustomSheetHeader(
-                    title: "Quick Pay",
+                    title: title,
                     subtitle: "Spend money instantly",
                     systemImage: "bolt.fill",
                     iconTint: Color.movo.accent,
@@ -80,17 +84,17 @@ struct QuickPayView: View {
                 ) {
                     dismiss()
                 }
-                .padding(.top, Spacing.xl)
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
-
+                        
                         AmountEntrySection(
                             amountText: $amountText,
                             amountFocused: $amountFocused,
                             availableText: "\(availableBalanceDisplay) available",
                             maxValue: availableBalanceDouble
                         )
+                        .padding(.top, Spacing.lg)
                         recipientSection
                             .padding(.top, Spacing.xl)
                         NoteCard(text: $descriptionText)
@@ -153,7 +157,7 @@ struct QuickPayView: View {
                 .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
 
-            VStack(spacing: Spacing.md) {
+            VStack(spacing: Spacing.lg) {
                 CustomTextField(text: $nickname)
                 CustomPhoneField(phoneNumber: $phoneNo)
             }

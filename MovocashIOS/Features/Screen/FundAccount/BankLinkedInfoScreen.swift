@@ -19,62 +19,48 @@ struct BankLinkedInfoScreen: View {
     var onContinue: () -> Void = {}
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xxl) {
+        VStack(alignment: .leading, spacing: Spacing.xl) {
 
-            HStack {
-                Spacer()
+            // Header — co-brand lockup centered; close pinned to the top-right.
+            HStack(spacing: Spacing.lg) {
+
+                // MOVO logo + wordmark
+                HStack(spacing: Spacing.sm) {
+                    MovoMVSymbol()
+                        .frame(width: 32, height: 32)
+                    Text("MOVO")
+                        .font(.system(size: 18, weight: .heavy))
+                        .tracking(1.5)
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+
+                // Vertical divider between the two brands
+                Rectangle()
+                    .fill(Color.movo.borderStrong)
+                    .frame(width: Stroke.hairline, height: 26)
+
+                // Plaid logo + wordmark
+                HStack(spacing: Spacing.sm) {
+                    Image("plaid")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 32, height: 32)
+                    Text("PLAID")
+                        .font(.system(size: 18, weight: .heavy))
+                        .tracking(1.5)
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, Spacing.huge)
+            .overlay(alignment: .topTrailing) {
                 CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
                     .accessibilityLabel("Close")
-                    .padding(.leading, Spacing.md)
-            }
-            .padding(.top, Spacing.lg)
-
-            // Header — logos + close on one balanced row
-            HStack(alignment: .center, spacing: 0) {
-
-                // MOVO tile
-                RoundedRectangle(cornerRadius: Radius.xl)
-                    .fill(Color.movo.elevated)
-                    .frame(width: 48, height: 48)
-                    .overlay(
-                        MovoMVSymbol()
-                            .frame(width: 28, height: 28)
-                    )
-
-                Spacer()
-
-                // Dot connector — fills space between the two tiles
-                HStack(spacing: 5) {
-                    ForEach(0..<5, id: \.self) { i in
-                        Circle()
-                            .fill(Color.movo.border)
-                            .frame(width: i == 2 ? 4 : 3, height: i == 2 ? 4 : 3)
-                            .opacity(i == 2 ? 0.6 : 1)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-
-                Spacer()
-
-                // Plaid tile
-                RoundedRectangle(cornerRadius: Radius.xl)
-                    .fill(Color.movo.elevated)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.xl)
-                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                    )
-                    .frame(width: 48, height: 48)
-                    .overlay(
-                        Text("plaid")
-                            .textStyle(Typography.cardTitle)
-                            .foregroundColor(Color.movo.textPrimary)
-                    )
-
             }
 
             // Title
             Text("MOVO partners with Plaid to connect your accounts")
-                .textStyle(Typography.heroTitle)
+                .textStyle(Typography.sectionTitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -92,6 +78,8 @@ struct BankLinkedInfoScreen: View {
                 )
             }
 
+            //Spacer().frame(height: Spacing.md)
+
             // Footer
             disclaimerText()
 
@@ -103,9 +91,13 @@ struct BankLinkedInfoScreen: View {
             }
             .buttonStyle(MovoPrimaryButtonStyle())
         }
-        .padding(.horizontal, Spacing.xxl)
-        .padding(.top, Spacing.lg)
-        .padding(.bottom, Spacing.xxl)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.md)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.movo.surface)
+        // Opaque sheet backing so the screen behind never shows through during
+        // the present / dismiss slide (avoids the background appearing to animate).
+        .presentationBackground(Color.movo.surface)
     }
 
     // MARK: - Disclaimer
@@ -120,10 +112,9 @@ struct BankLinkedInfoScreen: View {
             + Text(".")
                 .foregroundColor(Color.movo.textTertiary)
         )
-        .font(.system(size: 11, weight: .regular))
+        .font(.system(size: 12, weight: .regular))
         .multilineTextAlignment(.center)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
+        .lineLimit(2)
         .frame(maxWidth: .infinity)
         .onTapGesture {
             if let url = URL(string: "https://www.herringbank.com") {

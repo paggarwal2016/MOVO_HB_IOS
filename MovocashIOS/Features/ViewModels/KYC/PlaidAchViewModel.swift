@@ -369,11 +369,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         toAccountId: Int? = nil
     ) async {
         await perform {
-            // Step 0 — Refresh the access token and push it to the SDK so the transfer
-            // never runs against a token that expired in the background.
-            let freshToken = try await self.freshAccessToken()
-            MobileBankingSDK.updateAuthToken(freshToken)
-
             // Step 1 — Configure KYC SDK on every transfer so the SDK always holds
             // the current token. Skipping this with an isConfigured guard would leave
             // the SDK using a stale/expired token after the first refresh cycle.
