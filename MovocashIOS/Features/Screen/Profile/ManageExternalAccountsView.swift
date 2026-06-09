@@ -128,12 +128,20 @@ struct ManageExternalAccountsView: View {
             plaidVM: plaidVM,
             container: container,
             primaryAccount: primaryAccount,
-            allowFunding: false,
+            // Enable in-screen funding so the success screen's "Add fund" → Confirm
+            // runs the deposit (it receives container + primaryAccount). Onboarding/
+            // KYC keep their own allowFunding:false calls, so they're unaffected.
+            allowFunding: true,
             onLinked: { account in
                 // Bind immediately for an instant list update, then refresh in the
                 // background so the row gets the real balance / achAccountId. The
                 // success screen is already on-screen, so this never blocks the UI.
                 achVM.addLinkedAccount(account)
+                Task { await achVM.fetchAccounts() }
+            },
+            onDone: {
+                // Fires when the success/funding flow closes — refresh so the
+                // linked-accounts list reflects the new balance on return.
                 Task { await achVM.fetchAccounts() }
             }
         )

@@ -131,12 +131,13 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
 
     /// Full Plaid Link flow: fetch token → present Plaid UI → link account on backend.
     ///
-    /// On success it returns an `ACHAccount` built from the Plaid metadata + link
-    /// response so the caller can show the next screen and bind the account into
-    /// its local store immediately — without a second `getAccounts` round-trip.
-    /// The returned account carries display fields only (balance and achAccountId
-    /// are filled by a later, explicit `fetchAccounts()`); returns nil if the user
-    /// cancelled or any step failed (errors surfaced via AlertManager).
+    /// On success it fetches the full ACH account list (`getAccounts`) and returns
+    /// the freshly linked `ACHAccount` — matched on `plaidAccountId` — so the caller
+    /// can bind a fully-populated account (real balance + achAccountId) into its
+    /// local store. If that fetch fails or no match is found, it falls back to a
+    /// display-only account built from the Plaid metadata (balance/achAccountId 0).
+    /// Returns nil if the user cancelled or any step failed (errors surfaced via
+    /// AlertManager).
     /// - Parameters:
     ///   - onPresented: fires when Plaid's UI appears (hide any loading spinner).
     ///   - onLinking: fires after Plaid succeeds, just before the backend link
@@ -201,17 +202,20 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             let response = try await run { try await self.service.linkPlaidAccount(request: request) }
             self.linkedAccount = response
             SecureLogger.info("[Plaid] backend link succeeded — status=\(response.status) accountsAdded=\(response.accountsAdded.count)", category: .payment)
-            return Self.makeLinkedAccount(from: plaidResult.metadata)
+            return Self.makeLinkedAccount(
+                from: plaidResult.metadata,
+                savingsId: response.accountsAdded.first?.resourceId ?? 0
+            )
         } catch {
             SecureLogger.error("[Plaid] backend link failed — \(error.localizedDescription)", category: .payment)
             return nil
         }
     }
 
-    /// Builds a display `ACHAccount` from the Plaid link metadata. Balance and
-    /// achAccountId are unknown at link time (0) and get populated by an explicit
-    /// `fetchAccounts()` when the full list is next needed.
-    private static func makeLinkedAccount(from metadata: LinkPlaidLinkMetadata) -> ACHAccount {
+    /// Builds a display `ACHAccount` from the Plaid link metadata. The balance is
+    /// unknown at link time (0); `achAccountId` is set from the link response's
+    /// `savingsId` (the link response carries no separate ACH account id).
+    private static func makeLinkedAccount(from metadata: LinkPlaidLinkMetadata, savingsId: Int) -> ACHAccount {
         let account = metadata.accounts.first
         return ACHAccount(
             plaidAccountId: account?.id ?? "",
@@ -222,7 +226,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             accountNumber: account?.mask ?? "",
             accountName: account?.name ?? "Checking",
             institutionName: metadata.institution.name,
-            achAccountId: 0
+            achAccountId: savingsId
         )
     }
 

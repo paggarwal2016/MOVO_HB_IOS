@@ -80,6 +80,7 @@ struct QuickPayView: View {
                 ) {
                     dismiss()
                 }
+                .padding(.top, Spacing.xl)
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
@@ -91,10 +92,12 @@ struct QuickPayView: View {
                             maxValue: availableBalanceDouble
                         )
                         recipientSection
+                            .padding(.top, Spacing.xl)
                         NoteCard(text: $descriptionText)
+                            .padding(.top, Spacing.md)
                     }
                     .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.sm)
+                    .padding(.top, Spacing.md)
                     .padding(.bottom, Spacing.xl)
                 }
                 .scrollDismissesKeyboard(.immediately)
