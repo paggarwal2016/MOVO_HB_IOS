@@ -12,6 +12,9 @@ struct ViewCardsListScreen: View {
     let cards: [VCardListResponse]
     let primaryAccountId: Int?
     let primaryLinkedCard: VCardListResponse?
+    /// Primary account from the Dashboard — supplies the user-level `clientId`
+    /// the card detail transfer needs.
+    let primaryAccount: SavingsAccountInfo?
     let container: AppContainer
     /// Invoked when the user navigates back after creating or deleting a card,
     /// so the presenter (dashboard) can refresh to reflect the latest data.
@@ -24,12 +27,14 @@ struct ViewCardsListScreen: View {
         cards: [VCardListResponse],
         primaryAccountId: Int?,
         primaryLinkedCard: VCardListResponse? = nil,
+        primaryAccount: SavingsAccountInfo? = nil,
         container: AppContainer,
         onChanged: (() -> Void)? = nil
     ) {
         self.cards = cards
         self.primaryAccountId = primaryAccountId
         self.primaryLinkedCard = primaryLinkedCard
+        self.primaryAccount = primaryAccount
         self.container = container
         self.onChanged = onChanged
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
@@ -94,6 +99,8 @@ struct ViewCardsListScreen: View {
                     card: card,
                     primaryAccountId: primaryAccountId,
                     primaryLinkedCard: primaryLinkedCard,
+                    primaryAccount: primaryAccount,
+                    cards: displayCards,
                     savingVM: savingVM,
                     container: container,
                     onDeleted: {
@@ -102,7 +109,8 @@ struct ViewCardsListScreen: View {
                         }
                         hasChanges = true
                         Task { await cardVM.loadCards(primaryAccountId: primaryAccountId) }
-                    }
+                    },
+                    onChanged: { hasChanges = true }
                 )
             }
         }

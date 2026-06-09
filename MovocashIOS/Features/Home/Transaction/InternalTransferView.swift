@@ -615,7 +615,8 @@ struct InternalTransferView: View {
             description: descriptionText.isEmpty ? nil : descriptionText,
             isInternal: true,
             toClientId: toClientId,
-            toAccountId: selectedToCard?.savingsAccountId
+            toAccountId: selectedToCard?.savingsAccountId,
+            toMask: selectedToCard?.maskedNumber
         )
     }
 }

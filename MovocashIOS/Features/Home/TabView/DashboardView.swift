@@ -237,6 +237,7 @@ struct DashboardView: View {
                 cards: dashboardVM.cards,
                 primaryAccountId: dashboardVM.primaryAccount?.id,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                primaryAccount: dashboardVM.primaryAccount,
                 container: container,
                 onChanged: { needsDashboardRefresh = true }
             )
@@ -259,10 +260,13 @@ struct DashboardView: View {
                     card: card,
                     primaryAccountId: dashboardVM.primaryAccount?.id,
                     primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                    primaryAccount: dashboardVM.primaryAccount,
+                    cards: dashboardVM.cards,
                     savingVM: savingVM,
                     container: container,
                     canDelete: card.id != dashboardVM.primaryLinkedCard?.id,
-                    onDeleted: { needsDashboardRefresh = true }
+                    onDeleted: { needsDashboardRefresh = true },
+                    onChanged: { needsDashboardRefresh = true }
                 )
             }
         }

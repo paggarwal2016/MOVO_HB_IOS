@@ -366,7 +366,8 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         description: String?,
         isInternal: Bool = false,
         toClientId: Int? = nil,
-        toAccountId: Int? = nil
+        toAccountId: Int? = nil,
+        toMask: String? = nil
     ) async {
         await perform {
             // Step 1 — Configure KYC SDK on every transfer so the SDK always holds
@@ -475,7 +476,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 fromAccountName: fromCard.savingsAccountNickname ?? fromCard.name ?? fromCard.displayName,
                 fromAccountMask: fromCard.maskedNumber,
                 toAccountName: toName,
-                toAccountMask: normalizedPhone,
+                toAccountMask: toMask ?? normalizedPhone,
                 arrivesText: "Instantly",
                 dateText: Date.now.formatted(date: .long, time: .shortened),
                 referenceCode: approvalResult.intent.id
