@@ -65,11 +65,10 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
 
         SecureLogger.info("[Plaid] flow start — requesting fresh auth token", category: .payment)
 
-        // Ensure the SDK has a fresh auth token before presenting the Plaid UI.
-        // The link token may have been fetched seconds ago, but the auth token
-        // could have expired in the background.
-        let freshToken = try await freshAccessToken()
-        MobileBankingSDK.updateAuthToken(freshToken)
+        // Configure the SDK before presenting the Plaid UI. configureSDK fetches a
+        // fresh access token (/auth/token-access) and applies it to the SDK, so the
+        // link token having been fetched seconds ago can't leave us on a stale auth token.
+        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
 
         // Configure LinkKit callbacks on the main actor (before entering
         // continuation). Following the SDK's reference pattern: the success/exit
@@ -245,25 +244,6 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
         pendingContinuation = nil
         didResume = false
         onPresented = nil
-    }
-
-    // MARK: - Token Management
-
-    /// Fetches a fresh access token from the server before the Plaid flow starts.
-    private func freshAccessToken() async throws -> String {
-        do {
-            let fresh = try await performTokenRefresh()
-            analytics.log(AnalyticsEvent.tokenRefreshed, params: [
-                AnalyticsParam.reason: "plaid_proactive_refresh"
-            ])
-            return fresh
-        } catch {
-            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
-                AnalyticsParam.errorCode: "token_refresh_failed"
-            ])
-            SecureLogger.error("Token refresh failed before Plaid Link: \(error.localizedDescription)", category: .payment)
-            throw PlaidLinkError.tokenUnavailable
-        }
     }
 
     // MARK: - Metadata Parsing

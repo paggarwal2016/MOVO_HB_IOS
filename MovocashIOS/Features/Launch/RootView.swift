@@ -324,16 +324,14 @@ struct RootView: View {
             // Safety net — if postBootstrap warmup failed (transient network, etc.),
             // retry SDK configuration here before the scanner starts. No-op if
             // configureSDK already succeeded at boot.
-            if !container.kycManager.isConfigured {
-                do {
-                    try await container.kycManager.configureSDK(officeId: AppConfig.officeId)
-                } catch {
-                    AlertManager.shared.showError(
-                        "Failed to initialize KYC: \(error.localizedDescription)"
-                    )
-                    appState.flow = .pickDocument
-                    return
-                }
+            do {
+                try await container.kycManager.configureSDK(officeId: AppConfig.officeId)
+            } catch {
+                AlertManager.shared.showError(
+                    "Failed to initialize KYC: \(error.localizedDescription)"
+                )
+                appState.flow = .pickDocument
+                return
             }
 
             UserDefaults.standard.set(true, forKey: "kycInProgress")

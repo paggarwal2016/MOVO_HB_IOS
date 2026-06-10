@@ -354,7 +354,9 @@ struct AmountEntrySection: View {
                 amountFocused: amountFocused,
                 maxValue: maxValue
             )
+            .padding(.top, Spacing.md)
         }
+        .padding(.bottom, Spacing.lg)
     }
 }
 

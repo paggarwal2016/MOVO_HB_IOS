@@ -17,49 +17,37 @@ struct ActionCard: View {
     private let theme = MovoTheme.color
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            PayAnyoneIllustration()
-                .frame(width: 80, height: 80)
-                .frame(maxWidth: .none, alignment: .leading)
+        Button(action: onButtonTap) {
+            HStack(alignment: .center, spacing: 16) {
+                PayAnyoneIllustration()
+                    .frame(width: 80, height: 80)
+                    .frame(maxWidth: .none, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .textStyle(Typography.cardHero)
-                    .foregroundStyle(theme.textPrimary.color)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(title)
+                        .textStyle(Typography.cardHero)
+                        .foregroundStyle(theme.textPrimary.color)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text(description)
-                    .textStyle(Typography.subtitle)
-                    .foregroundStyle(theme.textSecondary.color)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Button(action: onButtonTap) {
-                    HStack(spacing: 6) {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.onAccent))
-                                .scaleEffect(0.8)
-                        } else {
-                            Text(buttonLabel)
-                                .textStyle(Typography.button)
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
-                    }
+                    Text(description)
+                        .textStyle(Typography.subtitle)
+                        .foregroundStyle(theme.textSecondary.color)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .buttonStyle(SoftAccentButtonStyle())
-                .disabled(isLoading)
             }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.movo.surface)
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                    .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.movo.surface)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
-        )
+        .buttonStyle(.plain)
+        .disabled(isLoading)
     }
 }
 

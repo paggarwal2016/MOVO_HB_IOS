@@ -25,6 +25,8 @@ final class DashboardViewModel: BaseViewModel {
     @Published var deletedCards: [VCardListResponse] = []
     /// True once a dashboard load has resolved the cards payload (drives skeleton vs content).
     @Published var hasLoadedCards: Bool = false
+    
+    @Published var quickPayTitle: String = ""
 
     /// Alias kept for call sites that read `cards`.
     var cards: [VCardListResponse] { apiCards }

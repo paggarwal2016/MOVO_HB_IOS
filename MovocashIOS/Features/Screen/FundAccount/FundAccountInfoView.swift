@@ -89,7 +89,7 @@ struct FundAccountInfoView: View {
             }
         }) {
             BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
-                .presentationDetents([.height(500)])
+                .presentationDetents([.height(480)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
                 .presentationBackground(Color.movo.cardSurface)

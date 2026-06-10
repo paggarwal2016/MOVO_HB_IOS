@@ -36,61 +36,61 @@ struct AllFrequentsView: View {
         NavigationStack {
             ZStack {
                 MovoBackground()
-
-                VStack(spacing: 0) {
-                    navBar
-
-                    if isLoading {
-                        Spacer()
-                        SpinnerView()
-                        Spacer()
-                    } else {
-                    searchBar
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.bottom, Spacing.md)
-
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            ForEach(filteredFrequents) { contact in
-                                Button {
-                                    selectedContact = ContactRecord(
-                                        id: contact.id,
-                                        isFav: false,
-                                        nickname: contact.nickname,
-                                        createdAt: Date(),
-                                        phoneNumber: contact.phoneNumber,
-                                        isAdded: false,
-                                        updatedAt: Date()
-                                    )
-                                    isNavigating = true
-                                } label: {
-                                    frequentRow(contact)
-                                }
-                                .buttonStyle(.plain)
-
-                                if contact.id != filteredFrequents.last?.id {
-                                    Rectangle()
-                                        .fill(Color.movo.border)
-                                        .frame(height: Stroke.hairline)
-                                        .padding(.horizontal, 14)
+                
+                if !isLoading {
+                    VStack(spacing: 0) {
+                        navBar
+                        searchBar
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.bottom, Spacing.md)
+                        
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 0) {
+                                ForEach(filteredFrequents) { contact in
+                                    Button {
+                                        selectedContact = ContactRecord(
+                                            id: contact.id,
+                                            isFav: false,
+                                            nickname: contact.nickname,
+                                            createdAt: Date(),
+                                            phoneNumber: contact.phoneNumber,
+                                            isAdded: false,
+                                            updatedAt: Date()
+                                        )
+                                        isNavigating = true
+                                    } label: {
+                                        frequentRow(contact)
+                                    }
+                                    .buttonStyle(.plain)
+                                    
+                                    if contact.id != filteredFrequents.last?.id {
+                                        Rectangle()
+                                            .fill(Color.movo.border)
+                                            .frame(height: Stroke.hairline)
+                                            .padding(.horizontal, 14)
+                                    }
                                 }
                             }
+                            .background(
+                                RoundedRectangle(cornerRadius: Radius.heroCard)
+                                    .fill(Color.movo.surface.opacity(0.85))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: Radius.heroCard)
+                                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                                    )
+                            )
+                            .padding(.horizontal, Spacing.lg)
+                            
+                            Spacer().frame(height: 80)
                         }
-                        .background(
-                            RoundedRectangle(cornerRadius: Radius.heroCard)
-                                .fill(Color.movo.surface.opacity(0.85))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                                )
-                        )
-                        .padding(.horizontal, Spacing.lg)
-
-                        Spacer().frame(height: 80)
                     }
-                    } // end else
                 }
                 StatusBarScrim()
+                
+                // Full-screen spinner overlay — covers the whole view while loading.
+                if isLoading {
+                    SpinnerView()
+                }
             }
             .background(Color.movo.background)
             .navigationBarHidden(true)
@@ -106,7 +106,12 @@ struct AllFrequentsView: View {
             }
             .navigationDestination(isPresented: $isNavigating) {
                 if let contact = selectedContact {
-                    QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard, onSuccess: { onSuccess() })
+                    QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard, onSuccess: {
+                        onSuccess()
+                        // Silently refresh the frequents list after a successful
+                        // transfer — no spinner, the list updates in place.
+                        Task { await contactVM.loadFrequent() }
+                    })
                 }
             }
         }
@@ -133,9 +138,9 @@ struct AllFrequentsView: View {
                 .foregroundColor(Color.movo.textDisabled)
             TextField("", text: $search,
                       prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
-                .textStyle(Typography.body)
-                .foregroundColor(Color.movo.textPrimary)
-                .autocorrectionDisabled()
+            .textStyle(Typography.body)
+            .foregroundColor(Color.movo.textPrimary)
+            .autocorrectionDisabled()
             if !search.isEmpty {
                 Button { search = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -166,7 +171,7 @@ struct AllFrequentsView: View {
                     .foregroundColor(Color.movo.textPrimary)
             }
             .frame(width: 44, height: 44)
-
+            
             VStack(alignment: .leading, spacing: 3) {
                 Text(contact.nickname ?? "")
                     .textStyle(Typography.bodyCompact)
@@ -177,9 +182,9 @@ struct AllFrequentsView: View {
                     .foregroundColor(Color.movo.textTertiary)
                     .lineLimit(1)
             }
-
+            
             Spacer()
-
+            
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Color.movo.textDisabled)
