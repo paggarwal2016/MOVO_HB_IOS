@@ -122,6 +122,10 @@ final class AuthViewModel: ObservableObject {
                 appState: appState
             )
 
+            // Account-switch protection: if a biometric key from a *different* user
+            // is still on this device, wipe it now that we know who just signed in.
+            await reconcileBiometricOwnership()
+
             analytics.trackLogin(method: .otp)
             let destination: AuthFlow = context == .login ? .home : .signupDetails
             reset()
@@ -285,6 +289,45 @@ extension AuthViewModel {
 
 extension AuthViewModel {
 
+    /// Keychain key holding the userId that owns the on-device biometric RSA key.
+    fileprivate static let biometricOwnerKey = "biometric_owner_user"
+
+    /// Account-switch protection. The on-device RSA key authenticates whoever the
+    /// **server** maps the device to, so a key left behind by a previous user must
+    /// never be usable to log into a different account. Call on every successful
+    /// phone/OTP login, once a fresh token identifies the current user.
+    ///
+    /// - Key owner == current user → keep (legitimate).
+    /// - Key owner != current user → wipe (different account).
+    /// - Legacy key, no owner recorded → adopt it only if the current user is the
+    ///   recorded enroller; otherwise wipe (it belongs to someone else).
+    func reconcileBiometricOwnership() async {
+        guard RSAKeyManager.shared.keysExist() else { return }   // nothing on device to protect
+
+        guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+              let json = JWTDecoder.decodePayload(token),
+              let payload = json["payload"] as? [String: Any],
+              let currentUserId = payload["userId"] as? Int
+        else { return }
+
+        if case .found(let stored) = keychain.getSync(Self.biometricOwnerKey), let ownerId = Int(stored) {
+            guard ownerId != currentUserId else { return }   // key belongs to this user — keep
+            await MainActor.run { try? lockManager.revokeBiometrics() }
+            try? await keychain.delete(Self.biometricOwnerKey)
+            SecureLogger.warning("Biometric key owner mismatch — wiped stale key (owner \(ownerId) ≠ current \(currentUserId))", category: .auth)
+            return
+        }
+
+        // Legacy key with no recorded owner (enrolled before this protection shipped).
+        if await isBiometricEnrolledForCurrentUser() {
+            try? await keychain.save("\(currentUserId)", for: Self.biometricOwnerKey, protection: .backgroundSafe)
+            SecureLogger.info("Adopted existing biometric key for user \(currentUserId)", category: .auth)
+        } else {
+            await MainActor.run { try? lockManager.revokeBiometrics() }
+            SecureLogger.warning("Legacy biometric key with no matching enrollment — wiped", category: .auth)
+        }
+    }
+
     /// Returns true if the **current user** has completed biometric enrollment on
     /// this device. Stored as a per-user Keychain flag so multiple users sharing
     /// a device each independently track their own enrollment state.
@@ -307,6 +350,10 @@ extension AuthViewModel {
               let userIdInt = payload["userId"] as? Int
         else { return }
         try? await keychain.save("1", for: "biometric_enrolled_\(userIdInt)", protection: .backgroundSafe)
+        // Record which user owns the on-device RSA key so a later sign-in by a
+        // different user on the same device can detect the mismatch and wipe it
+        // (see reconcileBiometricOwnership). Prevents cross-account biometric login.
+        try? await keychain.save("\(userIdInt)", for: Self.biometricOwnerKey, protection: .backgroundSafe)
         SecureLogger.info("Biometric enrollment marked for user \(userIdInt)", category: .auth)
     }
 
@@ -319,6 +366,7 @@ extension AuthViewModel {
               let userIdInt = payload["userId"] as? Int
         else { return }
         try? await keychain.delete("biometric_enrolled_\(userIdInt)")
+        try? await keychain.delete(Self.biometricOwnerKey)
         SecureLogger.info("Biometric enrollment cleared for user \(userIdInt)", category: .auth)
     }
 }
@@ -428,13 +476,38 @@ extension AuthViewModel {
             // ─────────────────────────────────────────────────────────────────
 
             // Step 3 — POST /auth/token-rsa
-            let response: RSATokenResponse = try await network.request(
-                AuthAPI.tokenRSA(request: RSATokenRequest(
-                    signedMessage: signedMessage,
-                    deviceId: deviceId,
-                    userAction: "RSA_LOGIN"
-                ))
-            )
+            let response: RSATokenResponse
+            do {
+                response = try await network.request(
+                    AuthAPI.tokenRSA(request: RSATokenRequest(
+                        signedMessage: signedMessage,
+                        deviceId: deviceId,
+                        userAction: "RSA_LOGIN"
+                    ))
+                )
+            } catch {
+                // A server rejection *here* means the signed challenge didn't verify —
+                // the device's RSA key no longer matches the server's stored public key.
+                // Wipe the stale key and route to phone login so the user re-enrolls.
+                // (Scoped to this step so a later token-access failure never wipes a key
+                // that already authenticated successfully.)
+                if case .keyRejected = Self.biometricFailureReason(for: error) {
+                    SecureLogger.error("token-rsa rejected — wiping stale biometric key: \(error)", category: .auth)
+                    await MainActor.run {
+                        // revokeBiometrics() deletes both the Secure Enclave key and the
+                        // RSA key pair, so the next launch routes the user to re-enroll.
+                        try? lockManager.revokeBiometrics()
+                        appState.flow = .choice
+                    }
+                    ToastManager.shared.show(
+                        "Biometric login needs to be set up again. Please sign in with your phone number.",
+                        style: .error,
+                        position: .bottom
+                    )
+                    return false
+                }
+                throw error   // transient/other → handled by the outer catch (non-destructive)
+            }
 
             try await keychain.save(response.sessionToken, for: "auth_session_id", protection: .backgroundSafe)
 
@@ -468,9 +541,55 @@ extension AuthViewModel {
             SecureLogger.warning("⚠️ Unexpected CancellationError in detached biometric task — investigate", category: .auth)
             return false
         } catch {
-            SecureLogger.error("biometric login failed: \(error)", category: .auth)
-            ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
+            // Non-destructive failures only — a verification rejection is already
+            // handled (and the key wiped) at the token-rsa step above. Here we just
+            // differentiate a transient/connectivity issue from anything else so the
+            // user gets an accurate message and keeps their enrolled key.
+            let reason = Self.biometricFailureReason(for: error)
+            SecureLogger.error("biometric login failed [\(reason)]: \(error)", category: .auth)
+            let message: String
+            if case .transient = reason {
+                message = "Couldn't reach the server. Please try again."
+            } else {
+                message = "Biometric login failed. Please use your phone number."
+            }
+            ToastManager.shared.show(message, style: .error, position: .bottom)
             return false
+        }
+    }
+
+    // MARK: - Biometric failure classification
+
+    private enum BiometricFailureReason: CustomStringConvertible {
+        case keyRejected   // server could not verify the signature — key is stale/invalid
+        case transient     // connectivity / server outage — the key is still valid
+        case other         // user cancel, local crypto error, etc. — take no destructive action
+
+        var description: String {
+            switch self {
+            case .keyRejected: return "keyRejected"
+            case .transient:   return "transient"
+            case .other:       return "other"
+            }
+        }
+    }
+
+    /// Maps a thrown error from the biometric login flow to a recovery action.
+    /// Only the server-rejection cases trigger a key wipe; everything else is
+    /// non-destructive so a flaky network never forces a re-enrollment.
+    private static func biometricFailureReason(for error: Error) -> BiometricFailureReason {
+        guard let netError = error as? NetworkError else { return .other }
+        switch netError {
+        case .serverMessage, .unauthorized:
+            // 4xx with a server body (e.g. token-rsa "request could not be processed")
+            // or an explicit 401 — the signed challenge was rejected.
+            return .keyRejected
+        case .apiError(let code):
+            return (400...499).contains(code) ? .keyRejected : .transient
+        case .noInternet, .timeout, .serverError, .rateLimited:
+            return .transient
+        default:
+            return .other
         }
     }
 }
