@@ -14,19 +14,29 @@ import UIKit
 /// Selection identity + local icon for a bottom tab bar slot.
 ///
 /// The set, order, and labels of the tabs come entirely from the MENU section of
-/// the dashboard API. The Nth menu item is rendered using the Nth slot here (its
-/// icon + destination); any item beyond the known slots becomes `.other(index)`
-/// so it still renders with a placeholder. The app owns only the icon — the
-/// label always comes from the API.
+/// the dashboard API. Each menu item's `action` decides which screen + icon it
+/// maps to (NOT its position) — so the API can rename a tab's `label` freely
+/// without changing where it goes, and reorder tabs without breaking routing.
+/// An unrecognized `action` becomes `.other(action)` so it still renders with a
+/// placeholder. The app owns only the icon — the label always comes from the API.
 enum Tab: Hashable {
     case home
     case payAnyone
     case quickPay
     case profile
-    case other(Int)
+    case other(String)
 
-    /// Canonical slots, in render order, paired by position with the API menu.
-    static let slots: [Tab] = [.home, .payAnyone, .quickPay, .profile]
+    /// Maps an API menu `action` to a known tab. Action values are the stable
+    /// routing key (`label` is display-only), so unknown actions fall through to
+    /// `.other` and render a placeholder rather than guessing by position.
+    init(action: String) {
+        switch action {
+        case "Home":     self = .home
+        case "Movo-Pay": self = .payAnyone
+        case "Settings": self = .profile
+        default:         self = .other(action)
+        }
+    }
 
     /// Local icon for the slot. Slots without a mapped image use a placeholder.
     var icon: String {
@@ -297,14 +307,12 @@ private extension HomeTabBarView {
 
 private extension HomeTabBarView {
 
-    /// Tabs to render — one per API MENU item, in API order. The Nth menu item is
-    /// paired with the Nth canonical slot (icon + destination); any item beyond
-    /// the known slots renders as `.other` with a placeholder. Nothing is capped:
-    /// the menu is exactly what the API returns.
+    /// Tabs to render — one per API MENU item, in API order. Each item maps to a
+    /// tab by its `action` (icon + destination); an unrecognized action renders as
+    /// `.other` with a placeholder. Nothing is capped: the menu is exactly what the
+    /// API returns.
     var resolvedTabs: [Tab] {
-        dashboardVM.menuItems.indices.map { index in
-            index < Tab.slots.count ? Tab.slots[index] : .other(index)
-        }
+        dashboardVM.menuItems.map { Tab(action: $0.action) }
     }
 
     /// API-driven label for the tab at the given position. The name always comes
