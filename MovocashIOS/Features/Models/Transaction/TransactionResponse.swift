@@ -182,11 +182,8 @@ nonisolated struct TransferInternalResponse: Codable {
 //   { "success": true, "message": "...", "exists": true|false }
 
 nonisolated struct CheckIntentResponse: Decodable {
-    /// Whether the API call itself succeeded.
     let success: Bool
-    /// Optional human-readable reason from the server.
     let message: String?
-    /// `true` → recipient exists and transfer is permitted.
-    /// `false` → recipient not found; Pay button should be blocked.
     let exists: Bool
+    let disclaimer: String?
 }

@@ -21,6 +21,7 @@ struct DashboardView: View {
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var achVM: PlaidAchViewModel
     @StateObject private var contactVM: ContactViewModel
+    @StateObject private var payeeFlow: PayeeTransferModel
     @ObservedObject var dashboardVM: DashboardViewModel
     
     @Binding var selectedTab: Tab
@@ -39,6 +40,7 @@ struct DashboardView: View {
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
+        _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
     }
     
     // MARK: - Navigation State
@@ -59,7 +61,6 @@ struct DashboardView: View {
     // Set to true by any child screen that completes a successful action;
     // triggers a single dashboard refresh on return.
     @State private var needsDashboardRefresh = false
-    @State private var quickTransferContact: ContactRecord? = nil
     /// Drives the contact picker sheet. Carries the API-driven title from the
     /// dashboard PAYANYONE section so it is captured at present time (avoids a
     /// state-vs-present race that would otherwise show the default title).
@@ -174,15 +175,13 @@ struct DashboardView: View {
                 onSuccess: { needsDashboardRefresh = true }
             )
         }
-        .fullScreenCover(item: $quickTransferContact) { contact in
-            QuickTransferView(
-                contact: contact,
-                container: container,
-                cards: dashboardVM.cards,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                onSuccess: { needsDashboardRefresh = true }
-            )
-        }
+        .payeeTransferFlow(
+            payeeFlow,
+            container: container,
+            cards: dashboardVM.cards,
+            primaryLinkedCard: dashboardVM.primaryLinkedCard,
+            onSuccess: { needsDashboardRefresh = true }
+        )
         .navigationDestination(isPresented: $showFundAccount) {
             if let account = displayAccount {
                 FundAccountView(
@@ -329,7 +328,7 @@ struct DashboardView: View {
             showInternalTransfer = false
             showAccountDetail = false
             showCreateCashCard = false
-            quickTransferContact = nil
+            payeeFlow.reset()
         }
         .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
             // Collapse any dashboard-originated push (e.g. FundAccountView) back to
@@ -425,7 +424,7 @@ struct DashboardView: View {
                                 showContactList = true
                             },
                             onContactTap: { record in
-                                quickTransferContact = ContactRecord(
+                                payeeFlow.tap(ContactRecord(
                                     id: record.id,
                                     isFav: false,
                                     nickname: record.nickname,
@@ -433,7 +432,7 @@ struct DashboardView: View {
                                     phoneNumber: record.phoneNumber,
                                     isAdded: false,
                                     updatedAt: Date()
-                                )
+                                ))
                             },
                             onSeeAllTap: { showAllFrequents = true }
                         )

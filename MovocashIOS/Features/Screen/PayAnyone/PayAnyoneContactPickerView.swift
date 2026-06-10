@@ -119,7 +119,7 @@ struct PayAnyoneContactPickerView: View {
                     )
                 }
             }
-            .sheet(isPresented: $showCreateContact) {
+            .fullScreenCover(isPresented: $showCreateContact) {
                 AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
                     // Sheet dismisses itself immediately; this view owns the async
                     // work and the spinner. Shows the success cover on completion.
@@ -140,9 +140,6 @@ struct PayAnyoneContactPickerView: View {
                         }
                     }
                 })
-                .presentationDetents([.height(320)])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(Color.movo.cardSurface)
             }
             .fullScreenCover(item: $addedContact, onDismiss: {
                 // After the cover closes, push the transfer if "Quick send" was tapped.

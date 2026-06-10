@@ -1,0 +1,348 @@
+//
+//  CustomContactEnrollView.swift
+//  MovocashIOS
+//
+//  Created by Vinu on 10/06/26.
+//
+
+import SwiftUI
+import UIKit
+import Combine
+
+struct CustomContactEnrollView: View {
+
+    @Binding var isPresented: Bool
+
+    var title: String
+    var message: String
+    /// Recipient initial shown inside the avatar (e.g. "K"). Falls back to "?".
+    var avatarInitial: String = ""
+
+    var continueTitle: String
+    var cancelTitle: String
+
+    var continueAction: (() -> Void)?
+    var cancelAction: (() -> Void)?
+
+    /// Drives the center scale/fade. Animated true on appear and back to false
+    /// before dismissing, so present and dismiss share the same expansion.
+    @State private var shown = false
+
+    // Palette tuned to the confirmation design (light card, dark CTA).
+    private let avatarFill   = Color(red: 0xF0 / 255, green: 0xED / 255, blue: 0xE7 / 255)
+    private let avatarText   = Color(red: 0x8A / 255, green: 0x86 / 255, blue: 0x7E / 255)
+    private let titleColor   = Color(red: 0x12 / 255, green: 0x16 / 255, blue: 0x1B / 255)
+    private let bodyColor    = Color(red: 0x49 / 255, green: 0x4E / 255, blue: 0x55 / 255)
+    private let primaryFill  = Color(red: 0x0E / 255, green: 0x3A / 255, blue: 0x4C / 255)
+    private let linkColor    = Color(red: 0x1E / 255, green: 0x6F / 255, blue: 0x8B / 255)
+
+    var body: some View {
+
+        if isPresented {
+
+            ZStack {
+
+                // Background scrim — dims the tab bar showing through the clear cover.
+                Color.movo.background.opacity(shown ? 0.45 : 0)
+                    .ignoresSafeArea()
+                    .onTapGesture { handleCancel() }
+
+                // Popup card — left-aligned content
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+
+                    // Avatar with Movo brand badge
+                    ZStack(alignment: .bottomTrailing) {
+                        Circle()
+                            .fill(avatarFill)
+                            .frame(width: 76, height: 76)
+                            .overlay {
+                                Text(avatarInitial.isEmpty ? "?" : avatarInitial)
+                                    .font(.system(size: 30, weight: .semibold))
+                                    .foregroundColor(avatarText)
+                            }
+
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 28, height: 28)
+                            .overlay {
+                                MovoMVSymbol()
+                                    .frame(width: 15, height: 15)
+                            }
+                            .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
+                            .offset(x: 3, y: 3)
+                    }
+                    .padding(.bottom, Spacing.xs)
+
+                    // Title (API message)
+                    Text(title)
+                        .textStyle(Typography.cardHero)
+                        .foregroundColor(titleColor)
+                        .multilineTextAlignment(.leading)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    // Message (disclaimer)
+                    Text(message)
+                        .textStyle(Typography.subtitle)
+                        .foregroundColor(bodyColor)
+                        .multilineTextAlignment(.leading)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    // Primary CTA
+                    Button(action: { handleContinue() } ) {
+                        Text(continueTitle)
+                    }
+                    .buttonStyle(MovoPrimaryButtonStyle())
+
+                    // Secondary CTA
+                    Button(action: { handleCancel() }) {
+                        Text(cancelTitle)
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+                }
+                .padding(.horizontal, Spacing.xxl)
+                .padding(.vertical, Spacing.xxl + Spacing.xs)
+                .frame(maxWidth: 340)
+                .background(Color.white)
+                .cornerRadius(28)
+                .shadow(color: .black.opacity(0.20), radius: 20, x: 0, y: 10)
+                .padding(.horizontal, Spacing.xxl)
+                .scaleEffect(shown ? 1 : 0.8)   // expands from / contracts to center
+                .opacity(shown ? 1 : 0)
+            }
+            .onAppear {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) { shown = true }
+            }
+        }
+    }
+
+    /// Animate the card back to center, then run the action (which removes the cover).
+    private func handleContinue() { animateOut { continueAction?() } }
+    private func handleCancel()   { animateOut { cancelAction?() } }
+
+    private func animateOut(_ then: @escaping () -> Void) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { shown = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { then() }
+    }
+}
+
+// MARK: - Presentation modifier
+
+extension View {
+
+    /// Presents `CustomContactEnrollView` above everything — including the tab bar —
+    /// using a transparent full-screen cover. The tab bar stays in place behind the
+    /// popup but is dimmed by the scrim and not interactive. Implemented as a view
+    /// modifier so callers just attach `.contactEnrollPopup(...)`.
+    func contactEnrollPopup(
+        isPresented: Binding<Bool>,
+        title: String,
+        message: String,
+        avatarInitial: String,
+        continueTitle: String = "Continue",
+        cancelTitle: String = "Cancel",
+        onDismiss: (() -> Void)? = nil,
+        onContinue: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) -> some View {
+        modifier(
+            ContactEnrollPopupModifier(
+                isPresented: isPresented,
+                title: title,
+                message: message,
+                avatarInitial: avatarInitial,
+                continueTitle: continueTitle,
+                cancelTitle: cancelTitle,
+                onDismiss: onDismiss,
+                onContinue: onContinue,
+                onCancel: onCancel
+            )
+        )
+    }
+}
+
+private struct ContactEnrollPopupModifier: ViewModifier {
+
+    @Binding var isPresented: Bool
+    let title: String
+    let message: String
+    let avatarInitial: String
+    let continueTitle: String
+    let cancelTitle: String
+    let onDismiss: (() -> Void)?
+    let onContinue: () -> Void
+    let onCancel: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .fullScreenCover(isPresented: $isPresented, onDismiss: onDismiss) {
+                CustomContactEnrollView(
+                    isPresented: $isPresented,
+                    title: title,
+                    message: message,
+                    avatarInitial: avatarInitial,
+                    continueTitle: continueTitle,
+                    cancelTitle: cancelTitle,
+                    continueAction: onContinue,
+                    cancelAction: onCancel
+                )
+                .background(ClearCoverBackground())
+            }
+    }
+}
+
+/// Makes the hosting full-screen cover transparent so the underlying UI (incl. the
+/// tab bar) shows through the scrim instead of an opaque system background.
+private struct ClearCoverBackground: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView { BackgroundClearingView() }
+    func updateUIView(_ uiView: UIView, context: Context) {}
+
+    private final class BackgroundClearingView: UIView {
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            // The cover's hosting view is two levels up; clear it so only our scrim shows.
+            superview?.superview?.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        }
+    }
+}
+
+// MARK: - Centralized payee → check-intent → confirm → transfer flow
+
+/// Owns the shared "tap a payee → check-intent → confirm popup → QuickTransferView"
+/// flow so each screen (Pay Anyone, See all, …) only has to call `tap(_:)` and attach
+/// `.payeeTransferFlow(...)`. Keeps a single check-intent call per tap and routes the
+/// transfer using its result.
+@MainActor
+final class PayeeTransferModel: ObservableObject {
+    /// True while check-intent runs for a tapped payee — drives the spinner.
+    @Published fileprivate var isChecking = false
+    /// Drives the Continue/Cancel confirmation popup.
+    @Published fileprivate var showPopup = false
+    /// The payee awaiting confirmation (populates the popup).
+    @Published fileprivate var confirmingContact: ContactRecord?
+    /// The payee to open in QuickTransferView (set after the popup fully dismisses).
+    @Published fileprivate var transferContact: ContactRecord?
+
+    /// Contact to open once the popup's dismiss transition completes (Continue).
+    private var pendingTransfer: ContactRecord?
+
+    let transactionVM: TransactionViewModel
+
+    init(container: AppContainer) {
+        transactionVM = container.makeTransactionViewModel()
+    }
+
+    /// Entry point — call from any payee row tap. Runs check-intent, then shows the
+    /// confirmation popup. On failure only the error toast shows (no popup).
+    func tap(_ contact: ContactRecord) {
+        Task {
+            isChecking = true
+            let raw = contact.phoneNumber ?? ""
+            let withCountry = raw.hasPrefix("+1") ? raw : "+1\(raw.filter(\.isNumber))"
+            let normalized = PhoneNumberValidator.normalize(PhoneNumberValidator.sanitize(withCountry))
+            await transactionVM.checkIntent(phoneNumber: normalized)
+            isChecking = false
+            guard transactionVM.checkIntentResult != nil else { return }
+            confirmingContact = contact
+            setPopup(true)
+        }
+    }
+
+    fileprivate func confirm() {
+        pendingTransfer = confirmingContact
+        confirmingContact = nil
+        setPopup(false)   // navigation fires in popupDidDismiss() after the card animates out
+    }
+
+    fileprivate func cancel() {
+        pendingTransfer = nil
+        confirmingContact = nil
+        setPopup(false)
+    }
+
+    /// Show/hide the cover without its own slide — the card runs the center
+    /// scale/fade animation itself, on both present and dismiss.
+    private func setPopup(_ visible: Bool) {
+        // Qualify SwiftUI.Transaction — the app also defines a `Transaction` model.
+        var tx = SwiftUI.Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) { showPopup = visible }
+    }
+
+    /// Called when the popup's dismiss transition finishes. Presenting the transfer
+    /// screen here (not on a timer) avoids presenting while the popup is still sliding.
+    fileprivate func popupDidDismiss() {
+        guard let contact = pendingTransfer else { return }
+        pendingTransfer = nil
+        transferContact = contact
+    }
+
+    /// Clears all flow state (e.g. on session expiry / returning to the dashboard).
+    func reset() {
+        isChecking = false
+        showPopup = false
+        confirmingContact = nil
+        pendingTransfer = nil
+        transferContact = nil
+    }
+}
+
+extension View {
+
+    /// Attaches the shared payee transfer flow: a check-intent spinner, the
+    /// confirmation popup, and the QuickTransferView cover. Trigger it from any
+    /// payee row with `model.tap(contact)`.
+    func payeeTransferFlow(
+        _ model: PayeeTransferModel,
+        container: AppContainer,
+        cards: [VCardListResponse],
+        primaryLinkedCard: VCardListResponse?,
+        onSuccess: @escaping () -> Void = {}
+    ) -> some View {
+        modifier(
+            PayeeTransferFlowModifier(
+                model: model,
+                container: container,
+                cards: cards,
+                primaryLinkedCard: primaryLinkedCard,
+                onSuccess: onSuccess
+            )
+        )
+    }
+}
+
+private struct PayeeTransferFlowModifier: ViewModifier {
+
+    @ObservedObject var model: PayeeTransferModel
+    let container: AppContainer
+    let cards: [VCardListResponse]
+    let primaryLinkedCard: VCardListResponse?
+    let onSuccess: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if model.isChecking { SpinnerView() }
+            }
+            .contactEnrollPopup(
+                isPresented: $model.showPopup,
+                title: model.transactionVM.checkIntentResult?.message ?? "",
+                message: model.transactionVM.checkIntentResult?.disclaimer ?? "",
+                avatarInitial: model.confirmingContact?.initials ?? "",
+                onDismiss: { model.popupDidDismiss() },
+                onContinue: { model.confirm() },
+                onCancel: { model.cancel() }
+            )
+            .fullScreenCover(item: $model.transferContact) { contact in
+                QuickTransferView(
+                    contact: contact,
+                    container: container,
+                    cards: cards,
+                    primaryLinkedCard: primaryLinkedCard,
+                    recipientExists: model.transactionVM.checkIntentResult?.exists,
+                    onSuccess: onSuccess
+                )
+            }
+    }
+}

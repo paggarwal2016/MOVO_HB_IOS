@@ -61,7 +61,6 @@ public struct AddContactSheet: View {
             Spacer(minLength: Spacing.lg)
             cta
         }
-        .padding(.top, Spacing.xxl)
         .background(Color.movo.cardSurface.ignoresSafeArea())
         .onAppear {
             // Brief delay so the sheet animation completes before keyboard appears
@@ -118,6 +117,17 @@ public struct AddContactSheet: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Close")
+        }
+        .padding(.horizontal, Spacing.xl + 2)
+        .padding(.top, Spacing.xxl)
+        .padding(.bottom, Spacing.lg)
+    }
+    
+    // MARK: Sub header
+    
+    private func subHeader() -> some View {
+        HStack(spacing: Spacing.md) {
+            
         }
         .padding(.horizontal, Spacing.xl + 2)
         .padding(.top, Spacing.xxl)

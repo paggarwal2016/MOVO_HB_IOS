@@ -14,6 +14,7 @@ struct PayAnyoneView: View {
     
     @StateObject private var contactVM: ContactViewModel
     @StateObject private var cardVM: VCardViewModel
+    @StateObject private var payeeFlow: PayeeTransferModel
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
@@ -31,7 +32,6 @@ struct PayAnyoneView: View {
     @State private var phoneNumber: String = ""
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     @State private var showCreateContactScreen = false
-    @State private var selectedFrequent: ContactRecord? = nil
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
 
@@ -54,6 +54,7 @@ struct PayAnyoneView: View {
     init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, screenTitle: String = "Pay Anyone") {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
         _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
+        _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
         _selectedTab = selectedTab
         self.cards = cards
         self.primaryLinkedCard = primaryLinkedCard
@@ -147,21 +148,9 @@ struct PayAnyoneView: View {
         .blur(radius: showCreateContactScreen ? 3 : 0)
         .animation(.easeInOut(duration: 0.25), value: showCreateContactScreen)
         .background(Color.movo.background)
-        .navigationDestination(for: ContactRecord.self) { contact in
-            QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
-        }
-        .navigationDestination(isPresented: Binding(
-            get: { selectedFrequent != nil },
-            set: { if !$0 { selectedFrequent = nil } }
-        )) {
-            if let contact = selectedFrequent {
-                QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
-            }
-        }
-        .sheet(isPresented: $showAllFrequents) {
+        .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
+        .fullScreenCover(isPresented: $showAllFrequents) {
             AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: localPrimaryCard)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
         }
         .onChange(of: primaryLinkedCard?.id) { _ in
             localPrimaryCard = primaryLinkedCard
@@ -191,10 +180,8 @@ struct PayAnyoneView: View {
                 Task { await contactVM.load() }
             }
         }
-        .sheet(isPresented: $showCreateContactScreen) {
+        .fullScreenCover(isPresented: $showCreateContactScreen) {
             AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
-                // Sheet dismisses itself immediately; this view owns the async
-                // work and the spinner. Shows the success cover on completion.
                 Task {
                     isCreatingContact = true
                     let success = await contactVM.createContact(
@@ -211,9 +198,6 @@ struct PayAnyoneView: View {
                     }
                 }
             })
-            .presentationDetents([.height(320)])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.movo.cardSurface)
         }
         // MARK: - Contact added success
         // Shown after the add sheet closes. "Quick send" defers the transfer
@@ -221,7 +205,7 @@ struct PayAnyoneView: View {
         .fullScreenCover(item: $addedContact, onDismiss: {
             if let contact = pendingQuickSendContact {
                 pendingQuickSendContact = nil
-                selectedFrequent = contact
+                payeeFlow.tap(contact)
             }
         }) { added in
             ContactAddedSuccess(
@@ -350,10 +334,6 @@ struct PayAnyoneView: View {
         )
     }
     
-    
-    
-    
-    
     // MARK: - Contacts List
     
     private var contactsLoadingCard: some View {
@@ -408,7 +388,7 @@ struct PayAnyoneView: View {
                     .padding(.top, Spacing.md)
                     .padding(.bottom, Spacing.xs)
                 ForEach(contactVM.filteredFavourites) { contact in
-                    NavigationLink(value: contact) { contactRow(contact) }
+                    Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
                         .buttonStyle(.plain)
                     if contact.id != contactVM.filteredFavourites.last?.id {
                         Rectangle().fill(Color.movo.border)
@@ -430,7 +410,7 @@ struct PayAnyoneView: View {
                     .padding(.top, Spacing.md)
                     .padding(.bottom, Spacing.xs)
                 ForEach(contactVM.filteredContacts) { contact in
-                    NavigationLink(value: contact) { contactRow(contact) }
+                    Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
                         .buttonStyle(.plain)
                     if contact.id != contactVM.filteredContacts.last?.id {
                         Rectangle().fill(Color.movo.border)
@@ -467,14 +447,6 @@ struct PayAnyoneView: View {
                     Text(contact.nickname ?? "")
                         .textStyle(Typography.bodyCompact)
                         .foregroundColor(Color.movo.textPrimary)
-//                    if contact.isAdded {
-//                        Text("MOVO")
-//                            .textStyle(Typography.micro)
-//                            .foregroundColor(Color.movo.accent)
-//                            .padding(.horizontal, 6)
-//                            .padding(.vertical, 2)
-//                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
-//                    }
                 }
                 Text(contact.phoneNumber ?? "")
                     .textStyle(Typography.caption)
@@ -806,7 +778,7 @@ extension PayAnyoneView {
                 HStack(spacing: Spacing.sm + 2) {
                     ForEach(contactVM.frequents) { contact in
                         QuickContactCell(contact: contact) {
-                            selectedFrequent = ContactRecord(
+                            payeeFlow.tap(ContactRecord(
                                 id: contact.id,
                                 isFav: false,
                                 nickname: contact.nickname,
@@ -814,7 +786,7 @@ extension PayAnyoneView {
                                 phoneNumber: contact.phoneNumber,
                                 isAdded: false,
                                 updatedAt: Date()
-                            )
+                            ))
                         }
                     }
                 }

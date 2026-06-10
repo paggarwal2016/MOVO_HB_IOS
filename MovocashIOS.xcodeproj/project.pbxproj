@@ -17,6 +17,7 @@
 		1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1420296C2F9616D600A72366 /* SignUpViewModel.swift */; };
 		142029732F96256900A72366 /* GetStartedInfoScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142029702F96256800A72366 /* GetStartedInfoScreen.swift */; };
 		142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142864562F92251B006F8C39 /* TokenRefreshable.swift */; };
+		14413D152FD9662C00EBC972 /* CustomContactEnrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
 		146819772F4DE6CF00BED014 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194F2F4DE6CF00BED014 /* Environment.swift */; };
 		146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819552F4DE6CF00BED014 /* NetworkServiceProtocol.swift */; };
@@ -115,6 +116,7 @@
 		1420296C2F9616D600A72366 /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewModel.swift; sourceTree = "<group>"; };
 		142029702F96256800A72366 /* GetStartedInfoScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedInfoScreen.swift; sourceTree = "<group>"; };
 		142864562F92251B006F8C39 /* TokenRefreshable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefreshable.swift; sourceTree = "<group>"; };
+		14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomContactEnrollView.swift; sourceTree = "<group>"; };
 		1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinInputAlertPresenter.swift; sourceTree = "<group>"; };
 		1468194F2F4DE6CF00BED014 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		146819522F4DE6CF00BED014 /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
@@ -477,6 +479,7 @@
 				1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */,
 				14D8165E2F73C30300B7D1EF /* ActionCard.swift */,
 				14D816602F73D3B100B7D1EF /* ContactsManager.swift */,
+				14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -784,6 +787,7 @@
 				1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */,
 				14C383882FBB0C0D002C2215 /* StartupRouter.swift in Sources */,
 				14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */,
+				14413D152FD9662C00EBC972 /* CustomContactEnrollView.swift in Sources */,
 				14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */,
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
 				1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */,
