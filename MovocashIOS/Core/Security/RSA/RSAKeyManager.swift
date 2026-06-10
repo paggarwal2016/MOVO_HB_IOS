@@ -189,6 +189,30 @@ final class RSAKeyManager: Sendable {
             throw BiometricLoginError.signatureFailed(message)
         }
 
+        // ── TEMP DIAGNOSTIC — remove once token-rsa 400 is resolved ───────────
+        // Verify the freshly-created signature against THIS device's own public
+        // key (derived from the same private key that just signed). This isolates
+        // client vs server faults:
+        //   PASS → client signing is internally valid. A server 400 then points
+        //          to enrollment / byte-convention / deviceId / padding mismatch.
+        //   FAIL → the problem is local (key access or algorithm).
+        if let publicKey = SecKeyCopyPublicKey(secKey) {
+            let verified = SecKeyVerifySignature(
+                publicKey,
+                algorithm,
+                payloadData as CFData,
+                signature as CFData,
+                nil
+            )
+            SecureLogger.info(
+                "RSA self-verify [\(algorithm.rawValue)]: \(verified ? "PASS" : "FAIL") — payloadBytes=\(payloadData.count), sigBytes=\(signature.count)",
+                category: .auth
+            )
+        } else {
+            SecureLogger.warning("RSA self-verify: could not derive public key from signing key", category: .auth)
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         return signature.base64EncodedString()
     }
 

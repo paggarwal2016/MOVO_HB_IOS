@@ -329,7 +329,7 @@ extension AuthViewModel {
 
     // ── Enroll: POST /rsa ─────────────────────────────────────────────────────
     // Called once when the user enables Face ID / biometric login.
-    func enrollRSA() async {
+    func enrollRSA() async throws {
         guard !isEnrolling else {
             SecureLogger.warning("enrollRSA already in progress — skipping", category: .auth)
             return
@@ -358,6 +358,9 @@ extension AuthViewModel {
         } catch {
             RSAKeyManager.shared.deleteKeyPair()   // keep local/server in sync on failure
             SecureLogger.error("RSA enrollment failed: \(error.localizedDescription)", category: .auth)
+            // Surface the real failure to the caller instead of swallowing it, so the
+            // UI can show the actual error and never mark biometrics enabled on failure.
+            throw error
         }
     }
 
@@ -388,6 +391,16 @@ extension AuthViewModel {
 
         let deviceId = await DeviceManager.shared.deviceID()
 
+        // ── TEMP DIAGNOSTIC — remove once token-rsa 400 is resolved ──────────
+        // deviceId must be byte-identical at enroll, nonce and token-rsa.
+        // keysExist == false here means no private key is on this device, so the
+        // server can have no matching public key (enrollment never succeeded).
+        SecureLogger.info(
+            "RSA login diag — deviceId=\(deviceId), keysExist=\(RSAKeyManager.shared.keysExist())",
+            category: .auth
+        )
+        // ─────────────────────────────────────────────────────────────────────
+
         do {
             // Step 1 — GET /rsa/nonce
             let nonceResponse: RSANonceResponse = try await network.request(
@@ -395,11 +408,24 @@ extension AuthViewModel {
             )
             SecureLogger.info("nonce fetched successfully", category: .auth)
 
+            // ── TEMP DIAGNOSTIC — remove once token-rsa 400 is resolved ──────
+            // Capture the exact nonce so we can confirm with the backend which
+            // bytes the signature must cover (raw string vs base64-decoded blob).
+            SecureLogger.info(
+                "RSA nonce diag — value=\(nonceResponse.nonce), length=\(nonceResponse.nonce.count)",
+                category: .auth
+            )
+            // ─────────────────────────────────────────────────────────────────
+
             // Step 2 — sign nonce (evaluatePolicy guarantees Face ID fully completes before signing)
             let signedMessage = try await RSAKeyManager.shared.createSignature(
                 payload: nonceResponse.nonce,
                 promptMessage: "Sign in with Face ID"
             )
+
+            // ── TEMP DIAGNOSTIC — remove once token-rsa 400 is resolved ──────
+            SecureLogger.info("RSA signedMessage diag — length=\(signedMessage.count)", category: .auth)
+            // ─────────────────────────────────────────────────────────────────
 
             // Step 3 — POST /auth/token-rsa
             let response: RSATokenResponse = try await network.request(

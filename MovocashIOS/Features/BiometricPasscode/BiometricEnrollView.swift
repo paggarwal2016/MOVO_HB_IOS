@@ -230,11 +230,21 @@ struct BiometricEnrollView: View {
         }
         
         // 3. Register RSA key pair with server (POST /rsa)
-        await authVM.enrollRSA()
+        do {
+            try await authVM.enrollRSA()
+        } catch {
+            // Enrollment failed — enrollRSA() already deleted the RSA key pair.
+            // Surface the real error and roll back the local Secure Enclave key
+            // so both sides stay in sync; the user can retry enrollment.
+            errorMessage = error.localizedDescription
+            try? lockManager.revokeBiometrics()
+            isEnrolling = false
+            return
+        }
 
-        // enrollRSA() deletes the RSA key pair on any failure.
-        // If keys are absent, roll back the local Secure Enclave key so both
-        // sides stay in sync — the user will need to retry enrollment.
+        // Safety net: enrollRSA() reported success but the key is somehow absent.
+        // Roll back the local Secure Enclave key so both sides stay in sync —
+        // the user will need to retry enrollment.
         if !RSAKeyManager.shared.keysExist() {
             do {
                 try lockManager.revokeBiometrics()
