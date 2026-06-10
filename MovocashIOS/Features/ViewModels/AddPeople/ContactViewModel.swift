@@ -102,45 +102,36 @@ final class ContactViewModel: BaseViewModel {
         self.network = network
         self.analytics = analytics ?? AnalyticsManager.shared
         super.init(alertManager: alertManager)
+        setupContactPipelines()
     }
     
-    // MARK: - Computed
-    
-    var mergedContacts: [ContactRecord] {
-        let favIds = Set(favourites.map(\.id))
-        var seen = Set<String>()
-        return (apiContacts + contacts)
-            .filter { !favIds.contains($0.id) }
-            .filter { contact in
-                guard let phone = contact.phoneNumber, !phone.isEmpty else { return true }
-                return seen.insert(phone).inserted
-            }
-            .sorted { $0.isAdded && !$1.isAdded }
-    }
-    
-    var filteredContacts: [ContactRecord] {
-        guard !search.isEmpty else { return mergedContacts }
-        return mergedContacts.filter {
-            ($0.nickname ?? "").localizedCaseInsensitiveContains(search) ||
-            ($0.phoneNumber ?? "").contains(search)
-        }
-    }
-    
-    var filteredFavourites: [ContactRecord] {
-        let sorted = favourites.sorted { $0.isAdded && !$1.isAdded }
-        guard !search.isEmpty else { return sorted }
-        return sorted.filter {
-            ($0.nickname ?? "").localizedCaseInsensitiveContains(search) ||
-            ($0.phoneNumber ?? "").contains(search)
-        }
-    }
+    // MARK: - Cached Lists
+    //
+    // Cached (not computed) so dedup + phone-normalization runs only when the source
+    // arrays change — off the main thread — and search is debounced. Typing no longer
+    // re-runs the whole pipeline on every keystroke / re-render.
+
+    /// API + device contacts, de-duped by phone, favourites removed.
+    @Published private(set) var mergedContacts: [ContactRecord] = []
+    /// `mergedContacts` filtered by the debounced `search`.
+    @Published private(set) var filteredContacts: [ContactRecord] = []
+    /// Favourites filtered by the debounced `search`.
+    @Published private(set) var filteredFavourites: [ContactRecord] = []
+
+    /// Device contacts available to import (Add Contact sheet), excluding numbers
+    /// already added in the app. Appends newly-granted contacts as `contacts` reloads.
+    @Published private(set) var importableContacts: [ContactRecord] = []
+    /// `importableContacts` filtered by the debounced `importSearch`.
+    @Published private(set) var filteredImportable: [ContactRecord] = []
+    /// Search text for the Add Contact sheet's import list.
+    @Published var importSearch = ""
 
     var favoriteContacts: [ContactRecord] { favourites }
-    
+
     func isFavorite(_ contact: ContactRecord) -> Bool {
         favourites.contains { $0.id == contact.id }
     }
-    
+
     var isPermissionError: Bool {
         loadError == ContactsError.permissionDenied.localizedDescription
     }
@@ -161,43 +152,104 @@ final class ContactViewModel: BaseViewModel {
         }
     }
 
+    /// Populates the sheet's nickname + phone fields from a tapped device contact.
+    func fill(from contact: ContactRecord) {
+        nickname = contact.nickname ?? ""
+        phoneInput = Self.formatPhone(PhoneNumberValidator.sanitize(contact.phoneNumber ?? ""))
+        helperIsError = false
+    }
+
+    // MARK: - List computation (pure, runs off the main thread)
+
     /// Normalized phone key ("+1XXXXXXXXXX") used for duplicate matching.
-    private func normalizedKey(_ phone: String?) -> String? {
+    nonisolated private static func normalizedKey(_ phone: String?) -> String? {
         guard let phone, !phone.isEmpty else { return nil }
         let sanitized = PhoneNumberValidator.sanitize(phone)
         guard !sanitized.isEmpty else { return nil }
         return PhoneNumberValidator.normalize(sanitized)
     }
 
-    /// Device contacts available to import: those with a phone number, excluding
-    /// numbers already added in the app (matched by normalized phone), de-duped
-    /// within the device list. New contacts granted later append automatically as
-    /// `contacts` reloads.
-    var importableContacts: [ContactRecord] {
-        let existing = Set(apiContacts.compactMap { normalizedKey($0.phoneNumber) })
+    nonisolated private static func computeMerged(api: [ContactRecord], device: [ContactRecord], favourites: [ContactRecord]) -> [ContactRecord] {
+        let favIds = Set(favourites.map(\.id))
         var seen = Set<String>()
-        return contacts.filter { contact in
+        return (api + device)
+            .filter { !favIds.contains($0.id) }
+            .filter { contact in
+                guard let phone = contact.phoneNumber, !phone.isEmpty else { return true }
+                return seen.insert(phone).inserted
+            }
+            .sorted { $0.isAdded && !$1.isAdded }
+    }
+
+    nonisolated private static func computeImportable(device: [ContactRecord], api: [ContactRecord]) -> [ContactRecord] {
+        let existing = Set(api.compactMap { normalizedKey($0.phoneNumber) })
+        var seen = Set<String>()
+        return device.filter { contact in
             guard let key = normalizedKey(contact.phoneNumber) else { return false }
             guard !existing.contains(key) else { return false }
             return seen.insert(key).inserted
         }
     }
 
-    func importableContacts(matching query: String) -> [ContactRecord] {
-        let base = importableContacts
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return base }
-        return base.filter {
-            ($0.nickname ?? "").localizedCaseInsensitiveContains(trimmed) ||
-            ($0.phoneNumber ?? "").contains(trimmed)
+    nonisolated private static func applySearch(_ list: [ContactRecord], query: String) -> [ContactRecord] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return list }
+        return list.filter {
+            ($0.nickname ?? "").localizedCaseInsensitiveContains(q) ||
+            ($0.phoneNumber ?? "").contains(q)
         }
     }
 
-    /// Populates the sheet's nickname + phone fields from a tapped device contact.
-    func fill(from contact: ContactRecord) {
-        nickname = contact.nickname ?? ""
-        phoneInput = Self.formatPhone(PhoneNumberValidator.sanitize(contact.phoneNumber ?? ""))
-        helperIsError = false
+    // MARK: - Reactive pipelines (cache + debounce + off-main filtering)
+
+    private func setupContactPipelines() {
+        let work = DispatchQueue.global(qos: .userInitiated)
+
+        // Heavy lists recompute only when their source arrays change.
+        Publishers.CombineLatest3($apiContacts, $contacts, $favourites)
+            .receive(on: work)
+            .map { Self.computeMerged(api: $0, device: $1, favourites: $2) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$mergedContacts)
+
+        Publishers.CombineLatest($contacts, $apiContacts)
+            .receive(on: work)
+            .map { Self.computeImportable(device: $0, api: $1) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$importableContacts)
+
+        // Debounced search queries (prepend the current value so the list shows
+        // immediately rather than after the first 300ms).
+        let mainQuery = $search
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .prepend(search)
+            .removeDuplicates()
+
+        let importQuery = $importSearch
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .prepend(importSearch)
+            .removeDuplicates()
+
+        Publishers.CombineLatest($mergedContacts, mainQuery)
+            .receive(on: work)
+            .map { Self.applySearch($0, query: $1) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$filteredContacts)
+
+        Publishers.CombineLatest($favourites, mainQuery)
+            .receive(on: work)
+            .map { favs, query -> [ContactRecord] in
+                let sorted = favs.sorted { $0.isAdded && !$1.isAdded }
+                return Self.applySearch(sorted, query: query)
+            }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$filteredFavourites)
+
+        Publishers.CombineLatest($importableContacts, importQuery)
+            .receive(on: work)
+            .map { Self.applySearch($0, query: $1) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$filteredImportable)
     }
 
     /// Re-reads the live authorization status (call on appear / scene-active).

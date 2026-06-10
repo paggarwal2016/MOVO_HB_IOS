@@ -52,7 +52,6 @@ public struct AddContactSheet: View {
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @ObservedObject private var vm: ContactViewModel
     @FocusState private var focusedField: Field?
-    @State private var contactSearch: String = ""
     /// Id of the contact tapped in the import list — drives the row highlight.
     @State private var selectedContactId: String? = nil
 
@@ -323,7 +322,7 @@ public struct AddContactSheet: View {
 
     @ViewBuilder
     private func contactsList() -> some View {
-        let items = vm.importableContacts(matching: contactSearch)
+        let items = vm.filteredImportable
 
         HStack {
             Text("FROM YOUR CONTACTS")
@@ -350,13 +349,13 @@ public struct AddContactSheet: View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(Color.movo.textDisabled)
-            TextField("", text: $contactSearch,
+            TextField("", text: $vm.importSearch,
                       prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
             .textStyle(Typography.body)
             .foregroundColor(Color.movo.textPrimary)
             .autocorrectionDisabled()
-            if !contactSearch.isEmpty {
-                Button { contactSearch = "" } label: {
+            if !vm.importSearch.isEmpty {
+                Button { vm.importSearch = "" } label: {
                     Image(systemName: "xmark.circle.fill").foregroundColor(Color.movo.textDisabled)
                 }
                 .buttonStyle(.plain)
@@ -372,7 +371,7 @@ public struct AddContactSheet: View {
         )
 
         if items.isEmpty {
-            Text(contactSearch.isEmpty ? "No contacts to import." : "No matches.")
+            Text(vm.importSearch.isEmpty ? "No contacts to import." : "No matches.")
                 .textStyle(Typography.caption)
                 .foregroundColor(Color.movo.textTertiary)
                 .padding(.vertical, Spacing.md)
