@@ -71,24 +71,16 @@ struct PayAnyoneContactPickerView: View {
         NavigationStack {
             ZStack {
                 MovoBackground()
-
-                VStack(spacing: 0) {
-                    navBar
-
-                    if isInitialLoading {
-                        Spacer()
-                        SpinnerView()
-                        Spacer()
-                    } else {
+                
+                if !isInitialLoading {
+                    VStack(spacing: 0) {
+                        navBar
                         ScrollView(showsIndicators: false) {
                             VStack(spacing: Spacing.lg) {
-
                                 if !contactVM.frequents.isEmpty {
                                     frequentsSection
                                 }
-
                                 contactsListCard
-
                                 if !isAuthorized {
                                     permissionCard
                                         .padding(.horizontal, Spacing.lg)
@@ -99,8 +91,7 @@ struct PayAnyoneContactPickerView: View {
                         }
                     }
                 }
-
-                if isCreatingContact {
+                if isInitialLoading || isCreatingContact {
                     SpinnerView()
                 }
             }
@@ -401,25 +392,20 @@ struct PayAnyoneContactPickerView: View {
     }
 
     private func contactRow(_ contact: ContactRecord) -> some View {
-        HStack(spacing: Spacing.md) {
-            contactAvatar(initials: contact.initials, size: 44)
+        let hasNickname = !(contact.nickname ?? "").isEmpty
+        return HStack(spacing: Spacing.md) {
+            rowAvatar(for: contact, size: 44)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(contact.nickname ?? "")
-                        .textStyle(Typography.bodyCompact)
-                        .foregroundColor(Color.movo.textPrimary)
-//                    if contact.isAdded {
-//                        Text("MOVO")
-//                            .textStyle(Typography.micro)
-//                            .foregroundColor(Color.movo.accent)
-//                            .padding(.horizontal, 6)
-//                            .padding(.vertical, 2)
-//                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
-//                    }
+                // Nickname when present; otherwise fall back to the mobile number.
+                Text(hasNickname ? (contact.nickname ?? "") : (contact.phoneNumber ?? ""))
+                    .textStyle(Typography.bodyCompact)
+                    .foregroundColor(Color.movo.textPrimary)
+                // Secondary phone line is redundant when the primary already shows it.
+                if hasNickname {
+                    Text(contact.phoneNumber ?? "")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textTertiary)
                 }
-                Text(contact.phoneNumber ?? "")
-                    .textStyle(Typography.caption)
-                    .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
             Image(systemName: "chevron.right")
@@ -431,25 +417,20 @@ struct PayAnyoneContactPickerView: View {
     }
 
     private func favouriteRow(_ contact: ContactRecord) -> some View {
-        HStack(spacing: Spacing.md) {
-            contactAvatar(initials: contact.initials, size: 44)
+        let hasNickname = !(contact.nickname ?? "").isEmpty
+        return HStack(spacing: Spacing.md) {
+            rowAvatar(for: contact, size: 44)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(contact.nickname ?? "")
-                        .textStyle(Typography.bodyCompact)
-                        .foregroundColor(Color.movo.textPrimary)
-//                    if contact.isAdded {
-//                        Text("MOVO")
-//                            .textStyle(Typography.micro)
-//                            .foregroundColor(Color.movo.accent)
-//                            .padding(.horizontal, 6)
-//                            .padding(.vertical, 2)
-//                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
-//                    }
+                // Nickname when present; otherwise fall back to the mobile number.
+                Text(hasNickname ? (contact.nickname ?? "") : (contact.phoneNumber ?? ""))
+                    .textStyle(Typography.bodyCompact)
+                    .foregroundColor(Color.movo.textPrimary)
+                // Secondary phone line is redundant when the primary already shows it.
+                if hasNickname {
+                    Text(contact.phoneNumber ?? "")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textTertiary)
                 }
-                Text(contact.phoneNumber ?? "")
-                    .textStyle(Typography.caption)
-                    .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
             Image(systemName: "chevron.right")
@@ -458,6 +439,22 @@ struct PayAnyoneContactPickerView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
+    }
+
+    /// Row avatar: initials when a nickname exists, otherwise the Movo logo.
+    @ViewBuilder
+    private func rowAvatar(for contact: ContactRecord, size: CGFloat) -> some View {
+        if (contact.nickname ?? "").isEmpty {
+            ZStack {
+                Circle().fill(Color.movo.elevated)
+                MovoMVSymbol()
+                    .frame(width: size * 0.5, height: size * 0.5)
+            }
+            .frame(width: size, height: size)
+            .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
+        } else {
+            contactAvatar(initials: contact.initials, size: size)
+        }
     }
 
     private func contactAvatar(initials: String, size: CGFloat) -> some View {

@@ -53,8 +53,6 @@ struct PlaidLinkFlowModifier: ViewModifier {
                     account: linkedAccount,
                     onDone: { showSuccess = false },
                     container: allowFunding ? container : nil,
-                    primaryAccount: allowFunding ? primaryAccount : nil,
-                    linkedAccounts: linkedAccount.map { [$0] } ?? [],
                     showBalance: false
                 )
             }

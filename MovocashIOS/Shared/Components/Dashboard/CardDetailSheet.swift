@@ -9,12 +9,22 @@ struct CardDetailSheet: View {
     
     let card: VCardListResponse
     let primaryAccountId: Int?
-    let primaryLinkedCard: VCardListResponse?
+    /// Primary card — refreshed from the card details API after a transfer.
+    @State private var primaryLinkedCard: VCardListResponse?
+    /// Primary account from the Dashboard — its `clientId` is the user-level id
+    /// used to execute transfers (the card list carries no clientId, so this is
+    /// not refreshed by the card details API).
+    @State private var primaryAccount: SavingsAccountInfo?
+    /// Card list (transfer destinations) — refreshed from the card details API.
+    @State private var cards: [VCardListResponse]
     let savingVM: SavingsAccountViewModel
     let container: AppContainer
     var canDelete: Bool
     var onDeleted: () -> Void
-    
+    /// Called on return from the sheet when something changed here (a completed
+    /// transfer or an Apple Wallet add), so the Dashboard can refresh.
+    var onChanged: (() -> Void)? = nil
+
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     
@@ -25,28 +35,47 @@ struct CardDetailSheet: View {
     @State private var isLoading = false
     @State private var walletTask: Task<Void, Never>?
     @State private var deleteTask: Task<Void, Never>?
+    @State private var refreshTask: Task<Void, Never>?
+    /// Set when a transfer or Apple Wallet add succeeds here; triggers a Dashboard
+    /// refresh on the way back via `onChanged`.
+    @State private var hasChanges = false
+    /// Latest card details fetched after a completed transfer. Falls back to the
+    /// `card` passed in from the Dashboard until a refresh succeeds.
+    @State private var liveCard: VCardListResponse?
     @StateObject private var txVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
+    @StateObject private var vcardVM: VCardViewModel
     
     init(
         card: VCardListResponse,
         primaryAccountId: Int?,
         primaryLinkedCard: VCardListResponse? = nil,
+        primaryAccount: SavingsAccountInfo? = nil,
+        cards: [VCardListResponse] = [],
         savingVM: SavingsAccountViewModel,
         container: AppContainer,
         canDelete: Bool = true,
-        onDeleted: @escaping () -> Void
+        onDeleted: @escaping () -> Void,
+        onChanged: (() -> Void)? = nil
     ) {
         self.card = card
         self.primaryAccountId = primaryAccountId
-        self.primaryLinkedCard = primaryLinkedCard
+        _primaryLinkedCard = State(initialValue: primaryLinkedCard)
+        _primaryAccount = State(initialValue: primaryAccount)
+        _cards = State(initialValue: cards)
         self.savingVM = savingVM
         self.container = container
         self.canDelete = canDelete
         self.onDeleted = onDeleted
+        self.onChanged = onChanged
         _txVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+        _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
+
+    /// The card currently shown. Reflects the latest refresh once a transfer
+    /// completes; otherwise the card handed down from the Dashboard.
+    private var displayCard: VCardListResponse { liveCard ?? card }
 
     private var transferMode: TransferFlowMode {
         if card.id == primaryLinkedCard?.id {
@@ -106,6 +135,8 @@ struct CardDetailSheet: View {
             walletTask = nil
             deleteTask?.cancel()
             deleteTask = nil
+            refreshTask?.cancel()
+            refreshTask = nil
             showDeleteConfirm = false
             showTransfer = false
             showAllTransactions = false
@@ -114,20 +145,24 @@ struct CardDetailSheet: View {
             (securedDismiss ?? dismiss)()
         }
         .sheet(isPresented: $showTransfer) {
-            let accounts = savingVM.accountList?.data.accounts ?? []
-            let cardAccount = accounts.first(where: { $0.id == card.savingsAccountId })
-            let primaryAccount = accounts.first(where: { $0.isPrimary })
-            let fromAccount = cardAccount ?? primaryAccount
-            if let fromAccount {
+            // The transfer uses the card list directly; `clientId` (user-level) is
+            // the only value not carried on the card, so it comes from the primary
+            // account passed down from the Dashboard.
+            if let clientId = primaryAccount?.clientId {
                 InternalTransferView(
                     mode: transferMode,
-                    toClientId: fromAccount.clientId,
-                    fromAccount: fromAccount,
-                    nonPrimaryAccounts: accounts.filter { $0.id != fromAccount.id },
-                    preselectedFromCard: card,
+                    toClientId: clientId,
+                    fromAccount: nil,
+                    nonPrimaryAccounts: [],
+                    preselectedFromCard: displayCard,
                     primaryLinkedCard: primaryLinkedCard,
+                    initialCards: cards,
                     container: container,
-                    onDismiss: { showTransfer = false }
+                    onDismiss: {
+                        showTransfer = false
+                        hasChanges = true
+                        refreshTask = Task { await refreshCardDetails() }
+                    }
                 )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -135,24 +170,48 @@ struct CardDetailSheet: View {
         }
         .task {
             isLoading = true
-            let accountId = card.savingsAccountId
-            let needsAccounts = savingVM.accountList == nil
-            async let transactions: () = {
-                guard let accountId else { return }
-                var filter = TransactionFilter(accountId: accountId)
-                filter.max       = 10
-                filter.limit     = 10
-                filter.sortBy    = .createdAt
-                filter.sortOrder = .desc
-                await txVM.loadTransactionsFiltered(filter: filter, paginated: false)
-            }()
-            async let accounts: () = {
-                guard needsAccounts else { return }
-                await savingVM.loadAccounts()
-            }()
-            _ = await (transactions, accounts)
+            await loadRecentTransactions()
             isLoading = false
         }
+        .onDisappear {
+            // Refresh the Dashboard on the way back only if something changed here.
+            if hasChanges { onChanged?() }
+        }
+    }
+
+    /// Loads the latest 10 transactions for this card's savings account.
+    private func loadRecentTransactions() async {
+        guard let accountId = card.savingsAccountId else { return }
+        var filter = TransactionFilter(accountId: accountId)
+        filter.max       = 10
+        filter.limit     = 10
+        filter.sortBy    = .createdAt
+        filter.sortOrder = .desc
+        await txVM.loadTransactionsFiltered(filter: filter, paginated: false)
+    }
+
+    /// Refreshes the card details and recent activity after a completed transfer.
+    /// On a card-details failure we keep the existing card and still refresh
+    /// transactions, so the screen never ends up empty.
+    private func refreshCardDetails() async {
+        isLoading = true
+        defer { isLoading = false }
+        // Re-fetch the full card list and re-derive everything by savings account id.
+        if let refreshed = try? await vcardVM.getVCardsAll() {
+            let enabled = refreshed.filter { $0.enabled == true }
+            // Refresh the displayed card (feeds `displayCard` → the card hero).
+            if let accountId = card.savingsAccountId,
+               let updated = enabled.first(where: { $0.savingsAccountId == accountId }) {
+                liveCard = updated
+            }
+            if !enabled.isEmpty {
+                // Primary card identified by matching savings id; the remaining
+                // cards feed the transfer's "from"/"to" destination lists.
+                primaryLinkedCard = enabled.first(where: { $0.savingsAccountId == primaryAccountId })
+                cards = enabled.filter { $0.savingsAccountId != primaryAccountId }
+            }
+        }
+        await loadRecentTransactions()
     }
     
     
@@ -176,6 +235,7 @@ struct CardDetailSheet: View {
                         accountId: accountId,
                         localizedDescription: "Apple Pay"
                     )
+                    hasChanges = true
                 }
             }) {
                 HStack(spacing: Spacing.sm) {
@@ -253,7 +313,7 @@ struct CardDetailSheet: View {
     }
     
     private var cardHero: some View {
-        MovoCardHero(card: card)
+        MovoCardHero(card: displayCard)
             .frame(width: 220)
             .padding(.top, Spacing.lg)
             .padding(.bottom, Spacing.xxl)

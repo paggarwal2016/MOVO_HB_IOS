@@ -12,17 +12,7 @@ struct BankLinkedSuccessScreen: View {
     var account: ACHAccount?
     var onDone: () -> Void = {}
 
-    // Optional dependencies — supplied by BankLinkedInfoScreen so the user can
-    // fund directly from this screen. ManageExternalAccountsView does NOT pass
-    // these (it owns its own navigation), so it falls back to the onDone path.
     var container: AppContainer? = nil
-    var primaryAccount: SavingsAccountInfo? = nil
-    /// Retained for source compatibility with existing call sites; the funding
-    /// flow now runs in-screen, so this is no longer forwarded to FundAccountView.
-    var linkedAccounts: [ACHAccount] = []
-    /// Hide the balance when the account came straight from the Plaid link
-    /// metadata (no balance yet) so we don't show a misleading $0.00. A real
-    /// balance appears once the full account list is refreshed.
     var showBalance: Bool = true
 
     // MARK: - Funding state
@@ -34,15 +24,7 @@ struct BankLinkedSuccessScreen: View {
     @State private var successData: SuccessConfirmation?
     @State private var transferTask: Task<Void, Never>?
 
-    /// MOVO primary fetched from `VCardAPI.getVCardsPrimary` on appear. Once loaded
-    /// it is the source of truth for the "To" side; the injected `primaryAccount`
-    /// is only the pre-load fallback.
-    @State private var loadedPrimary: SavingsAccountInfo?
-
-    /// The destination MOVO account — prefers the freshly fetched primary card.
-    private var resolvedPrimary: SavingsAccountInfo? {
-        loadedPrimary ?? primaryAccount
-    }
+    @State private var loadedCard: VCardListResponse?
 
     private var amountValue: Decimal { Decimal(string: amountText) ?? 0 }
 
@@ -60,31 +42,16 @@ struct BankLinkedSuccessScreen: View {
         String(institutionName.prefix(2)).uppercased()
     }
 
-    private var bankName: String {
-        account?.accountName ?? institutionName
-    }
+    // FROM — linked external bank. Hoisted out of `body` so the view type-checks
+    // quickly and the same values feed the row, the sheet and the success screen.
+    private var fromName: String { account?.accountName ?? account?.institutionName ?? "Bank" }
+    private var fromMask: String? { account.map { "••\($0.accountNumber.suffix(4))" } }
+    private var fromBalance: String { showBalance ? (account?.formattedBalance ?? "") : "" }
 
-    private var bankMask: String? {
-        account.map { "••\($0.accountNumber.suffix(4))" }
-    }
-
-    private var bankBalanceText: String {
-        guard showBalance else { return "" }
-        return account?.formattedBalance ?? ""
-    }
-
-    private var movoName: String {
-        resolvedPrimary?.nickname ?? "Movo"
-    }
-
-    private var movoMask: String? {
-        resolvedPrimary?.maskedAccountNumber
-    }
-
-    private var movoBalanceText: String {
-        guard let primary = resolvedPrimary else { return "" }
-        return "$\(primary.availableBalance.toCurrencyString())"
-    }
+    // TO — MOVO primary card.
+    private var toName: String { loadedCard?.savingsAccountNickname ?? "MOVO" }
+    private var toMask: String? { loadedCard?.maskedNumber }
+    private var toBalance: String { loadedCard?.displayBalance ?? "" }
 
     // MARK: - Body
 
@@ -97,7 +64,7 @@ struct BankLinkedSuccessScreen: View {
             VStack(spacing: 0) {
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: Spacing.xl) {
+                    VStack(alignment: .leading, spacing: Spacing.xxl) {
 
                         header
                         amountSection
@@ -126,10 +93,10 @@ struct BankLinkedSuccessScreen: View {
             ConfirmationBottomSheet(
                 channel: .external,
                 amount: amountText,
-                fromName: bankName,
-                fromMask: bankMask,
-                toName: movoName,
-                toMask: movoMask,
+                fromName: fromName,
+                fromMask: fromMask,
+                toName: toName,
+                toMask: toMask,
                 isLoading: isSubmitting,
                 onCancel: { showConfirmSheet = false },
                 onConfirm: submitDeposit
@@ -160,12 +127,10 @@ struct BankLinkedSuccessScreen: View {
         // Works with or without an injected container (falls back to the shared
         // network) so the "To" row populates in every flow.
         .task {
-            guard loadedPrimary == nil else { return }
+            guard loadedCard == nil else { return }
             let vcardVM = container?.makeVCardViewModel()
                 ?? VCardViewModel(network: NetworkService.shared, alertManager: AlertManager.shared)
-            if let card = try? await vcardVM.fetchPrimaryCard() {
-                loadedPrimary = SavingsAccountInfo(primaryCard: card)
-            }
+            loadedCard = try? await vcardVM.fetchPrimaryCard()
         }
     }
 
@@ -192,7 +157,7 @@ struct BankLinkedSuccessScreen: View {
                     .foregroundColor(Color.movo.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Let’s initiate the transfer to the Movo account.")
+                Text("Let’s Movo. Add funds to spend anywhere.")
                     .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -216,19 +181,19 @@ struct BankLinkedSuccessScreen: View {
             accountRow(
                 label: "FROM",
                 logo: bankLogoTile,
-                name: bankName,
+                name: fromName,
                 isPrimary: false,
-                mask: bankMask,
-                balance: bankBalanceText
+                mask: fromMask,
+                balance: fromBalance
             )
             divider
             accountRow(
                 label: "TO",
                 logo: movoLogoTile,
-                name: movoName,
-                isPrimary: resolvedPrimary?.isPrimary ?? false,
-                mask: movoMask,
-                balance: movoBalanceText
+                name: toName,
+                isPrimary: true,
+                mask: toMask,
+                balance: toBalance
             )
         }
         .padding(.vertical, Spacing.sm)
@@ -384,20 +349,24 @@ struct BankLinkedSuccessScreen: View {
         showConfirmSheet = false
         isSubmitting = true
 
-        let fromName = bankName
-        let fromMask = bankMask
-        let toName = movoName
-        let toMask = movoMask
+        // Snapshot all display/request inputs up front so the async task captures
+        // plain values, not view state read across threads.
         let enteredAmount = amountValue
+        let snapFromName = fromName
+        let snapFromMask = fromMask
+        let snapToName = toName
+        let snapToMask = toMask
+        let request = ACHRequest(
+            amount: Int(amountText) ?? 0,
+            achAccountId: account.achAccountId,
+            userAction: "SUBMITS-ACH-DEPOSIT"
+        )
 
-        transferTask = Task {
+        // @MainActor so the `isSubmitting` / `successData` writes after the await
+        // always run on the main thread (avoids the background-publish crash).
+        transferTask = Task { @MainActor in
             let vm = container?.makeACHViewModel()
                 ?? ACHViewModel(network: NetworkService.shared, alertManager: AlertManager.shared)
-            let request = ACHRequest(
-                amount: Int(amountText) ?? 0,
-                achAccountId: account.achAccountId,
-                userAction: "SUBMITS-ACH-DEPOSIT"
-            )
             let success = await vm.initiateTransfer(request: request)
 
             guard !Task.isCancelled else { return }
@@ -407,40 +376,15 @@ struct BankLinkedSuccessScreen: View {
                 successData = SuccessConfirmation(
                     channel: .external,
                     amount: enteredAmount,
-                    fromAccountName: fromName,
-                    fromAccountMask: fromMask ?? "—",
-                    toAccountName: toName,
-                    toAccountMask: toMask,
+                    fromAccountName: snapFromName,
+                    fromAccountMask: snapFromMask ?? "—",
+                    toAccountName: snapToName,
+                    toAccountMask: snapToMask,
                     arrivesText: "1–3 business days",
                     dateText: Date.now.formatted(date: .long, time: .shortened),
                     referenceCode: "MV-\(String(UUID().uuidString.prefix(8)))"
                 )
             }
         }
-    }
-}
-
-#Preview {
-    BankLinkedSuccessScreen()
-}
-
-// MARK: - Primary card → SavingsAccountInfo
-
-private extension SavingsAccountInfo {
-    /// Builds a display-oriented MOVO primary from the primary VCard
-    /// (`VCardAPI.getVCardsPrimary`) — used for the "To" row's name, masked
-    /// number and available balance. File-private so it does not collide with
-    /// the identical helper in FundAccountView.
-    init(primaryCard card: VCardListResponse) {
-        id = card.savingsAccountId ?? 0
-        accountNumber = card.lastFour ?? ""
-        clientName = card.name ?? ""
-        status = .active
-        accountBalance = Decimal(card.savingsAccountBalance ?? 0)
-        availableBalance = Decimal(card.savingsAccountAvailableBalance ?? card.savingsAccountBalance ?? 0)
-        clientId = 0
-        nickname = card.savingsAccountNickname.flatMap { $0.isEmpty ? nil : $0 }
-        isPrimary = true
-        routingNumber = nil
     }
 }
