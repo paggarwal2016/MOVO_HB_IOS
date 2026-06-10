@@ -166,7 +166,7 @@ struct PayAnyoneContactPickerView: View {
                     onMaybeLater: { addedContact = nil }
                 )
             }
-            .sheet(isPresented: $showAllFrequents) {
+            .fullScreenCover(isPresented: $showAllFrequents) {
                 AllFrequentsView(
                     contactVM: contactVM,
                     container: container,

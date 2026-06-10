@@ -35,21 +35,8 @@ struct PayAnyoneView: View {
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
 
-    /// Newly added contact, drives the full-screen success cover.
-    @State private var addedContact: AddedContact? = nil
     /// True while the create-contact API call is in flight — shows the spinner.
     @State private var isCreatingContact = false
-    /// Contact to open in QuickTransferView once the success cover dismisses
-    /// (set when the user taps "Quick send"). Deferring to onDismiss avoids a
-    /// present/dismiss race between the cover and the navigation push.
-    @State private var pendingQuickSendContact: ContactRecord? = nil
-
-    /// Lightweight payload for the success cover.
-    private struct AddedContact: Identifiable {
-        let id = UUID()
-        let nickname: String
-        let phoneE164: String
-    }
 
     init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, screenTitle: String = "Pay Anyone") {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
@@ -190,41 +177,21 @@ struct PayAnyoneView: View {
                     )
                     contactVM.clear()
                     isCreatingContact = false
+                    // Skip the success screen — go straight into the check-intent →
+                    // confirm → transfer flow for the newly created contact.
                     if success {
-                        addedContact = AddedContact(
+                        payeeFlow.tap(ContactRecord(
+                            id: data.phoneE164,
+                            isFav: false,
                             nickname: data.nickname,
-                            phoneE164: data.phoneE164
-                        )
+                            createdAt: Date(),
+                            phoneNumber: data.phoneE164,
+                            isAdded: true,
+                            updatedAt: Date()
+                        ))
                     }
                 }
-            })
-        }
-        // MARK: - Contact added success
-        // Shown after the add sheet closes. "Quick send" defers the transfer
-        // navigation to onDismiss so the cover fully closes first.
-        .fullScreenCover(item: $addedContact, onDismiss: {
-            if let contact = pendingQuickSendContact {
-                pendingQuickSendContact = nil
-                payeeFlow.tap(contact)
-            }
-        }) { added in
-            ContactAddedSuccess(
-                name: added.nickname,
-                phone: added.phoneE164,
-                onQuickSend: {
-                    pendingQuickSendContact = ContactRecord(
-                        id: added.phoneE164,
-                        isFav: false,
-                        nickname: added.nickname,
-                        createdAt: Date(),
-                        phoneNumber: added.phoneE164,
-                        isAdded: true,
-                        updatedAt: Date()
-                    )
-                    addedContact = nil
-                },
-                onMaybeLater: { addedContact = nil }
-            )
+            }, onOpenSettings: openSettings)
         }
     }
     
@@ -262,13 +229,7 @@ struct PayAnyoneView: View {
     
     
     private var orDivider: some View {
-        HStack(spacing: Spacing.md) {
-            Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
-            Text("OR PICK FROM")
-                .textStyle(Typography.micro)
-                .foregroundColor(Color.movo.textTertiary)
-            Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
-        }
+        LabeledDivider(text: "OR PICK FROM")
     }
     
     @ViewBuilder
