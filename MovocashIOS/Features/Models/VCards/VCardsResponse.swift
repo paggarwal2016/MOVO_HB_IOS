@@ -119,7 +119,7 @@ extension VCardListResponse {
 
     var displayBalance: String {
         let amount = savingsAccountAvailableBalance ?? savingsAccountBalance ?? 0
-        return String(format: "$ %.2f", amount)
+        return "$ \(Decimal(amount).toCurrencyString())"
     }
 
     var currencyCode: String {

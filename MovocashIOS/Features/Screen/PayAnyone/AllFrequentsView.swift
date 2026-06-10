@@ -15,13 +15,22 @@ struct AllFrequentsView: View {
     let cards: [VCardListResponse]
     var primaryLinkedCard: VCardListResponse? = nil
     var onSuccess: () -> Void = {}
-    
+
+    @StateObject private var payeeFlow: PayeeTransferModel
+
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var search: String = ""
-    @State private var selectedContact: ContactRecord? = nil
-    @State private var isNavigating: Bool = false
     @State private var isLoading: Bool = true
-    
+
+    init(contactVM: ContactViewModel, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
+        _contactVM = ObservedObject(wrappedValue: contactVM)
+        self.container = container
+        self.cards = cards
+        self.primaryLinkedCard = primaryLinkedCard
+        self.onSuccess = onSuccess
+        _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
+    }
+
     private var showSearch: Bool { contactVM.frequents.count > 15 }
     
     private var filteredFrequents: [RecordContact] {
@@ -48,7 +57,7 @@ struct AllFrequentsView: View {
                             VStack(spacing: 0) {
                                 ForEach(filteredFrequents) { contact in
                                     Button {
-                                        selectedContact = ContactRecord(
+                                        payeeFlow.tap(ContactRecord(
                                             id: contact.id,
                                             isFav: false,
                                             nickname: contact.nickname,
@@ -56,8 +65,7 @@ struct AllFrequentsView: View {
                                             phoneNumber: contact.phoneNumber,
                                             isAdded: false,
                                             updatedAt: Date()
-                                        )
-                                        isNavigating = true
+                                        ))
                                     } label: {
                                         frequentRow(contact)
                                     }
@@ -104,16 +112,11 @@ struct AllFrequentsView: View {
                     isLoading = false
                 }
             }
-            .navigationDestination(isPresented: $isNavigating) {
-                if let contact = selectedContact {
-                    QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard, onSuccess: {
-                        onSuccess()
-                        // Silently refresh the frequents list after a successful
-                        // transfer — no spinner, the list updates in place.
-                        Task { await contactVM.loadFrequent() }
-                    })
-                }
-            }
+            .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard, onSuccess: {
+                onSuccess()
+                // Silently refresh the frequents list after a successful transfer.
+                Task { await contactVM.loadFrequent() }
+            })
         }
     }
     

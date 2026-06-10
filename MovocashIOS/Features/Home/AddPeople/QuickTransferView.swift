@@ -13,6 +13,10 @@ struct QuickTransferView: View {
     let contact: ContactRecord
     let cards: [VCardListResponse]
     let primaryLinkedCard: VCardListResponse?
+    /// Recipient enrollment result from a check-intent already run by the caller
+    /// (the Pay Anyone confirmation popup). Drives the transfer route. `nil` when the
+    /// caller didn't pre-resolve it.
+    let recipientExists: Bool?
 
     private var accountBalance: Decimal {
         Decimal(primaryLinkedCard?.savingsAccountAvailableBalance ?? 0)
@@ -43,10 +47,11 @@ struct QuickTransferView: View {
 
     var onSuccess: () -> Void = {}
 
-    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
+    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, recipientExists: Bool? = nil, onSuccess: @escaping () -> Void = {}) {
         self.contact = contact
         self.cards = cards
         self.primaryLinkedCard = primaryLinkedCard
+        self.recipientExists = recipientExists
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
@@ -112,15 +117,6 @@ struct QuickTransferView: View {
         }
         .background(Color.movo.background)
         .navigationBarHidden(true)
-        // Call check-intent as soon as the view appears so the Pay button is
-        // gated before the user finishes entering an amount.
-        .task {
-            let rawPhone    = contact.phoneNumber ?? ""
-            let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
-            let sanitized   = PhoneNumberValidator.sanitize(withCountry)
-            let normalized  = PhoneNumberValidator.normalize(sanitized)
-            await transVM.checkIntent(phoneNumber: normalized)
-        }
         .onChange(of: amountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
@@ -447,10 +443,9 @@ struct QuickTransferView: View {
         let sanitized   = PhoneNumberValidator.sanitize(withCountry)
         let normalizedPhone = PhoneNumberValidator.normalize(sanitized)
 
-        // checkIntent result drives the transfer route:
-        //   exists == true  → recipient is a MOVO user → .internalTransfer
-        //   exists == false / nil → external recipient → .externalTransfer
-        let isInternal = transVM.checkIntentResult?.exists ?? false
+        //   true  → recipient is a MOVO user → .internalTransfer
+        //   false / nil → external recipient → .externalTransfer
+        let isInternal = recipientExists ?? false
 
         await achVM.sendMoneyToContact(
             fromCard: fromCard,

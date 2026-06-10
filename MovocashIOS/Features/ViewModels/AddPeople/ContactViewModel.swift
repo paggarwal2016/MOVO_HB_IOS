@@ -7,15 +7,18 @@
 
 import Foundation
 import Combine
+import Contacts
 
 @MainActor
 final class ContactViewModel: BaseViewModel {
-    
+
     // MARK: - Device Contacts
-    
+
     @Published var contacts: [ContactRecord] = []
     @Published var search = ""
     @Published private(set) var loadError: String? = nil
+    /// Current device-contacts permission, kept in sync via `refreshAuthorization()`.
+    @Published var authorizationStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     
     // MARK: - API Contacts
     
@@ -141,7 +144,79 @@ final class ContactViewModel: BaseViewModel {
     var isPermissionError: Bool {
         loadError == ContactsError.permissionDenied.localizedDescription
     }
-    
+
+    // MARK: - Device Contact Import (Add Contact sheet)
+
+    /// Permission tiers the Add Contact sheet branches on.
+    enum ContactAccess { case undetermined, denied, limited, full }
+
+    var contactAccess: ContactAccess {
+        switch authorizationStatus {
+        case .notDetermined:        return .undetermined
+        case .authorized:           return .full
+        case .restricted, .denied:  return .denied
+        default:
+            if #available(iOS 18.0, *), authorizationStatus == .limited { return .limited }
+            return .denied
+        }
+    }
+
+    /// Normalized phone key ("+1XXXXXXXXXX") used for duplicate matching.
+    private func normalizedKey(_ phone: String?) -> String? {
+        guard let phone, !phone.isEmpty else { return nil }
+        let sanitized = PhoneNumberValidator.sanitize(phone)
+        guard !sanitized.isEmpty else { return nil }
+        return PhoneNumberValidator.normalize(sanitized)
+    }
+
+    /// Device contacts available to import: those with a phone number, excluding
+    /// numbers already added in the app (matched by normalized phone), de-duped
+    /// within the device list. New contacts granted later append automatically as
+    /// `contacts` reloads.
+    var importableContacts: [ContactRecord] {
+        let existing = Set(apiContacts.compactMap { normalizedKey($0.phoneNumber) })
+        var seen = Set<String>()
+        return contacts.filter { contact in
+            guard let key = normalizedKey(contact.phoneNumber) else { return false }
+            guard !existing.contains(key) else { return false }
+            return seen.insert(key).inserted
+        }
+    }
+
+    func importableContacts(matching query: String) -> [ContactRecord] {
+        let base = importableContacts
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return base }
+        return base.filter {
+            ($0.nickname ?? "").localizedCaseInsensitiveContains(trimmed) ||
+            ($0.phoneNumber ?? "").contains(trimmed)
+        }
+    }
+
+    /// Populates the sheet's nickname + phone fields from a tapped device contact.
+    func fill(from contact: ContactRecord) {
+        nickname = contact.nickname ?? ""
+        phoneInput = Self.formatPhone(PhoneNumberValidator.sanitize(contact.phoneNumber ?? ""))
+        helperIsError = false
+    }
+
+    /// Re-reads the live authorization status (call on appear / scene-active).
+    func refreshAuthorization() {
+        authorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
+    }
+
+    /// First-time request: shows the system prompt when undetermined, then loads
+    /// contacts if access (full or limited) was granted.
+    func requestContactAccess() async {
+        if CNContactStore.authorizationStatus(for: .contacts) == .notDetermined {
+            _ = try? await CNContactStore().requestAccess(for: .contacts)
+        }
+        refreshAuthorization()
+        if contactAccess == .full || contactAccess == .limited {
+            await load()
+        }
+    }
+
     // MARK: - Load Device Contacts
     
     func load() async {
