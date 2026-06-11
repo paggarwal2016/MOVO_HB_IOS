@@ -223,9 +223,20 @@ final class PayeeTransferModel: ObservableObject {
     @Published fileprivate var confirmingContact: ContactRecord?
     /// The payee to open in QuickTransferView (set after the popup fully dismisses).
     @Published fileprivate var transferContact: ContactRecord?
+    /// Success payload, presented only after QuickTransferView has fully dismissed
+    /// so the success screen replaces the transfer screen rather than stacking on it.
+    @Published fileprivate var successData: SuccessConfirmation?
+
+    /// Drives the enroll popup rendered INSIDE the Add Contact sheet after check-intent
+    /// succeeds. Kept separate from `showPopup` (the parent-level popup used by the
+    /// normal payee-tap flow) so the two presentation sites never collide.
+    @Published var showAddConfirm = false
 
     /// Contact to open once the popup's dismiss transition completes (Continue).
     private var pendingTransfer: ContactRecord?
+    /// Success held until the transfer cover's dismiss transition completes, then
+    /// promoted to `successData`.
+    private var pendingSuccess: SuccessConfirmation?
 
     let transactionVM: TransactionViewModel
 
@@ -270,12 +281,67 @@ final class PayeeTransferModel: ObservableObject {
         withTransaction(tx) { showPopup = visible }
     }
 
-    /// Called when the popup's dismiss transition finishes. Presenting the transfer
-    /// screen here (not on a timer) avoids presenting while the popup is still sliding.
-    fileprivate func popupDidDismiss() {
+    /// Called when the popup (or the Add Contact sheet) finishes dismissing. Presenting
+    /// the transfer screen here (not on a timer) avoids presenting while the cover is
+    /// still sliding. No-op unless a transfer is pending (e.g. plain Cancel/close).
+    func popupDidDismiss() {
         guard let contact = pendingTransfer else { return }
         pendingTransfer = nil
         transferContact = contact
+    }
+
+    /// Called by QuickTransferView when the transfer API succeeds. Dismisses the
+    /// transfer screen first; the success screen is presented in transferDidDismiss().
+    fileprivate func completeTransfer(_ success: SuccessConfirmation) {
+        pendingSuccess = success
+        transferContact = nil
+    }
+
+    /// Called when the transfer cover's dismiss transition finishes. Presents the
+    /// success screen only when the dismissal followed a completed transfer.
+    fileprivate func transferDidDismiss() {
+        guard let success = pendingSuccess else { return }
+        pendingSuccess = nil
+        successData = success
+    }
+
+    /// Content accessors for the in-sheet enroll popup (`showAddConfirm`).
+    var confirmTitle: String { transactionVM.checkIntentResult?.message ?? "" }
+    var confirmMessage: String { transactionVM.checkIntentResult?.disclaimer ?? "" }
+    var confirmInitial: String { confirmingContact?.initials ?? "" }
+
+    /// Runs check-intent for a newly added contact and, on success, raises the in-sheet
+    /// enroll popup (`showAddConfirm`) WITHOUT dismissing the Add Contact sheet. Returns
+    /// false on failure so the caller keeps the sheet open. The error toast is surfaced
+    /// by check-intent.
+    @discardableResult
+    func prepareConfirmation(for contact: ContactRecord) async -> Bool {
+        isChecking = true
+        let raw = contact.phoneNumber ?? ""
+        let withCountry = raw.hasPrefix("+1") ? raw : "+1\(raw.filter(\.isNumber))"
+        let normalized = PhoneNumberValidator.normalize(PhoneNumberValidator.sanitize(withCountry))
+        await transactionVM.checkIntent(phoneNumber: normalized)
+        isChecking = false
+        guard transactionVM.checkIntentResult != nil else { return false }
+        confirmingContact = contact
+        showAddConfirm = true
+        return true
+    }
+
+    /// Continue tapped in the in-sheet enroll popup: arm the transfer and hide the popup.
+    /// The caller dismisses the Add Contact sheet; the transfer is presented from the
+    /// sheet's `onDismiss` via `popupDidDismiss()`.
+    func confirmAdd() {
+        pendingTransfer = confirmingContact
+        confirmingContact = nil
+        showAddConfirm = false
+    }
+
+    /// Cancel tapped in the in-sheet enroll popup: hide the popup and stay on the sheet.
+    func cancelAdd() {
+        pendingTransfer = nil
+        confirmingContact = nil
+        showAddConfirm = false
     }
 
     /// Clears all flow state (e.g. on session expiry / returning to the dashboard).
@@ -285,6 +351,9 @@ final class PayeeTransferModel: ObservableObject {
         confirmingContact = nil
         pendingTransfer = nil
         transferContact = nil
+        pendingSuccess = nil
+        successData = nil
+        showAddConfirm = false
     }
 }
 
@@ -334,14 +403,22 @@ private struct PayeeTransferFlowModifier: ViewModifier {
                 onContinue: { model.confirm() },
                 onCancel: { model.cancel() }
             )
-            .fullScreenCover(item: $model.transferContact) { contact in
+            .fullScreenCover(item: $model.transferContact, onDismiss: { model.transferDidDismiss() }) { contact in
                 QuickTransferView(
                     contact: contact,
                     container: container,
                     cards: cards,
                     primaryLinkedCard: primaryLinkedCard,
                     recipientExists: model.transactionVM.checkIntentResult?.exists,
-                    onSuccess: onSuccess
+                    onComplete: { success in model.completeTransfer(success) }
+                )
+            }
+            .fullScreenCover(item: $model.successData) { data in
+                SuccessConfirmationView(
+                    viewModel: SuccessConfirmationViewModel(success: data) {
+                        model.successData = nil
+                        onSuccess()
+                    }
                 )
             }
     }

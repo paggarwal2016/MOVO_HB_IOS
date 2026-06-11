@@ -15,13 +15,15 @@ struct AllFrequentsView: View {
     let cards: [VCardListResponse]
     var primaryLinkedCard: VCardListResponse? = nil
     var onSuccess: () -> Void = {}
-
+    
     @StateObject private var payeeFlow: PayeeTransferModel
-
+    
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var search: String = ""
     @State private var isLoading: Bool = true
-
+    /// Set when the frequents API fails; shows a centered error in the content area.
+    @State private var errorMessage: String? = nil
+    
     init(contactVM: ContactViewModel, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
         _contactVM = ObservedObject(wrappedValue: contactVM)
         self.container = container
@@ -30,7 +32,7 @@ struct AllFrequentsView: View {
         self.onSuccess = onSuccess
         _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
     }
-
+    
     private var showSearch: Bool { contactVM.frequents.count > 15 }
     
     private var filteredFrequents: [RecordContact] {
@@ -45,73 +47,28 @@ struct AllFrequentsView: View {
         NavigationStack {
             ZStack {
                 MovoBackground()
-                
-                if !isLoading {
-                    VStack(spacing: 0) {
-                        navBar
-                        searchBar
-                            .padding(.horizontal, Spacing.lg)
-                            .padding(.bottom, Spacing.md)
-                        
-                        ScrollView(showsIndicators: false) {
-                            VStack(spacing: 0) {
-                                ForEach(filteredFrequents) { contact in
-                                    Button {
-                                        payeeFlow.tap(ContactRecord(
-                                            id: contact.id,
-                                            isFav: false,
-                                            nickname: contact.nickname,
-                                            createdAt: Date(),
-                                            phoneNumber: contact.phoneNumber,
-                                            isAdded: false,
-                                            updatedAt: Date()
-                                        ))
-                                    } label: {
-                                        frequentRow(contact)
-                                    }
-                                    .buttonStyle(.plain)
-                                    
-                                    if contact.id != filteredFrequents.last?.id {
-                                        Rectangle()
-                                            .fill(Color.movo.border)
-                                            .frame(height: Stroke.hairline)
-                                            .padding(.horizontal, 14)
-                                    }
-                                }
-                            }
-                            .background(
-                                RoundedRectangle(cornerRadius: Radius.heroCard)
-                                    .fill(Color.movo.surface.opacity(0.85))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: Radius.heroCard)
-                                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                                    )
-                            )
-                            .padding(.horizontal, Spacing.lg)
-                            
-                            Spacer().frame(height: 80)
+                VStack(spacing: 0) {
+                    navBar
+                    ZStack {
+                        if let errorMessage {
+                            errorView(errorMessage)
+                        } else if !isLoading {
+                            frequentsList
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 StatusBarScrim()
-                
-                // Full-screen spinner overlay — covers the whole view while loading.
+            }
+            .background(Color.movo.background)
+            // Full-screen spinner overlay — covers the whole view while loading.
+            .overlay {
                 if isLoading {
                     SpinnerView()
                 }
             }
-            .background(Color.movo.background)
             .navigationBarHidden(true)
-            .onAppear {
-                if contactVM.frequents.isEmpty {
-                    Task {
-                        await contactVM.loadFrequent()
-                        isLoading = false
-                    }
-                } else {
-                    isLoading = false
-                }
-            }
+            .onAppear { load() }
             .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard, onSuccess: {
                 onSuccess()
                 // Silently refresh the frequents list after a successful transfer.
@@ -120,6 +77,89 @@ struct AllFrequentsView: View {
         }
     }
     
+    // MARK: - Load
+
+    /// Loads frequents (when not already cached), dismissing the spinner on success or
+    /// failure. On failure a centered error is shown while the nav bar stays available.
+    private func load() {
+        guard contactVM.frequents.isEmpty else {
+            isLoading = false
+            return
+        }
+        Task {
+            isLoading = true
+            errorMessage = nil
+            let ok = await contactVM.loadFrequent()
+            isLoading = false
+            if !ok {
+                errorMessage = "Couldn't load recent contacts.\nPlease try again."
+            }
+        }
+    }
+
+    // MARK: - Content
+
+    private var frequentsList: some View {
+        VStack(spacing: 0) {
+            searchBar
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, Spacing.md)
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    ForEach(filteredFrequents) { contact in
+                        Button {
+                            payeeFlow.tap(ContactRecord(
+                                id: contact.id,
+                                isFav: false,
+                                nickname: contact.nickname,
+                                createdAt: Date(),
+                                phoneNumber: contact.phoneNumber,
+                                isAdded: false,
+                                updatedAt: Date()
+                            ))
+                        } label: {
+                            frequentRow(contact)
+                        }
+                        .buttonStyle(.plain)
+
+                        if contact.id != filteredFrequents.last?.id {
+                            Rectangle()
+                                .fill(Color.movo.border)
+                                .frame(height: Stroke.hairline)
+                                .padding(.horizontal, 14)
+                        }
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .fill(Color.movo.surface.opacity(0.85))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.heroCard)
+                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        )
+                )
+                .padding(.horizontal, Spacing.lg)
+
+                Spacer().frame(height: 80)
+            }
+        }
+    }
+
+    private func errorView(_ message: String) -> some View {
+        VStack(spacing: Spacing.md) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 28, weight: .regular))
+                .foregroundColor(Color.movo.textTertiary)
+            Text(message)
+                .textStyle(Typography.body)
+                .foregroundColor(Color.movo.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private var navBar: some View {
         HStack {
             CircularNavButton(systemName: "chevron.left") { dismiss() }
@@ -169,21 +209,25 @@ struct AllFrequentsView: View {
             ZStack {
                 Circle().fill(Color.movo.elevated)
                 Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
-                Text(contact.nickname?.prefix(1).uppercased() ?? "?")
+                Text(contact.avatarInitial)
                     .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
             }
             .frame(width: 44, height: 44)
             
             VStack(alignment: .leading, spacing: 3) {
-                Text(contact.nickname ?? "")
+                // Nickname when present; otherwise the phone number stands in.
+                Text(contact.displayName)
                     .textStyle(Typography.bodyCompact)
                     .foregroundColor(Color.movo.textPrimary)
                     .lineLimit(1)
-                Text(contact.phoneNumber ?? "")
-                    .textStyle(Typography.caption)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .lineLimit(1)
+                // Secondary phone line is redundant when the primary already shows it.
+                if contact.hasNickname {
+                    Text(contact.phoneNumber ?? "")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textTertiary)
+                        .lineLimit(1)
+                }
             }
             
             Spacer()

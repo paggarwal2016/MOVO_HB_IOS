@@ -167,30 +167,34 @@ struct PayAnyoneView: View {
                 Task { await contactVM.load() }
             }
         }
-        .fullScreenCover(isPresented: $showCreateContactScreen) {
-            AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
+        .fullScreenCover(isPresented: $showCreateContactScreen, onDismiss: { payeeFlow.popupDidDismiss() }) {
+            AddContactSheet(container: contactVM, payeeFlow: payeeFlow, isSubmitting: $isCreatingContact, countryCode: "+1", onSave: { data in
+                // The sheet stays open while we create the contact and run check-intent.
+                // On check-intent success the model raises the in-sheet enroll popup; on
+                // any failure the sheet remains open (error toast shows).
                 Task {
                     isCreatingContact = true
-                    let success = await contactVM.createContact(
+                    let created = await contactVM.createContact(
                         nickname: data.nickname,
                         phoneNumber: data.phoneE164
                     )
-                    contactVM.clear()
+                    guard created else { isCreatingContact = false; return }
+                    await payeeFlow.prepareConfirmation(for: ContactRecord(
+                        id: data.phoneE164,
+                        isFav: false,
+                        nickname: data.nickname,
+                        createdAt: Date(),
+                        phoneNumber: data.phoneE164,
+                        isAdded: true,
+                        updatedAt: Date()
+                    ))
                     isCreatingContact = false
-                    // Skip the success screen — go straight into the check-intent →
-                    // confirm → transfer flow for the newly created contact.
-                    if success {
-                        payeeFlow.tap(ContactRecord(
-                            id: data.phoneE164,
-                            isFav: false,
-                            nickname: data.nickname,
-                            createdAt: Date(),
-                            phoneNumber: data.phoneE164,
-                            isAdded: true,
-                            updatedAt: Date()
-                        ))
-                    }
                 }
+            }, onContinue: {
+                // Continue tapped in the enroll popup — dismiss this sheet; the transfer
+                // is presented from onDismiss via popupDidDismiss().
+                contactVM.clear()
+                showCreateContactScreen = false
             }, onOpenSettings: openSettings)
         }
     }
@@ -402,16 +406,18 @@ struct PayAnyoneView: View {
     
     private func contactRow(_ contact: ContactRecord) -> some View {
         HStack(spacing: Spacing.md) {
-            contactAvatar(initials: contact.initials, size: 44)
+            contactAvatar(initials: contact.avatarInitial, size: 44)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(contact.nickname ?? "")
-                        .textStyle(Typography.bodyCompact)
-                        .foregroundColor(Color.movo.textPrimary)
+                // Nickname when present; otherwise the phone number stands in.
+                Text(contact.displayName)
+                    .textStyle(Typography.bodyCompact)
+                    .foregroundColor(Color.movo.textPrimary)
+                // Secondary phone line is redundant when the primary already shows it.
+                if contact.hasNickname {
+                    Text(contact.phoneNumber ?? "")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textTertiary)
                 }
-                Text(contact.phoneNumber ?? "")
-                    .textStyle(Typography.caption)
-                    .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
             Button {
@@ -722,16 +728,16 @@ extension PayAnyoneView {
     private var frequentContactsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Eyebrow("RECENT PAY")
+                Eyebrow("SEND AGAIN WITH MOVO")
                 Spacer()
-                //        if contactVM.frequents.count >= 10 {
+                if contactVM.frequents.count >= 5 {
                 Button(action: { showAllFrequents = true }) {
-                    Text("See all")
+                    Text("SEE ALL")
                         .textStyle(Typography.caption)
                         .foregroundColor(Color.movo.textSecondary)
                 }
                 .buttonStyle(.plain)
-                //       }
+                }
             }
             .padding(.horizontal, Spacing.lg)
             
@@ -775,13 +781,13 @@ extension PayAnyoneView {
                             .strokeBorder( Color.movo.border,
                                            lineWidth: Stroke.hairline
                             )
-                        Text("\(contact.nickname?.prefix(1) ?? "")")
+                        Text(contact.avatarInitial)
                             .textStyle(Typography.cardTitle)
                             .foregroundColor(Color.movo.textPrimary)
                     }
                     .frame(width: 56, height: 56)
-                    
-                    Text((contact.nickname?.split(separator: " ").first.map(String.init) ?? contact.nickname) ?? "")
+
+                    Text(contact.compactLabel)
                         .textStyle(Typography.captionSmall)
                         .foregroundColor(Color.movo.textSecondary)
                         .lineLimit(1)

@@ -239,7 +239,9 @@ final class ContactViewModel: BaseViewModel {
         Publishers.CombineLatest($favourites, mainQuery)
             .receive(on: work)
             .map { favs, query -> [ContactRecord] in
-                let sorted = favs.sorted { $0.isAdded && !$1.isAdded }
+                // Drop favourites whose number isn't a valid US (NANP) number.
+                let valid = favs.filter { $0.hasValidPhone }
+                let sorted = valid.sorted { $0.isAdded && !$1.isAdded }
                 return Self.applySearch(sorted, query: query)
             }
             .receive(on: DispatchQueue.main)
@@ -333,20 +335,29 @@ final class ContactViewModel: BaseViewModel {
     
     // MARK: - Load Frequent
     
-    func loadFrequent() async {
+    /// Loads recent (frequent) contacts. Returns `true` on success (or cancellation,
+    /// which is not a user-facing failure) and `false` when the request errors, so
+    /// callers can present an error state. `@discardableResult` keeps existing callers
+    /// that ignore the outcome unaffected.
+    @discardableResult
+    func loadFrequent() async -> Bool {
         do {
             let response: RecentTransferResponse = try await perform {
                 try await self.network.request(ContactAPI.getRecent)
             }
-            frequents = response.contacts
+            // Drop frequents whose number isn't a valid US (NANP) number.
+            frequents = response.contacts.filter { $0.hasValidPhone }
             analytics.log(AnalyticsEvent.contactFrequent, params: [
-                AnalyticsParam.count: response.contacts.count
+                AnalyticsParam.count: frequents.count
             ])
+            return true
         } catch is CancellationError {
+            return true
         } catch {
             analytics.log(AnalyticsEvent.contactFrequentFailed, params: [
                 AnalyticsParam.errorCode: error.localizedDescription
             ])
+            return false
         }
     }
     

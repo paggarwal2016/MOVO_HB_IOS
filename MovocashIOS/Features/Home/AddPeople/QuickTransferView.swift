@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 import MobileBankingSDK
 
 struct QuickTransferView: View {
@@ -45,14 +46,17 @@ struct QuickTransferView: View {
     @State private var showAccountSheet = false
     @State private var sendTask: Task<Void, Never>?
 
-    var onSuccess: () -> Void = {}
+    /// Reports the transfer success payload to the presenter so it can dismiss this
+    /// screen first and then present the success confirmation (instead of stacking it
+    /// on top of this screen).
+    var onComplete: (SuccessConfirmation) -> Void = { _ in }
 
-    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, recipientExists: Bool? = nil, onSuccess: @escaping () -> Void = {}) {
+    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, recipientExists: Bool? = nil, onComplete: @escaping (SuccessConfirmation) -> Void = { _ in }) {
         self.contact = contact
         self.cards = cards
         self.primaryLinkedCard = primaryLinkedCard
         self.recipientExists = recipientExists
-        self.onSuccess = onSuccess
+        self.onComplete = onComplete
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _selectedCard = State(wrappedValue: primaryLinkedCard ?? cards.first)
@@ -158,14 +162,11 @@ struct QuickTransferView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
         }
-        .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
-            SuccessConfirmationView(
-                viewModel: SuccessConfirmationViewModel(success: data) {
-                    achVM.peerTransferSuccess = nil
-                    onSuccess()
-                    (securedDismiss ?? dismiss)()
-                }
-            )
+        .onReceive(achVM.$peerTransferSuccess.compactMap { $0 }) { data in
+            // API success: hand the payload to the presenter and let it dismiss this
+            // screen before presenting the success confirmation.
+            achVM.peerTransferSuccess = nil
+            onComplete(data)
         }
         .sheet(isPresented: $showAccountSheet) {
             accountSelectionSheet

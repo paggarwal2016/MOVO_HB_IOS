@@ -11,6 +11,9 @@ import MobileBankingSDK
 struct QuickPayView: View {
 
     let primaryLinkedCard: VCardListResponse?
+    /// Available balance from the dashboard PRIMARYACCOUNT section. Authoritative for
+    /// the amount entry — the VCard's balance fields aren't populated from that payload.
+    let availableBalance: Decimal
     /// Sheet header title (API-driven from the dashboard PAYANYONE section).
     let title: String
 
@@ -28,14 +31,18 @@ struct QuickPayView: View {
     @State private var sendTask: Task<Void, Never>?
     /// Last sanitized number we ran check-intent for, so we don't refire on every keystroke.
     @State private var lastCheckedPhone: String = ""
+    /// Drives presentation of the native `CNContactPickerViewController`.
+    @State private var showSystemPicker = false
 
     var onSuccess: () -> Void = {}
 
     init(container: AppContainer,
          primaryLinkedCard: VCardListResponse? = nil,
+         availableBalance: Decimal = 0,
          title: String = "Quick Pay",
          onSuccess: @escaping () -> Void = {}) {
         self.primaryLinkedCard = primaryLinkedCard
+        self.availableBalance = availableBalance
         self.title = title
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
@@ -55,7 +62,11 @@ struct QuickPayView: View {
     // MARK: - Balance helpers
 
     private var accountBalance: Decimal {
-        Decimal(primaryLinkedCard?.savingsAccountAvailableBalance ?? 0)
+        // Prefer the PRIMARYACCOUNT available balance (authoritative). Fall back to the
+        // VCard's balance fields only when it wasn't supplied.
+        if availableBalance > 0 { return availableBalance }
+        return Decimal(primaryLinkedCard?.savingsAccountAvailableBalance
+                       ?? primaryLinkedCard?.savingsAccountBalance ?? 0)
     }
 
     private var availableBalanceDisplay: String {
@@ -95,10 +106,22 @@ struct QuickPayView: View {
                             maxValue: availableBalanceDouble
                         )
                         .padding(.top, Spacing.lg)
+                        
                         recipientSection
-                            .padding(.top, Spacing.xl)
+                        
                         NoteCard(text: $descriptionText)
-                            .padding(.top, Spacing.md)
+                            .padding(.top, Spacing.sm)
+
+                        // Divider + button read as one unit: tight md gap between them,
+                        // while the group keeps the section's xl rhythm below NoteCard.
+                        VStack(spacing: Spacing.md) {
+                            LabeledDivider(text: "OR PICK FROM")
+                            UsePhoneContactButton {
+                                amountFocused = false
+                                UIApplication.shared.dismissKeyboard()
+                                showSystemPicker = true
+                            }
+                        }
                     }
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.md)
@@ -124,12 +147,16 @@ struct QuickPayView: View {
                 SpinnerView()
             }
         }
+        // Hosts the native contact picker; presents when `showSystemPicker` flips true.
+        .background {
+            PhoneContactPicker(isPresented: $showSystemPicker) { name, phone in
+                applyPickedContact(name: name, phone: phone)
+            }
+        }
         .onChange(of: amountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
         }
-        // Run check-intent once the user has entered a complete, valid number so the
-        // transfer route (internal vs external) is resolved before they tap Pay.
         .onChange(of: phoneNo) { _ in runCheckIntentIfReady() }
         .globalAlert()
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
@@ -162,6 +189,15 @@ struct QuickPayView: View {
                 CustomPhoneField(phoneNumber: $phoneNo)
             }
         }
+    }
+
+    // MARK: - Use phone contact
+
+    /// Fills the recipient fields from a contact picked in the native system picker.
+    /// `sanitize` yields the 10-digit national number; `CustomPhoneField` re-formats it.
+    private func applyPickedContact(name: String, phone: String) {
+        nickname = name
+        phoneNo = PhoneNumberValidator.sanitize(phone)
     }
 
     // MARK: - Actions

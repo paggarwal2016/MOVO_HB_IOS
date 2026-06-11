@@ -25,8 +25,8 @@ struct CustomSheetHeader: View {
     var showsCloseButton: Bool = true
     
     var horizontalPadding: CGFloat = Spacing.xxl
-    var topPadding: CGFloat = 28
-    var bottomPadding: CGFloat = 18
+    var topPadding: CGFloat = 15
+    var bottomPadding: CGFloat = 15
     
     var closeAction: (() -> Void)?
     
@@ -69,9 +69,12 @@ struct CustomSheetHeader: View {
                     .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(Color.movo.textTertiary)
                     .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            
-            Spacer(minLength: Spacing.md)
+            // Fill the available width so the subtitle uses the full first line before
+            // wrapping (a lineLimit(2) Text otherwise reports a narrow "balanced" ideal
+            // width). The close button then sits at the trailing edge — no Spacer needed.
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             
             // MARK: Close

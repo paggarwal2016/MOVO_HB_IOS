@@ -17,37 +17,62 @@ struct ActionCard: View {
     private let theme = MovoTheme.color
 
     var body: some View {
-        Button(action: onButtonTap) {
-            HStack(alignment: .center, spacing: 16) {
-                PayAnyoneIllustration()
-                    .frame(width: 80, height: 80)
-                    .frame(maxWidth: .none, alignment: .leading)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Section eyebrow — the tile title (e.g. "QUICK SEND").
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(1.2)
+                .foregroundColor(Color.movo.textTertiary)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(title)
-                        .textStyle(Typography.cardHero)
-                        .foregroundStyle(theme.textPrimary.color)
-                        .fixedSize(horizontal: false, vertical: true)
+            // Inner card — tappable empty state.
+            Button(action: onButtonTap) {
+                VStack(spacing: Spacing.xs) {
+                    // Circular tinted badge holding the add-person glyph.
+                    ZStack {
+                        Circle()
+                            .fill(Color.movo.accentTint)
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 20, weight: .regular))
+                            .foregroundColor(Color.movo.accent)
+                    }
+                    .frame(width: 40, height: 40)
 
-                    Text(description)
-                        .textStyle(Typography.subtitle)
-                        .foregroundStyle(theme.textSecondary.color)
-                        .lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
+                    // Message — the section's `description` (e.g. "No recent contacts yet").
+                    if !description.isEmpty {
+                        Text(description)
+                            .textStyle(Typography.subtitle)
+                            .foregroundStyle(theme.textSecondary.color)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    // Accent action — the API action's `label` (e.g. "Add someone").
+                    Text(buttonLabel)
+                        .textStyle(Typography.button)
+                        .foregroundStyle(Color.movo.accent)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.sm)
+                .padding(.horizontal, Spacing.lg)
+                .background(Color.movo.cardSurface)
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                        .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
             }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.movo.surface)
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                    .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+            .buttonStyle(.plain)
+            .disabled(isLoading)
         }
-        .buttonStyle(.plain)
-        .disabled(isLoading)
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.movo.surface)
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
+        )
     }
 }
 
@@ -165,8 +190,10 @@ struct PayAnyoneAddContactView: View {
     var onContactTap: (RecordContact) -> Void
     var onSeeAllTap: (() -> Void)? = nil
 
-    private var showSeeAll: Bool { contacts.count >= 4 }
-    private var displayedContacts: [RecordContact] { Array(contacts.prefix(4)) }
+    /// Drop contacts whose number isn't a valid US (NANP) number.
+    private var validContacts: [RecordContact] { contacts.filter { $0.hasValidPhone } }
+    private var showSeeAll: Bool { validContacts.count >= 4 }
+    private var displayedContacts: [RecordContact] { Array(validContacts.prefix(4)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
@@ -188,15 +215,8 @@ struct PayAnyoneAddContactView: View {
             // Bubbles — equal width when ≥4 contacts, fixed width otherwise
             HStack(spacing: 8) {
                 ForEach(displayedContacts) { contact in
-                    let hasNickname = !(contact.nickname?.isEmpty ?? true)
-                    let initial = hasNickname
-                        ? String(contact.nickname?.first ?? "?").uppercased()
-                        : ""
-                    let label = hasNickname
-                        ? (contact.nickname?.split(separator: " ").first.map(String.init)
-                           ?? contact.nickname ?? "")
-                        : (contact.phoneNumber ?? "")
-                    bubble(initial: initial, label: label, expand: showSeeAll, usesLogo: !hasNickname) { onContactTap(contact) }
+                    // No nickname → first local digit avatar + phone number label.
+                    bubble(initial: contact.avatarInitial, label: contact.compactLabel, expand: showSeeAll) { onContactTap(contact) }
                 }
                 bubble(initial: "+", label: "Add", expand: showSeeAll, action: onAddTap)
             }
@@ -213,7 +233,7 @@ struct PayAnyoneAddContactView: View {
         )
     }
 
-    private func bubble(initial: String, label: String, expand: Bool, usesLogo: Bool = false, action: @escaping () -> Void) -> some View {
+    private func bubble(initial: String, label: String, expand: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: Spacing.xs) {
                 if initial == "+" {
@@ -224,14 +244,9 @@ struct PayAnyoneAddContactView: View {
                         Circle()
                             .fill(Color.movo.elevatedHigh)
                             .overlay(Circle().strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline))
-                        if usesLogo {
-                            MovoMVSymbol()
-                                .frame(width: 16, height: 16)
-                        } else {
-                            Text(initial)
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(Color.movo.textPrimary)
-                        }
+                        Text(initial)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Color.movo.textPrimary)
                     }
                     .frame(width: 52, height: 52)
                 }

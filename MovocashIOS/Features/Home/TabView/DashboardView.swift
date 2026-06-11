@@ -58,6 +58,9 @@ struct DashboardView: View {
     @State private var showViewCardList = false
     @State private var showContactList = false
     @State private var showQuickPayView = false
+    @State private var showCreateContact = false
+    /// True while the create-contact API call is in flight — shows the spinner.
+    @State private var isCreatingContact = false
     // Set to true by any child screen that completes a successful action;
     // triggers a single dashboard refresh on return.
     @State private var needsDashboardRefresh = false
@@ -90,7 +93,7 @@ struct DashboardView: View {
                 scrollContent
             }
             StatusBarScrim()
-            if dashboardVM.isRefreshing {
+            if dashboardVM.isRefreshing || isCreatingContact {
                 // Scrim — black-on-alpha is intentional; works on both light and dark backgrounds.
                 Color.black.opacity(0.35)
                     .ignoresSafeArea()
@@ -157,10 +160,42 @@ struct DashboardView: View {
             )
         }
         
+        .fullScreenCover(isPresented: $showCreateContact, onDismiss: { payeeFlow.popupDidDismiss() }) {
+            AddContactSheet(container: contactVM, payeeFlow: payeeFlow, isSubmitting: $isCreatingContact, countryCode: "+1", onSave: { data in
+                // The sheet stays open while we create the contact and run check-intent.
+                // On check-intent success the model raises the in-sheet enroll popup; on
+                // any failure the sheet remains open (error toast shows).
+                Task {
+                    isCreatingContact = true
+                    let created = await contactVM.createContact(
+                        nickname: data.nickname,
+                        phoneNumber: data.phoneE164
+                    )
+                    guard created else { isCreatingContact = false; return }
+                    await payeeFlow.prepareConfirmation(for: ContactRecord(
+                        id: data.phoneE164,
+                        isFav: false,
+                        nickname: data.nickname,
+                        createdAt: Date(),
+                        phoneNumber: data.phoneE164,
+                        isAdded: true,
+                        updatedAt: Date()
+                    ))
+                    isCreatingContact = false
+                }
+            }, onContinue: {
+                // Continue tapped in the enroll popup — dismiss this sheet; the transfer
+                // is presented from onDismiss via popupDidDismiss().
+                contactVM.clear()
+                showCreateContact = false
+            })
+        }
+
         .fullScreenCover(isPresented: $showQuickPayView) {
             QuickPayView(
                 container: container,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                availableBalance: dashboardVM.primaryAccount?.availableBalance ?? 0,
                 title: dashboardVM.quickPayTitle,
                 onSuccess: { needsDashboardRefresh = true }
             )
@@ -414,14 +449,13 @@ struct DashboardView: View {
                             buttonLabel: data.actions.first?.label ?? "Add payee"
                         ) {
                             showQuickPayView = true
-                            SecureLogger.debug("Quick transfer tapped", category: .general)
                         }
                     } else {
                         PayAnyoneAddContactView(
                             title: data.title ?? "",
                             contacts: data.favContactList,
                             onAddTap: {
-                                showContactList = true
+                                showQuickPayView = true
                             },
                             onContactTap: { record in
                                 payeeFlow.tap(ContactRecord(
