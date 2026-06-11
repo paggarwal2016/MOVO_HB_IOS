@@ -11,8 +11,12 @@ import MobileBankingSDK
 struct QuickPayView: View {
 
     let primaryLinkedCard: VCardListResponse?
+    /// Funding/other cards forwarded to the transfer screen by the payee flow.
+    let cards: [VCardListResponse]
     /// Sheet header title (API-driven from the dashboard PAYANYONE section).
     let title: String
+
+    private let container: AppContainer
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
@@ -20,6 +24,7 @@ struct QuickPayView: View {
 
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
+    @StateObject private var payeeFlow: PayeeTransferModel
 
     @State private var nickname: String = ""
     @State private var phoneNo: String = ""
@@ -28,34 +33,44 @@ struct QuickPayView: View {
     @State private var sendTask: Task<Void, Never>?
     /// Last sanitized number we ran check-intent for, so we don't refire on every keystroke.
     @State private var lastCheckedPhone: String = ""
+    /// Drives presentation of the native `CNContactPickerViewController`.
+    @State private var showSystemPicker = false
 
     var onSuccess: () -> Void = {}
 
     init(container: AppContainer,
          primaryLinkedCard: VCardListResponse? = nil,
+         cards: [VCardListResponse] = [],
          title: String = "Quick Pay",
          onSuccess: @escaping () -> Void = {}) {
+        self.container = container
         self.primaryLinkedCard = primaryLinkedCard
+        self.cards = cards
         self.title = title
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+        _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
 
-    /// Pay enables on a valid US phone number and a positive amount. Nickname and
-    /// note are optional. The funding card / balance are validated at send time so
-    /// the button reflects the user's own input rather than data-load state.
+    /// Pay enables once a 10-digit recipient number is entered (or picked from Contacts)
+    /// and the amount is positive. Nickname and note are optional. We intentionally use a
+    /// length check rather than strict NANP validation so legitimately-picked numbers
+    /// (incl. test 555 numbers) enable the button; the recipient is still resolved by
+    /// check-intent and validated at send time.
     private var isFormValid: Bool {
-        PhoneNumberValidator.isValidUSNumber(PhoneNumberValidator.sanitize(phoneNo))
-            && amount > 0
+        PhoneNumberValidator.sanitize(phoneNo).count >= 10 && amount > 0
     }
 
     // MARK: - Balance helpers
 
     private var accountBalance: Decimal {
-        Decimal(primaryLinkedCard?.savingsAccountAvailableBalance ?? 0)
+        // primaryLinkedCard carries the balance (backfilled from PRIMARYACCOUNT in the
+        // dashboard VM). Mirror `displayBalance`'s available → ledger fallback.
+        Decimal(primaryLinkedCard?.savingsAccountAvailableBalance
+                ?? primaryLinkedCard?.savingsAccountBalance ?? 0)
     }
 
     private var availableBalanceDisplay: String {
@@ -95,10 +110,22 @@ struct QuickPayView: View {
                             maxValue: availableBalanceDouble
                         )
                         .padding(.top, Spacing.lg)
+                        
                         recipientSection
-                            .padding(.top, Spacing.xl)
+                        
                         NoteCard(text: $descriptionText)
-                            .padding(.top, Spacing.md)
+                            .padding(.top, Spacing.sm)
+
+                        // Divider + button read as one unit: tight md gap between them,
+                        // while the group keeps the section's xl rhythm below NoteCard.
+                        VStack(spacing: Spacing.md) {
+                            LabeledDivider(text: "OR PICK FROM")
+                            UsePhoneContactButton {
+                                amountFocused = false
+                                UIApplication.shared.dismissKeyboard()
+                                showSystemPicker = true
+                            }
+                        }
                     }
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.md)
@@ -109,7 +136,17 @@ struct QuickPayView: View {
                 PayActionButton(amount: amount, isEnabled: isFormValid) {
                     amountFocused = false
                     UIApplication.shared.dismissKeyboard()
-                    sendTask = Task { await sendMoney() }
+                    // Hand off to the shared payee flow: check-intent → confirm popup →
+                    // QuickTransferView (presented by .payeeTransferFlow below).
+                    payeeFlow.tap(ContactRecord(
+                        id: phoneNo,
+                        isFav: false,
+                        nickname: nickname.isEmpty ? nil : nickname,
+                        createdAt: Date(),
+                        phoneNumber: phoneNo,
+                        isAdded: false,
+                        updatedAt: Date()
+                    ))
                 }
                 .padding(.horizontal, Spacing.lg)
                 .padding(.top, Spacing.xs)
@@ -124,17 +161,29 @@ struct QuickPayView: View {
                 SpinnerView()
             }
         }
+        // Hosts the native contact picker; presents when `showSystemPicker` flips true.
+        .background {
+            PhoneContactPicker(isPresented: $showSystemPicker) { name, phone in
+                applyPickedContact(name: name, phone: phone)
+            }
+        }
         .onChange(of: amountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
         }
-        // Run check-intent once the user has entered a complete, valid number so the
-        // transfer route (internal vs external) is resolved before they tap Pay.
         .onChange(of: phoneNo) { _ in runCheckIntentIfReady() }
+        .payeeTransferFlow(
+            payeeFlow,
+            container: container,
+            cards: cards,
+            primaryLinkedCard: primaryLinkedCard,
+            onSuccess: { onSuccess(); (securedDismiss ?? dismiss)() }
+        )
         .globalAlert()
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             sendTask?.cancel()
             sendTask = nil
+            payeeFlow.reset()
             (securedDismiss ?? dismiss)()
         }
         .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
@@ -162,6 +211,15 @@ struct QuickPayView: View {
                 CustomPhoneField(phoneNumber: $phoneNo)
             }
         }
+    }
+
+    // MARK: - Use phone contact
+
+    /// Fills the recipient fields from a contact picked in the native system picker.
+    /// `sanitize` yields the 10-digit national number; `CustomPhoneField` re-formats it.
+    private func applyPickedContact(name: String, phone: String) {
+        nickname = name
+        phoneNo = PhoneNumberValidator.sanitize(phone)
     }
 
     // MARK: - Actions

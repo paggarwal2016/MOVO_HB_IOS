@@ -272,14 +272,17 @@ actor PlaidService {
     func approveTransactionIntent(
         intentId: String,
         deviceId: String,
-        presentingViewController: UIViewController
+        presentingViewController: UIViewController,
+        enableEncryptedResponses: Bool = false,
+        approvalSheetHeight: TransactionApprovalSheetHeight = .large,
     ) async throws -> SecureTransactionApprovalResult {
         try await withCheckedThrowingContinuation { continuation in
             MobileBankingSDK.approveTransactionIntent(
                 intentId: intentId,
                 deviceId: deviceId,
                 presentingViewController: presentingViewController,
-                enableEncryptedResponses: false
+                enableEncryptedResponses: false,
+                approvalSheetHeight: approvalSheetHeight
             ) { result in
                 continuation.resume(with: result)
             }

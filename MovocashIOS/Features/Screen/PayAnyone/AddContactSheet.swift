@@ -8,6 +8,8 @@
 import Foundation
 import SwiftUI
 import Combine
+import Contacts
+import ContactsUI
 
 // MARK: - Public sheet view
 
@@ -24,25 +26,34 @@ public struct AddContactSheet: View {
     // MARK: Public init
     
     init(container: ContactViewModel,
+         payeeFlow: PayeeTransferModel,
+         isSubmitting: Binding<Bool>,
          countryCode: String = "+1",
          onSave: @escaping (Result) -> Void,
+         onContinue: @escaping () -> Void = {},
          onCancel: (() -> Void)? = nil,
          onOpenSettings: (() -> Void)? = nil
     ) {
         self.countryCode = countryCode
         self.onSave = onSave
+        self.onContinue = onContinue
         self.onCancel = onCancel
         self.onOpenSettings = onOpenSettings
+        _isSubmitting = isSubmitting
         // `container` is owned by the presenting view's @StateObject. Observe it
         // here — do NOT re-wrap in @StateObject, which would take a second
         // ownership of the same instance and over-release it (EXC_BAD_ACCESS).
         _vm = ObservedObject(wrappedValue: container)
+        _payeeFlow = ObservedObject(wrappedValue: payeeFlow)
     }
 
     // MARK: Configuration
 
     public let countryCode: String
     public let onSave: (Result) -> Void
+    /// Continue tapped in the in-sheet enroll popup — the caller dismisses this sheet
+    /// (the transfer is then presented from the sheet's `onDismiss`).
+    public let onContinue: () -> Void
     public let onCancel: (() -> Void)?
     /// Opens the app's Settings page (the caller injects the app-lock-aware action).
     public let onOpenSettings: (() -> Void)?
@@ -51,9 +62,16 @@ public struct AddContactSheet: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @ObservedObject private var vm: ContactViewModel
+    /// Shared payee flow — drives the in-sheet enroll popup (`showAddConfirm`) shown
+    /// after check-intent succeeds.
+    @ObservedObject private var payeeFlow: PayeeTransferModel
+    /// Owned by the caller. True while the caller runs create-contact → check-intent.
+    /// The sheet stays open and shows a loading overlay until the enroll popup appears
+    /// (success) or this flag clears (failure).
+    @Binding private var isSubmitting: Bool
     @FocusState private var focusedField: Field?
-    /// Id of the contact tapped in the import list — drives the row highlight.
-    @State private var selectedContactId: String? = nil
+    /// Drives presentation of the native `CNContactPickerViewController`.
+    @State private var showSystemPicker = false
 
     private enum Field { case nickname, phone }
     
@@ -64,10 +82,45 @@ public struct AddContactSheet: View {
         VStack(spacing: 0) {
             header()
             form()
-            importSection()
+            LabeledDivider(text: "OR PICK FROM")
+                .padding(.bottom, Spacing.md)
+            usePhoneContactButton()
+            Spacer()
             cta
         }
         .background(Color.movo.cardSurface.ignoresSafeArea())
+        // Hosts the native contact picker; presents when `showSystemPicker` flips true.
+        .background {
+            PhoneContactPicker(isPresented: $showSystemPicker) { name, phone in
+                applyPickedContact(name: name, phone: phone)
+            }
+        }
+        // Loading overlay while the caller runs create-contact → check-intent.
+        .overlay {
+            if isSubmitting {
+                SpinnerView()
+            }
+        }
+        // Enroll popup, shown OVER this sheet once check-intent succeeds. Continue
+        // dismisses both (the caller dismisses the sheet); Cancel stays on the sheet.
+        .overlay {
+            CustomContactEnrollView(
+                isPresented: Binding(
+                    get: { payeeFlow.showAddConfirm },
+                    set: { if !$0 { payeeFlow.showAddConfirm = false } }
+                ),
+                title: payeeFlow.confirmTitle,
+                message: payeeFlow.confirmMessage,
+                avatarInitial: payeeFlow.confirmInitial,
+                continueTitle: "Continue",
+                cancelTitle: "Cancel",
+                continueAction: {
+                    payeeFlow.confirmAdd()
+                    onContinue()
+                },
+                cancelAction: { payeeFlow.cancelAdd() }
+            )
+        }
         .onAppear {
             vm.refreshAuthorization()
             if vm.contactAccess == .full || vm.contactAccess == .limited {
@@ -83,67 +136,38 @@ public struct AddContactSheet: View {
     // MARK: Header
     
     private func header() -> some View {
-        HStack(spacing: Spacing.md) {
-            // Icon tile
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.accentTint)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.button)
-                            .strokeBorder(Color.movo.accentBorder,
-                                          lineWidth: Stroke.hairline)
-                    )
-                Image(systemName: "person.badge.plus")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(Color.movo.accent)
-            }
-            .frame(width: 38, height: 38)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Add new contact")
-                    .textStyle(Typography.cardTitle)
-                    .foregroundColor(Color.movo.textPrimary)
-                Text("They'll appear under your contacts")
-                    .textStyle(Typography.caption)
-                    .foregroundColor(Color.movo.textTertiary)
-            }
-            
-            Spacer()
-            
-            // Close button
-            Button(action: cancelTapped) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.movo.textSecondary)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        Circle()
-                            .fill(Color.movo.elevated.opacity(0.8))
-                            .overlay(
-                                Circle()
-                                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                            )
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close")
+        CustomSheetHeader(
+            title: "Add new contact",
+            subtitle: "They'll appear under your contacts",
+            systemImage: "person.badge.plus",
+            iconTint: Color.movo.accent,
+            iconBackground: Color.movo.accentTint,
+            horizontalPadding: Spacing.lg
+        ) {
+            cancelTapped()
         }
-        .padding(.horizontal, Spacing.xl + 2)
-        .padding(.top, Spacing.xxl)
-        .padding(.bottom, Spacing.lg)
     }
     
-    // MARK: Sub header
-    
-    private func subHeader() -> some View {
-        HStack(spacing: Spacing.md) {
-            
+    // MARK: Use phone contact
+
+    /// Opens the native system contact picker (no Contacts permission required).
+    private func usePhoneContactButton() -> some View {
+        UsePhoneContactButton {
+            focusedField = nil
+            showSystemPicker = true
         }
-        .padding(.horizontal, Spacing.xl + 2)
-        .padding(.top, Spacing.xxl)
-        .padding(.bottom, Spacing.lg)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.sm)
     }
-    
+
+    /// Fills the form from a contact picked in the native system picker.
+    private func applyPickedContact(name: String, phone: String) {
+        let sanitized = PhoneNumberValidator.sanitize(phone)
+        vm.nickname = name
+        vm.phoneInput = ContactViewModel.formatPhone(sanitized)
+        vm.helperIsError = false
+    }
+
     // MARK: Form
     
     private func form() -> some View {
@@ -237,209 +261,6 @@ public struct AddContactSheet: View {
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.lg)
     }
-    
-    // MARK: Import device contacts
-
-    @ViewBuilder
-    private func importSection() -> some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            LabeledDivider(text: "OR PICK FROM")
-                .padding(.bottom, Spacing.xs)
-
-            switch vm.contactAccess {
-            case .undetermined:
-                permissionCard(
-                    title: "Movo is better with friends",
-                    message: "Find people you know already on Movo and send instantly.",
-                    button: "Enable Contacts",
-                    action: { Task { await vm.requestContactAccess() } }
-                )
-            case .denied:
-                permissionCard(
-                    title: "Movo is better with friends",
-                    message: "Allow contact access to pick from your phone contacts.",
-                    button: "Allow Access",
-                    action: { onOpenSettings?() }
-                )
-            case .limited, .full:
-                contactsList()
-            }
-        }
-        .padding(.horizontal, Spacing.lg)
-        .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    /// Styled permission card (ported from PayAnyoneView.permissionCompactCard).
-    private func permissionCard(title: String, message: String, button: String, action: @escaping () -> Void) -> some View {
-        HStack(alignment: .top, spacing: Spacing.md + 2) {
-
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(Color.movo.accentTint)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.lg)
-                            .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
-                    )
-                Image(systemName: "person.2.badge.plus")
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundColor(Color.movo.accent)
-            }
-            .frame(width: 44, height: 44)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .textStyle(Typography.cardTitle)
-                    .foregroundColor(Color.movo.textPrimary)
-
-                Text(message)
-                    .textStyle(Typography.captionSmall)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .lineSpacing(1.5)
-                    .padding(.bottom, Spacing.sm + 2)
-
-                Button(action: action) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "person.badge.plus")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text(button)
-                            .textStyle(Typography.button)
-                    }
-                }
-                .buttonStyle(MovoCompactButtonStyle())
-            }
-        }
-        .padding(Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface.opacity(0.85))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                )
-        )
-    }
-
-    @ViewBuilder
-    private func contactsList() -> some View {
-        let items = vm.filteredImportable
-
-        HStack {
-            Text("FROM YOUR CONTACTS")
-                .textStyle(Typography.eyebrow)
-                .foregroundColor(Color.movo.textTertiary)
-            
-            Spacer()
-            
-            if vm.contactAccess == .limited {
-                Button(action: { onOpenSettings?() }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus.circle")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Use More")
-                            .textStyle(Typography.button)
-                    }
-                    .foregroundColor(Color.movo.accent)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-
-        // Search
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(Color.movo.textDisabled)
-            TextField("", text: $vm.importSearch,
-                      prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
-            .textStyle(Typography.body)
-            .foregroundColor(Color.movo.textPrimary)
-            .autocorrectionDisabled()
-            if !vm.importSearch.isEmpty {
-                Button { vm.importSearch = "" } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundColor(Color.movo.textDisabled)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.button)
-                .fill(Color.movo.cardSurface)
-                .overlay(RoundedRectangle(cornerRadius: Radius.button)
-                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-        )
-
-        if items.isEmpty {
-            Text(vm.importSearch.isEmpty ? "No contacts to import." : "No matches.")
-                .textStyle(Typography.caption)
-                .foregroundColor(Color.movo.textTertiary)
-                .padding(.vertical, Spacing.md)
-        } else {
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    ForEach(items) { contact in
-                        Button { selectContact(contact) } label: { contactRow(contact) }
-                            .buttonStyle(.plain)
-                        if contact.id != items.last?.id {
-                            Rectangle().fill(Color.movo.border)
-                                .frame(height: Stroke.hairline)
-                                .padding(.leading, 52)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func contactRow(_ contact: ContactRecord) -> some View {
-        let isSelected = contact.id == selectedContactId
-        return HStack(spacing: Spacing.md) {
-            Text(contact.initials.isEmpty ? "?" : contact.initials)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(Color.movo.textPrimary)
-                .frame(width: 38, height: 38)
-                .background(Color.movo.elevated, in: Circle())
-                .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(contact.nickname ?? "")
-                    .textStyle(Typography.bodyCompact)
-                    .foregroundColor(Color.movo.textPrimary)
-                    .lineLimit(1)
-                Text(contact.phoneNumber ?? "")
-                    .textStyle(Typography.caption)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .lineLimit(1)
-            }
-            Spacer()
-
-            if isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(Color.movo.accent)
-            }
-        }
-        .padding(.vertical, Spacing.sm + 2)
-        .padding(.horizontal, Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.button)
-                .fill(isSelected ? Color.movo.accentTint : Color.clear)
-        )
-        .contentShape(Rectangle())
-    }
-
-    private func selectContact(_ contact: ContactRecord) {
-        if selectedContactId == contact.id {
-            // Tapping the selected contact again deselects it and clears the fields.
-            selectedContactId = nil
-            vm.clear()
-        } else {
-            vm.fill(from: contact)
-            selectedContactId = contact.id
-        }
-        focusedField = nil
-    }
 
     // MARK: CTA
 
@@ -457,15 +278,16 @@ public struct AddContactSheet: View {
     // MARK: Actions
 
     private func addTapped() {
+        guard !isSubmitting else { return }
         guard let result = vm.buildResult(countryCode: countryCode) else {
             vm.helperIsError = true
             return
         }
         focusedField = nil
-        // Hand off to the caller, which owns the async create-contact Task and
-        // the loading spinner, then dismiss immediately (proven crash-free flow).
+        // Hand off to the caller, which owns the async create-contact → check-intent
+        // Task. The sheet stays open (showing the loading CTA) and is dismissed by the
+        // caller only after check-intent succeeds; on failure it remains open.
         onSave(result)
-        dismiss()
     }
     
     private func cancelTapped() {
@@ -488,6 +310,112 @@ struct LabeledDivider: View {
                 .textStyle(Typography.micro)
                 .foregroundColor(Color.movo.textTertiary)
             Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
+        }
+    }
+}
+
+// MARK: - Reusable "Use phone contact" button
+
+/// Tappable row that opens the native system contact picker. The caller owns the
+/// `CNContactPickerViewController` presentation (via `PhoneContactPicker`) and decides
+/// what `action` does (e.g. flip a `showSystemPicker` flag).
+struct UsePhoneContactButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Use phone contact")
+                    .textStyle(Typography.button)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(Color.movo.textDisabled)
+            }
+            .foregroundColor(Color.movo.accent)
+            .padding(.horizontal, Spacing.md + 2)
+            .padding(.vertical, Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.button)
+                    .fill(Color.movo.accentTint)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Native system contact picker
+
+/// Wraps `CNContactPickerViewController` so a contact (and a specific phone
+/// number) can be picked from the system UI. Runs out-of-process — it does NOT
+/// require the app to hold Contacts permission.
+///
+/// Presented from an otherwise-empty host controller (rather than via `.sheet`)
+/// so the picker's own self-dismissal stays in sync with `isPresented`.
+struct PhoneContactPicker: UIViewControllerRepresentable {
+
+    @Binding var isPresented: Bool
+    /// Fired once the picker has finished presenting — lets callers dismiss a loader
+    /// shown during the (out-of-process) launch delay. Declared before `onPick` so the
+    /// trailing-closure call sites still bind their closure to `onPick`.
+    var onPresented: (() -> Void)? = nil
+    /// Called with the contact's display name and the selected raw phone number.
+    let onPick: (String, String) -> Void
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        UIViewController()
+    }
+
+    func updateUIViewController(_ host: UIViewController, context: Context) {
+        // Present once per `isPresented` rising edge.
+        if isPresented, context.coordinator.picker == nil {
+            let picker = CNContactPickerViewController()
+            picker.delegate = context.coordinator
+            // Show phone numbers and force property-level selection so a contact
+            // with multiple numbers lets the user choose which one.
+            picker.displayedPropertyKeys = [CNContactPhoneNumbersKey]
+            picker.predicateForSelectionOfContact = NSPredicate(value: false)
+            context.coordinator.picker = picker
+            let onPresented = self.onPresented
+            DispatchQueue.main.async {
+                host.present(picker, animated: true) { onPresented?() }
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, CNContactPickerDelegate {
+        private let parent: PhoneContactPicker
+        /// Held so we present at most once and can clear it on dismissal.
+        var picker: CNContactPickerViewController?
+
+        init(_ parent: PhoneContactPicker) { self.parent = parent }
+
+        func contactPicker(_ picker: CNContactPickerViewController,
+                           didSelect contactProperty: CNContactProperty) {
+            if let phone = (contactProperty.value as? CNPhoneNumber)?.stringValue {
+                let contact = contactProperty.contact
+                let name = "\(contact.givenName) \(contact.familyName)"
+                    .trimmingCharacters(in: .whitespaces)
+                parent.onPick(name, phone)
+            }
+            finish()
+        }
+
+        func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
+            finish()
+        }
+
+        private func finish() {
+            picker = nil
+            parent.isPresented = false
         }
     }
 }

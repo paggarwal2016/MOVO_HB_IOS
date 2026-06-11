@@ -17,33 +17,20 @@ struct PayAnyoneContactPickerView: View {
     var onSuccess: () -> Void = {}
 
     @StateObject private var contactVM: ContactViewModel
+    @StateObject private var payeeFlow: PayeeTransferModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @SwiftUI.Environment(\.openURL) private var openURL
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
     @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
-    @State private var selectedFrequent: ContactRecord? = nil
     @State private var showCreateContact = false
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
     @State private var loadTask: Task<Void, Never>?
     @State private var createContactTask: Task<Void, Never>?
 
-    /// Newly added contact, drives the full-screen success cover.
-    @State private var addedContact: AddedContact? = nil
     /// True while the create-contact API call is in flight — shows the spinner.
     @State private var isCreatingContact = false
-    /// Contact to open in QuickTransferView once the success cover dismisses
-    /// (set when the user taps "Quick send"); deferred to onDismiss to avoid a
-    /// present/dismiss race with the navigation push.
-    @State private var pendingQuickSendContact: ContactRecord? = nil
-
-    /// Lightweight payload for the success cover.
-    private struct AddedContact: Identifiable {
-        let id = UUID()
-        let nickname: String
-        let phoneE164: String
-    }
 
     init(container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, title: String = "Pay Anyone", onSuccess: @escaping () -> Void = {}) {
         self.container = container
@@ -52,6 +39,7 @@ struct PayAnyoneContactPickerView: View {
         self.title = title
         self.onSuccess = onSuccess
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
+        _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
     }
 
     private var isAuthorized: Bool {
@@ -96,75 +84,44 @@ struct PayAnyoneContactPickerView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: ContactRecord.self) { contact in
-                QuickTransferView(
-                    contact: contact,
-                    container: container,
-                    cards: cards,
-                    primaryLinkedCard: primaryLinkedCard,
-                    onSuccess: { onSuccess(); dismiss() }
-                )
-            }
-            .navigationDestination(isPresented: Binding(
-                get: { selectedFrequent != nil },
-                set: { if !$0 { selectedFrequent = nil } }
-            )) {
-                if let contact = selectedFrequent {
-                    QuickTransferView(
-                        contact: contact,
-                        container: container,
-                        cards: cards,
-                        primaryLinkedCard: primaryLinkedCard,
-                        onSuccess: { onSuccess(); dismiss() }
-                    )
-                }
-            }
-            .fullScreenCover(isPresented: $showCreateContact) {
-                AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
-                    // Sheet dismisses itself immediately; this view owns the async
-                    // work and the spinner. Shows the success cover on completion.
+            .payeeTransferFlow(
+                payeeFlow,
+                container: container,
+                cards: cards,
+                primaryLinkedCard: primaryLinkedCard,
+                onSuccess: { onSuccess() }
+            )
+            .fullScreenCover(isPresented: $showCreateContact, onDismiss: { payeeFlow.popupDidDismiss() }) {
+                AddContactSheet(container: contactVM, payeeFlow: payeeFlow, isSubmitting: $isCreatingContact, countryCode: "+1", onSave: { data in
+                    // The sheet stays open while we create the contact and run
+                    // check-intent. On success the model raises the in-sheet enroll
+                    // popup; on failure the sheet stays open (error toast shows).
                     createContactTask = Task {
                         isCreatingContact = true
-                        let success = await contactVM.createContact(
+                        let created = await contactVM.createContact(
                             nickname: data.nickname,
                             phoneNumber: data.phoneE164
                         )
                         guard !Task.isCancelled else { return }
-                        contactVM.clear()
-                        isCreatingContact = false
-                        if success {
-                            addedContact = AddedContact(
-                                nickname: data.nickname,
-                                phoneE164: data.phoneE164
-                            )
-                        }
-                    }
-                })
-            }
-            .fullScreenCover(item: $addedContact, onDismiss: {
-                // After the cover closes, push the transfer if "Quick send" was tapped.
-                if let contact = pendingQuickSendContact {
-                    pendingQuickSendContact = nil
-                    selectedFrequent = contact
-                }
-            }) { added in
-                ContactAddedSuccess(
-                    name: added.nickname,
-                    phone: added.phoneE164,
-                    onQuickSend: {
-                        pendingQuickSendContact = ContactRecord(
-                            id: added.phoneE164,
+                        guard created else { isCreatingContact = false; return }
+                        await payeeFlow.prepareConfirmation(for: ContactRecord(
+                            id: data.phoneE164,
                             isFav: false,
-                            nickname: added.nickname,
+                            nickname: data.nickname,
                             createdAt: Date(),
-                            phoneNumber: added.phoneE164,
+                            phoneNumber: data.phoneE164,
                             isAdded: true,
                             updatedAt: Date()
-                        )
-                        addedContact = nil
-                    },
-                    onMaybeLater: { addedContact = nil }
-                )
+                        ))
+                        guard !Task.isCancelled else { return }
+                        isCreatingContact = false
+                    }
+                }, onContinue: {
+                    // Continue tapped in the enroll popup — dismiss this sheet; the
+                    // transfer is presented from onDismiss via popupDidDismiss().
+                    contactVM.clear()
+                    showCreateContact = false
+                })
             }
             .fullScreenCover(isPresented: $showAllFrequents) {
                 AllFrequentsView(
@@ -177,19 +134,16 @@ struct PayAnyoneContactPickerView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
-            .blur(radius: showCreateContact ? 3 : 0)
             .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
                 loadTask?.cancel()
                 loadTask = nil
                 createContactTask?.cancel()
                 createContactTask = nil
                 isCreatingContact = false
-                addedContact = nil
-                pendingQuickSendContact = nil
+                payeeFlow.reset()
                 isInitialLoading = false
                 showCreateContact = false
                 showAllFrequents = false
-                selectedFrequent = nil
                 dismiss()
             }
             .onAppear {
@@ -238,10 +192,10 @@ struct PayAnyoneContactPickerView: View {
     private var frequentsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Eyebrow("RECENT PAY")
+                Eyebrow("SEND AGAIN WITH MOVO")
                 Spacer()
                 Button(action: { showAllFrequents = true }) {
-                    Text("See all")
+                    Text("SEE ALL")
                         .textStyle(Typography.caption)
                         .foregroundColor(Color.movo.accent)
                 }
@@ -263,7 +217,7 @@ struct PayAnyoneContactPickerView: View {
 
     private func frequentCell(_ contact: RecordContact) -> some View {
         Button {
-            selectedFrequent = ContactRecord(
+            payeeFlow.tap(ContactRecord(
                 id: contact.id,
                 isFav: false,
                 nickname: contact.nickname,
@@ -271,7 +225,7 @@ struct PayAnyoneContactPickerView: View {
                 phoneNumber: contact.phoneNumber,
                 isAdded: false,
                 updatedAt: Date()
-            )
+            ))
         } label: {
             VStack(spacing: Spacing.sm) {
                 ZStack {
@@ -282,13 +236,13 @@ struct PayAnyoneContactPickerView: View {
                             endPoint: .bottomTrailing
                         ))
                     Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                    Text(String(contact.nickname?.prefix(1) ?? "?"))
+                    Text(contact.avatarInitial)
                         .textStyle(Typography.cardTitle)
                         .foregroundColor(Color.movo.textPrimary)
                 }
                 .frame(width: 56, height: 56)
 
-                Text((contact.nickname?.split(separator: " ").first.map(String.init) ?? contact.nickname) ?? "")
+                Text(contact.compactLabel)
                     .textStyle(Typography.captionSmall)
                     .foregroundColor(Color.movo.textSecondary)
                     .lineLimit(1)
@@ -336,7 +290,7 @@ struct PayAnyoneContactPickerView: View {
             if !contactVM.filteredFavourites.isEmpty {
                 sectionLabel("FAVOURITES")
                 ForEach(contactVM.filteredFavourites) { contact in
-                    NavigationLink(value: contact) { favouriteRow(contact) }
+                    Button { payeeFlow.tap(contact) } label: { favouriteRow(contact) }
                         .buttonStyle(.plain)
                     rowDivider(isLast: contact.id == contactVM.filteredFavourites.last?.id)
                 }
@@ -346,7 +300,7 @@ struct PayAnyoneContactPickerView: View {
             if !contactVM.filteredContacts.isEmpty {
                 sectionLabel("CONTACTS")
                 ForEach(contactVM.filteredContacts) { contact in
-                    NavigationLink(value: contact) { contactRow(contact) }
+                    Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
                         .buttonStyle(.plain)
                     rowDivider(isLast: contact.id == contactVM.filteredContacts.last?.id)
                 }
@@ -438,20 +392,10 @@ struct PayAnyoneContactPickerView: View {
         .padding(.vertical, Spacing.md)
     }
 
-    /// Row avatar: initials when a nickname exists, otherwise the Movo logo.
-    @ViewBuilder
+    /// Row avatar: nickname initial when present, otherwise the first local
+    /// digit of the phone number.
     private func rowAvatar(for contact: ContactRecord, size: CGFloat) -> some View {
-        if (contact.nickname ?? "").isEmpty {
-            ZStack {
-                Circle().fill(Color.movo.elevated)
-                MovoMVSymbol()
-                    .frame(width: size * 0.5, height: size * 0.5)
-            }
-            .frame(width: size, height: size)
-            .overlay(Circle().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
-        } else {
-            contactAvatar(initials: contact.initials, size: size)
-        }
+        contactAvatar(initials: contact.avatarInitial, size: size)
     }
 
     private func contactAvatar(initials: String, size: CGFloat) -> some View {

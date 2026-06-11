@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct PhoneNumberValidator {
+nonisolated struct PhoneNumberValidator {
 
     // MARK: - Sanitize
     // Strip everything except digits, then drop a leading country code

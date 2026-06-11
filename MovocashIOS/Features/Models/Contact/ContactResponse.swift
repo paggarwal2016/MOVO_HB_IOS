@@ -49,13 +49,37 @@ extension ContactRecord {
     public var isOnMovo: Bool {
         false
     }
-    
+
     public var initials: String {
         let parts = nickname?.split(separator: " ")
         guard let first = parts?.first?.first else { return "?" }
         return String(first).uppercased()
     }
-    
+
+    /// True when a non-empty nickname is present.
+    var hasNickname: Bool {
+        !(nickname?.trimmingCharacters(in: .whitespaces).isEmpty ?? true)
+    }
+
+    /// Single avatar character: nickname initial when present, otherwise the
+    /// first local digit of the phone number, falling back to "?".
+    var avatarInitial: String {
+        if hasNickname { return initials }
+        let digits = PhoneNumberValidator.sanitize(phoneNumber ?? "")
+        return digits.first.map { String($0) } ?? "?"
+    }
+
+    /// Primary display label: nickname when present, otherwise the phone number.
+    var displayName: String {
+        hasNickname ? (nickname ?? "") : (phoneNumber ?? "")
+    }
+
+    /// Whether the phone number has at least 10 digits. Lenient on purpose — strict NANP
+    /// validation drops legitimate entries (e.g. 555-exchange test contacts). The
+    /// recipient is still resolved by check-intent and validated server-side at send.
+    var hasValidPhone: Bool {
+        PhoneNumberValidator.sanitize(phoneNumber ?? "").count >= 10
+    }
 }
 
 
@@ -92,4 +116,44 @@ nonisolated struct RecordContact: Decodable, Sendable, Identifiable {
     let nickname: String?
     var lastSentAt: String?
     var phoneNumber: String?
+}
+
+extension RecordContact {
+    /// True when a non-empty nickname is present.
+    var hasNickname: Bool {
+        !(nickname?.trimmingCharacters(in: .whitespaces).isEmpty ?? true)
+    }
+
+    /// Nickname initial, uppercased; "?" when no nickname.
+    var initials: String {
+        guard let first = nickname?.split(separator: " ").first?.first else { return "?" }
+        return String(first).uppercased()
+    }
+
+    /// Single avatar character: nickname initial when present, otherwise the
+    /// first local digit of the phone number, falling back to "?".
+    var avatarInitial: String {
+        if hasNickname { return initials }
+        let digits = PhoneNumberValidator.sanitize(phoneNumber ?? "")
+        return digits.first.map { String($0) } ?? "?"
+    }
+
+    /// Primary display label: nickname when present, otherwise the phone number.
+    var displayName: String {
+        hasNickname ? (nickname ?? "") : (phoneNumber ?? "")
+    }
+
+    /// First word of the nickname (for compact cells), otherwise the phone number.
+    var compactLabel: String {
+        hasNickname
+            ? (nickname?.split(separator: " ").first.map(String.init) ?? nickname ?? "")
+            : (phoneNumber ?? "")
+    }
+
+    /// Whether the phone number has at least 10 digits. Lenient on purpose — strict NANP
+    /// validation drops legitimate entries (e.g. 555-exchange test contacts). The
+    /// recipient is still resolved by check-intent and validated server-side at send.
+    var hasValidPhone: Bool {
+        PhoneNumberValidator.sanitize(phoneNumber ?? "").count >= 10
+    }
 }

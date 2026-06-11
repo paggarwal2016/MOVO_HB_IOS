@@ -447,7 +447,8 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             let approvalResult = try await self.service.approveTransactionIntent(
                 intentId: intent.id,
                 deviceId: deviceId,
-                presentingViewController: approvalPresenter
+                presentingViewController: approvalPresenter,
+                approvalSheetHeight: .fraction(0.85)
             )
 
             let completeRequest = TransactionRequest.Complete(
