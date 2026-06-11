@@ -195,7 +195,7 @@ struct DashboardView: View {
             QuickPayView(
                 container: container,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                availableBalance: dashboardVM.primaryAccount?.availableBalance ?? 0,
+                cards: dashboardVM.cards,
                 title: dashboardVM.quickPayTitle,
                 onSuccess: { needsDashboardRefresh = true }
             )

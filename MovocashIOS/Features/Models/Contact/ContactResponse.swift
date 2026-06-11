@@ -74,9 +74,11 @@ extension ContactRecord {
         hasNickname ? (nickname ?? "") : (phoneNumber ?? "")
     }
 
-    /// Whether the phone number is a valid US (NANP) number.
+    /// Whether the phone number has at least 10 digits. Lenient on purpose — strict NANP
+    /// validation drops legitimate entries (e.g. 555-exchange test contacts). The
+    /// recipient is still resolved by check-intent and validated server-side at send.
     var hasValidPhone: Bool {
-        PhoneNumberValidator.isValidUSNumber(PhoneNumberValidator.sanitize(phoneNumber ?? ""))
+        PhoneNumberValidator.sanitize(phoneNumber ?? "").count >= 10
     }
 }
 
@@ -148,8 +150,10 @@ extension RecordContact {
             : (phoneNumber ?? "")
     }
 
-    /// Whether the phone number is a valid US (NANP) number.
+    /// Whether the phone number has at least 10 digits. Lenient on purpose — strict NANP
+    /// validation drops legitimate entries (e.g. 555-exchange test contacts). The
+    /// recipient is still resolved by check-intent and validated server-side at send.
     var hasValidPhone: Bool {
-        PhoneNumberValidator.isValidUSNumber(PhoneNumberValidator.sanitize(phoneNumber ?? ""))
+        PhoneNumberValidator.sanitize(phoneNumber ?? "").count >= 10
     }
 }

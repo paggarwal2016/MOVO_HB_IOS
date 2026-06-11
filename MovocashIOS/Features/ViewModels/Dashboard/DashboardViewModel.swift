@@ -115,16 +115,15 @@ final class DashboardViewModel: BaseViewModel {
             }
 #endif
             let decoded = try JSONDecoder().decode([VCardListResponse].self, from: plainData)
-            // Disabled (deleted) cards — kept separately for the Profile > Deleted Cards screen.
             deletedCards = decoded.filter { $0.enabled == false }
-            // Only enabled (active) cards are shown and used on the dashboard.
             let all = decoded.filter { $0.enabled == true }
-            if let accountId = primaryAccount?.id {
-                primaryLinkedCard = all.first { $0.savingsAccountId == accountId }
+            if let accountId = primaryAccount?.id,
+               let matched = all.first(where: { $0.savingsAccountId == accountId }) {
+                primaryLinkedCard = matched
                 apiCards = all.filter { $0.savingsAccountId != accountId }
             } else {
-                primaryLinkedCard = nil
-                apiCards = all
+                primaryLinkedCard = all.first
+                apiCards = Array(all.dropFirst())
             }
         } catch {
             // Leave previously loaded cards in place on a transient decrypt/decode failure.
