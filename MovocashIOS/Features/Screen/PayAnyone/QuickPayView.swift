@@ -24,7 +24,6 @@ struct QuickPayView: View {
 
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
-    @StateObject private var payeeFlow: PayeeTransferModel
 
     @State private var nickname: String = ""
     @State private var phoneNo: String = ""
@@ -35,6 +34,13 @@ struct QuickPayView: View {
     @State private var lastCheckedPhone: String = ""
     /// Drives presentation of the native `CNContactPickerViewController`.
     @State private var showSystemPicker = false
+    /// Drives the Continue/Cancel confirmation popup shown after check-intent succeeds.
+    @State private var showConfirm = false
+    /// True while the Pay-tap check-intent runs — blocks the screen with a spinner.
+    @State private var isChecking = false
+    /// Set when Continue is tapped so the send fires in the popup's `onDismiss`
+    /// (after the popup cover finishes dismissing, before presenting the success cover).
+    @State private var pendingSend = false
 
     var onSuccess: () -> Void = {}
 
@@ -50,7 +56,6 @@ struct QuickPayView: View {
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
-        _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
@@ -136,27 +141,19 @@ struct QuickPayView: View {
                 PayActionButton(amount: amount, isEnabled: isFormValid) {
                     amountFocused = false
                     UIApplication.shared.dismissKeyboard()
-                    // Hand off to the shared payee flow: check-intent → confirm popup →
-                    // QuickTransferView (presented by .payeeTransferFlow below).
-                    payeeFlow.tap(ContactRecord(
-                        id: phoneNo,
-                        isFav: false,
-                        nickname: nickname.isEmpty ? nil : nickname,
-                        createdAt: Date(),
-                        phoneNumber: phoneNo,
-                        isAdded: false,
-                        updatedAt: Date()
-                    ))
+                    // Self-contained flow: check-intent → confirm popup → send directly
+                    // from this screen. QuickTransferView is intentionally not presented.
+                    Task { await prepareAndConfirm() }
                 }
                 .padding(.horizontal, Spacing.lg)
                 .padding(.top, Spacing.xs)
                 .padding(.bottom, Spacing.sm)
             }
-            // Only the send (achVM) shows the spinner. The check-intent call on
-            // transVM runs silently in the background while the user is still typing.
-            .blur(radius: achVM.state == .loading ? 3 : 0)
+            // The send (achVM) and the Pay-tap check-intent both show the spinner. The
+            // keystroke check-intent on transVM still runs silently (see runCheckIntentIfReady).
+            .blur(radius: (achVM.state == .loading || isChecking) ? 3 : 0)
 
-            if achVM.state == .loading {
+            if achVM.state == .loading || isChecking {
                 Color.black.opacity(0.5).ignoresSafeArea()
                 SpinnerView()
             }
@@ -172,18 +169,24 @@ struct QuickPayView: View {
             if !focused && amountText.isEmpty { amountText = "0" }
         }
         .onChange(of: phoneNo) { _ in runCheckIntentIfReady() }
-        .payeeTransferFlow(
-            payeeFlow,
-            container: container,
-            cards: cards,
-            primaryLinkedCard: primaryLinkedCard,
-            onSuccess: { onSuccess(); (securedDismiss ?? dismiss)() }
+        // Confirmation popup with the recipient's check-intent message/disclaimer.
+        // On Continue we arm `pendingSend` and dismiss; the send fires in `onDismiss`.
+        .contactEnrollPopup(
+            isPresented: $showConfirm,
+            title: transVM.checkIntentResult?.message ?? "",
+            message: transVM.checkIntentResult?.disclaimer ?? "",
+            avatarInitial: nickname.first.map { String($0).uppercased() } ?? "",
+            onDismiss: { if pendingSend { pendingSend = false; Task { await sendMoney() } } },
+            onContinue: { pendingSend = true; setConfirm(false) },
+            onCancel: { pendingSend = false; setConfirm(false) }
         )
         .globalAlert()
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             sendTask?.cancel()
             sendTask = nil
-            payeeFlow.reset()
+            isChecking = false
+            pendingSend = false
+            showConfirm = false
             (securedDismiss ?? dismiss)()
         }
         .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
@@ -231,6 +234,31 @@ struct QuickPayView: View {
         lastCheckedPhone = sanitized
         let normalized = PhoneNumberValidator.normalize(sanitized)
         Task { await transVM.checkIntent(phoneNumber: normalized) }
+    }
+
+    /// Pay tapped: run a fresh check-intent for the entered number, then show the
+    /// confirmation popup. On check-intent failure only the error toast shows (no popup),
+    /// matching the shared payee flow. The actual send happens after Continue (see
+    /// `.contactEnrollPopup`'s `onDismiss`).
+    private func prepareAndConfirm() async {
+        let sanitized = PhoneNumberValidator.sanitize(phoneNo)
+        let normalized = PhoneNumberValidator.normalize(sanitized)
+        isChecking = true
+        await transVM.checkIntent(phoneNumber: normalized)
+        isChecking = false
+        guard transVM.checkIntentResult != nil else { return }
+        lastCheckedPhone = sanitized
+        setConfirm(true)
+    }
+
+    /// Toggles the confirmation cover without the fullScreenCover's default bottom
+    /// slide, so only `CustomContactEnrollView`'s center scale/fade plays — the popup
+    /// expands from / contracts to center on present and dismiss/cancel.
+    private func setConfirm(_ visible: Bool) {
+        // Qualify SwiftUI.Transaction — the app also defines a `Transaction` model.
+        var tx = SwiftUI.Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) { showConfirm = visible }
     }
 
     private func sendMoney() async {
