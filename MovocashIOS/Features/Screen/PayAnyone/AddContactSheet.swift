@@ -361,6 +361,10 @@ struct UsePhoneContactButton: View {
 struct PhoneContactPicker: UIViewControllerRepresentable {
 
     @Binding var isPresented: Bool
+    /// Fired once the picker has finished presenting — lets callers dismiss a loader
+    /// shown during the (out-of-process) launch delay. Declared before `onPick` so the
+    /// trailing-closure call sites still bind their closure to `onPick`.
+    var onPresented: (() -> Void)? = nil
     /// Called with the contact's display name and the selected raw phone number.
     let onPick: (String, String) -> Void
 
@@ -378,7 +382,10 @@ struct PhoneContactPicker: UIViewControllerRepresentable {
             picker.displayedPropertyKeys = [CNContactPhoneNumbersKey]
             picker.predicateForSelectionOfContact = NSPredicate(value: false)
             context.coordinator.picker = picker
-            DispatchQueue.main.async { host.present(picker, animated: true) }
+            let onPresented = self.onPresented
+            DispatchQueue.main.async {
+                host.present(picker, animated: true) { onPresented?() }
+            }
         }
     }
 

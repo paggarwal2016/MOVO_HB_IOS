@@ -204,9 +204,7 @@ struct PayAnyoneAddContactView: View {
                 Spacer()
                 if showSeeAll {
                     Button(action: { onSeeAllTap?() }) {
-                        Text("See all")
-                            .textStyle(Typography.caption)
-                            .foregroundColor(Color.movo.accent)
+                        Eyebrow("SEE ALL")
                     }
                     .buttonStyle(.plain)
                 }

@@ -34,6 +34,11 @@ struct PayAnyoneView: View {
     @State private var showCreateContactScreen = false
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
+    /// Drives the native `CNContactPickerViewController` (limited-access "Use Phone Contacts").
+    @State private var showSystemPicker = false
+    /// True between tapping "Use Phone Contacts" and the picker finishing presenting —
+    /// shows a loader during the picker's launch delay.
+    @State private var isOpeningPicker = false
 
     /// True while the create-contact API call is in flight — shows the spinner.
     @State private var isCreatingContact = false
@@ -63,6 +68,13 @@ struct PayAnyoneView: View {
     
     private var isDenied: Bool {
         authStatus == .denied || authStatus == .restricted
+    }
+
+    /// True only for iOS 18+ "Limited Access" (the user shared a subset of contacts).
+    /// Full Access returns false — no "Use Phone Contacts" button is shown then.
+    private var isLimited: Bool {
+        if #available(iOS 18.0, *) { return authStatus == .limited }
+        return false
     }
     
     private var hasAnyData: Bool {
@@ -128,13 +140,22 @@ struct PayAnyoneView: View {
 
             StatusBarScrim()
 
-            if isInitialLoading || isCreatingContact {
+            if isInitialLoading || isCreatingContact || isOpeningPicker {
                 SpinnerView()
             }
         }
         .blur(radius: showCreateContactScreen ? 3 : 0)
         .animation(.easeInOut(duration: 0.25), value: showCreateContactScreen)
         .background(Color.movo.background)
+        // Hosts the native contact picker; presents when `showSystemPicker` flips true.
+        .background {
+            PhoneContactPicker(
+                isPresented: $showSystemPicker,
+                onPresented: { isOpeningPicker = false }
+            ) { name, phone in
+                handlePickedContact(name: name, phone: phone)
+            }
+        }
         .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
         .fullScreenCover(isPresented: $showAllFrequents) {
             AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: localPrimaryCard)
@@ -366,14 +387,31 @@ struct PayAnyoneView: View {
                     .padding(.horizontal, Spacing.lg)
             }
             
-            // All contacts
-            if !contactVM.filteredContacts.isEmpty {
-                Text("ALL CONTACTS")
-                    .textStyle(Typography.eyebrow)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
-                    .padding(.bottom, Spacing.xs)
+            // All contacts — header always present for limited access so the user can
+            // pick more contacts even when none are currently shared with the app.
+            if !contactVM.filteredContacts.isEmpty || isLimited {
+                HStack {
+                    Text("ALL CONTACTS")
+                        .textStyle(Typography.eyebrow)
+                        .foregroundColor(Color.movo.textTertiary)
+                    Spacer()
+                    // Full Access: no button. Limited Access: offer the native picker.
+                    if isLimited {
+                        Button { isOpeningPicker = true; showSystemPicker = true } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "person.crop.circle.badge.plus")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("Use Phone Contacts")
+                                    .textStyle(Typography.caption)
+                            }
+                            .foregroundColor(Color.movo.accent)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.md)
+                .padding(.bottom, Spacing.xs)
                 ForEach(contactVM.filteredContacts) { contact in
                     Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
                         .buttonStyle(.plain)
@@ -452,6 +490,22 @@ struct PayAnyoneView: View {
         }
     }
     
+    /// Routes a contact picked from the native picker (limited-access "Use Phone
+    /// Contacts") into the payee flow — same as tapping a contact row.
+    private func handlePickedContact(name: String, phone: String) {
+        let national = PhoneNumberValidator.sanitize(phone)
+        let e164 = national.isEmpty ? phone : "+1\(national)"
+        payeeFlow.tap(ContactRecord(
+            id: e164,
+            isFav: false,
+            nickname: name.isEmpty ? nil : name,
+            createdAt: Date(),
+            phoneNumber: e164,
+            isAdded: false,
+            updatedAt: Date()
+        ))
+    }
+
     private func refreshPrimaryCard() {
         Task {
             guard let updated = try? await cardVM.fetchPrimaryCard() else { return }
@@ -732,9 +786,7 @@ extension PayAnyoneView {
                 Spacer()
                 if contactVM.frequents.count >= 5 {
                 Button(action: { showAllFrequents = true }) {
-                    Text("SEE ALL")
-                        .textStyle(Typography.caption)
-                        .foregroundColor(Color.movo.textSecondary)
+                    Eyebrow("SEE ALL")
                 }
                 .buttonStyle(.plain)
                 }
