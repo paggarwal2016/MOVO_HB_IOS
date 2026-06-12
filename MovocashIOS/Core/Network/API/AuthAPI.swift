@@ -57,11 +57,12 @@ enum AuthAPI: Endpoint {
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .messengerOTP, .deviceConfig:
+        case .messengerOTP,
+             .nonceRSA,
+             .deviceConfig:
             return [.officeId]
         case .tokenSMS,
-             .tokenRSA,
-             .nonceRSA:
+             .tokenRSA:
             return [.officeId, .secureDeviceInfo]
         case .emailOTP,
              .emailVerify,
@@ -98,7 +99,7 @@ enum AuthAPI: Endpoint {
                 userAction: "GET_ACCESS_TOKEN")
             return try JSONEncoder().encode(request)
         case .acceptAgreements:
-            let request = AgreementRequest(accepted: true, Agreement: [Agreement(AgreementType: .ecc, action: .accepted), Agreement(AgreementType: .tos, action: .accepted), Agreement(AgreementType: .virtualCardTos, action: .accepted)], userAction: "AGREEMENT")
+            let request = AgreementRequest(accepted: true, Agreement: [Agreement(AgreementType: .tos, action: .accepted)], userAction: "AGREEMENT")
             return try JSONEncoder().encode(request)
         case .enrollRSA(let request):
             return try JSONEncoder().encode(request)

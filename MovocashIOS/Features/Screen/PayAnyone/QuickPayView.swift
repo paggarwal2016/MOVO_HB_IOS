@@ -98,7 +98,7 @@ struct QuickPayView: View {
 
                 CustomSheetHeader(
                     title: title,
-                    subtitle: "Spend money instantly",
+                    subtitle: "Send to spend",
                     systemImage: "bolt.fill",
                     iconTint: Color.movo.accent,
                     iconBackground: Color.movo.accentTint,

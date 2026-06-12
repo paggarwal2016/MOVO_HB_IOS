@@ -22,6 +22,10 @@ final class AuthViewModel: ObservableObject {
     /// authentication already underway. Concurrent callers join this task instead
     /// of starting a second flow.
     private var biometricLoginTask: Task<Bool, Never>?
+    /// Device-session config fetch started after OTP is sent, so the movo-info key
+    /// is ready for the tokenSMS validation step. Awaited in `validateOTP`. This is
+    /// the ONLY place `/get/config` is requested — during a fresh login.
+    private var deviceConfigTask: Task<Void, Never>?
 
     private let network: NetworkServiceProtocol
     private let keychain: KeychainManagerProtocol
@@ -67,6 +71,10 @@ final class AuthViewModel: ObservableObject {
             )
             state = .otpSent
             showOTP = true
+            // Fetch the X25519 device-session config now, in the background, so the
+            // movo-info key is ready for tokenSMS (OTP validation). This is the only
+            // place /get/config is requested — i.e. only on a fresh login.
+            deviceConfigTask = Task { [weak self] in try? await self?.configure() }
             ToastManager.shared.show(
                 response.message ?? "OTP sent successfully",
                 style: .success,
@@ -83,6 +91,13 @@ final class AuthViewModel: ObservableObject {
     func validateOTP(code: String) async throws -> AuthTokenSMSResponse {
         guard state != .loading else { throw ModelError.alreadyLoading }
         state = .loading
+
+        // tokenSMS requires the movo-info header. Wait for the config fetch started
+        // after sendOTP; if it didn't populate, fetch once more before validating.
+        await deviceConfigTask?.value
+        if await !DeviceSessionManager.shared.hasConfig() {
+            try? await configure()
+        }
 
         do {
             let response: AuthTokenSMSResponse = try await network.request(
@@ -395,11 +410,19 @@ extension AuthViewModel {
             )
             SecureLogger.info("nonce fetched successfully", category: .auth)
 
+            // After the nonce, refresh the device-session config in the background so
+            // token-rsa uses a fresh movo-info key. Awaited before Step 3. This is the
+            // biometric-login equivalent of the post-OTP config fetch.
+            let configTask = Task { [weak self] in try? await self?.configure() }
+
             // Step 2 — sign nonce (evaluatePolicy guarantees Face ID fully completes before signing)
             let signedMessage = try await RSAKeyManager.shared.createSignature(
                 payload: nonceResponse.nonce,
                 promptMessage: "Sign in with Face ID"
             )
+
+            // Ensure the refreshed config is ready before token-rsa (needs movo-info).
+            await configTask.value
 
             // Step 3 — POST /auth/token-rsa
             let response: RSATokenResponse = try await network.request(

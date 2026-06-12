@@ -155,7 +155,7 @@ struct DashboardView: View {
                 container: container,
                 cards: dashboardVM.cards,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                title: "MOVO Quick Pay", //dashboardVM.quickPayTitle
+                title: "Quick Pay", //dashboardVM.quickPayTitle
                 onSuccess: { needsDashboardRefresh = true }
             )
         }
@@ -196,7 +196,7 @@ struct DashboardView: View {
                 container: container,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 cards: dashboardVM.cards,
-                title: "MOVO Quick Pay", // dashboardVM.quickPayTitle
+                title: "Quick Pay", // dashboardVM.quickPayTitle
                 onSuccess: { needsDashboardRefresh = true }
             )
         }

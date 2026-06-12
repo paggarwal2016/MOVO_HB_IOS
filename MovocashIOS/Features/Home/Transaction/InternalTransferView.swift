@@ -42,7 +42,6 @@ struct InternalTransferView: View {
     @State private var showCardSheet = false
     @State private var showFromCardSheet = false
     @State private var showConfirmSheet = false
-    @State private var submitTask: Task<Void, Never>?
 
     private var toCardAccount: SavingsAccountInfo? {
         guard let id = selectedToCard?.savingsAccountId else { return nil }
@@ -175,6 +174,9 @@ struct InternalTransferView: View {
             
             
         }
+        // Confirmation sheet disabled — the transfer button now submits directly.
+        // Kept for easy restore if the confirmation step is needed again.
+        /*
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(
                 channel: .internalTransfer,
@@ -188,7 +190,7 @@ struct InternalTransferView: View {
                 onCancel: { showConfirmSheet = false },
                 onConfirm: {
                     showConfirmSheet = false
-                    submitTask = Task { await submitTransfer() }
+                    Task { await submitTransfer() }
                 }
             )
             .padding(.top, 30)
@@ -196,6 +198,7 @@ struct InternalTransferView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
         }
+        */
         .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
             SuccessConfirmationView(
                 viewModel: SuccessConfirmationViewModel(success: data) {
@@ -217,8 +220,6 @@ struct InternalTransferView: View {
             resolveCardSelection()
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-            submitTask?.cancel()
-            submitTask = nil
             showConfirmSheet = false
             showCardSheet = false
             showFromCardSheet = false
@@ -558,7 +559,7 @@ struct InternalTransferView: View {
         Button {
             UIApplication.shared.dismissKeyboard()
             isAmountFocused = false
-            showConfirmSheet = true
+            Task { await submitTransfer() }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.up.forward")

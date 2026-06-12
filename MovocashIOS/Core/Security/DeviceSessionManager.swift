@@ -51,12 +51,10 @@ actor DeviceSessionManager {
     /// out without the header (the server responds with a tunable expiry signal,
     /// which the reactive retry uses to re-fetch and retry once).
     func headerValue() async -> String? {
-        var config = await currentConfig()
-        if config == nil {
-            try? await refresh()
-            config = await currentConfig()
-        }
-        guard let config else {
+        // Config is fetched only at login (after OTP). No lazy re-fetch here — if it is
+        // missing/expired the request goes out without the header and the server-side
+        // session-expiry flow handles re-login.
+        guard let config = await currentConfig() else {
             SecureLogger.error("secure movo-info: device config unavailable", category: .network)
             return nil
         }
@@ -72,6 +70,12 @@ actor DeviceSessionManager {
             SecureLogger.error("secure movo-info: encryption failed — \(error.localizedDescription)", category: .network)
             return nil
         }
+    }
+
+    /// True when a device-session config (public key + sessionId) is cached.
+    /// Used by the login flow to confirm the config is ready before `tokenSMS`.
+    func hasConfig() async -> Bool {
+        await currentConfig() != nil
     }
 
     // MARK: - Private

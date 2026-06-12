@@ -66,9 +66,8 @@ struct MovocashIOSApp: App {
                         keychain: KeychainManager.shared,
                         kycManager: container.kycManager,
                         analytics: container.analytics,
-                        configure: {
-                            try await authVM.configure()
-                        },
+                        // Device-session config is fetched only during login (after OTP),
+                        // so it is intentionally not warmed up at bootstrap anymore.
                         biometricAuthenticate: {
                             #if targetEnvironment(simulator)
                             return false

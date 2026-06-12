@@ -17,6 +17,11 @@ struct PDFViewScreen: View {
     @StateObject private var viewModel: PDFViewModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var hasReachedEnd = false
+    @State private var isContentLoading = true
+
+    private var isLoading: Bool {
+        viewModel.state == .loading || (viewModel.pdfURL != nil && isContentLoading)
+    }
 
     init(documentType: DocumentType, container: AppContainer, onAccept: @escaping () -> Void) {
         self.documentType = documentType
@@ -35,13 +40,13 @@ struct PDFViewScreen: View {
                     .fill(Color.movo.textTertiary.opacity(0.10))
                     .frame(height: DesignTokens.Stroke.hairline)
                 contentArea
-                if viewModel.state != .loading {
+                if !isLoading {
                     bottomBar
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            if viewModel.state == .loading {
+            if isLoading {
                 SpinnerView()
             }
         }
@@ -127,11 +132,11 @@ private extension PDFViewScreen {
         ZStack {
             if let url = viewModel.pdfURL {
                 if url.pathExtension.lowercased() == "html" {
-                    WebKitView(url: url) {
+                    WebKitView(url: url, onLoaded: { isContentLoading = false }) {
                         hasReachedEnd = true
                     }
                 } else {
-                    PDFKitView(pdfURL: url) {
+                    PDFKitView(pdfURL: url, onLoaded: { isContentLoading = false }) {
                         hasReachedEnd = true
                     }
                 }
@@ -231,11 +236,13 @@ private extension PDFViewScreen {
 private struct WebKitView: UIViewRepresentable {
 
     let url: URL
+    /// Called when the page finishes loading (or fails) so the host can hide the spinner.
+    let onLoaded: () -> Void
     let onReachEnd: () -> Void
     @Environment(\.colorScheme) private var colorScheme
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onReachEnd: onReachEnd)
+        Coordinator(onReachEnd: onReachEnd, onLoaded: onLoaded)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -428,10 +435,13 @@ private struct WebKitView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         private let onReachEnd: () -> Void
+        private let onLoaded: () -> Void
         private var didFire = false
+        private var didLoad = false
 
-        init(onReachEnd: @escaping () -> Void) {
+        init(onReachEnd: @escaping () -> Void, onLoaded: @escaping () -> Void) {
             self.onReachEnd = onReachEnd
+            self.onLoaded = onLoaded
         }
 
         func signalEnd() {
@@ -440,17 +450,34 @@ private struct WebKitView: UIViewRepresentable {
             onReachEnd()
         }
 
+        /// Fires once when the page has loaded (or failed) so the spinner is dismissed.
+        func signalLoaded() {
+            guard !didLoad else { return }
+            didLoad = true
+            onLoaded()
+        }
+
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "scrollEnd" { signalEnd() }
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            signalLoaded()
             // Signal end immediately for pages short enough to fit without scrolling.
             webView.evaluateJavaScript("document.body.scrollHeight <= window.innerHeight") { result, _ in
                 if let fits = result as? Bool, fits {
                     DispatchQueue.main.async { self.signalEnd() }
                 }
             }
+        }
+
+        // Dismiss the spinner even if loading fails, so it never hangs.
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            signalLoaded()
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            signalLoaded()
         }
     }
 }
@@ -460,7 +487,9 @@ private struct WebKitView: UIViewRepresentable {
 private struct PDFKitView: UIViewRepresentable {
 
     let pdfURL: URL?
-        
+    /// Called when the document has been loaded into the PDF view so the host can
+    /// hide the spinner.
+    let onLoaded: () -> Void
     let onReachEnd: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -489,6 +518,9 @@ private struct PDFKitView: UIViewRepresentable {
                 DispatchQueue.main.async { context.coordinator.signalEnd() }
             }
         }
+        // Document is loaded synchronously above; dismiss the spinner on the next
+        // runloop (deferred to avoid mutating SwiftUI state during view construction).
+        DispatchQueue.main.async { onLoaded() }
         return pdfView
     }
 
