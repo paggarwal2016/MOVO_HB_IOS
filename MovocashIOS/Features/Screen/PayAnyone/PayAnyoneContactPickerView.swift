@@ -32,6 +32,10 @@ struct PayAnyoneContactPickerView: View {
     /// True while the create-contact API call is in flight — shows the spinner.
     @State private var isCreatingContact = false
 
+    /// Collapsible-section state for the contacts list. Default expanded.
+    @State private var favouritesExpanded = true
+    @State private var contactsExpanded = true
+
     init(container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, title: String = "Pay Anyone", onSuccess: @escaping () -> Void = {}) {
         self.container = container
         self.cards = cards
@@ -288,21 +292,35 @@ struct PayAnyoneContactPickerView: View {
 
             // Favourites section
             if !contactVM.filteredFavourites.isEmpty {
-                sectionLabel("FAVOURITES")
-                ForEach(contactVM.filteredFavourites) { contact in
-                    Button { payeeFlow.tap(contact) } label: { favouriteRow(contact) }
-                        .buttonStyle(.plain)
-                    rowDivider(isLast: contact.id == contactVM.filteredFavourites.last?.id)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { favouritesExpanded.toggle() }
+                } label: {
+                    sectionHeader("FAVOURITES", isExpanded: favouritesExpanded)
+                }
+                .buttonStyle(.plain)
+                if favouritesExpanded {
+                    ForEach(contactVM.filteredFavourites) { contact in
+                        Button { payeeFlow.tap(contact) } label: { favouriteRow(contact) }
+                            .buttonStyle(.plain)
+                        rowDivider(isLast: contact.id == contactVM.filteredFavourites.last?.id)
+                    }
                 }
             }
 
             // apiContacts + device contacts
             if !contactVM.filteredContacts.isEmpty {
-                sectionLabel("CONTACTS")
-                ForEach(contactVM.filteredContacts) { contact in
-                    Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
-                        .buttonStyle(.plain)
-                    rowDivider(isLast: contact.id == contactVM.filteredContacts.last?.id)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { contactsExpanded.toggle() }
+                } label: {
+                    sectionHeader("CONTACTS", isExpanded: contactsExpanded)
+                }
+                .buttonStyle(.plain)
+                if contactsExpanded {
+                    ForEach(contactVM.filteredContacts) { contact in
+                        Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
+                            .buttonStyle(.plain)
+                        rowDivider(isLast: contact.id == contactVM.filteredContacts.last?.id)
+                    }
                 }
             } else if contactVM.filteredFavourites.isEmpty {
                 Text(contactVM.search.isEmpty ? "No contacts found" : "No results for \"\(contactVM.search)\"")
@@ -323,13 +341,23 @@ struct PayAnyoneContactPickerView: View {
         .padding(.horizontal, Spacing.lg)
     }
 
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .textStyle(Typography.eyebrow)
-            .foregroundColor(Color.movo.textTertiary)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.md)
-            .padding(.bottom, Spacing.xs)
+    /// Collapsible-section header: eyebrow title with a chevron that rotates to
+    /// point right when the section is collapsed.
+    private func sectionHeader(_ text: String, isExpanded: Bool) -> some View {
+        HStack(spacing: 6) {
+            Text(text)
+                .textStyle(Typography.eyebrow)
+                .foregroundColor(Color.movo.textTertiary)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Color.movo.textTertiary)
+                .rotationEffect(.degrees(isExpanded ? 0 : -90))
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.xs)
     }
 
     @ViewBuilder
