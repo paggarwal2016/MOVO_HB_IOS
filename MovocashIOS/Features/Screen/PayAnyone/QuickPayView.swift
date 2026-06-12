@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import MobileBankingSDK
+import Combine
 
 struct QuickPayView: View {
 
@@ -42,18 +42,20 @@ struct QuickPayView: View {
     /// (after the popup cover finishes dismissing, before presenting the success cover).
     @State private var pendingSend = false
 
-    var onSuccess: () -> Void = {}
+    /// Called when the transfer API succeeds. The payload is handed to the presenter
+    /// (DashboardView), which dismisses this screen and then presents the success view.
+    var onCompleted: (SuccessConfirmation) -> Void = { _ in }
 
     init(container: AppContainer,
          primaryLinkedCard: VCardListResponse? = nil,
          cards: [VCardListResponse] = [],
          title: String = "Quick Pay",
-         onSuccess: @escaping () -> Void = {}) {
+         onCompleted: @escaping (SuccessConfirmation) -> Void = { _ in }) {
         self.container = container
         self.primaryLinkedCard = primaryLinkedCard
         self.cards = cards
         self.title = title
-        self.onSuccess = onSuccess
+        self.onCompleted = onCompleted
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
     }
@@ -189,14 +191,13 @@ struct QuickPayView: View {
             showConfirm = false
             (securedDismiss ?? dismiss)()
         }
-        .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
-            SuccessConfirmationView(
-                viewModel: SuccessConfirmationViewModel(success: data) {
-                    achVM.peerTransferSuccess = nil
-                    onSuccess()
-                    (securedDismiss ?? dismiss)()
-                }
-            )
+        // API success: hand the payload to the presenter (Dashboard) and dismiss this
+        // screen silently. The success confirmation is presented by the presenter after
+        // this screen finishes dismissing, so "Let's MOVO" lands directly on the Dashboard.
+        .onReceive(achVM.$peerTransferSuccess.compactMap { $0 }) { data in
+            achVM.peerTransferSuccess = nil
+            onCompleted(data)
+            (securedDismiss ?? dismiss)()
         }
     }
 

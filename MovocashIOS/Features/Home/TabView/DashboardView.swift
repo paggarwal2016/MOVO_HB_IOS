@@ -58,6 +58,10 @@ struct DashboardView: View {
     @State private var showViewCardList = false
     @State private var showContactList = false
     @State private var showQuickPayView = false
+    /// Quick Pay success payload, held until QuickPayView finishes dismissing, then
+    /// promoted to `quickPaySuccess` so the success screen is presented over the Dashboard.
+    @State private var pendingQuickPaySuccess: SuccessConfirmation?
+    @State private var quickPaySuccess: SuccessConfirmation?
     @State private var showCreateContact = false
     /// True while the create-contact API call is in flight — shows the spinner.
     @State private var isCreatingContact = false
@@ -191,13 +195,30 @@ struct DashboardView: View {
             })
         }
 
-        .fullScreenCover(isPresented: $showQuickPayView) {
+        .fullScreenCover(isPresented: $showQuickPayView, onDismiss: {
+            // Present the success screen only after QuickPayView has finished dismissing,
+            // so it appears over the Dashboard (not stacked on QuickPay).
+            if let pending = pendingQuickPaySuccess {
+                pendingQuickPaySuccess = nil
+                quickPaySuccess = pending
+            }
+        }) {
             QuickPayView(
                 container: container,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 cards: dashboardVM.cards,
                 title: dashboardVM.quickPayTitle,
-                onSuccess: { needsDashboardRefresh = true }
+                onCompleted: { data in
+                    needsDashboardRefresh = true
+                    pendingQuickPaySuccess = data
+                }
+            )
+        }
+        .fullScreenCover(item: $quickPaySuccess) { data in
+            SuccessConfirmationView(
+                viewModel: SuccessConfirmationViewModel(success: data) {
+                    quickPaySuccess = nil
+                }
             )
         }
         
@@ -357,6 +378,8 @@ struct DashboardView: View {
             showViewCard = false
             showMoveMoney = false
             showQuickPayView = false
+            pendingQuickPaySuccess = nil
+            quickPaySuccess = nil
             showContactList = false
             showAllFrequents = false
             showFundAccount = false
