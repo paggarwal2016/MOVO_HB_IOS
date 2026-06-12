@@ -31,6 +31,10 @@ struct AllFrequentsView: View {
         self.primaryLinkedCard = primaryLinkedCard
         self.onSuccess = onSuccess
         _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
+        // Only start in the loading state when a fetch is actually needed. When the
+        // frequents are already cached (the common case), this avoids a spinner flash
+        // during the screen's present animation.
+        _isLoading = State(initialValue: contactVM.frequents.isEmpty)
     }
     
     private var showSearch: Bool { contactVM.frequents.count > 15 }
@@ -100,14 +104,18 @@ struct AllFrequentsView: View {
     // MARK: - Content
 
     private var frequentsList: some View {
-        VStack(spacing: 0) {
+        // Compute the filtered list once per render (not per row) — the previous
+        // `filteredFrequents.last?.id` inside the loop re-ran the filter for every row.
+        let items = filteredFrequents
+        return VStack(spacing: 0) {
             searchBar
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, Spacing.md)
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    ForEach(filteredFrequents) { contact in
+                // Lazy rendering so only on-screen rows are built.
+                LazyVStack(spacing: 0) {
+                    ForEach(items) { contact in
                         Button {
                             payeeFlow.tap(ContactRecord(
                                 id: contact.id,
@@ -123,7 +131,7 @@ struct AllFrequentsView: View {
                         }
                         .buttonStyle(.plain)
 
-                        if contact.id != filteredFrequents.last?.id {
+                        if contact.id != items.last?.id {
                             Rectangle()
                                 .fill(Color.movo.border)
                                 .frame(height: Stroke.hairline)

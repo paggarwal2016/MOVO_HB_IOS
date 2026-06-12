@@ -487,11 +487,15 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     
     // MARK: - Helpers
 
-    // Polls until the top VC has no active child presentation (max 2s).
+    // Polls until the top VC is fully settled with no active child presentation (max 2s).
+    // We intentionally wait out an in-progress dismissal (`isBeingDismissed`) rather than
+    // returning that VC: presenting the SDK's approval sheet while a dismissal is still
+    // running makes UIKit refuse to present, and the SDK then never calls its completion —
+    // which leaks the approval continuation and hangs the transfer forever.
     private func waitForPresentableViewController() async -> UIViewController? {
         for _ in 0..<20 {
             if let vc = UIApplication.topViewController(),
-               vc.presentedViewController == nil || vc.presentedViewController?.isBeingDismissed == true {
+               vc.presentedViewController == nil {
                 return vc
             }
             try? await Task.sleep(nanoseconds: 100_000_000)
