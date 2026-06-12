@@ -444,12 +444,18 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                               userInfo: [NSLocalizedDescriptionKey: "Unable to present biometric approval."])
             }
             let deviceId = await DeviceManager.shared.deviceID()
+            // Remove the loading spinner before presenting the biometric approval sheet:
+            // it must not sit behind the system sheet, and it must not be left stuck if
+            // the user cancels/dismisses the approval.
+            self.state = .idle
             let approvalResult = try await self.service.approveTransactionIntent(
                 intentId: intent.id,
                 deviceId: deviceId,
                 presentingViewController: approvalPresenter,
                 approvalSheetHeight: .fraction(0.85)
             )
+            // Approval completed — restore the spinner for the remaining completion step.
+            self.state = .loading
 
             let completeRequest = TransactionRequest.Complete(
                 transferId:    approvalResult.intent.id,

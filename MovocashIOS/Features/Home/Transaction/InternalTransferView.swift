@@ -143,7 +143,23 @@ struct InternalTransferView: View {
                 Color.black.opacity(0.5).ignoresSafeArea()
                 SpinnerView()
             }
+
+            // On transfer success the confirmation screen slides up as a full-screen
+            // layer over this view — presented FIRST, with the transfer form hidden
+            // behind it. "Let's MOVO" dismisses this whole screen in one transition,
+            // revealing the Dashboard with no flicker.
+            if let success = achVM.peerTransferSuccess {
+                SuccessConfirmationView(
+                    viewModel: SuccessConfirmationViewModel(success: success) {
+                        onDismiss()
+                        (securedDismiss ?? dismiss)()
+                    }
+                )
+                .transition(.move(edge: .bottom))
+                .zIndex(1)
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: achVM.peerTransferSuccess?.id)
         .background(Color.movo.background.ignoresSafeArea())
         .navigationBarHidden(true)
         .onChange(of: isAmountFocused) { focused in
@@ -199,15 +215,6 @@ struct InternalTransferView: View {
             .presentationCornerRadius(Radius.sheet)
         }
         */
-        .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
-            SuccessConfirmationView(
-                viewModel: SuccessConfirmationViewModel(success: data) {
-                    achVM.peerTransferSuccess = nil
-                    dismiss()
-                    onDismiss()
-                }
-            )
-        }
         .task {
             if case .fixedBoth = mode { return }
             if initialCards.isEmpty {

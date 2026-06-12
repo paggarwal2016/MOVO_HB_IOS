@@ -217,7 +217,7 @@ struct DashboardView: View {
             primaryLinkedCard: dashboardVM.primaryLinkedCard,
             onSuccess: { needsDashboardRefresh = true }
         )
-        .navigationDestination(isPresented: $showFundAccount) {
+        .fullScreenCover(isPresented: $showFundAccount) {
             if let account = displayAccount {
                 FundAccountView(
                     container: container,

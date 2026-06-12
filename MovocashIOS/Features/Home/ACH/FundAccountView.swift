@@ -262,18 +262,18 @@ struct FundAccountView: View {
 
     private var navBar: some View {
         HStack {
-            CircularNavButton(systemName: "chevron.left") {
-                // Onboarding: leaving the fund step lands on the dashboard rather than
-                // popping back to the bank-link screen.
-                if isOnboarding { onSuccess() }
-                else { (securedDismiss ?? dismiss)() }
-            }
+            Color.clear.frame(width: 32, height: 32)
             Spacer()
             Text(isProfileMode ? "Withdraw Funds" : "Fund Account")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
-            Color.clear.frame(width: 32, height: 32)
+            CircularNavButton(systemName: "xmark") {
+                // Onboarding: leaving the fund step lands on the dashboard rather than
+                // popping back to the bank-link screen.
+                if isOnboarding { onSuccess() }
+                else { (securedDismiss ?? dismiss)() }
+            }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
