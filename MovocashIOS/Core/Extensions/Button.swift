@@ -134,7 +134,7 @@ struct FilledButtonStyle: ButtonStyle {
         configuration.label
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.primary)
+            .background(Color.movo.accent)
             .foregroundColor(Color.movo.onAccent)
             .cornerRadius(8)
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
@@ -146,9 +146,9 @@ struct BorderButtonStyle: ButtonStyle {
         configuration.label
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.primary)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
-            .foregroundColor(.blue)
+            .background(Color.movo.accent)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.movo.accentBorder, lineWidth: 2))
+            .foregroundColor(Color.movo.accent)
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
     }
 }

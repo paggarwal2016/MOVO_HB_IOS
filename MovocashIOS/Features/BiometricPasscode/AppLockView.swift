@@ -17,7 +17,7 @@ struct AppLockView: View {
     var body: some View {
         ZStack {
             // Background
-            Color(uiColor: .systemBackground)
+            Color.movo.background
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -82,7 +82,7 @@ struct AppLockView: View {
         VStack(spacing: 12) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 48, weight: .light))
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(Color.movo.accent)
                 .accessibilityHidden(true)
             Text("MovoCash")
                 .font(.title2.bold())
@@ -99,7 +99,7 @@ struct AppLockView: View {
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
             .padding(14)
-            .background(Color(uiColor: .secondarySystemBackground))
+            .background(Color.movo.elevated)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .modifier(ShakeModifier(trigger: vm.shouldShake))
             .submitLabel(.go)
@@ -158,8 +158,8 @@ struct PINDotsView: View {
         HStack(spacing: 20) {
             ForEach(0..<total, id: \.self) { i in
                 Circle()
-                    .fill(i < filledCount ? Color.primary : Color.clear)
-                    .overlay(Circle().stroke(Color.primary, lineWidth: 1.5))
+                    .fill(i < filledCount ? Color.movo.accent : Color.clear)
+                    .overlay(Circle().stroke(Color.movo.accent, lineWidth: 1.5))
                     .frame(width: 16, height: 16)
                     .animation(.spring(response: 0.2), value: filledCount)
             }
@@ -224,7 +224,7 @@ private struct PINKeyView: View {
                 .frame(width: 76, height: 76)
                 .background(
                     Circle()
-                        .fill(Color(uiColor: .secondarySystemBackground))
+                        .fill(Color.movo.elevated)
                         .opacity(isPressed ? 0.5 : 1.0)
                 )
         }

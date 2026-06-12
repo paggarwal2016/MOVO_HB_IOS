@@ -187,7 +187,7 @@ struct ManageExternalAccountsView: View {
             // Bank logo
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.sm)
-                    .fill(account.logoImage != nil ? Color(.systemBackground) : Color.movo.elevated)
+                    .fill(account.logoImage != nil ? Color.movo.surface : Color.movo.elevated)
                     .frame(width: 44, height: 44)
                 if let logo = account.logoImage {
                     Image(uiImage: logo)

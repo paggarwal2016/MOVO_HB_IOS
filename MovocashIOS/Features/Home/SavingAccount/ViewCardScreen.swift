@@ -35,7 +35,7 @@ struct ViewCardScreen: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { isPresented = false }
-                                .foregroundStyle(Color.primary)
+                                .foregroundStyle(Color.movo.accent)
                                 .fontWeight(.semibold)
                         }
                     }

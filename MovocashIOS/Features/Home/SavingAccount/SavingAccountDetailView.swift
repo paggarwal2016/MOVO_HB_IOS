@@ -36,7 +36,7 @@ struct SavingAccountDetailView: View {
                         title: "No Transactions",
                         description: "Transaction history is not available."
                     )
-                    .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                    .background(Color.movo.background.ignoresSafeArea())
                 } else {
                     transactionList
                 }
@@ -46,7 +46,7 @@ struct SavingAccountDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { (securedDismiss ?? dismiss)() }
-                        .foregroundStyle(Color.primary)
+                        .foregroundStyle(Color.movo.accent)
                         .fontWeight(.semibold)
                 }
             }
@@ -74,7 +74,7 @@ struct SavingAccountDetailView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 10)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.movo.background)
     }
 
     // MARK: - Transaction List
@@ -102,7 +102,7 @@ struct SavingAccountDetailView: View {
             }
             .padding(.vertical, 10)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.movo.background)
     }
 
     // MARK: - Load
@@ -128,18 +128,18 @@ struct TransactionRow: View {
         HStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(item.isCredit ? Color.green.opacity(0.12) : Color.red.opacity(0.12))
+                    .fill(item.isCredit ? Color.movo.successTint : Color.movo.dangerTint)
                     .frame(width: 48, height: 48)
                 Image(systemName: item.isCredit ? "arrow.down.left" : "arrow.up.right")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(item.isCredit ? .green : .red)
+                    .foregroundStyle(item.isCredit ? Color.movo.success : Color.movo.danger)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.movo.textPrimary)
                     .lineLimit(1)
                 HStack(spacing: 4) {
                     Text(item.subtitle)
@@ -159,11 +159,11 @@ struct TransactionRow: View {
             Text(item.amountFormatted)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundStyle(item.isCredit ? .green : .red)
+                .foregroundStyle(item.isCredit ? Color.movo.success : Color.movo.danger)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
-        .background(Color(.systemBackground))
+        .background(Color.movo.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

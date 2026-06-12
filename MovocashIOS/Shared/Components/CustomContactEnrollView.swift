@@ -28,13 +28,11 @@ struct CustomContactEnrollView: View {
     /// before dismissing, so present and dismiss share the same expansion.
     @State private var shown = false
 
-    // Palette tuned to the confirmation design (light card, dark CTA).
-    private let avatarFill   = Color(red: 0xF0 / 255, green: 0xED / 255, blue: 0xE7 / 255)
-    private let avatarText   = Color(red: 0x8A / 255, green: 0x86 / 255, blue: 0x7E / 255)
-    private let titleColor   = Color(red: 0x12 / 255, green: 0x16 / 255, blue: 0x1B / 255)
-    private let bodyColor    = Color(red: 0x49 / 255, green: 0x4E / 255, blue: 0x55 / 255)
-    private let primaryFill  = Color(red: 0x0E / 255, green: 0x3A / 255, blue: 0x4C / 255)
-    private let linkColor    = Color(red: 0x1E / 255, green: 0x6F / 255, blue: 0x8B / 255)
+    // Semantic palette — adapts to light and dark mode via the design system.
+    private var avatarFill  : Color { Color.movo.elevated }
+    private var avatarText  : Color { Color.movo.textTertiary }
+    private var titleColor  : Color { Color.movo.textPrimary }
+    private var bodyColor   : Color { Color.movo.textSecondary }
 
     var body: some View {
 
@@ -62,7 +60,7 @@ struct CustomContactEnrollView: View {
                             }
 
                         Circle()
-                            .fill(Color.white)
+                            .fill(Color.movo.surface)
                             .frame(width: 28, height: 28)
                             .overlay {
                                 MovoMVSymbol()
@@ -104,7 +102,7 @@ struct CustomContactEnrollView: View {
                 .padding(.horizontal, Spacing.xxl)
                 .padding(.vertical, Spacing.xxl + Spacing.xs)
                 .frame(maxWidth: 340)
-                .background(Color.white)
+                .background(Color.movo.cardSurface)
                 .cornerRadius(28)
                 .shadow(color: .black.opacity(0.20), radius: 20, x: 0, y: 10)
                 .padding(.horizontal, Spacing.xxl)

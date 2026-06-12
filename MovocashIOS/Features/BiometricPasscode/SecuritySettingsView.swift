@@ -281,7 +281,7 @@ struct SecuritySettingsView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
-            .background(Color.red.gradient)
+            .background(Color.movo.danger)
             .transition(.move(edge: .top).combined(with: .opacity))
             .animation(.spring(), value: lockManager.revocationError)
     }
@@ -305,7 +305,7 @@ struct RemovePasscodeConfirmView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(uiColor: .systemBackground).ignoresSafeArea()
+                Color.movo.background.ignoresSafeArea()
                 VStack(spacing: 0) {
                     Spacer()
                     VStack(spacing: 8) {
