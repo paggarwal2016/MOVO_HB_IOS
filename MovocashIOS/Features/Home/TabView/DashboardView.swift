@@ -261,7 +261,7 @@ struct DashboardView: View {
                     Task { try? await Task.sleep(nanoseconds: 350_000_000); showInternalTransfer = true }
                 }
             )
-            .presentationDetents([.height(300)])
+            .presentationDetents([.height(270)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
