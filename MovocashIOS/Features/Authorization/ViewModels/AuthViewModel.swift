@@ -138,7 +138,17 @@ final class AuthViewModel: ObservableObject {
 
     func handlePhoneInput(_ newValue: String) {
         let isDeleting = newValue.count < phonePreviousText.count
-        var digits = PhoneFormatter.raw(newValue)
+
+        // Strip non-numeric characters.
+        var digits = newValue.filter { $0.isNumber }
+
+        // Normalize an 11-digit paste with US country code before the 10-digit mask runs.
+        if digits.count == 11 && digits.hasPrefix("1") {
+            digits = String(digits.dropFirst())
+        }
+
+        // Cap to 10 digits (same behaviour as PhoneFormatter.raw).
+        digits = String(digits.prefix(10))
 
         if digits.count > 10 {
             phoneDisplayText = phonePreviousText
@@ -159,14 +169,11 @@ final class AuthViewModel: ObservableObject {
     // MARK: - Submit Phone Number
 
     func submitPhoneNumber(appState: AppState) async {
-        let phone = PhoneNumberValidator.sanitize(phoneNumber)
-
-        guard PhoneNumberValidator.isValidUSNumber(phone) else {
-            alertManager.showError("Enter a valid phone number")
-            return
-        }
-
-        phoneNumber = PhoneNumberValidator.normalize(phone)
+        // Normalize to E.164. The view pre-validates and shows inline errors, so a
+        // failure here means the call was made without going through the normal UI
+        // path — return silently rather than showing a duplicate error.
+        guard case .success(let e164) = PhoneNormalizer.normalizePhone(phoneNumber) else { return }
+        phoneNumber = e164
         context = appState.context
 
         do {

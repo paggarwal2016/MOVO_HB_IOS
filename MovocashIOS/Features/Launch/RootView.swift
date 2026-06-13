@@ -265,8 +265,14 @@ struct RootView: View {
                 case .kycSuccess:
                     KYCSuccessView(
                         container: container,
-                        onFinish: { appState.flow = .home },
-                        onSkip: { appState.flow = .home }
+                        onFinish: {
+                            UserDefaults.standard.set(true, forKey: "hasCompletedSignup")
+                            appState.flow = .home
+                        },
+                        onSkip: {
+                            UserDefaults.standard.set(true, forKey: "hasCompletedSignup")
+                            appState.flow = .home
+                        }
                     )
 
                 case .home:
@@ -483,6 +489,7 @@ struct RootView: View {
             appState.flow = .getStartedInfo
         default:
             UserDefaults.standard.set(true, forKey: "kycCompleted")
+            UserDefaults.standard.set(true, forKey: "hasCompletedSignup")
             appState.flow = .home
         }
         return true

@@ -33,15 +33,15 @@ struct SavingAccountDetailView: View {
                 } else if transVM.transactions.isEmpty {
                     EmptyStateView(
                         image: "list.bullet.rectangle.portrait",
-                        title: "No Transactions",
-                        description: "Transaction history is not available."
+                        title: "No Activity",
+                        description: "Activity history is not available."
                     )
                     .background(Color.movo.background.ignoresSafeArea())
                 } else {
                     transactionList
                 }
             }
-            .navigationTitle("Transactions")
+            .navigationTitle("Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

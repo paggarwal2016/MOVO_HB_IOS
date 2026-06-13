@@ -74,6 +74,7 @@
 		99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */ = {isa = PBXBuildFile; fileRef = 99C2EAA22FC9AAB600384E28 /* terms-layout.css */; };
 		99C2EAA62FC9ABDE00384E28 /* StatusBarScrim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */; };
 		99C2F1D12FDB13F400384E28 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 99C2F1D02FDB13F400384E28 /* MobileBankingSDK */; };
+		99C2F1D32FDC610A00384E28 /* PhoneNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -175,6 +176,7 @@
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
 		99C2EAA22FC9AAB600384E28 /* terms-layout.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "terms-layout.css"; sourceTree = "<group>"; };
 		99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarScrim.swift; sourceTree = "<group>"; };
+		99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNormalizer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -487,6 +489,7 @@
 		146819722F4DE6CF00BED014 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */,
 				146819712F4DE6CF00BED014 /* Components */,
 				14DCE2D22F5AF6E8008A8DC4 /* PhoneNumberValidator.swift */,
 			);
@@ -806,6 +809,7 @@
 				14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */,
 				1468198F2F4DE6CF00BED014 /* DeviceManager.swift in Sources */,
 				14D2069C2FD69479001726E7 /* DeviceSessionManager.swift in Sources */,
+				99C2F1D32FDC610A00384E28 /* PhoneNormalizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

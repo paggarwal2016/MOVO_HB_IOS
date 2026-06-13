@@ -500,11 +500,11 @@ struct TransactionListView: View {
                 .foregroundColor(Color.movo.textTertiary)
             
             VStack(spacing: Spacing.sm) {
-                Text(noFilters ? "No transactions yet" : "No results found")
+                Text(noFilters ? "No activity yet" : "No results found")
                     .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
                 Text(noFilters
-                     ? "Your transactions will appear here once activity begins."
+                     ? "Your activity will appear here once it begins."
                      : "Try adjusting your search or clearing the filters.")
                 .textStyle(Typography.caption)
                 .foregroundColor(Color.movo.textTertiary)
@@ -615,7 +615,7 @@ extension TransactionListView {
                 
                 TextField("",
                           text: $transactionVM.searchText,
-                          prompt: Text("Search transactions, merchants…")
+                          prompt: Text("Search activity, merchants…")
                     .foregroundColor(Color.movo.textDisabled))
                 .textStyle(Typography.bodyCompact)
                 .foregroundColor(Color.movo.textPrimary)

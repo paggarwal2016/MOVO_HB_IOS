@@ -14,6 +14,8 @@ struct ChoiceScreen: View {
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject private var lockManager: AppLockManager
     
+    @AppStorage("hasCompletedSignup") private var hasCompletedSignup = false
+
     @State private var isBiometricLoading = false
     @State private var showBiometricError = false
     
@@ -106,7 +108,7 @@ struct ChoiceScreen: View {
                     .foregroundColor(Color.movo.textPrimary)
                     .multilineTextAlignment(.center)
                 
-                Text("Send. Spend. Move money your way.")
+                Text("Send to Spend.")
                     .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
                     .multilineTextAlignment(.center)
@@ -119,15 +121,13 @@ struct ChoiceScreen: View {
     private var actionStack: some View {
         VStack(spacing: Spacing.md) {
             
-            Button(action: { appState.flow = .getStartedPhone } ) {
-                Text("Get Started")
+            if hasCompletedSignup {
+                Button("Get Started") { appState.flow = .getStartedPhone }.buttonStyle(OutlineButtonStyle())
+                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
+            } else {
+                Button("Get Started") { appState.flow = .getStartedPhone }.buttonStyle(MovoPrimaryButtonStyle())
+                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
             }
-            .buttonStyle(MovoPrimaryButtonStyle())
-            
-            Button(action: { appState.flow = .loginPhone }) {
-                Text("Log In")
-            }
-            .buttonStyle(OutlineButtonStyle())
             
             
             if RSAKeyManager.shared.keysExist() {
@@ -189,7 +189,7 @@ struct ChoiceScreen: View {
                 .foregroundColor(Color.movo.textSecondary)
             + Text("Inc. is a financial technology company, ")
                 .foregroundColor(Color.movo.textTertiary)
-            + Text("Fin-Tech")
+            + Text("Fintech")
                 .foregroundColor(Color.movo.textSecondary)
                 .fontWeight(.semibold)
             + Text(", not a bank. Depository Banking Services provided by Herring Bank, Member ")
