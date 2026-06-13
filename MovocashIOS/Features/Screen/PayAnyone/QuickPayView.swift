@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import MobileBankingSDK
+import Combine
 
 struct QuickPayView: View {
 
@@ -42,6 +42,8 @@ struct QuickPayView: View {
     /// (after the popup cover finishes dismissing, before presenting the success cover).
     @State private var pendingSend = false
 
+    /// Called when the user finishes on the success screen ("Let's MOVO"), so the
+    /// Dashboard can refresh on return.
     var onSuccess: () -> Void = {}
 
     init(container: AppContainer,
@@ -96,7 +98,7 @@ struct QuickPayView: View {
 
                 CustomSheetHeader(
                     title: title,
-                    subtitle: "Spend money instantly",
+                    subtitle: "Send to spend",
                     systemImage: "bolt.fill",
                     iconTint: Color.movo.accent,
                     iconBackground: Color.movo.accentTint,
@@ -157,7 +159,23 @@ struct QuickPayView: View {
                 Color.black.opacity(0.5).ignoresSafeArea()
                 SpinnerView()
             }
+
+            // On transfer success the confirmation screen slides up as a full-screen
+            // layer over this view — presented FIRST, with the Quick Pay form hidden
+            // behind it. "Let's MOVO" dismisses the whole Quick Pay cover in one
+            // transition, revealing the Dashboard with no flicker.
+            if let success = achVM.peerTransferSuccess {
+                SuccessConfirmationView(
+                    viewModel: SuccessConfirmationViewModel(success: success) {
+                        onSuccess()
+                        (securedDismiss ?? dismiss)()
+                    }
+                )
+                .transition(.move(edge: .bottom))
+                .zIndex(1)
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: achVM.peerTransferSuccess?.id)
         // Hosts the native contact picker; presents when `showSystemPicker` flips true.
         .background {
             PhoneContactPicker(isPresented: $showSystemPicker) { name, phone in
@@ -188,15 +206,6 @@ struct QuickPayView: View {
             pendingSend = false
             showConfirm = false
             (securedDismiss ?? dismiss)()
-        }
-        .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
-            SuccessConfirmationView(
-                viewModel: SuccessConfirmationViewModel(success: data) {
-                    achVM.peerTransferSuccess = nil
-                    onSuccess()
-                    (securedDismiss ?? dismiss)()
-                }
-            )
         }
     }
 

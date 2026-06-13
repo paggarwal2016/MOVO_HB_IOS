@@ -46,9 +46,9 @@ struct QuickTransferView: View {
     @State private var showAccountSheet = false
     @State private var sendTask: Task<Void, Never>?
 
-    /// Reports the transfer success payload to the presenter so it can dismiss this
-    /// screen first and then present the success confirmation (instead of stacking it
-    /// on top of this screen).
+    /// Called when the user finishes on the success screen ("Let's MOVO"), so the
+    /// presenter can refresh on return. The success confirmation is shown as a layer
+    /// inside this screen; this screen dismisses itself once the user is done.
     var onComplete: (SuccessConfirmation) -> Void = { _ in }
 
     init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, recipientExists: Bool? = nil, onComplete: @escaping (SuccessConfirmation) -> Void = { _ in }) {
@@ -118,7 +118,23 @@ struct QuickTransferView: View {
                     .ignoresSafeArea()
                 SpinnerView()
             }
+
+            // On transfer success the confirmation screen slides up as a full-screen
+            // layer over this view — presented FIRST, with the transfer form hidden
+            // behind it. "Let's MOVO" dismisses this whole screen in one transition,
+            // revealing the presenting screen with no flicker.
+            if let success = achVM.peerTransferSuccess {
+                SuccessConfirmationView(
+                    viewModel: SuccessConfirmationViewModel(success: success) {
+                        onComplete(success)
+                        (securedDismiss ?? dismiss)()
+                    }
+                )
+                .transition(.move(edge: .bottom))
+                .zIndex(1)
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: achVM.peerTransferSuccess?.id)
         .background(Color.movo.background)
         .navigationBarHidden(true)
         .onChange(of: amountFocused) { focused in
@@ -161,12 +177,6 @@ struct QuickTransferView: View {
             .presentationDetents([.height(descriptionText.isEmpty ? 420 : 490)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
-        }
-        .onReceive(achVM.$peerTransferSuccess.compactMap { $0 }) { data in
-            // API success: hand the payload to the presenter and let it dismiss this
-            // screen before presenting the success confirmation.
-            achVM.peerTransferSuccess = nil
-            onComplete(data)
         }
         .sheet(isPresented: $showAccountSheet) {
             accountSelectionSheet

@@ -277,6 +277,9 @@ actor PlaidService {
         approvalSheetHeight: TransactionApprovalSheetHeight = .large,
     ) async throws -> SecureTransactionApprovalResult {
         try await withCheckedThrowingContinuation { continuation in
+            // Defensive one-shot guard: a checked continuation crashes if resumed twice.
+            // If the SDK ever invokes its completion more than once, ignore the extras.
+            var hasResumed = false
             MobileBankingSDK.approveTransactionIntent(
                 intentId: intentId,
                 deviceId: deviceId,
@@ -284,6 +287,8 @@ actor PlaidService {
                 enableEncryptedResponses: false,
                 approvalSheetHeight: approvalSheetHeight
             ) { result in
+                guard !hasResumed else { return }
+                hasResumed = true
                 continuation.resume(with: result)
             }
         }

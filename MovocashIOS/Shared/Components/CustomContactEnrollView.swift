@@ -221,9 +221,6 @@ final class PayeeTransferModel: ObservableObject {
     @Published fileprivate var confirmingContact: ContactRecord?
     /// The payee to open in QuickTransferView (set after the popup fully dismisses).
     @Published fileprivate var transferContact: ContactRecord?
-    /// Success payload, presented only after QuickTransferView has fully dismissed
-    /// so the success screen replaces the transfer screen rather than stacking on it.
-    @Published fileprivate var successData: SuccessConfirmation?
 
     /// Drives the enroll popup rendered INSIDE the Add Contact sheet after check-intent
     /// succeeds. Kept separate from `showPopup` (the parent-level popup used by the
@@ -232,9 +229,6 @@ final class PayeeTransferModel: ObservableObject {
 
     /// Contact to open once the popup's dismiss transition completes (Continue).
     private var pendingTransfer: ContactRecord?
-    /// Success held until the transfer cover's dismiss transition completes, then
-    /// promoted to `successData`.
-    private var pendingSuccess: SuccessConfirmation?
 
     let transactionVM: TransactionViewModel
 
@@ -288,21 +282,6 @@ final class PayeeTransferModel: ObservableObject {
         transferContact = contact
     }
 
-    /// Called by QuickTransferView when the transfer API succeeds. Dismisses the
-    /// transfer screen first; the success screen is presented in transferDidDismiss().
-    fileprivate func completeTransfer(_ success: SuccessConfirmation) {
-        pendingSuccess = success
-        transferContact = nil
-    }
-
-    /// Called when the transfer cover's dismiss transition finishes. Presents the
-    /// success screen only when the dismissal followed a completed transfer.
-    fileprivate func transferDidDismiss() {
-        guard let success = pendingSuccess else { return }
-        pendingSuccess = nil
-        successData = success
-    }
-
     /// Content accessors for the in-sheet enroll popup (`showAddConfirm`).
     var confirmTitle: String { transactionVM.checkIntentResult?.message ?? "" }
     var confirmMessage: String { transactionVM.checkIntentResult?.disclaimer ?? "" }
@@ -349,8 +328,6 @@ final class PayeeTransferModel: ObservableObject {
         confirmingContact = nil
         pendingTransfer = nil
         transferContact = nil
-        pendingSuccess = nil
-        successData = nil
         showAddConfirm = false
     }
 }
@@ -401,22 +378,16 @@ private struct PayeeTransferFlowModifier: ViewModifier {
                 onContinue: { model.confirm() },
                 onCancel: { model.cancel() }
             )
-            .fullScreenCover(item: $model.transferContact, onDismiss: { model.transferDidDismiss() }) { contact in
+            .fullScreenCover(item: $model.transferContact) { contact in
                 QuickTransferView(
                     contact: contact,
                     container: container,
                     cards: cards,
                     primaryLinkedCard: primaryLinkedCard,
                     recipientExists: model.transactionVM.checkIntentResult?.exists,
-                    onComplete: { success in model.completeTransfer(success) }
-                )
-            }
-            .fullScreenCover(item: $model.successData) { data in
-                SuccessConfirmationView(
-                    viewModel: SuccessConfirmationViewModel(success: data) {
-                        model.successData = nil
-                        onSuccess()
-                    }
+                    // The success confirmation is shown inside QuickTransferView and it
+                    // dismisses itself; here we only refresh the presenter on return.
+                    onComplete: { _ in onSuccess() }
                 )
             }
     }

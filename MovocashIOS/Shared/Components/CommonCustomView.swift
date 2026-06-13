@@ -38,21 +38,34 @@ struct CustomSheetHeader: View {
             
             // MARK: Icon
             
-            ZStack {
-                
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .fill(iconBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.xl)
-                            .stroke(
-                                iconTint.opacity(0.18),
-                                lineWidth: Stroke.thin
-                            )
-                    )
-                
+            ZStack(alignment: .bottomTrailing) {
+
+                // Big icon: Movo-branded background with the Movo "M" mark, clipped to
+                // the rounded square.
+                ZStack {
+                    MovoBackground()
+                    MovoMVSymbol()
+                        .frame(width: 24, height: 24)
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.xl)
+                        .stroke(
+                            iconTint.opacity(0.18),
+                            lineWidth: Stroke.thin
+                        )
+                )
+
+                // Small badge: the screen's icon (e.g. the thunder bolt for Quick Pay),
+                // pinned to the bottom-trailing corner with a slight overhang.
                 Image(systemName: systemImage)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(iconTint)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(iconTint))
+                    .overlay(Circle().stroke(Color.movo.background, lineWidth: 1.5))
+                    .offset(x: 3, y: 3)
             }
             .frame(width: 44, height: 44)
             

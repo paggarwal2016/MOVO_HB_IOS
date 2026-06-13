@@ -17,6 +17,10 @@ protocol KYCManagerProtocol {
     /// True once configureSDK has completed successfully since launch (or last clearSession).
     /// Allows callers to skip redundant SDK initialization.
     func configureSDK(officeId: String) async throws
+    /// Configures the SDK with an already-fetched access token, skipping the internal
+    /// `/auth/token-access` call. Used right after login (which just fetched a token) so
+    /// the token endpoint isn't hit twice.
+    func configureSDK(officeId: String, authToken: String) async throws
     func start() async throws -> User
     func clearSession()
     func updateToken(_ token: String)
@@ -55,8 +59,6 @@ final class KYCManager: KYCManagerProtocol, TokenRefreshable {
 extension KYCManager {
 
     func configureSDK(officeId: String) async throws {
-        SecureLogger.info("Configuring KYC SDK", category: .kyc)
-
         // Fetch a fresh access token from /auth/token-access and pass the API
         // response straight into the SDK so it never runs on a stale token.
         let token: String
@@ -67,15 +69,20 @@ extension KYCManager {
             analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "token_refresh_failed"])
             throw KYCError.notConfigured
         }
+        try await configureSDK(officeId: officeId, authToken: token)
+    }
+
+    func configureSDK(officeId: String, authToken: String) async throws {
+        SecureLogger.info("Configuring KYC SDK", category: .kyc)
 
         #if DEBUG
         let verboseLogs = true
 #else
         let verboseLogs = false
 #endif
-        
+
         MobileBankingSDK.configure(
-            authToken: token,
+            authToken: authToken,
             baseUrl: AppConfig.sdkURL,
             officeId: officeId,
             theme: makeKYCTheme(),

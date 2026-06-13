@@ -38,17 +38,6 @@ struct MoveMoneyMenuView: View {
                 .padding(.horizontal, Spacing.xxl)
 
             optionRow(
-                icon: "person.2",
-                title: "Pay Anyone",
-                subtitle: "Send to spend",
-                action: onTransferMoney
-            )
-
-            Divider()
-                .background(Color.movo.border)
-                .padding(.horizontal, Spacing.xxl)
-
-            optionRow(
                 icon: "arrow.left.arrow.right",
                 title: "Transfer Money",
                 subtitle: "Move money between your accounts",

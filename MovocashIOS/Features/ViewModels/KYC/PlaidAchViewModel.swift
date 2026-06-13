@@ -444,12 +444,18 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                               userInfo: [NSLocalizedDescriptionKey: "Unable to present biometric approval."])
             }
             let deviceId = await DeviceManager.shared.deviceID()
+            // Remove the loading spinner before presenting the biometric approval sheet:
+            // it must not sit behind the system sheet, and it must not be left stuck if
+            // the user cancels/dismisses the approval.
+            self.state = .idle
             let approvalResult = try await self.service.approveTransactionIntent(
                 intentId: intent.id,
                 deviceId: deviceId,
                 presentingViewController: approvalPresenter,
                 approvalSheetHeight: .fraction(0.85)
             )
+            // Approval completed — restore the spinner for the remaining completion step.
+            self.state = .loading
 
             let completeRequest = TransactionRequest.Complete(
                 transferId:    approvalResult.intent.id,
@@ -487,11 +493,15 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     
     // MARK: - Helpers
 
-    // Polls until the top VC has no active child presentation (max 2s).
+    // Polls until the top VC is fully settled with no active child presentation (max 2s).
+    // We intentionally wait out an in-progress dismissal (`isBeingDismissed`) rather than
+    // returning that VC: presenting the SDK's approval sheet while a dismissal is still
+    // running makes UIKit refuse to present, and the SDK then never calls its completion —
+    // which leaks the approval continuation and hangs the transfer forever.
     private func waitForPresentableViewController() async -> UIViewController? {
         for _ in 0..<20 {
             if let vc = UIApplication.topViewController(),
-               vc.presentedViewController == nil || vc.presentedViewController?.isBeingDismissed == true {
+               vc.presentedViewController == nil {
                 return vc
             }
             try? await Task.sleep(nanoseconds: 100_000_000)

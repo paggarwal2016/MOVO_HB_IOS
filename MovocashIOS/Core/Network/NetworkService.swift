@@ -109,12 +109,6 @@ actor NetworkService: NetworkServiceProtocol {
                     let jitter  = UInt64.random(in: 0..<100_000_000)        // up to 100ms
                     try await Task.sleep(nanoseconds: backoff + jitter)
 
-                case .deviceSessionExpired:
-                    // 15-min X25519 Redis session expired — re-fetch config once and
-                    // retry. The rebuilt request reads the fresh sessionId + key.
-                    guard usesDeviceSession, attempt < maxAttempts - 1 else { throw error }
-                    try? await DeviceSessionManager.shared.refresh()
-
                 default:
                     // 401, decode error, any other client error — throw immediately, no retry
                     throw error
@@ -168,9 +162,6 @@ actor NetworkService: NetworkServiceProtocol {
                     let backoff = UInt64(500_000_000) * UInt64(attempt + 1)
                     let jitter  = UInt64.random(in: 0..<100_000_000)
                     try await Task.sleep(nanoseconds: backoff + jitter)
-                case .deviceSessionExpired:
-                    guard usesDeviceSession, attempt < maxAttempts - 1 else { throw error }
-                    try? await DeviceSessionManager.shared.refresh()
                 default:
                     throw error
                 }
@@ -291,15 +282,6 @@ actor NetworkService: NetworkServiceProtocol {
                 
         SecureLogger.info("API Success.", category: .network)
 
-        // X25519 device-session expiry — only for requests that sent the secure
-        // movo-info header. Checked before auth-session termination so a stale
-        // 15-min Redis session triggers a re-config + retry instead of a logout.
-        if usesDeviceSession,
-           let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data),
-           DeviceSessionExpiry.isExpired(code: apiError.code) {
-            throw NetworkError.deviceSessionExpired(message: apiError.message)
-        }
-
         if SessionExpiryNotifier.shouldTerminateSession(statusCode: http.statusCode, data: data) {
             let message = SessionExpiryNotifier.displayMessage(statusCode: http.statusCode, data: data)
             Task { @MainActor in
@@ -393,12 +375,6 @@ actor NetworkService: NetworkServiceProtocol {
 
         guard let http = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
-        }
-
-        if usesDeviceSession,
-           let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data),
-           DeviceSessionExpiry.isExpired(code: apiError.code) {
-            throw NetworkError.deviceSessionExpired(message: apiError.message)
         }
 
         if SessionExpiryNotifier.shouldTerminateSession(statusCode: http.statusCode, data: data) {

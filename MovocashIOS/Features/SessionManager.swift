@@ -91,8 +91,9 @@ final class SessionManager: ObservableObject {
             accessToken: accessToken
         )
 
-        // Configure KYC SDK with the authenticated session
-        try await kycManager.configureSDK(officeId: AppConfig.officeId)
+        // Configure KYC SDK with the access token we just received — avoids a second
+        // /auth/token-access call right after login (the token is already fresh).
+        try await kycManager.configureSDK(officeId: AppConfig.officeId, authToken: accessToken)
 
         // Update UI state
         appState.isAuthenticated = true

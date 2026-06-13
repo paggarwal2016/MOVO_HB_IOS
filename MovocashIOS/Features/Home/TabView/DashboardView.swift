@@ -155,7 +155,7 @@ struct DashboardView: View {
                 container: container,
                 cards: dashboardVM.cards,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                title: dashboardVM.quickPayTitle,
+                title: "Quick Pay", //dashboardVM.quickPayTitle
                 onSuccess: { needsDashboardRefresh = true }
             )
         }
@@ -196,7 +196,7 @@ struct DashboardView: View {
                 container: container,
                 primaryLinkedCard: dashboardVM.primaryLinkedCard,
                 cards: dashboardVM.cards,
-                title: dashboardVM.quickPayTitle,
+                title: "Quick Pay", // dashboardVM.quickPayTitle
                 onSuccess: { needsDashboardRefresh = true }
             )
         }
@@ -217,7 +217,7 @@ struct DashboardView: View {
             primaryLinkedCard: dashboardVM.primaryLinkedCard,
             onSuccess: { needsDashboardRefresh = true }
         )
-        .navigationDestination(isPresented: $showFundAccount) {
+        .fullScreenCover(isPresented: $showFundAccount) {
             if let account = displayAccount {
                 FundAccountView(
                     container: container,
@@ -261,7 +261,7 @@ struct DashboardView: View {
                     Task { try? await Task.sleep(nanoseconds: 350_000_000); showInternalTransfer = true }
                 }
             )
-            .presentationDetents([.height(300)])
+            .presentationDetents([.height(270)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)

@@ -43,6 +43,10 @@ struct PayAnyoneView: View {
     /// True while the create-contact API call is in flight — shows the spinner.
     @State private var isCreatingContact = false
 
+    /// Collapsible-section state for the contacts list. Default expanded.
+    @State private var favouritesExpanded = true
+    @State private var allContactsExpanded = true
+
     init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, screenTitle: String = "Pay Anyone") {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
         _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
@@ -156,7 +160,7 @@ struct PayAnyoneView: View {
                 handlePickedContact(name: name, phone: phone)
             }
         }
-        .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
+        .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { handleTransferSuccess() })
         .fullScreenCover(isPresented: $showAllFrequents) {
             AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: localPrimaryCard)
         }
@@ -174,11 +178,9 @@ struct PayAnyoneView: View {
                     await contactVM.load()
                 }
                 isInitialLoading = false
-                // Silently refresh primary card balance only when there is
-                // contact data to display (balance card is visible).
-                if hasAnyData {
-                    refreshPrimaryCard()
-                }
+                // Normal load uses the Primary Card details passed from the Dashboard —
+                // no Primary Card API call here. It is refreshed only after a successful
+                // Quick Transfer (see handleTransferSuccess()).
             }
         }
         .onChange(of: scenePhase) { newPhase in
@@ -367,19 +369,21 @@ struct PayAnyoneView: View {
             
             // Favourites
             if !contactVM.filteredFavourites.isEmpty {
-                Text("FAVOURITES")
-                    .textStyle(Typography.eyebrow)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
-                    .padding(.bottom, Spacing.xs)
-                ForEach(contactVM.filteredFavourites) { contact in
-                    Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
-                        .buttonStyle(.plain)
-                    if contact.id != contactVM.filteredFavourites.last?.id {
-                        Rectangle().fill(Color.movo.border)
-                            .frame(height: Stroke.hairline)
-                            .padding(.horizontal, Spacing.lg)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { favouritesExpanded.toggle() }
+                } label: {
+                    sectionHeader(title: "FAVOURITES", isExpanded: favouritesExpanded)
+                }
+                .buttonStyle(.plain)
+                if favouritesExpanded {
+                    ForEach(contactVM.filteredFavourites) { contact in
+                        Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
+                            .buttonStyle(.plain)
+                        if contact.id != contactVM.filteredFavourites.last?.id {
+                            Rectangle().fill(Color.movo.border)
+                                .frame(height: Stroke.hairline)
+                                .padding(.horizontal, Spacing.lg)
+                        }
                     }
                 }
                 Rectangle().fill(Color.movo.border)
@@ -390,35 +394,47 @@ struct PayAnyoneView: View {
             // All contacts — header always present for limited access so the user can
             // pick more contacts even when none are currently shared with the app.
             if !contactVM.filteredContacts.isEmpty || isLimited {
-                HStack {
-                    Text("ALL CONTACTS")
-                        .textStyle(Typography.eyebrow)
-                        .foregroundColor(Color.movo.textTertiary)
-                    Spacer()
-                    // Full Access: no button. Limited Access: offer the native picker.
-                    if isLimited {
-                        Button { isOpeningPicker = true; showSystemPicker = true } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "person.crop.circle.badge.plus")
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text("Use Phone Contacts")
-                                    .textStyle(Typography.caption)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { allContactsExpanded.toggle() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("ALL CONTACTS")
+                            .textStyle(Typography.eyebrow)
+                            .foregroundColor(Color.movo.textTertiary)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color.movo.textTertiary)
+                            .rotationEffect(.degrees(allContactsExpanded ? 0 : -90))
+                        Spacer()
+                        // Full Access: no button. Limited Access: offer the native picker.
+                        if isLimited {
+                            Button { isOpeningPicker = true; showSystemPicker = true } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "person.crop.circle.badge.plus")
+                                        .font(.system(size: 11, weight: .semibold))
+                                    Text("Use Phone Contacts")
+                                        .textStyle(Typography.caption)
+                                }
+                                .foregroundColor(Color.movo.accent)
                             }
-                            .foregroundColor(Color.movo.accent)
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .contentShape(Rectangle())
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.md)
+                    .padding(.bottom, Spacing.xs)
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.md)
-                .padding(.bottom, Spacing.xs)
-                ForEach(contactVM.filteredContacts) { contact in
-                    Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
-                        .buttonStyle(.plain)
-                    if contact.id != contactVM.filteredContacts.last?.id {
-                        Rectangle().fill(Color.movo.border)
-                            .frame(height: Stroke.hairline)
-                            .padding(.horizontal, Spacing.lg)
+                .buttonStyle(.plain)
+                if allContactsExpanded {
+                    ForEach(contactVM.filteredContacts) { contact in
+                        Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
+                            .buttonStyle(.plain)
+                        if contact.id != contactVM.filteredContacts.last?.id {
+                            Rectangle().fill(Color.movo.border)
+                                .frame(height: Stroke.hairline)
+                                .padding(.horizontal, Spacing.lg)
+                        }
                     }
                 }
             }
@@ -431,6 +447,25 @@ struct PayAnyoneView: View {
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
         )
         .padding(.horizontal, Spacing.lg)
+    }
+
+    /// Collapsible-section header: eyebrow title with a chevron that rotates
+    /// to point right when the section is collapsed.
+    private func sectionHeader(title: String, isExpanded: Bool) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .textStyle(Typography.eyebrow)
+                .foregroundColor(Color.movo.textTertiary)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Color.movo.textTertiary)
+                .rotationEffect(.degrees(isExpanded ? 0 : -90))
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.xs)
     }
 
     private func contactAvatar(initials: String, size: CGFloat) -> some View {
@@ -446,11 +481,9 @@ struct PayAnyoneView: View {
         HStack(spacing: Spacing.md) {
             contactAvatar(initials: contact.avatarInitial, size: 44)
             VStack(alignment: .leading, spacing: 3) {
-                // Nickname when present; otherwise the phone number stands in.
                 Text(contact.displayName)
                     .textStyle(Typography.bodyCompact)
                     .foregroundColor(Color.movo.textPrimary)
-                // Secondary phone line is redundant when the primary already shows it.
                 if contact.hasNickname {
                     Text(contact.phoneNumber ?? "")
                         .textStyle(Typography.caption)
@@ -464,6 +497,8 @@ struct PayAnyoneView: View {
                 Image(systemName: contactVM.isFavorite(contact) ? "star.fill" : "star")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundColor(contactVM.isFavorite(contact) ? Color.movo.accent : Color.movo.textDisabled)
+                    .frame(width: 40, height: 40)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             Image(systemName: "chevron.right")
@@ -472,8 +507,9 @@ struct PayAnyoneView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
+        .contentShape(Rectangle())
     }
-    
+
     // MARK: - Actions
     
     private func addContact() {
@@ -511,6 +547,14 @@ struct PayAnyoneView: View {
             guard let updated = try? await cardVM.fetchPrimaryCard() else { return }
             localPrimaryCard = updated
         }
+    }
+
+    /// Runs only after a successful Quick Transfer when the user lands back on this
+    /// screen (Success screen dismissed). Refreshes the Primary Card balance via the
+    /// API and reloads Frequents so the just-paid contact appears.
+    private func handleTransferSuccess() {
+        refreshPrimaryCard()
+        Task { await contactVM.loadFrequent() }
     }
 
     private func enableContacts() {
@@ -794,7 +838,7 @@ extension PayAnyoneView {
             .padding(.horizontal, Spacing.lg)
             
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.sm + 2) {
+                LazyHStack(spacing: Spacing.sm + 2) {
                     ForEach(contactVM.frequents) { contact in
                         QuickContactCell(contact: contact) {
                             payeeFlow.tap(ContactRecord(

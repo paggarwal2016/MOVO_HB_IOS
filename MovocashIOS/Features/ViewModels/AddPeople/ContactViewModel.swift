@@ -128,8 +128,12 @@ final class ContactViewModel: BaseViewModel {
 
     var favoriteContacts: [ContactRecord] { favourites }
 
+    /// Set of favourite IDs kept in sync with `favourites` so per-row favourite
+    /// checks are O(1) instead of scanning the array for every contact row.
+    @Published private(set) var favouriteIDs: Set<String> = []
+
     func isFavorite(_ contact: ContactRecord) -> Bool {
-        favourites.contains { $0.id == contact.id }
+        favouriteIDs.contains(contact.id)
     }
 
     var isPermissionError: Bool {
@@ -204,6 +208,11 @@ final class ContactViewModel: BaseViewModel {
 
     private func setupContactPipelines() {
         let work = DispatchQueue.global(qos: .userInitiated)
+
+        // Keep the O(1) favourite-ID lookup set in sync with the favourites array.
+        $favourites
+            .map { Set($0.map(\.id)) }
+            .assign(to: &$favouriteIDs)
 
         // Heavy lists recompute only when their source arrays change.
         Publishers.CombineLatest3($apiContacts, $contacts, $favourites)
