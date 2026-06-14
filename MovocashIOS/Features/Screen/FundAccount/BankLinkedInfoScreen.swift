@@ -21,37 +21,36 @@ struct BankLinkedInfoScreen: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
 
-            // Header — co-brand lockup centered; close pinned to the top-right.
-            HStack(spacing: Spacing.lg) {
+            // Header — co-brand overlapping circles (Chime style); close pinned top-right.
+            ZStack {
+                // Back circle: Plaid — elevatedHigh, sits behind
+                Circle()
+                    .fill(Color.movo.elevatedHigh)
+                    .frame(width: 64, height: 64)
+                    .overlay(
+                        Image("plaid")
+                            .resizable()
+                            .renderingMode(.template)
+                            .scaledToFit()
+                            .foregroundColor(Color.movo.textPrimary)
+                            .frame(width: 34, height: 34)
+                    )
+                    .offset(x: 22)
 
-                // MOVO logo + wordmark
-                HStack(spacing: Spacing.sm) {
-                    MovoMVSymbol()
-                        .frame(width: 32, height: 32)
-                    Text("MOVO")
-                        .font(.system(size: 18, weight: .heavy))
-                        .tracking(1.5)
-                        .foregroundColor(Color.movo.textPrimary)
-                }
-
-                // Vertical divider between the two brands
-                Rectangle()
-                    .fill(Color.movo.borderStrong)
-                    .frame(width: Stroke.hairline, height: 26)
-
-                // Plaid logo + wordmark
-                HStack(spacing: Spacing.sm) {
-                    Image("plaid")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 32, height: 32)
-                    Text("PLAID")
-                        .font(.system(size: 18, weight: .heavy))
-                        .tracking(1.5)
-                        .foregroundColor(Color.movo.textPrimary)
-                }
+                // Front circle: Movo — dark elevated + accent tint + separator ring
+                Circle()
+                    .fill(Color.movo.elevated)
+                    .overlay(Circle().fill(Color.movo.accent.opacity(0.12)))
+                    .overlay(Circle().strokeBorder(Color.movo.surface, lineWidth: 1))
+                    .frame(width: 64, height: 64)
+                    .overlay(
+                        MovoMVSymbol()
+                            .frame(width: 34, height: 34)
+                    )
+                    .offset(x: -22)
             }
-            .frame(maxWidth: .infinity)
+            .frame(width: 108, height: 64)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, Spacing.huge)
             .overlay(alignment: .topTrailing) {
                 CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }

@@ -267,9 +267,7 @@ struct SecuritySettingsView: View {
                     .foregroundStyle(Color.movo.textSecondary)
                     .font(.subheadline)
             } else {
-                Image(systemName: "chevron.right")
-                    .font(.caption.bold())
-                    .foregroundStyle(.tertiary)
+                MovoChevron(.disclosure, color: Color.movo.textDisabled)
             }
         }
     }

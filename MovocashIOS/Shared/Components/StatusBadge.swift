@@ -138,8 +138,7 @@ struct StatusBadge: View {
                     .font(size.font)
                 
                 if action != nil {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: size.iconSize - 1, weight: .bold))
+                    MovoChevron(.disclosure, color: status.color)
                         .opacity(0.6)
                 }
             }

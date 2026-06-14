@@ -327,10 +327,12 @@ private struct WebKitView: UIViewRepresentable {
           --accent-tint: \(rgba(c.accent.lightHex, alpha: 0.12));
           --danger: \(hex(c.danger.lightHex));
           --warning: \(hex(c.warning.lightHex));
+          --warn: \(hex(c.warning.lightHex));
           --border: \(hex(c.border.lightHex));
           --border-strong: \(hex(c.borderStrong.lightHex));
           --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
           --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+          --font-mono: 'Courier New', monospace;
           --size-h1: 26px; --size-h2: 22px; --size-h3: 18px; --size-h4: 16px;
           --size-body: 16px; /* intentionally overrides Typography.body (14pt) for long-form reading */
           --size-caption: 12px; --size-eyebrow: 10px;
@@ -355,6 +357,7 @@ private struct WebKitView: UIViewRepresentable {
           --accent-tint: \(rgba(c.accent.darkHex, alpha: 0.18));
           --danger: \(hex(c.danger.darkHex));
           --warning: \(hex(c.warning.darkHex));
+          --warn: \(hex(c.warning.darkHex));
           --border: \(hex(c.border.darkHex));
           --border-strong: \(hex(c.borderStrong.darkHex));
         }

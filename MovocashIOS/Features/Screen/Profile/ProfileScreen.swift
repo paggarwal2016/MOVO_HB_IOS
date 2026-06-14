@@ -391,9 +391,7 @@ private extension ProfileScreen {
                         }
                 } else {
                     Button { showSecuritySettings = true } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.movo.textTertiary)
+                        MovoChevron(.disclosure, color: Color.movo.textTertiary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -451,9 +449,7 @@ private extension ProfileScreen {
                     .font(Typography.body.font)
                     .foregroundStyle(Color.movo.textPrimary)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)
@@ -481,9 +477,7 @@ private extension ProfileScreen {
                     .font(Typography.body.font)
                     .foregroundStyle(Color.movo.textPrimary)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)

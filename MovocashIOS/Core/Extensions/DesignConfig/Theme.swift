@@ -68,6 +68,9 @@ public struct MovoColorScheme: Sendable {
     // Ghost surface — surface at 85% opacity, subtle near-flush card feel
    // public let ghostSurface:    ColorToken
 
+    // Card tile face — locked near-black for the Void Silver card cell in the dashboard carousel.
+    public let cardVoid:           ColorToken
+
     // Card artwork — brand-locked (heritage black card; same hex in both modes)
     // Scoped to the physical card artwork view only.
     public let cardArtwork:        ColorToken
@@ -111,6 +114,8 @@ public struct MovoColorScheme: Sendable {
         onAccent:      DesignTokens.Palette.onAccent,
         cardSurface:   DesignTokens.Palette.cardSurface,
         cardBorder:    DesignTokens.Palette.cardBorder,
+
+        cardVoid:          DesignTokens.Palette.cardVoid,
 
         // Heritage black card — locked, never adapts.
         cardArtwork:       DesignTokens.Palette.cardArtwork,

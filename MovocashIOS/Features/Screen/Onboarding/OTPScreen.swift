@@ -95,8 +95,21 @@ private extension OTPScreen {
 
     var otpSectionView: some View {
         VStack(spacing: Spacing.md) {
+            // .overlay keeps otpBoxesView in full control of layout;
+            // the TextField matches its frame exactly — no layout interference.
             otpBoxesView
-            hiddenTextField
+                .overlay(
+                    TextField("", text: otpBinding)
+                        .keyboardType(.numberPad)
+                        .textContentType(.oneTimeCode)
+                        .focused($isFocused)
+                        .tint(.clear)
+                        .foregroundColor(.clear)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .opacity(0.011)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture { isFocused = true }
             resendView
         }
     }
@@ -113,17 +126,6 @@ private extension OTPScreen {
                 .frame(height: 55)
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { isFocused = true }
-    }
-
-    var hiddenTextField: some View {
-        TextField("", text: otpBinding)
-            .keyboardType(.numberPad)
-            .textContentType(.oneTimeCode)
-            .focused($isFocused)
-            .frame(width: 1, height: 1)
-            .opacity(0.01)
     }
 
     @ViewBuilder

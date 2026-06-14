@@ -330,9 +330,7 @@ struct UsePhoneContactButton: View {
                 Text("Use phone contact")
                     .textStyle(Typography.button)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.movo.textDisabled)
+                MovoChevron(.disclosure, color: Color.movo.textDisabled)
             }
             .foregroundColor(Color.movo.accent)
             .padding(.horizontal, Spacing.md + 2)

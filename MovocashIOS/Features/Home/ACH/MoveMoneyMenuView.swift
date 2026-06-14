@@ -97,9 +97,7 @@ struct MoveMoneyMenuView: View {
                         .foregroundStyle(Color.movo.textSecondary)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
             .padding(.horizontal, Spacing.xxl)
             .padding(.vertical, Spacing.lg)

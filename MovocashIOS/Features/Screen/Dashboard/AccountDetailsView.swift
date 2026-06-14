@@ -52,10 +52,9 @@ struct AccountDetailsView: View {
     private var header: some View {
         HStack {
             HStack(spacing: Spacing.sm) {
-                Image(systemName: "banknote")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.movo.accent)
-                    .frame(width: 28, height: 28)
+                MovoMVSymbol()
+                    .frame(width: 18, height: 18)
+                    .padding(5)
                     .background(Color.movo.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm))
 
                 Text("\(account.isPrimary ? "PRIMARY" : "ACCOUNT") · ••\(account.accountNumber.suffix(4))")

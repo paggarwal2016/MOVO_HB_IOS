@@ -40,6 +40,9 @@ extension Color {
         public static var cardSurface:   Color { MovoTheme.color.cardSurface.color }
         public static var cardBorder:    Color { MovoTheme.color.cardBorder.color }
 
+        // Card tile face — locked near-black. Use only in CardItemView.
+        public static var cardVoid:          Color { MovoTheme.color.cardVoid.color }
+
         // Card artwork — brand-locked. Use only in the physical card artwork view.
         public static var cardArtwork:       Color { MovoTheme.color.cardArtwork.color }
         public static var onCardArtwork:     Color { MovoTheme.color.onCardArtwork.color }

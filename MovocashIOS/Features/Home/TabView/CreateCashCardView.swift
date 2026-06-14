@@ -97,7 +97,7 @@ struct CreateCashCardView: View {
 private extension CreateCashCardView {
 
     var header: some View {
-        HStack(spacing: Spacing.md) {
+        HStack(alignment: .top, spacing: Spacing.md) {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.accentTint)
@@ -105,19 +105,18 @@ private extension CreateCashCardView {
                         RoundedRectangle(cornerRadius: Radius.button)
                             .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
                     )
-                Image(systemName: "creditcard")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(Color.movo.accent)
+                MovoMVSymbol()
+                    .frame(width: 20, height: 20)
             }
             .frame(width: 38, height: 38)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text("Create cash card")
+                Text("Create your cash card")
                     .textStyle(Typography.cardTitle)
                     .foregroundStyle(Color.movo.textPrimary)
-                Text("Pick a type, name it, set a PIN")
+                Text("Let's MOVO your way")
                     .textStyle(Typography.subtitle)
-                    .foregroundStyle(Color.movo.textSecondary)
+                    .foregroundColor(Color.movo.accent)
             }
 
             Spacer()
@@ -138,7 +137,7 @@ private extension CreateCashCardView {
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.top, Spacing.xl)
-        .padding(.bottom, Spacing.xl)
+        .padding(.bottom, Spacing.md)
     }
 }
 
@@ -177,7 +176,7 @@ private extension CreateCashCardView {
     var pinSection: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack {
-                fieldLabel("PIN")
+                fieldLabel("SET YOUR PIN")
                 Spacer()
                 eyeToggle(isOn: $showPin)
             }
@@ -226,7 +225,12 @@ private extension CreateCashCardView {
 
     var actionButtons: some View {
         Button(action: submit) {
-            Text("Create Card")
+            HStack(spacing: Spacing.sm) {
+                Text("LET'S MOVO")
+                    .tracking(1.5)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .semibold))
+            }
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         .disabled(!isValid || isLoading)
