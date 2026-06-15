@@ -376,9 +376,9 @@ struct DashboardView: View {
             FirstCardRewardView(
                 onViewDetails: {
                     pendingViewCardDetails = true
-                    showFirstCardReward = false
+                    setFirstCardReward(false)
                 },
-                onClose: { showFirstCardReward = false }
+                onClose: { setFirstCardReward(false) }
             )
         }
     }
@@ -397,8 +397,17 @@ struct DashboardView: View {
         guard let card = dashboardVM.primaryLinkedCard else { return }
         didCheckFirstCardReward = true
         firstCardRewardCard = card
-        showFirstCardReward = true
+        setFirstCardReward(true)
         UserDefaults.standard.set(false, forKey: "pendingFirstCardReward")
+    }
+
+    /// Show/hide the reward cover without its own bottom slide — `FirstCardRewardView`
+    /// runs the center zoom itself, on both present and dismiss.
+    private func setFirstCardReward(_ visible: Bool) {
+        // Qualify SwiftUI.Transaction — the app also defines a `Transaction` model.
+        var tx = SwiftUI.Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) { showFirstCardReward = visible }
     }
 
     // MARK: - Subviews
