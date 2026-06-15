@@ -26,22 +26,12 @@ struct CustomHeaderView: View {
     var body: some View {
         HStack(alignment: .center) {
 
-            VStack(alignment: .leading, spacing: 4) {
-                // Row 1: M symbol + MOVOCASH
-                HStack(spacing: 10) {
-                    MovoMVSymbol()
-                        .frame(width: 22, height: 22)
-                    Text("MOVOCASH")
-                        .textStyle(Typography.sectionTitle)
-                        .foregroundStyle(Color.movo.textPrimary)
-                }
-
-                // Row 2: WELCOME, {name} — indented to align with MOVOCASH text
-                Text("WELCOME, \(userName)")
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(2.5)
-                    .foregroundColor(Color.movo.accent)
-                    .padding(.leading, 32) // 22pt icon + 10pt spacing
+            HStack(spacing: 10) {
+                MovoMVSymbol()
+                    .frame(width: 22, height: 22)
+                Text("MOVOCASH")
+                    .textStyle(Typography.sectionTitle)
+                    .foregroundStyle(Color.movo.textPrimary)
             }
 
             Spacer()
