@@ -386,6 +386,8 @@ private extension HomeTabBarView {
     func handleOnAppear() {
         guard appState.isNewRegistration else { return }
         lockManager.resetToUnlocked()
+        // Dashboard can show the one-time first-card reward. `isNewRegistration`
+        UserDefaults.standard.set(true, forKey: "pendingFirstCardReward")
         appState.isNewRegistration = false
     }
 }
