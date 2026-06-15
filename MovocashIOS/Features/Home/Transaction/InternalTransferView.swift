@@ -509,9 +509,7 @@ struct InternalTransferView: View {
             Spacer()
 
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
         }
         .padding(.horizontal, Spacing.lg)
@@ -661,9 +659,7 @@ private struct CardChipRow: View {
                 StatusBadge(status: badge, size: .small)
             }
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.movo.textDisabled)
+                MovoChevron(.disclosure, color: Color.movo.textDisabled)
                     .padding(.leading, 2)
             }
         }

@@ -301,9 +301,7 @@ struct ManageExternalAccountsView: View {
                     .textStyle(Typography.body)
                     .foregroundColor(Color.movo.accent)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)

@@ -51,7 +51,7 @@ nonisolated struct SavingsAccountInfo: Decodable, Sendable, Identifiable {
     let clientName: String
     let status: AccountStatus
     let accountBalance: Decimal
-    let availableBalance: Decimal
+    let availableBalance: Decimal?
     let clientId: Int
     let nickname: String?
     let isPrimary: Bool
@@ -81,10 +81,18 @@ nonisolated struct SavingsAccountInfo: Decodable, Sendable, Identifiable {
         accountNumber = try container.decode(String.self, forKey: .accountNumber)
         clientName = try container.decode(String.self, forKey: .clientName)
         status = try container.decode(AccountStatus.self, forKey: .status)
-        let accBalStr    = try container.decodeIfPresent(String.self, forKey: .accountBalance) ?? "0"
-        let availBalStr  = try container.decodeIfPresent(String.self, forKey: .availableBalance) ?? "0"
-        accountBalance   = Decimal(string: accBalStr) ?? 0
-        availableBalance = Decimal(string: availBalStr) ?? 0
+        let accBalStr  = try container.decodeIfPresent(String.self, forKey: .accountBalance) ?? "0"
+        accountBalance = Decimal(string: accBalStr) ?? 0
+        if let s = try container.decodeIfPresent(String.self, forKey: .availableBalance) {
+            if let d = Decimal(string: s, locale: Locale(identifier: "en_US_POSIX")) {
+                availableBalance = d
+            } else {
+                availableBalance = nil
+                SecureLogger.warning("Unparseable availableBalance string: \"\(s)\"", category: .general)
+            }
+        } else {
+            availableBalance = nil
+        }
         clientId = try container.decode(Int.self, forKey: .clientId)
 
         nickname = try container.decodeIfPresent(String.self, forKey: .nickname)
@@ -120,24 +128,10 @@ nonisolated struct SavingsAccountInfo: Decodable, Sendable, Identifiable {
     }()
     
     var formattedBalance: String {
-        Self.currencyFormatter.string(
-            from: NSDecimalNumber(decimal: availableBalance)
-        ) ?? "$0.00"
+        guard let bal = availableBalance else { return "$ —" }
+        return Self.currencyFormatter.string(from: NSDecimalNumber(decimal: bal)) ?? "$ —"
     }
-    
-    var balanceParts: (whole: String, cents: String) {
-        let formatted = Self.decimalFormatter.string(
-            from: NSDecimalNumber(decimal: availableBalance)
-        ) ?? "0.00"
-        
-        let parts = formatted.split(separator: ".")
-        
-        return (
-            whole: String(parts.first ?? "0"),
-            cents: String(parts.last ?? "00")
-        )
-    }
-    
+
     // MARK: - Status Helpers
 
     var isActive: Bool {

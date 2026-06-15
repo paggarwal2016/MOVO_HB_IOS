@@ -240,9 +240,7 @@ struct AllFrequentsView: View {
             
             Spacer()
             
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(Color.movo.textDisabled)
+            MovoChevron(.disclosure, color: Color.movo.textDisabled)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)

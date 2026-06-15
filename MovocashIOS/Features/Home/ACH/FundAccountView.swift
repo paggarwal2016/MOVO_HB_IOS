@@ -366,9 +366,7 @@ struct FundAccountView: View {
                                 .textStyle(Typography.body)
                                 .foregroundStyle(Color.movo.accent)
                             Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Color.movo.accent)
+                            MovoChevron(.disclosure)
                         }
                         .padding(.vertical, 14)
                         .padding(.horizontal, Spacing.lg)
@@ -493,9 +491,7 @@ struct FundAccountView: View {
             Spacer()
 
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
         }
         .padding(.horizontal, Spacing.lg)

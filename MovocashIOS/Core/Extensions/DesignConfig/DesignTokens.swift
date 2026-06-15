@@ -99,12 +99,38 @@ public enum DesignTokens {
 
         
 
+        // Card tile face — LOCKED near-black surface (~#101315) for the Void Silver card cell.
+        // Sits between background (0x060608) and surface (0x0F0F14). Locked across modes
+        // because the card tile always presents as a dark branded surface.
+        public static let cardVoid = ColorToken(light: 0xD0D3DC, dark: 0x101315, name: "cardVoid")
+
+        // Void Silver card gradient stops — ADAPTIVE.
+        // Dark:  deep void black (branded dark card).
+        // Light: cool platinum (branded light / App Store Edition card).
+        public static let cardVoidTop    = ColorToken(light: 0xD8DBE2, dark: 0x16191D, name: "cardVoidTop")
+        public static let cardVoidMid    = ColorToken(light: 0xCDD0D8, dark: 0x0A0C0E, name: "cardVoidMid")
+        public static let cardVoidBottom = ColorToken(light: 0xD2D5DC, dark: 0x0E1114, name: "cardVoidBottom")
+
+        // Silver — sheen, hairline, watermark. ADAPTIVE: darker in light mode for contrast.
+        public static let silverTint     = ColorToken(light: 0x5A6070, dark: 0xA8B2C0, name: "silverTint")
+
         // Card artwork — LOCKED (heritage Amex-style black card; constant across both modes).
         // Use ONLY in the physical card artwork view. Do not use for any other UI surface.
         public static let cardArtwork       = ColorToken(hex: 0x060608, name: "cardArtwork")
         public static let onCardArtwork     = ColorToken(hex: 0xF2F3F6, name: "onCardArtwork")
         public static let cardArtworkMuted  = ColorToken(hex: 0xA8ACBA, name: "cardArtworkMuted")
         public static let cardArtworkBorder = ColorToken(hex: 0x1C1C25, name: "cardArtworkBorder")
+
+        // Movo label system
+        // Type badge — neutral silver, no green. Border-only container.
+        public static let typeBadgeText   = ColorToken(light: 0x6A727C, dark: 0x9AA2AC, name: "typeBadgeText")
+        public static let typeBadgeBorder = ColorToken(light: 0x000000, dark: 0xA8B2C0, name: "typeBadgeBorder", alpha: 0.22)
+
+        // Action button — elevated secondary surface.
+        // Light: tonal green fill/border. Dark: slate fill + greenLight text. Dark values unchanged.
+        public static let actionFill   = ColorToken(light: 0x629F86, dark: 0x242A31, name: "actionFill",   lightAlpha: 0.20, darkAlpha: 1.00)
+        public static let actionBorder = ColorToken(light: 0x4E8870, dark: 0xFFFFFF, name: "actionBorder", lightAlpha: 0.50, darkAlpha: 0.09)
+        public static let actionText   = ColorToken(light: 0x3E7560, dark: 0x7BB8A0, name: "actionText")
     }
 
     // MARK: - Spacing scale (4-pt grid)
@@ -162,25 +188,34 @@ public struct ColorToken: Sendable {
     public let lightHex: UInt32
     public let darkHex: UInt32
     public let name: String
+    /// Uniform alpha — kept for backward compatibility. Equal to `darkAlpha` for per-mode tokens.
     public let alpha: Double
+    /// Per-mode alpha resolved in light appearance.
+    public let lightAlpha: Double
+    /// Per-mode alpha resolved in dark appearance.
+    public let darkAlpha: Double
 
-    /// Adaptive token — separate hex for light and dark.
+    /// Adaptive token — separate hex for light and dark, same alpha in both.
     public init(light: UInt32, dark: UInt32, name: String, alpha: Double = 1.0) {
-        self.lightHex = light
-        self.darkHex = dark
-        self.name = name
-        self.alpha = alpha
+        self.lightHex = light; self.darkHex = dark; self.name = name
+        self.alpha = alpha; self.lightAlpha = alpha; self.darkAlpha = alpha
     }
 
     /// Static token — same hex in both modes (e.g. brand accent).
     public init(hex: UInt32, name: String, alpha: Double = 1.0) {
-        self.lightHex = hex
-        self.darkHex = hex
-        self.name = name
-        self.alpha = alpha
+        self.lightHex = hex; self.darkHex = hex; self.name = name
+        self.alpha = alpha; self.lightAlpha = alpha; self.darkAlpha = alpha
     }
 
-    /// Returns a copy of this token with adjusted alpha (preserves adaptiveness).
+    /// Adaptive token with independent alpha per appearance.
+    /// `alpha` mirrors `darkAlpha` for any code that reads it directly.
+    public init(light: UInt32, dark: UInt32, name: String, lightAlpha: Double, darkAlpha: Double) {
+        self.lightHex = light; self.darkHex = dark; self.name = name
+        self.lightAlpha = lightAlpha; self.darkAlpha = darkAlpha
+        self.alpha = darkAlpha
+    }
+
+    /// Returns a copy of this token with a uniform adjusted alpha.
     public func opacity(_ alpha: Double) -> ColorToken {
         ColorToken(light: lightHex, dark: darkHex, name: name, alpha: alpha)
     }
@@ -191,7 +226,7 @@ public struct ColorToken: Sendable {
         #if canImport(UIKit)
         return Color(uiColor: uiColor)
         #else
-        return Self.staticColor(hex: darkHex, alpha: alpha)
+        return Self.staticColor(hex: darkHex, alpha: darkAlpha)
         #endif
     }
 
@@ -200,11 +235,12 @@ public struct ColorToken: Sendable {
     /// Resolves via `UIColor(dynamicProvider:)` so it tracks trait collection
     /// changes automatically.
     public var uiColor: UIColor {
-        let light = lightHex
-        let dark  = darkHex
-        let a     = alpha
+        let light = lightHex; let dark = darkHex
+        let lA = lightAlpha; let dA = darkAlpha
         return UIColor { trait in
-            let hex = trait.userInterfaceStyle == .dark ? dark : light
+            let isDark = trait.userInterfaceStyle == .dark
+            let hex = isDark ? dark : light
+            let a   = isDark ? dA   : lA
             let r = CGFloat((hex >> 16) & 0xFF) / 255.0
             let g = CGFloat((hex >>  8) & 0xFF) / 255.0
             let b = CGFloat( hex        & 0xFF) / 255.0
@@ -214,11 +250,10 @@ public struct ColorToken: Sendable {
     #endif
 
     /// Resolve to a specific concrete `Color` for a given scheme.
-    /// Useful in places where you can't rely on the environment
-    /// (e.g. CALayer fills, Core Animation, snapshot rendering).
     public func color(for scheme: SwiftUI.ColorScheme) -> Color {
         let hex = scheme == .dark ? darkHex : lightHex
-        return Self.staticColor(hex: hex, alpha: alpha)
+        let a   = scheme == .dark ? darkAlpha : lightAlpha
+        return Self.staticColor(hex: hex, alpha: a)
     }
 
     private static func staticColor(hex: UInt32, alpha: Double) -> Color {

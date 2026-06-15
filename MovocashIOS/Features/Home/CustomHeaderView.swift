@@ -25,19 +25,23 @@ struct CustomHeaderView: View {
 
     var body: some View {
         HStack(alignment: .center) {
-            
-            MovoMVSymbol()
-                .frame(width: 30, height: 30)
-            
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("LET'S MOVO,")
-                    .textStyle(Typography.eyebrow)
-                    .foregroundStyle(Color.movo.accent)
+
+            VStack(alignment: .leading, spacing: 4) {
+                // Row 1: M symbol + MOVOCASH
+                HStack(spacing: 10) {
+                    MovoMVSymbol()
+                        .frame(width: 22, height: 22)
+                    Text("MOVOCASH")
+                        .textStyle(Typography.sectionTitle)
+                        .foregroundStyle(Color.movo.textPrimary)
+                }
+
+                // Row 2: WELCOME, {name} — indented to align with MOVOCASH text
+                Text("WELCOME, \(userName)")
+                    .font(.system(size: 11, weight: .semibold))
                     .tracking(2.5)
-                Text(userName)
-                    .textStyle(Typography.sectionTitle)
-                    .foregroundStyle(Color.movo.textPrimary)
+                    .foregroundColor(Color.movo.accent)
+                    .padding(.leading, 32) // 22pt icon + 10pt spacing
             }
 
             Spacer()
@@ -45,20 +49,17 @@ struct CustomHeaderView: View {
             // Right — initial avatar (taps to open the Settings/profile tab)
             Button(action: onProfileTap) {
                 ZStack {
-                    Circle()
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color.movo.surface)
-                        .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
                         .frame(width: 44, height: 44)
                         .overlay(
-                            Circle()
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(Color.movo.accent, lineWidth: 1.5)
                         )
 
                     Text(initial)
                         .textStyle(Typography.cardTitle)
                         .foregroundStyle(theme.textPrimary.color)
-
-                   
                 }
             }
             .buttonStyle(.plain)

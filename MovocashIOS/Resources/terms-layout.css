@@ -54,3 +54,109 @@ th { font-weight: var(--weight-semi); color: var(--fg); background: var(--surfac
 td { color: var(--fg-secondary); }
 tr.odd  { background: var(--bg); }
 tr.even { background: var(--surface); }
+
+/* ── Callout variant: warning (amber) ───────────────────── */
+.callout.warn {
+  background: color-mix(in srgb, var(--warn) 10%, var(--bg));
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+  color: var(--warn);
+}
+.callout.warn strong { color: var(--warn); }
+
+/* ── Callout label (eyebrow inside callout) ─────────────── */
+.callout-label {
+  font-size: var(--size-eyebrow);
+  font-weight: var(--weight-semi);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: var(--space-xs);
+}
+.callout.warn .callout-label { color: var(--warn); }
+
+/* ── Table: horizontal scroll wrapper ───────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  margin: var(--space-lg) 0;
+  -webkit-overflow-scrolling: touch;
+}
+.table-wrap table { margin: 0; }
+
+/* ── Table: category grouping rows ──────────────────────── */
+tr.category-row td {
+  background: var(--surface);
+  color: var(--accent);
+  font-size: var(--size-eyebrow);
+  font-weight: var(--weight-semi);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  padding: var(--space-xs) var(--space-md);
+}
+
+/* ── Table: footnote rows ───────────────────────────────── */
+tr.footnote-row td {
+  font-size: var(--size-eyebrow);
+  color: var(--fg-tertiary);
+  font-style: italic;
+  background: var(--bg);
+  border-bottom: none;
+}
+
+/* ── Table: fee amount cell ─────────────────────────────── */
+td.fee-amount {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semi);
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+/* ── Part divider (between Part I / Part II) ────────────── */
+.part-divider {
+  background: var(--surface);
+  border: var(--stroke-hairline) solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl) var(--space-xxl);
+  margin: var(--space-xxxl) 0 var(--space-xxl);
+}
+.part-divider .part-label {
+  font-size: var(--size-eyebrow);
+  font-weight: var(--weight-semi);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: var(--space-xs);
+}
+.part-divider h2 { margin: 0 0 var(--space-xs); }
+.part-divider p  { margin: 0; font-size: var(--size-caption); }
+
+/* ── WKWebView: strip desktop chrome ────────────────────── */
+header,
+.sidebar          { display: none !important; }
+.layout           { display: block !important; }
+main              {
+  padding: var(--space-lg) var(--space-lg) calc(var(--space-xxxl) * 3) !important;
+  max-width: 100% !important;
+}
+
+/* ── Fix: fee amount cell overflow ──────────────────────── */
+td.fee-amount {
+  white-space: normal !important;
+  word-break: break-word;
+}
+
+/* ── Fix: transaction table — 2-col widths ──────────────── */
+.table-wrap th:nth-child(1),
+.table-wrap td:nth-child(1) { width: 55%; }
+
+.table-wrap th:nth-child(2),
+.table-wrap td:nth-child(2) { width: 45%; }
+
+/* ── Fix: fee table — 3-col widths (overrides above) ────── */
+.table-wrap th:nth-child(3),
+.table-wrap td:nth-child(3) { width: auto; }
+
+table:has(th:nth-child(3)) th:nth-child(1),
+table:has(th:nth-child(3)) td:nth-child(1) { width: 38%; }
+
+table:has(th:nth-child(3)) th:nth-child(2),
+table:has(th:nth-child(3)) td:nth-child(2) { width: 22%; }

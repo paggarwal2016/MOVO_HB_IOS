@@ -85,8 +85,7 @@ struct LinkedAccountsSectionView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.2)
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
 
             VStack(spacing: 0) {
@@ -111,9 +110,7 @@ struct LinkedAccountsSectionView: View {
                             .textStyle(Typography.body)
                             .foregroundStyle(Color.movo.accent)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.movo.accent)
+                        MovoChevron(.disclosure)
                     }
                 }
                 .padding(.vertical, Spacing.md)

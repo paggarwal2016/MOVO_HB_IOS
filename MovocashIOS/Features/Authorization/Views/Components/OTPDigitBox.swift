@@ -20,8 +20,8 @@ struct OTPDigitBox: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.md)
                         .stroke(
-                            isActive ? Color.movo.accent : Color.movo.border,
-                            lineWidth: isActive ? Stroke.medium : Stroke.hairline
+                            isActive ? Color.movo.accent : Color.movo.borderStrong,
+                            lineWidth: isActive ? Stroke.medium : Stroke.thin
                         )
                 )
                 .frame(height: 55)
