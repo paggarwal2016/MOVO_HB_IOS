@@ -76,9 +76,11 @@ struct PayAnyoneView: View {
                         navBar
                             .padding(.bottom, Spacing.lg)
                         if hasAnyData {
-                            balanceCard
-                                .padding(.horizontal, Spacing.lg)
-                                .padding(.bottom, Spacing.lg)
+                            if localPrimaryCard != nil {
+                                balanceCard
+                                    .padding(.horizontal, Spacing.lg)
+                                    .padding(.bottom, Spacing.lg)
+                            }
 
                             if contactVM.frequents.count > 0 {
                                 frequentContactsSection
@@ -744,21 +746,24 @@ extension PayAnyoneView {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Eyebrow("Available to send")
-                Text(localPrimaryCard?.displayBalance ?? "$ 0.00")
-                    .textStyle(Typography.sectionTitle)
-                    .monospacedDigit()
-                    .foregroundColor(Color.movo.textPrimary)
+                if let bal = localPrimaryCard.flatMap({ Decimal($0.savingsAccountAvailableBalance ?? $0.savingsAccountBalance ?? 0) }) {
+                    BalanceText(amount: bal, dollarSize: 33, centsSize: 23, centsOpacity: 1.0)
+                } else {
+                    Text("$ —")
+                        .font(.system(size: 36, weight: .bold).monospacedDigit())
+                        .foregroundColor(Color.movo.textTertiary)
+                }
             }
             Spacer()
             Button(action: { withAnimation { showCreateContactScreen = true } }) {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .heavy))
-                    Text("Add Contact")
+                    Text("Add Movo recipient")
                         .textStyle(Typography.button)
                 }
             }
-            .frame(width: 120)
+            .frame(width: 160)
             .buttonStyle(MovoCompactButtonStyle())
         }
         .padding(Spacing.lg)

@@ -241,12 +241,7 @@ struct BankLinkedSuccessScreen: View {
                             .foregroundColor(Color.movo.textPrimary)
 
                         if isPrimary {
-                            Text("PRIMARY")
-                                .textStyle(Typography.eyebrow)
-                                .foregroundColor(Color.movo.accent)
-                                .padding(.horizontal, Spacing.sm)
-                                .padding(.vertical, Spacing.xs)
-                                .background(Capsule().fill(Color.movo.accentTint))
+                            StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                                 .overlay(Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
                         }
                     }

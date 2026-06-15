@@ -142,22 +142,9 @@ private struct LinkBankIllustration: View {
 
     var body: some View {
         ZStack {
-            // Dotted connecting line
-            Canvas { ctx, size in
-                var path = Path()
-                path.move(to: CGPoint(x: size.width * 0.38, y: size.height * 0.52))
-                path.addLine(to: CGPoint(x: size.width * 0.72, y: size.height * 0.50))
-
-                ctx.stroke(
-                    path,
-                    with: .color(theme.accent.color.opacity(0.75)),
-                    style: StrokeStyle(
-                        lineWidth: 1.2,
-                        lineCap: .round,
-                        dash: [2, 3]
-                    )
-                )
-            }
+            // MOVO symbol as connector — replaces dashed wire
+            MovoMVSymbol(bodyStyle: Color.movo.accent, accent: Color.movo.accent)
+                .frame(width: 22, height: 22)
 
             // Bank
             Image(systemName: "building.columns")

@@ -21,7 +21,7 @@ struct BalanceCardView: View {
 
             // Top row: eyebrow + type badge
             HStack(alignment: .center) {
-                Text("AVAILABLE BALANCE")
+                Text("MOVO AVAILABLE BALANCE")
                     .font(.system(size: 10, weight: .semibold))
                     .tracking(1.2)
                     .foregroundColor(Color.movo.textTertiary)

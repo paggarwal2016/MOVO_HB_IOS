@@ -289,7 +289,7 @@ struct QuickTransferView: View {
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(Color.movo.textPrimary)
                         if isPrimary {
-                            StatusPill("PRIMARY", variant: .accent)
+                            StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                         }
                     }
                     Text(card.maskedNumber)

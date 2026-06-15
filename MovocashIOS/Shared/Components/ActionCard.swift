@@ -26,7 +26,7 @@ struct ActionCard: View {
 
             // Inner card — tappable empty state.
             Button(action: onButtonTap) {
-                VStack(spacing: Spacing.xs) {
+                VStack(spacing: Spacing.sm) {
                     // Circular tinted badge holding the add-person glyph.
                     ZStack {
                         Circle()
@@ -36,6 +36,7 @@ struct ActionCard: View {
                             .foregroundColor(Color.movo.accent)
                     }
                     .frame(width: 40, height: 40)
+                    .padding(.top, Spacing.md)
 
                     // Message — the section's `description` (e.g. "No recent contacts yet").
                     if !description.isEmpty {
@@ -50,6 +51,7 @@ struct ActionCard: View {
                     Text(buttonLabel)
                         .textStyle(Typography.button)
                         .foregroundStyle(Color.movo.accent)
+                        .padding(.bottom, Spacing.md)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.sm)

@@ -490,7 +490,7 @@ struct FundAccountView: View {
                     .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
                     if isPrimary {
-                        StatusPill("PRIMARY", variant: .accent)
+                        StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                     }
                 }
                 Text(number)

@@ -272,10 +272,13 @@ public struct StatusPill: View {
     public let variant: Variant
     public let icon: String?
 
-    public init(_ label: String, variant: Variant = .accent, icon: String? = nil) {
+    public let style: TextStyle
+
+    public init(_ label: String, variant: Variant = .accent, icon: String? = nil, style: TextStyle = Typography.eyebrow) {
         self.label = label
         self.variant = variant
         self.icon = icon
+        self.style = style
     }
 
     public var body: some View {
@@ -285,7 +288,7 @@ public struct StatusPill: View {
                     .font(.system(size: 9, weight: .bold))
             }
             Text(label)
-                .textStyle(Typography.eyebrow)
+                .textStyle(style)
         }
         .foregroundColor(textColor)
         .padding(.horizontal, 9)

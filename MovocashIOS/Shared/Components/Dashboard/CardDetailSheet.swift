@@ -94,6 +94,7 @@ struct CardDetailSheet: View {
                 VStack(spacing: 0) {
                     navBar
                     cardHero
+                    cardBalanceSection
                     cardNumberRow
                     cardActions
                     if txVM.transactions.count > 0 {
@@ -314,116 +315,19 @@ struct CardDetailSheet: View {
     
     private var cardHero: some View {
         MovoCardHero(card: displayCard)
-            .frame(width: 220)
+            .frame(width: 280)
             .padding(.top, Spacing.lg)
-            .padding(.bottom, Spacing.xxl)
+            .padding(.bottom, Spacing.md)
             .frame(maxWidth: .infinity)
     }
     
     public struct MovoCardHero: View {
         public let card: VCardListResponse
 
-        private var formattedBalance: String {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .currency
-            formatter.currencyCode = card.currencyCode
-            formatter.maximumFractionDigits = 2
-            return formatter.string(from: card.balance as NSDecimalNumber) ?? "—"
-        }
-        
         public var body: some View {
-            VStack(alignment: .leading, spacing: 0) {
-                
-                // Top: brand lockup + status pill
-                HStack(alignment: .center) {
-                    HStack(spacing: 6) {
-
-                        MovoMVSymbol()
-                            .frame(width: 22, height: 22)
-
-                        Text("MOVOCASH")
-                            .font(.system(size: 10, weight: .bold))
-                            .tracking(1.8)
-                            .foregroundColor(Color.movo.onCardArtwork)
-                    }
-                    Spacer()
-                    StatusPill(card.isActive ? "Active" : "Inactive",
-                               variant: card.isActive ? .accent : .neutral)
-                }
-
-                // Balance
-                VStack(alignment: .leading, spacing: 3) {
-                    Eyebrow("Available balance", color: Color.movo.cardArtworkMuted)
-                    Text(card.displayBalance)
-                        .textStyle(Typography.cardHero)
-                        .foregroundColor(Color.movo.onCardArtwork)
-                        .monospacedDigit()
-                }
-                .padding(.top, Spacing.lg)
-
-                // Chip + contactless
-                HStack(spacing: 14) {
-                    CardChip()
-                        .frame(width: 44, height: 34)
-                    ContactlessIcon()
-                        .frame(width: 22, height: 22)
-                }
-                .padding(.top, Spacing.md)
-
-                Spacer(minLength: 8)
-
-                // Card number
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("CARD NUMBER")
-                        .font(.system(size: 7.5, weight: .medium))
-                        .tracking(1.0)
-                        .foregroundColor(Color.movo.cardArtworkMuted)
-                    Text(card.maskedNumber)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        .tracking(1.3)
-                        .foregroundColor(Color.movo.onCardArtwork)
-                }
-
-                // Bottom: DEBIT + Mastercard
-                HStack(alignment: .bottom) {
-                    Text(card.tier.uppercased())
-                        .font(.system(size: 8.5, weight: .medium))
-                        .tracking(1.5)
-                        .foregroundColor(Color.movo.cardArtworkMuted)
-                    Spacer()
-                    MastercardMark()
-                }
-                .padding(.top, Spacing.lg)
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.lg)
-            .aspectRatio(0.63, contentMode: .fit)
-            .background(cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .strokeBorder(Color.movo.cardArtworkBorder, lineWidth: Stroke.hairline)
-            )
-            .cardArtworkShadow()
-        }
-        
-        private var cardBackground: some View {
-            ZStack {
-                // Base gradient — brand-locked card art (constant in both light and dark mode)
-                LinearGradient(
-                    colors: [Color.movo.cardArtworkBorder, Color.movo.cardArtwork],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                // Top shimmer
-                RadialGradient(
-                    colors: [Color.movo.onCardArtwork.opacity(0.10), .clear],
-                    center: .top,
-                    startRadius: 0,
-                    endRadius: 180
-                )
-                .blendMode(.overlay)
-            }
+            Image("CardFrontHerring")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
         }
     }
     
@@ -437,6 +341,30 @@ struct CardDetailSheet: View {
             return String(number[start..<end])
         }
         .joined(separator: " ")
+    }
+
+    private var cardBalanceSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Eyebrow("Movo available balance")
+            BalanceText(
+                amount: displayCard.balance,
+                dollarSize: 32,
+                centsSize: 22,
+                centsOpacity: 1.0
+            )
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.surface.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        )
+        .padding(.horizontal, Spacing.screenHorizontal)
+        .padding(.bottom, Spacing.lg)
     }
 
     private var cardNumberRow: some View {

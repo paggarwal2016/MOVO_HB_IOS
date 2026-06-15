@@ -164,6 +164,12 @@ public enum Typography {
         usage: "Eyebrow labels (uppercase + tracked)"
     )
 
+    /// 11pt — status/type pill labels (PRIMARY, VIRTUAL, Movo member, etc.)
+    public static let pill = TextStyle(
+        size: 11, weight: .semibold, tracking: 0.8,
+        usage: "Pill badges — StatusPill, MovoTypeBadge"
+    )
+
     /// 9pt — section labels, smallest readable
     public static let micro = TextStyle(
         size: 9, weight: .medium, tracking: 0.7,

@@ -213,7 +213,7 @@ struct ManageExternalAccountsView: View {
                         .textStyle(Typography.body)
                         .foregroundColor(Color.movo.textPrimary)
                     if account.isDefault {
-                        StatusPill("PRIMARY", variant: .accent)
+                        StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                     }
                 }
                 Text("\(account.accountName) · ••\(account.accountNumber.suffix(4))")

@@ -97,7 +97,7 @@ struct ContactAddedSuccess: View {
                             .foregroundColor(Color.movo.textTertiary)
 
                         if isMovoMember {
-                            StatusPill("Movo member", variant: .success, icon: "checkmark.seal.fill")
+                            StatusPill("Movo member", variant: .success, icon: "checkmark.seal.fill", style: Typography.pill)
                                 .padding(.top, Spacing.xxs)
                         }
                     }
