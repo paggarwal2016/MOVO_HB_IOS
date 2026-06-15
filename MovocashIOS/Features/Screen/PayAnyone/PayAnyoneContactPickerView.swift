@@ -460,7 +460,7 @@ struct PayAnyoneContactPickerView: View {
                     .padding(.bottom, Spacing.sm + 2)
 
                 Button(action: isDenied ? openSettings : enableContacts) {
-                    Text(isDenied ? "Open Settings" : "Enable Contacts")
+                    Text(isDenied ? "Open Settings" : "Add Contacts")
                 }
                 .buttonStyle(MovoPrimaryButtonStyle())
             }

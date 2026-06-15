@@ -186,7 +186,6 @@ struct QuickPayView: View {
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
         }
-        .onChange(of: phoneNo) { _ in runCheckIntentIfReady() }
         // Confirmation popup with the recipient's check-intent message/disclaimer.
         // On Continue we arm `pendingSend` and dismiss; the send fires in `onDismiss`.
         .contactEnrollPopup(
@@ -232,17 +231,6 @@ struct QuickPayView: View {
     private func applyPickedContact(name: String, phone: String) {
         nickname = name
         phoneNo = PhoneNumberValidator.sanitize(phone)
-    }
-
-    // MARK: - Actions
-
-    private func runCheckIntentIfReady() {
-        let sanitized = PhoneNumberValidator.sanitize(phoneNo)
-        guard PhoneNumberValidator.isValidUSNumber(sanitized),
-              sanitized != lastCheckedPhone else { return }
-        lastCheckedPhone = sanitized
-        let normalized = PhoneNumberValidator.normalize(sanitized)
-        Task { await transVM.checkIntent(phoneNumber: normalized) }
     }
 
     /// Pay tapped: run a fresh check-intent for the entered number, then show the

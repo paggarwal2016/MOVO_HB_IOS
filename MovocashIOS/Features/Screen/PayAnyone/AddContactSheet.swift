@@ -40,9 +40,6 @@ public struct AddContactSheet: View {
         self.onCancel = onCancel
         self.onOpenSettings = onOpenSettings
         _isSubmitting = isSubmitting
-        // `container` is owned by the presenting view's @StateObject. Observe it
-        // here — do NOT re-wrap in @StateObject, which would take a second
-        // ownership of the same instance and over-release it (EXC_BAD_ACCESS).
         _vm = ObservedObject(wrappedValue: container)
         _payeeFlow = ObservedObject(wrappedValue: payeeFlow)
     }
