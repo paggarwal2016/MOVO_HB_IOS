@@ -38,7 +38,7 @@ struct CustomHeaderView: View {
 
                 // Row 2: WELCOME, {name} — indented to align with MOVOCASH text
                 Text("WELCOME, \(userName)")
-                    .font(Typography.eyebrow.font)
+                    .font(.system(size: 11, weight: .semibold))
                     .tracking(2.5)
                     .foregroundColor(Color.movo.accent)
                     .padding(.leading, 32) // 22pt icon + 10pt spacing

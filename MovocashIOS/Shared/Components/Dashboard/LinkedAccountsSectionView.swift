@@ -85,8 +85,7 @@ struct LinkedAccountsSectionView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.2)
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
 
             VStack(spacing: 0) {

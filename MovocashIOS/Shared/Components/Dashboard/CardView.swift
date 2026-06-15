@@ -40,7 +40,7 @@ struct CardItemView: View {
                 linkRow
             }
         }
-        .frame(height: 145)
+        .frame(height: 165)
         .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
@@ -56,9 +56,9 @@ struct CardItemView: View {
             // Top row: small M mark + card name + Virtual pill
             HStack(spacing: Spacing.xs) {
             MovoMVSymbol()
-                    .frame(width: 14, height: 14)
+                    .frame(width: 19, height: 19)
                 Text(cardName)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .tracking(0.9)
                     .foregroundColor(Color.movo.textPrimary)
                     .lineLimit(1)
@@ -75,7 +75,7 @@ struct CardItemView: View {
 
             // Footer: masked number — silver neutral
             Text(card.maskedNumber)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 15, weight: .medium))
                 .tracking(0.7)
                 .foregroundColor(DesignTokens.Palette.silverTint.color)
         }
@@ -146,16 +146,16 @@ struct CardItemView: View {
             let cents   = String(raw[raw.index(after: dotIdx)...])
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(dollars)
-                    .font(.system(size: 28, weight: .bold).monospacedDigit())
+                    .font(.system(size: 38, weight: .bold).monospacedDigit())
                     .tracking(-0.5)
                     .foregroundColor(Color.movo.textPrimary)
                 Text(cents)
-                    .font(.system(size: 20, weight: .semibold).monospacedDigit())
-                    .foregroundColor(Color.movo.textPrimary.opacity(0.5))
+                    .font(.system(size: 30, weight: .semibold).monospacedDigit())
+                    .foregroundColor(Color.movo.textPrimary)
             }
         } else {
             Text(raw)
-                .font(.system(size: 28, weight: .bold).monospacedDigit())
+                .font(.system(size: 38, weight: .bold).monospacedDigit())
                 .tracking(-0.5)
                 .foregroundColor(Color.movo.textPrimary)
         }
@@ -173,14 +173,14 @@ struct CardItemView: View {
     private var linkRow: some View {
         HStack(spacing: Spacing.xs) {
             Text("LET'S MOVO")
-                .font(.system(size: 11, weight: .bold))
-                .tracking(1.1)    // ~0.1 em at 11 pt
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.accent)
             Spacer()
             MovoChevron(.cta)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
+        .padding(.bottom, 5)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .onTapGesture { onDetail?() }
@@ -216,8 +216,7 @@ struct CardSelectorView: View {
                 // Header
                 HStack {
                     Text(sectionTitle.uppercased())
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(1.2)
+                        .textStyle(Typography.eyebrow)
                         .foregroundColor(Color.movo.textTertiary)
 
                     Button(action: onTap) {
@@ -258,7 +257,7 @@ struct CardSelectorView: View {
 
                 }
                 .offset(x: targetOffset + dragOffset)
-                .frame(height: 145, alignment: .leading)
+                .frame(height: 165, alignment: .leading)
                 .clipped()
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 10)
@@ -325,7 +324,7 @@ struct CardSelectorView: View {
                 }
             }
         }
-        .frame(height: cards.count > 1 ? 205 : 190)
+        .frame(height: cards.count > 1 ? 225 : 205)
         .clipped()
         .contentShape(Rectangle())
     }

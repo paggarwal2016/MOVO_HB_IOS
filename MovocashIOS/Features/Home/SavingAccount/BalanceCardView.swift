@@ -31,8 +31,14 @@ struct BalanceCardView: View {
 
             Spacer().frame(height: Spacing.sm)
 
-            // Balance — split cents (mirrors CardItemView.styledBalance)
-            styledBalance
+            // Balance
+            if let bal = account.availableBalance {
+                BalanceText(amount: bal, dollarSize: 58, centsSize: 40, centsOpacity: 1.0)
+            } else {
+                Text("$ —")
+                    .font(.system(size: 58, weight: .bold).monospacedDigit())
+                    .foregroundColor(Color.movo.textTertiary)
+            }
 
             Spacer().frame(height: Spacing.sm)
 
@@ -50,12 +56,12 @@ struct BalanceCardView: View {
             HStack(alignment: .center) {
                 HStack(spacing: 4) {
                     Text("••\(account.accountNumber.suffix(4))")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 20, weight: .medium))
                         .tracking(0.5)
                         .foregroundColor(Color.movo.textTertiary)
                     Button(action: onCardTap) {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundColor(Color.movo.accent)
                     }
                     .buttonStyle(.plain)
@@ -120,34 +126,4 @@ struct BalanceCardView: View {
         .onTapGesture { onCardTap() }
     }
 
-    // MARK: - Styled balance
-
-    /// Splits "$9,284.21" → "$9,284." full-weight + "21" smaller + dimmed.
-    /// Mirrors styledBalance on CardItemView.
-    @ViewBuilder
-    private var styledBalance: some View {
-        let formatted = account.availableBalance.toCurrencyString()
-        if let dotIdx = formatted.lastIndex(of: ".") {
-            let dollars = "$" + String(formatted[formatted.startIndex...dotIdx])
-            let cents   = String(formatted[formatted.index(after: dotIdx)...])
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text(dollars)
-                    .font(.system(size: 40, weight: .bold).monospacedDigit())
-                    .tracking(-1.0)
-                    .foregroundColor(Color.movo.textPrimary)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-                Text(cents)
-                    .font(.system(size: 22, weight: .bold).monospacedDigit())
-                    .foregroundColor(Color.movo.textPrimary.opacity(0.45))
-            }
-        } else {
-            Text("$" + formatted)
-                .font(.system(size: 40, weight: .bold).monospacedDigit())
-                .tracking(-1.0)
-                .foregroundColor(Color.movo.textPrimary)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-        }
-    }
 }

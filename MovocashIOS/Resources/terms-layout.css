@@ -128,3 +128,35 @@ td.fee-amount {
 }
 .part-divider h2 { margin: 0 0 var(--space-xs); }
 .part-divider p  { margin: 0; font-size: var(--size-caption); }
+
+/* ── WKWebView: strip desktop chrome ────────────────────── */
+header,
+.sidebar          { display: none !important; }
+.layout           { display: block !important; }
+main              {
+  padding: var(--space-lg) var(--space-lg) calc(var(--space-xxxl) * 3) !important;
+  max-width: 100% !important;
+}
+
+/* ── Fix: fee amount cell overflow ──────────────────────── */
+td.fee-amount {
+  white-space: normal !important;
+  word-break: break-word;
+}
+
+/* ── Fix: transaction table — 2-col widths ──────────────── */
+.table-wrap th:nth-child(1),
+.table-wrap td:nth-child(1) { width: 55%; }
+
+.table-wrap th:nth-child(2),
+.table-wrap td:nth-child(2) { width: 45%; }
+
+/* ── Fix: fee table — 3-col widths (overrides above) ────── */
+.table-wrap th:nth-child(3),
+.table-wrap td:nth-child(3) { width: auto; }
+
+table:has(th:nth-child(3)) th:nth-child(1),
+table:has(th:nth-child(3)) td:nth-child(1) { width: 38%; }
+
+table:has(th:nth-child(3)) th:nth-child(2),
+table:has(th:nth-child(3)) td:nth-child(2) { width: 22%; }

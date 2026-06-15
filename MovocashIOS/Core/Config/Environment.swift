@@ -47,7 +47,7 @@ final class AppConfig {
     ///
     /// When `false`, all of the above is disabled — screenshots and screen
     /// sharing are allowed.
-    static let isScreenProtectionEnabled: Bool = true
+    static let isScreenProtectionEnabled: Bool = false
 }
 
 

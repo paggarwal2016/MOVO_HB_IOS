@@ -80,7 +80,7 @@ struct BankLinkedInfoScreen: View {
             //Spacer().frame(height: Spacing.md)
 
             // Footer
-            disclaimerText()
+          //qw  disclaimerText()
 
             // Continue CTA — dismiss this sheet first, then let the parent start
             // Plaid (see PlaidLinkFlowModifier wired on the parent).
@@ -101,26 +101,7 @@ struct BankLinkedInfoScreen: View {
 
     // MARK: - Disclaimer
 
-    private func disclaimerText() -> some View {
-        (
-            Text("By selecting Continue, you agree to the ")
-                .foregroundColor(Color.movo.textSecondary)
-            + Text("Plaid End User Privacy Policy")
-                .foregroundColor(Color.movo.textSecondary)
-                .underline(true, color: Color.movo.borderStrong)
-            + Text(".")
-                .foregroundColor(Color.movo.textTertiary)
-        )
-        .font(.system(size: 12, weight: .regular))
-        .multilineTextAlignment(.center)
-        .lineLimit(2)
-        .frame(maxWidth: .infinity)
-        .onTapGesture {
-            if let url = URL(string: "https://www.herringbank.com") {
-                UIApplication.shared.open(url)
-            }
-        }
-    }
+    
 
     // MARK: - Feature Row
 
