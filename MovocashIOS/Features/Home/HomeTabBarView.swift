@@ -415,8 +415,9 @@ private extension HomeTabBarView {
     /// Must be called from the main actor (ImageRenderer requires it).
     /// Returns nil only if ImageRenderer produces no output (should not happen in practice).
     func makeHomeIcon(selected: Bool, scale: CGFloat, scheme: ColorScheme) -> UIImage? {
-        let body    = selected ? Color.movo.accent : Color.white
-        let chevron = selected ? Color.movo.accent : Color.white
+        let unselected: Color = scheme == .dark ? .white : .black
+        let body    = selected ? Color.movo.accent : unselected
+        let chevron = selected ? Color.movo.accent : unselected
         // .environment(\.colorScheme) forces ImageRenderer (which defaults to light)
         // to resolve dynamic colors (secondaryLabel, movo tokens) in the correct scheme.
         let view = MovoMVSymbol(bodyStyle: body, accent: chevron)
@@ -431,8 +432,12 @@ private extension HomeTabBarView {
     /// Re-renders both states and caches them. Call on appear and on
     /// displayScale / colorScheme change so the raster stays correct.
     func refreshHomeIcons() {
-        homeIconSelected   = makeHomeIcon(selected: true,  scale: displayScale, scheme: colorScheme)
-        homeIconUnselected = makeHomeIcon(selected: false, scale: displayScale, scheme: colorScheme)
+        // Use UITraitCollection.current instead of @Environment(\.colorScheme) —
+        // .toolbarColorScheme(.dark, for: .tabBar) forces the SwiftUI env to .dark
+        // even on a light-mode device, which would make the unselected M render white in light mode.
+        let deviceScheme: ColorScheme = UITraitCollection.current.userInterfaceStyle == .dark ? .dark : .light
+        homeIconSelected   = makeHomeIcon(selected: true,  scale: displayScale, scheme: deviceScheme)
+        homeIconUnselected = makeHomeIcon(selected: false, scale: displayScale, scheme: deviceScheme)
     }
 }
 

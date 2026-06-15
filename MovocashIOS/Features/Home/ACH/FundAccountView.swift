@@ -390,12 +390,27 @@ struct FundAccountView: View {
                 }
             }
 
-            Rectangle()
-                .fill(Color.movo.cardBorder)
-                .frame(height: Stroke.hairline)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, 5)
-                .padding(.bottom, 10)
+            ZStack {
+                Rectangle()
+                    .fill(Color.movo.cardBorder)
+                    .frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+
+                Circle()
+                    .fill(Color.movo.background)
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Circle()
+                            .strokeBorder(Color.movo.cardBorder, lineWidth: Stroke.hairline)
+                    )
+                    .overlay(
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color.movo.textSecondary)
+                    )
+            }
+            .padding(.top, 5)
+            .padding(.bottom, 0)
 
             // TO
             VStack(alignment: .leading, spacing: Spacing.sm) {
