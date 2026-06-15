@@ -38,13 +38,15 @@ enum Tab: Hashable {
         }
     }
 
-    /// Local icon for the slot. Slots without a mapped image use a placeholder.
+    /// Local SF Symbol for the slot.
+    /// .home uses this only as a fallback if the UIImage rasteriser hasn't fired yet;
+    /// the real Home icon is MovoMVSymbol rendered via ImageRenderer.
     var icon: String {
         switch self {
-        case .home:      return "house"
-        case .payAnyone: return "person.2"
-        case .quickPay:  return "bolt"
-        case .profile:   return "gearshape"
+        case .home:      return "house"                    // fallback — M rendered via UIImage
+        case .payAnyone: return "bolt.fill"
+        case .quickPay:  return "bolt.fill"
+        case .profile:   return "person.crop.circle.fill"
         case .other:     return "square.dashed"
         }
     }
@@ -66,9 +68,15 @@ struct HomeTabBarView: View {
     @StateObject private var linkAccountVM: ACHViewModel
     @StateObject private var vCardVM: VCardViewModel
 
+    @Environment(\.displayScale) private var displayScale
+    @Environment(\.colorScheme)  private var colorScheme
+
     @State private var selectedTab: Tab = .home
     @State private var isLoggingOut = false
     @State private var hasLoadedOnce = false
+    /// Rasterised MovoMVSymbol images — cached so ImageRenderer never runs during body.
+    @State private var homeIconSelected:   UIImage?
+    @State private var homeIconUnselected: UIImage?
 
     init(container: AppContainer) {
         _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
@@ -91,7 +99,12 @@ struct HomeTabBarView: View {
             hasLoadedOnce = true
             await dashboardVM.fetchDashboard()
         }
-        .onAppear(perform: handleOnAppear)
+        .onAppear {
+            handleOnAppear()
+            refreshHomeIcons()
+        }
+        .onChange(of: displayScale)  { _ in refreshHomeIcons() }
+        .onChange(of: colorScheme)   { _ in refreshHomeIcons() }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
             dashboardVM.cancelAllTasks()
             linkAccountVM.cancelAllTasks()
@@ -339,8 +352,15 @@ private extension HomeTabBarView {
             destination(for: tab, title: tabLabel(at: index))
         }
         .tabItem {
-            Label(tabLabel(at: index), systemImage: tab.icon)
-                .environment(\.symbolVariants, SymbolVariants.none)
+            let label = tabLabel(at: index)
+            if tab == .home,
+               let img = selectedTab == .home ? homeIconSelected : homeIconUnselected {
+                // MovoMVSymbol rasterised to UIImage — .alwaysOriginal preserves two-tone colors.
+                Label { Text(label) } icon: { Image(uiImage: img) }
+            } else {
+                Label(label, systemImage: tab.icon)
+                    .environment(\.symbolVariants, SymbolVariants.none)
+            }
         }
         .tag(tab)
     }
@@ -387,6 +407,32 @@ private extension HomeTabBarView {
         guard appState.isNewRegistration else { return }
         lockManager.resetToUnlocked()
         appState.isNewRegistration = false
+    }
+
+    // MARK: Home tab icon rasteriser
+
+    /// Renders MovoMVSymbol at the current display scale into a UIImage.
+    /// Must be called from the main actor (ImageRenderer requires it).
+    /// Returns nil only if ImageRenderer produces no output (should not happen in practice).
+    func makeHomeIcon(selected: Bool, scale: CGFloat, scheme: ColorScheme) -> UIImage? {
+        let body    = selected ? Color.movo.accent : Color.white
+        let chevron = selected ? Color.movo.accent : Color.white
+        // .environment(\.colorScheme) forces ImageRenderer (which defaults to light)
+        // to resolve dynamic colors (secondaryLabel, movo tokens) in the correct scheme.
+        let view = MovoMVSymbol(bodyStyle: body, accent: chevron)
+            .frame(width: 24, height: 24)
+            .environment(\.colorScheme, scheme)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = scale
+        // .alwaysOriginal — never let UIKit recolor the image (preserves two-tone M).
+        return renderer.uiImage?.withRenderingMode(.alwaysOriginal)
+    }
+
+    /// Re-renders both states and caches them. Call on appear and on
+    /// displayScale / colorScheme change so the raster stays correct.
+    func refreshHomeIcons() {
+        homeIconSelected   = makeHomeIcon(selected: true,  scale: displayScale, scheme: colorScheme)
+        homeIconUnselected = makeHomeIcon(selected: false, scale: displayScale, scheme: colorScheme)
     }
 }
 
