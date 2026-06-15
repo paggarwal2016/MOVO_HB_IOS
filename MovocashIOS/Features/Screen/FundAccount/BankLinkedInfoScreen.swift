@@ -91,7 +91,7 @@ struct BankLinkedInfoScreen: View {
             .buttonStyle(MovoPrimaryButtonStyle())
         }
         .padding(.horizontal, Spacing.xl)
-        .padding(.top, Spacing.md)
+        .padding(.top, Spacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.movo.surface)
         // Opaque sheet backing so the screen behind never shows through during
