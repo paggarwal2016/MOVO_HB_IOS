@@ -461,8 +461,8 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 transferId:    approvalResult.intent.id,
                 amount:        amountText,
                 fromAccountId: fromCard.savingsAccountId ?? 0,
-                toAccountId:   0,
-                toClientId:    0,
+                toAccountId:   toAccountId ?? 0,
+                toClientId:    toClientId ?? 0,
                 phoneNumber:   normalizedPhone,
                 nickname:      toName
             )

@@ -387,7 +387,6 @@ final class ContactViewModel: BaseViewModel {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.create(request: request))
             }
-            await loadApiContacts()
             return true
         } catch is CancellationError { return false }
         catch { return false }

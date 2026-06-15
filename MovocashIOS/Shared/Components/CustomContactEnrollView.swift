@@ -239,8 +239,10 @@ final class PayeeTransferModel: ObservableObject {
     /// Entry point — call from any payee row tap. Runs check-intent, then shows the
     /// confirmation popup. On failure only the error toast shows (no popup).
     func tap(_ contact: ContactRecord) {
+        // Set synchronously (not inside the Task) so the spinner shows immediately on
+        // tap with no scheduling gap — lets callers hand off a loader continuously.
+        isChecking = true
         Task {
-            isChecking = true
             let raw = contact.phoneNumber ?? ""
             let withCountry = raw.hasPrefix("+1") ? raw : "+1\(raw.filter(\.isNumber))"
             let normalized = PhoneNumberValidator.normalize(PhoneNumberValidator.sanitize(withCountry))
@@ -342,7 +344,8 @@ extension View {
         container: AppContainer,
         cards: [VCardListResponse],
         primaryLinkedCard: VCardListResponse?,
-        onSuccess: @escaping () -> Void = {}
+        onSuccess: @escaping () -> Void = {},
+        onCancel: @escaping () -> Void = {}
     ) -> some View {
         modifier(
             PayeeTransferFlowModifier(
@@ -350,20 +353,22 @@ extension View {
                 container: container,
                 cards: cards,
                 primaryLinkedCard: primaryLinkedCard,
-                onSuccess: onSuccess
+                onSuccess: onSuccess,
+                onCancel: onCancel
             )
         )
     }
 }
 
 private struct PayeeTransferFlowModifier: ViewModifier {
-
+    
     @ObservedObject var model: PayeeTransferModel
     let container: AppContainer
     let cards: [VCardListResponse]
     let primaryLinkedCard: VCardListResponse?
     let onSuccess: () -> Void
-
+    let onCancel: () -> Void
+    
     func body(content: Content) -> some View {
         content
             .overlay {
@@ -376,7 +381,7 @@ private struct PayeeTransferFlowModifier: ViewModifier {
                 avatarInitial: model.confirmingContact?.initials ?? "",
                 onDismiss: { model.popupDidDismiss() },
                 onContinue: { model.confirm() },
-                onCancel: { model.cancel() }
+                onCancel: { model.cancel(); onCancel() }
             )
             .fullScreenCover(item: $model.transferContact) { contact in
                 QuickTransferView(
@@ -385,8 +390,6 @@ private struct PayeeTransferFlowModifier: ViewModifier {
                     cards: cards,
                     primaryLinkedCard: primaryLinkedCard,
                     recipientExists: model.transactionVM.checkIntentResult?.exists,
-                    // The success confirmation is shown inside QuickTransferView and it
-                    // dismisses itself; here we only refresh the presenter on return.
                     onComplete: { _ in onSuccess() }
                 )
             }

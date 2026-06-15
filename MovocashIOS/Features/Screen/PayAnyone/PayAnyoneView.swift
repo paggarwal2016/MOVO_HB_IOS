@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 import Combine
-import Contacts
 
 struct PayAnyoneView: View {
     
@@ -17,7 +16,6 @@ struct PayAnyoneView: View {
     @StateObject private var payeeFlow: PayeeTransferModel
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
-    @SwiftUI.Environment(\.scenePhase) private var scenePhase
     @SwiftUI.Environment(\.openURL) private var openURL
 
     let cards: [VCardListResponse]
@@ -30,7 +28,6 @@ struct PayAnyoneView: View {
 
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
-    @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     @State private var showCreateContactScreen = false
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
@@ -62,25 +59,7 @@ struct PayAnyoneView: View {
         !nickname.trimmingCharacters(in: .whitespaces).isEmpty &&
         phoneNumber.filter(\.isNumber).count >= 10
     }
-    
-    private var isAuthorized: Bool {
-        if #available(iOS 18.0, *) {
-            return authStatus == .authorized || authStatus == .limited
-        }
-        return authStatus == .authorized
-    }
-    
-    private var isDenied: Bool {
-        authStatus == .denied || authStatus == .restricted
-    }
 
-    /// True only for iOS 18+ "Limited Access" (the user shared a subset of contacts).
-    /// Full Access returns false — no "Use Phone Contacts" button is shown then.
-    private var isLimited: Bool {
-        if #available(iOS 18.0, *) { return authStatus == .limited }
-        return false
-    }
-    
     private var hasAnyData: Bool {
         !contactVM.mergedContacts.isEmpty ||
         !contactVM.favourites.isEmpty ||
@@ -109,15 +88,13 @@ struct PayAnyoneView: View {
                             contactsListCard
                                 .padding(.bottom, Spacing.lg)
 
-                            if !isAuthorized {
-                                orDivider
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 18)
+                            orDivider
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 18)
 
-                                permissionCompactCard
-                                    .padding(.horizontal, 14)
-                                    .padding(.bottom, 18)
-                            }
+                            usePhoneContactsCard
+                                .padding(.horizontal, 14)
+                                .padding(.bottom, 18)
 
                         } else {
                             heroIllustration
@@ -160,7 +137,7 @@ struct PayAnyoneView: View {
                 handlePickedContact(name: name, phone: phone)
             }
         }
-        .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { handleTransferSuccess() })
+        .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { handleTransferSuccess() }, onCancel: { reloadContacts() })
         .fullScreenCover(isPresented: $showAllFrequents) {
             AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: localPrimaryCard)
         }
@@ -168,33 +145,15 @@ struct PayAnyoneView: View {
             localPrimaryCard = primaryLinkedCard
         }
         .onAppear {
-            // Resolve permission status synchronously before async work begins
-            authStatus = CNContactStore.authorizationStatus(for: .contacts)
             Task {
                 await contactVM.loadApiContacts()
                 await contactVM.loadFavourites()
                 await contactVM.loadFrequent()
-                if isAuthorized {
-                    await contactVM.load()
-                }
                 isInitialLoading = false
-                // Normal load uses the Primary Card details passed from the Dashboard —
-                // no Primary Card API call here. It is refreshed only after a successful
-                // Quick Transfer (see handleTransferSuccess()).
             }
         }
-        .onChange(of: scenePhase) { newPhase in
-            guard newPhase == .active else { return }
-            authStatus = CNContactStore.authorizationStatus(for: .contacts)
-            if isAuthorized && contactVM.contacts.isEmpty {
-                Task { await contactVM.load() }
-            }
-        }
-        .fullScreenCover(isPresented: $showCreateContactScreen, onDismiss: { payeeFlow.popupDidDismiss() }) {
+        .fullScreenCover(isPresented: $showCreateContactScreen, onDismiss: { payeeFlow.popupDidDismiss(); reloadContacts() }) {
             AddContactSheet(container: contactVM, payeeFlow: payeeFlow, isSubmitting: $isCreatingContact, countryCode: "+1", onSave: { data in
-                // The sheet stays open while we create the contact and run check-intent.
-                // On check-intent success the model raises the in-sheet enroll popup; on
-                // any failure the sheet remains open (error toast shows).
                 Task {
                     isCreatingContact = true
                     let created = await contactVM.createContact(
@@ -214,8 +173,6 @@ struct PayAnyoneView: View {
                     isCreatingContact = false
                 }
             }, onContinue: {
-                // Continue tapped in the enroll popup — dismiss this sheet; the transfer
-                // is presented from onDismiss via popupDidDismiss().
                 contactVM.clear()
                 showCreateContactScreen = false
             }, onOpenSettings: openSettings)
@@ -264,16 +221,15 @@ struct PayAnyoneView: View {
         if hasAnyData {
             contactsListCard
         } else {
-            permissionCompactCard
+            usePhoneContactsCard
         }
     }
-    
-    // MARK: - Permission Card
-    
-    private var permissionCompactCard: some View {
-        
+
+    // MARK: - Use Phone Contacts Card
+    private var usePhoneContactsCard: some View {
+
         HStack(alignment: .top, spacing: Spacing.md + 2) {
-            
+
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.lg)
                     .fill(Color.movo.accentTint)
@@ -287,23 +243,23 @@ struct PayAnyoneView: View {
                     .foregroundColor(Color.movo.accent)
             }
             .frame(width: 44, height: 44)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("Movo is better with friends")
                     .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
-                
-                Text("Find people you know already on Movo and send instantly.")
+
+                Text("Pick someone from your phone — we only use the contact you choose.")
                     .textStyle(Typography.captionSmall)
                     .foregroundColor(Color.movo.textTertiary)
                     .lineSpacing(1.5)
                     .padding(.bottom, Spacing.sm + 2)
-                
-                Button(action: isDenied ? openSettings : enableContacts) {
+
+                Button(action: presentSystemPicker) {
                     HStack(spacing: 6) {
-                        Image(systemName: "person.badge.plus")
+                        Image(systemName: "person.crop.circle.badge.plus")
                             .font(.system(size: 11, weight: .semibold))
-                        Text("Enable Contacts")
+                        Text("Use Phone Contacts")
                             .textStyle(Typography.button)
                     }
                 }
@@ -391,39 +347,13 @@ struct PayAnyoneView: View {
                     .padding(.horizontal, Spacing.lg)
             }
             
-            // All contacts — header always present for limited access so the user can
-            // pick more contacts even when none are currently shared with the app.
-            if !contactVM.filteredContacts.isEmpty || isLimited {
+            // All contacts — backend (API) contacts only. The device address book is
+            // not loaded; device contacts are pulled in one at a time via the picker.
+            if !contactVM.filteredContacts.isEmpty {
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) { allContactsExpanded.toggle() }
                 } label: {
-                    HStack(spacing: 6) {
-                        Text("ALL CONTACTS")
-                            .textStyle(Typography.eyebrow)
-                            .foregroundColor(Color.movo.textTertiary)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(Color.movo.textTertiary)
-                            .rotationEffect(.degrees(allContactsExpanded ? 0 : -90))
-                        Spacer()
-                        // Full Access: no button. Limited Access: offer the native picker.
-                        if isLimited {
-                            Button { isOpeningPicker = true; showSystemPicker = true } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "person.crop.circle.badge.plus")
-                                        .font(.system(size: 11, weight: .semibold))
-                                    Text("Use Phone Contacts")
-                                        .textStyle(Typography.caption)
-                                }
-                                .foregroundColor(Color.movo.accent)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
-                    .padding(.bottom, Spacing.xs)
+                    sectionHeader(title: "ALL CONTACTS", isExpanded: allContactsExpanded)
                 }
                 .buttonStyle(.plain)
                 if allContactsExpanded {
@@ -524,20 +454,33 @@ struct PayAnyoneView: View {
         }
     }
     
-    /// Routes a contact picked from the native picker (limited-access "Use Phone
-    /// Contacts") into the payee flow — same as tapping a contact row.
+    /// Handles a contact picked from the native system picker: first saves it to the
+    /// backend via `createContact` (POST → `ContactAPI.create`), then — on success —
+    /// continues into the payee transfer flow, same as tapping a saved contact row.
+    /// Falls back to the phone number as the nickname when the device contact has no name.
     private func handlePickedContact(name: String, phone: String) {
         let national = PhoneNumberValidator.sanitize(phone)
         let e164 = national.isEmpty ? phone : "+1\(national)"
-        payeeFlow.tap(ContactRecord(
-            id: e164,
-            isFav: false,
-            nickname: name.isEmpty ? nil : name,
-            createdAt: Date(),
-            phoneNumber: e164,
-            isAdded: false,
-            updatedAt: Date()
-        ))
+        let nickname = name.isEmpty ? e164 : name
+        Task {
+            isCreatingContact = true
+            let created = await contactVM.createContact(nickname: nickname, phoneNumber: e164)
+            guard created else { isCreatingContact = false; return }
+            // Hand off to the transfer flow BEFORE clearing the create loader: `tap`
+            // sets `isChecking` synchronously, so its spinner is already showing when
+            // this one drops — a single continuous loader with no flicker between the
+            // create and check-intent calls.
+            payeeFlow.tap(ContactRecord(
+                id: e164,
+                isFav: false,
+                nickname: name.isEmpty ? nil : name,
+                createdAt: Date(),
+                phoneNumber: e164,
+                isAdded: true,
+                updatedAt: Date()
+            ))
+            isCreatingContact = false
+        }
     }
 
     private func refreshPrimaryCard() {
@@ -552,16 +495,28 @@ struct PayAnyoneView: View {
     /// API and reloads Frequents so the just-paid contact appears.
     private func handleTransferSuccess() {
         refreshPrimaryCard()
-        Task { await contactVM.loadFrequent() }
+        Task { await contactVM.loadFrequent()
+               await contactVM.loadApiContacts() }
     }
 
-    private func enableContacts() {
+    /// Reloads the backend contact lists. Called when the enroll confirmation popup is
+    /// cancelled so a contact just saved via `createContact` (POST → `ContactAPI.create`)
+    /// is reflected in the list even though the transfer wasn't completed.
+    private func reloadContacts() {
         Task {
-            await contactVM.load()
-            authStatus = CNContactStore.authorizationStatus(for: .contacts)
+            await contactVM.loadApiContacts()
+            await contactVM.loadFavourites()
         }
     }
-    
+
+    /// Presents the native system contact picker. Works regardless of the app's
+    /// Contacts permission — the picker runs out-of-process and returns just the one
+    /// contact the user selects. `isOpeningPicker` shows a loader during the launch delay.
+    private func presentSystemPicker() {
+        isOpeningPicker = true
+        showSystemPicker = true
+    }
+
     private func openSettings() {
         lockManager.notifyWillOpenPermissionSettings()
         if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -799,7 +754,7 @@ extension PayAnyoneView {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .heavy))
-                    Text("Quick Pay")
+                    Text("Add Contact")
                         .textStyle(Typography.button)
                 }
             }

@@ -17,7 +17,6 @@ private struct ContentHeightKey: PreferenceKey {
 struct MoveMoneyMenuView: View {
 
     let onFundAccount: () -> Void
-    let onTransferMoney: () -> Void
     let onInternalTransfer: () -> Void
 
     @State private var detentHeight: CGFloat = 160
