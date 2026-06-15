@@ -56,7 +56,6 @@ struct DashboardView: View {
     @State private var showAllFrequents = false
     @State private var showInternalTransfer = false
     @State private var showViewCardList = false
-    @State private var showContactList = false
     @State private var showQuickPayView = false
     @State private var showCreateContact = false
     /// True while the create-contact API call is in flight — shows the spinner.
@@ -149,17 +148,7 @@ struct DashboardView: View {
                 )
             }
         }
-        
-        .fullScreenCover(isPresented: $showContactList) {
-            PayAnyoneContactPickerView(
-                container: container,
-                cards: dashboardVM.cards,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard,
-                title: "Quick Pay", //dashboardVM.quickPayTitle
-                onSuccess: { needsDashboardRefresh = true }
-            )
-        }
-        
+                
         .fullScreenCover(isPresented: $showCreateContact, onDismiss: { payeeFlow.popupDidDismiss() }) {
             AddContactSheet(container: contactVM, payeeFlow: payeeFlow, isSubmitting: $isCreatingContact, countryCode: "+1", onSave: { data in
                 // The sheet stays open while we create the contact and run check-intent.
@@ -251,10 +240,6 @@ struct DashboardView: View {
                 onFundAccount: {
                     showMoveMoney = false
                     Task { try? await Task.sleep(nanoseconds: 350_000_000); showFundAccount = true }
-                },
-                onTransferMoney: {
-                    showMoveMoney = false
-                    Task { try? await Task.sleep(nanoseconds: 350_000_000); showContactList = true }
                 },
                 onInternalTransfer: {
                     showMoveMoney = false
@@ -357,7 +342,6 @@ struct DashboardView: View {
             showViewCard = false
             showMoveMoney = false
             showQuickPayView = false
-            showContactList = false
             showAllFrequents = false
             showFundAccount = false
             showInternalTransfer = false
