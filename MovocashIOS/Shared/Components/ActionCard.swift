@@ -228,7 +228,9 @@ struct PayAnyoneAddContactView: View {
                 bubble(initial: "+", label: "Add", expand: showSeeAll, action: onAddTap)
             }
             .padding(Spacing.cardPadding)
-            .frame(maxWidth: .infinity)
+            // Align left so a short list (fixed-width bubbles) starts from the leading
+            // edge instead of centering. With ≥4 contacts the bubbles expand to fill.
+            .frame(maxWidth: .infinity, alignment: .leading)
             // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid
             // gradient with a silver hairline border.
             .background(
