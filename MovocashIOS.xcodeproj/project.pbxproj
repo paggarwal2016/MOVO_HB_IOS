@@ -78,6 +78,7 @@
 		99C2F1DB2FDED63800384E28 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1DA2FDED63800384E28 /* PhoneNumberValidator.swift */; };
 		99C2F1DD2FDEDD3B00384E28 /* MovoLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1DC2FDEDD3B00384E28 /* MovoLabels.swift */; };
 		99C2F1DF2FDFA58D00384E28 /* BalanceText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1DE2FDFA58D00384E28 /* BalanceText.swift */; };
+		99C2F4492FE06CA100384E28 /* RegistrationCelebrationHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F4482FE06CA100384E28 /* RegistrationCelebrationHero.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -183,6 +184,7 @@
 		99C2F1DA2FDED63800384E28 /* PhoneNumberValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberValidator.swift; sourceTree = "<group>"; };
 		99C2F1DC2FDEDD3B00384E28 /* MovoLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovoLabels.swift; sourceTree = "<group>"; };
 		99C2F1DE2FDFA58D00384E28 /* BalanceText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceText.swift; sourceTree = "<group>"; };
+		99C2F4482FE06CA100384E28 /* RegistrationCelebrationHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrationCelebrationHero.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -471,6 +473,7 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				99C2F4482FE06CA100384E28 /* RegistrationCelebrationHero.swift */,
 				99C2F1DE2FDFA58D00384E28 /* BalanceText.swift */,
 				99C2F1DA2FDED63800384E28 /* PhoneNumberValidator.swift */,
 				99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */,
@@ -768,6 +771,7 @@
 				99C2F1DD2FDEDD3B00384E28 /* MovoLabels.swift in Sources */,
 				146819772F4DE6CF00BED014 /* Environment.swift in Sources */,
 				142029732F96256900A72366 /* GetStartedInfoScreen.swift in Sources */,
+				99C2F4492FE06CA100384E28 /* RegistrationCelebrationHero.swift in Sources */,
 				146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */,
 				146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */,
 				1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */,

@@ -60,6 +60,13 @@ public enum DesignTokens {
         public static let accent = ColorToken(
             light: 0x629F86, dark: 0x629F86, name: "accent")
 
+        // Balloon illustration pigments — LOCKED, non-adaptive.
+        // Used exclusively in RegistrationCelebrationHero for the balloon sheen and
+        // shadow/knot. Do NOT use as text or interactive-element colors — these are
+        // not contrast-tested and will break accessibility if misapplied.
+        public static let balloonHighlight = ColorToken(hex: 0x8DC6B0, name: "balloonHighlight")
+        public static let balloonShade     = ColorToken(hex: 0x4F8770, name: "balloonShade")
+
         // Text (most → least emphasis)
         public static let textPrimary = ColorToken(
             light: 0x0A0A0E, dark: 0xF2F3F6, name: "textPrimary")     // Headlines

@@ -68,6 +68,9 @@ public struct MovoColorScheme: Sendable {
     // Ghost surface — surface at 85% opacity, subtle near-flush card feel
    // public let ghostSurface:    ColorToken
 
+    // Silver sheen / watermark — adaptive.
+    public let silverTint:         ColorToken
+
     // Card tile face — locked near-black for the Void Silver card cell in the dashboard carousel.
     public let cardVoid:           ColorToken
 
@@ -77,6 +80,11 @@ public struct MovoColorScheme: Sendable {
     public let onCardArtwork:      ColorToken
     public let cardArtworkMuted:   ColorToken
     public let cardArtworkBorder:  ColorToken
+
+    // Balloon illustration pigments — locked, non-adaptive.
+    // Scoped to RegistrationCelebrationHero only. Not for text or interactive use.
+    public let balloonHighlight:   ColorToken
+    public let balloonShade:       ColorToken
 
     // MARK: - Built-in scheme: Void Silver (adaptive)
 
@@ -115,13 +123,19 @@ public struct MovoColorScheme: Sendable {
         cardSurface:   DesignTokens.Palette.cardSurface,
         cardBorder:    DesignTokens.Palette.cardBorder,
 
+        silverTint:        DesignTokens.Palette.silverTint,
+
         cardVoid:          DesignTokens.Palette.cardVoid,
 
         // Heritage black card — locked, never adapts.
         cardArtwork:       DesignTokens.Palette.cardArtwork,
         onCardArtwork:     DesignTokens.Palette.onCardArtwork,
         cardArtworkMuted:  DesignTokens.Palette.cardArtworkMuted,
-        cardArtworkBorder: DesignTokens.Palette.cardArtworkBorder
+        cardArtworkBorder: DesignTokens.Palette.cardArtworkBorder,
+
+        // Balloon illustration pigments — locked.
+        balloonHighlight:  DesignTokens.Palette.balloonHighlight,
+        balloonShade:      DesignTokens.Palette.balloonShade
     )
 }
 

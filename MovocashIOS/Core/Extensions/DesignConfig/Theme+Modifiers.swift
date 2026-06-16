@@ -40,6 +40,8 @@ extension Color {
         public static var cardSurface:   Color { MovoTheme.color.cardSurface.color }
         public static var cardBorder:    Color { MovoTheme.color.cardBorder.color }
 
+        public static var silverTint:        Color { MovoTheme.color.silverTint.color }
+
         // Card tile face — locked near-black. Use only in CardItemView.
         public static var cardVoid:          Color { MovoTheme.color.cardVoid.color }
 
@@ -48,6 +50,11 @@ extension Color {
         public static var onCardArtwork:     Color { MovoTheme.color.onCardArtwork.color }
         public static var cardArtworkMuted:  Color { MovoTheme.color.cardArtworkMuted.color }
         public static var cardArtworkBorder: Color { MovoTheme.color.cardArtworkBorder.color }
+
+        // Balloon illustration pigments — locked, non-adaptive.
+        // Use only in RegistrationCelebrationHero. Not for text or interactive elements.
+        public static var balloonHighlight:  Color { MovoTheme.color.balloonHighlight.color }
+        public static var balloonShade:      Color { MovoTheme.color.balloonShade.color }
     }
 }
 

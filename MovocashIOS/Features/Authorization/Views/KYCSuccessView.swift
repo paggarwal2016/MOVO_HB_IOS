@@ -38,14 +38,19 @@ struct KYCSuccessView: View {
             VStack(spacing: 0) {
                 Spacer(minLength: Spacing.xxl)
 
+                RegistrationCelebrationHero()
+                    .frame(maxHeight: 190)
+                    .padding(.bottom, Spacing.lg)
+                // no .clipped() — would cut the balloon's −12° tilt corners
+
                 VStack(spacing: Spacing.xl) {
-                    Text("Congrats! You're officially registered.")
+                    Text("Your account\u{2019}s ready! Let\u{2019}s movo.")
                         .textStyle(Typography.heroTitle)
                         .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
 
-                    Text("Your identity's verified. Add money now to start sending to family & friends — or spending anywhere.")
+                    Text("Identity verified. Add money to send to family & friends \u{2014} or spend anywhere.")
                         .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                         .multilineTextAlignment(.center)
@@ -57,7 +62,7 @@ struct KYCSuccessView: View {
                 .padding(.horizontal, Spacing.screenHorizontal)
                 .padding(.bottom, Spacing.lg)
 
-                Spacer(minLength: Spacing.xxl)
+                Spacer(minLength: Spacing.xl)
 
                 ctaFooter
             }
