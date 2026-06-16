@@ -38,17 +38,21 @@ struct ActionCard: View {
                     .padding(.top, Spacing.md)
 
                     // Message — the section's `description` (e.g. "No recent contacts yet").
+                    // +3pt over Typography.subtitle (13pt regular, tracking 0)
                     if !description.isEmpty {
                         Text(description)
-                            .textStyle(Typography.subtitle)
+                            .font(.system(size: 16, weight: .regular))
+                            .tracking(0)
                             .foregroundStyle(theme.textSecondary.color)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
                     // Accent action — the API action's `label` (e.g. "Add someone").
+                    // +3pt over Typography.button (12pt semibold, tracking 0.2)
                     Text(buttonLabel)
-                        .textStyle(Typography.button)
+                        .font(.system(size: 15, weight: .semibold))
+                        .tracking(0.2)
                         .foregroundStyle(Color.movo.accent)
                         .padding(.bottom, Spacing.md)
                 }

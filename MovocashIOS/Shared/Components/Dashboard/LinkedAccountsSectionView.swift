@@ -31,52 +31,68 @@ struct LinkedAccountsSectionView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .textStyle(Typography.cardHero)
-                    .foregroundStyle(theme.textPrimary.color)
-                    .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
 
-                Text(description)
-                    .textStyle(Typography.subtitle)
-                    .foregroundStyle(theme.textSecondary.color)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
+            Text("LINK ACCOUNT")
+                .textStyle(Typography.eyebrow)
+                .foregroundColor(Color.movo.textTertiary)
 
-                Button(action: onLinkAccount) {
-                    HStack(spacing: 6) {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.onAccent))
-                                .scaleEffect(0.8)
-                        } else {
-                            Text(buttonLabel)
-                                .textStyle(Typography.button)
-                                .lineLimit(1)
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
+            VStack(alignment: .leading, spacing: 16) {
+                // Title + description + illustration side by side
+                HStack(alignment: .center, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(title)
+                            .textStyle(Typography.cardHero)
+                            .foregroundStyle(theme.textPrimary.color)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(description)
+                            .textStyle(Typography.subtitle)
+                            .foregroundStyle(theme.textSecondary.color)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    LinkBankIllustration()
+                        .frame(width: 130, height: 85)
                 }
-                .buttonStyle(SoftAccentButtonStyle())
+
+                // Button spans full card width — text always fits on one line
+                Button(action: onLinkAccount) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.onAccent))
+                            .scaleEffect(0.8)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Text(buttonLabel)
+                            .lineLimit(1)
+                    }
+                }
+                .buttonStyle(MovoPrimaryButtonStyle())
                 .disabled(isLoading)
             }
-
-            Spacer(minLength: 2)
-
-            LinkBankIllustration()
-                .frame(width: 80, height: 65)
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(
+                    stops: [
+                        .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
+                        .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
+                        .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint:   .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                    .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: DesignTokens.Stroke.hairline)
+            )
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.movo.cardSurface)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .stroke(theme.borderStrong.color, lineWidth: DesignTokens.Stroke.hairline)
-        )
+        .padding(.top, Spacing.md)
     }
 
     // MARK: - List State
@@ -137,60 +153,88 @@ struct LinkedAccountsSectionView: View {
 
 // MARK: - Link Bank Illustration
 
+// MARK: - Link Bank Illustration
+//
+// Canonical 230×150 composition, scales proportionally to fit available space.
+// Three layers: bank glyph + connector arc/arrowhead (Canvas), then the Movo M
+// with tagline (SwiftUI views) positioned over the Canvas via GeometryReader.
+
 private struct LinkBankIllustration: View {
-    private let theme = MovoTheme.color
 
     var body: some View {
-        ZStack {
-            // MOVO symbol as connector — replaces dashed wire
-            MovoMVSymbol(bodyStyle: Color.movo.accent, accent: Color.movo.accent)
-                .frame(width: 22, height: 22)
+        // Canvas uses its OWN size parameter. Caller supplies an explicit
+        // frame(width:height:) so the Canvas always gets concrete dimensions.
+        Canvas { context, size in
+            let s = size.width / 230.0
 
-            // Bank
-            Image(systemName: "building.columns")
-                .font(.system(size: 32, weight: .thin))
-                .foregroundStyle(theme.textSecondary.color)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .offset(y: -4)
+            let silver = GraphicsContext.Shading.color(Color.movo.silverTint)
+            let accent = GraphicsContext.Shading.color(Color.movo.accent)
+            let thin   = StrokeStyle(lineWidth: 2.0 * s, lineCap: .round, lineJoin: .round)
+            let thick  = StrokeStyle(lineWidth: 2.5 * s, lineCap: .round, lineJoin: .round)
 
-            // Lock
-            Image(systemName: "lock.fill")
-                .font(.system(size: 8))
-                .foregroundStyle(theme.accent.color)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .offset(x: 38, y: -2)
+            // ── Roof (pediment) ────────────────────────────────────────────────
+            var roof = Path()
+            roof.move(to:    CGPoint(x: 24*s, y: 58*s))
+            roof.addLine(to: CGPoint(x: 88*s, y: 58*s))
+            roof.addLine(to: CGPoint(x: 56*s, y: 42*s))
+            roof.closeSubpath()
+            context.stroke(roof, with: silver, style: thin)
 
-            // Phone
-            phoneView
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .offset(y: 4)
-        }
-        .frame(width: 80, height: 70)
-    }
+            // ── Entablature bar ────────────────────────────────────────────────
+            var entab = Path()
+            entab.move(to:    CGPoint(x: 28*s, y: 61*s))
+            entab.addLine(to: CGPoint(x: 84*s, y: 61*s))
+            context.stroke(entab, with: silver, style: thin)
 
-    private var phoneView: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(theme.textSecondary.color, lineWidth: 1.2)
-                .frame(width: 28, height: 42)
-
-            VStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(theme.textTertiary.color.opacity(0.5))
-                    .frame(width: 16, height: 4)
-
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(theme.textTertiary.color.opacity(0.5))
-                    .frame(width: 16, height: 4)
-
-                Spacer()
-
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(theme.accent.color)
-                    .frame(width: 16, height: 6)
+            // ── Columns ───────────────────────────────────────────────────────
+            for cx in [38, 56, 74] as [CGFloat] {
+                var col = Path()
+                col.move(to:    CGPoint(x: cx*s, y: 63*s))
+                col.addLine(to: CGPoint(x: cx*s, y: 90*s))
+                context.stroke(col, with: silver, style: thin)
             }
-            .padding(.vertical, 8)
-            .frame(width: 28, height: 42)
+
+            // ── Base (slightly thicker) ────────────────────────────────────────
+            var base = Path()
+            base.move(to:    CGPoint(x: 26*s, y: 93*s))
+            base.addLine(to: CGPoint(x: 86*s, y: 93*s))
+            context.stroke(base, with: silver, style: thick)
+
+            // ── Connector arc  Q(94,54)(132,28)(162,62) ──────────────────────
+            var arc = Path()
+            arc.move(to: CGPoint(x: 94*s, y: 54*s))
+            arc.addQuadCurve(
+                to:      CGPoint(x: 162*s, y: 62*s),
+                control: CGPoint(x: 132*s, y: 28*s)
+            )
+            context.stroke(arc, with: accent, style: thick)
+
+            // ── Arrowhead at arc tip (162, 62) ─────────────────────────────────
+            // Tangent at t=1: 2*(P2−ctrl) = 2*(30,34)  mag≈90.69
+            // Wings = reversed unit (−0.6614, −0.7499) rotated ±25°
+            let len: CGFloat = 9 * s
+            let tip = CGPoint(x: 162*s, y: 62*s)
+            let w1  = CGPoint(x: tip.x + (-0.2825) * len, y: tip.y + (-0.9592) * len)
+            let w2  = CGPoint(x: tip.x + (-0.9163) * len, y: tip.y + (-0.4002) * len)
+            var head = Path()
+            head.move(to: w1)
+            head.addLine(to: tip)
+            head.addLine(to: w2)
+            context.stroke(head, with: accent, style: thick)
+        }
+        // Overlay: GeometryReader here reads the Canvas's resolved size — safe.
+        .overlay(alignment: .topLeading) {
+            GeometryReader { geo in
+                let s = geo.size.width / 230.0
+                VStack(spacing: max(1, 3 * s)) {
+                    MovoMVSymbol()
+                        .frame(width: 44 * s, height: 44 * s)
+                    Text("Let\u{2019}s Movo.")
+                        .font(.system(size: max(7, 13 * s), weight: .medium).italic())
+                        .foregroundColor(Color.movo.textTertiary)
+                }
+                .position(x: 192 * s, y: 73 * s)
+            }
         }
     }
 }
