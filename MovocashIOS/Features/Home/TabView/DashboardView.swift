@@ -363,7 +363,7 @@ struct DashboardView: View {
             showCreateCashCard = false
             maybeShowFirstCardReward()
         }
-        .onChange(of: dashboardVM.primaryLinkedCard?.id) { _ in
+        .onChange(of: dashboardVM.hasLoadedCards) { _ in
             maybeShowFirstCardReward()
         }
         .fullScreenCover(isPresented: $showFirstCardReward, onDismiss: {
@@ -394,11 +394,20 @@ struct DashboardView: View {
     private func maybeShowFirstCardReward() {
         guard !didCheckFirstCardReward else { return }
         guard UserDefaults.standard.bool(forKey: "pendingFirstCardReward") else { return }
-        guard let card = dashboardVM.primaryLinkedCard else { return }
+        // Wait until the MYCARDS payload has resolved so we can reliably tell whether
+        // a secondary card exists before deciding (the `.onChange` retries on load).
+        guard dashboardVM.hasLoadedCards else { return }
+
+        // One-shot check — consume the flag whether or not we show the review.
         didCheckFirstCardReward = true
-        firstCardRewardCard = card
-        setFirstCardReward(true)
         UserDefaults.standard.set(false, forKey: "pendingFirstCardReward")
+
+        // First-time flow applies only when a secondary card (a non-primary card in
+        // the My Cards list) was issued alongside the primary. The review then opens
+        // Card Details for that secondary card. No secondary card → skip silently.
+        guard let secondaryCard = dashboardVM.cards.first else { return }
+        firstCardRewardCard = secondaryCard
+        setFirstCardReward(true)
     }
 
     /// Show/hide the reward cover without its own bottom slide — `FirstCardRewardView`
