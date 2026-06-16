@@ -200,7 +200,7 @@ struct PayAnyoneAddContactView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
 
-            // Header
+            // Header — sits OUTSIDE the card, like CardSelectorView's section title.
             HStack {
                 Eyebrow(title)
                 Spacer()
@@ -212,7 +212,8 @@ struct PayAnyoneAddContactView: View {
                 }
             }
 
-            // Bubbles — equal width when ≥4 contacts, fixed width otherwise
+            // Bubbles — equal width when ≥4 contacts, fixed width otherwise.
+            // Only this row carries the card surface now.
             HStack(spacing: 8) {
                 ForEach(displayedContacts) { contact in
                     // No nickname → first local digit avatar + phone number label.
@@ -220,17 +221,17 @@ struct PayAnyoneAddContactView: View {
                 }
                 bubble(initial: "+", label: "Add", expand: showSeeAll, action: onAddTap)
             }
+            .padding(Spacing.cardPadding)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .fill(Color.movo.cardSurface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.heroCard)
+                            .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
+                    )
+            )
         }
-        .padding(Spacing.cardPadding)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
-                )
-        )
     }
 
     private func bubble(initial: String, label: String, expand: Bool, action: @escaping () -> Void) -> some View {
