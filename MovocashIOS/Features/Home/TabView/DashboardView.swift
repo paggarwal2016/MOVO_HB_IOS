@@ -76,6 +76,9 @@ struct DashboardView: View {
     @State private var firstCardRewardCard: VCardListResponse? = nil
     @State private var didCheckFirstCardReward = false
     @State private var pendingViewCardDetails = false
+    @State private var showInsufficientBalance = false
+    /// true = branch A (no linked bank → open Plaid), false = branch B (has bank → open Fund screen)
+    @State private var insufficientBalanceUsePlaid = false
     
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -220,6 +223,22 @@ struct DashboardView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationBarBackButtonHidden(true)
             }
+        }
+        .fullScreenCover(isPresented: $showInsufficientBalance) {
+            InsufficientBalanceDialog(
+                balance: dashboardVM.primaryAccount?.availableBalance ?? 0,
+                onAddMoney: {
+                    showInsufficientBalance = false
+                    if insufficientBalanceUsePlaid {
+                        plaidInfoAllowFunding = true
+                        showPlaidInfo = true
+                    } else {
+                        showFundAccount = true
+                    }
+                },
+                onDismiss: { showInsufficientBalance = false }
+            )
+            .presentationBackground(.clear)
         }
         .fullScreenCover(isPresented: $showInternalTransfer) {
             if let account = displayAccount {
@@ -563,51 +582,25 @@ struct DashboardView: View {
     /// Handles the "+" (create card) tap in the My Cards section.
     /// When the primary account has a zero available balance, card creation is
     /// gated behind a prompt to fund the account first.
+    /// Minimum available balance required to create a new virtual card.
+    private static let minCardCreationBalance: Decimal = 5
+
     private func handleCreateCardTap() {
         let account = dashboardVM.primaryAccount
         let availableBalance = account?.availableBalance ?? 0
         let accountBalance   = account?.accountBalance ?? 0
         let hasLinkedAccount = !(dashboardVM.linkedAccounts?.linkedAccounts ?? []).isEmpty
-        
+
         // Sufficient balance → proceed straight to card creation.
-        guard availableBalance == 0 else {
+        guard availableBalance < Self.minCardCreationBalance else {
             showCreateCashCard = true
             return
         }
         
-        if !hasLinkedAccount && accountBalance == 0 {
-            // No funds and no linked bank → prompt the user to fund/link first.
-            ToastManager.shared.show(ToastConfig(
-                message: "Add funds to your account to create a new card.",
-                style: .warning,
-                position: .center,
-                duration: nil,
-                title: "Insufficient balance",
-                imageSystemName: "creditcard.fill",
-                primaryAction: ToastAction(label: "Add money") {
-                    plaidInfoAllowFunding = true
-                    showPlaidInfo = true
-                },
-                secondaryAction: ToastAction(label: "Cancel") { },
-                dimsBackground: true
-            ))
-        } else {
-            // Available balance is 0 but funding is possible (a linked bank exists,
-            // or the account carries a balance) → prompt first, then open the Fund screen.
-            ToastManager.shared.show(ToastConfig(
-                message: "Add funds to your account to create a new card.",
-                style: .warning,
-                position: .center,
-                duration: nil,
-                title: "Insufficient balance",
-                imageSystemName: "creditcard.fill",
-                primaryAction: ToastAction(label: "Add money") {
-                    showFundAccount = true
-                },
-                secondaryAction: ToastAction(label: "Cancel") { },
-                dimsBackground: true
-            ))
-        }
+        // Show the new centered dialog. Branch A (no linked bank) opens Plaid;
+        // Branch B (has linked bank or account balance) opens the Fund screen.
+        insufficientBalanceUsePlaid = !hasLinkedAccount && accountBalance == 0
+        showInsufficientBalance = true
     }
     
     private func handleQuickAction(_ action: String) {

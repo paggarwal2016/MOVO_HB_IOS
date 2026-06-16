@@ -20,84 +20,67 @@ struct CashCardCreateSuccess: View {
     // MARK: - Body
 
     var body: some View {
-        ZStack {
+        VStack(spacing: 0) {
 
-            SuccessBackdrop()
+            Spacer().frame(height: Spacing.xxxl)
 
-            VStack(spacing: 0) {
+            CheckmarkHalo()
+                .frame(width: 88, height: 88)
 
-                Spacer().frame(height: Spacing.huge + Spacing.xxl) // 64pt
+            Spacer().frame(height: Spacing.xxl)
 
-                CheckmarkHalo()
-                    .frame(width: 88, height: 88)
+            Text("Your MOVO card created!")
+                .textStyle(Typography.eyebrow)
+                .foregroundColor(Color.movo.accent)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.sm)
+                .background(
+                    Capsule()
+                        .fill(Color.movo.accentTint)
+                        .overlay(
+                            Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
+                        )
+                )
 
-                Spacer().frame(height: Spacing.xxl)
+            Spacer().frame(height: Spacing.xxl)
 
-                Text("Card created!")
-                    .textStyle(Typography.eyebrow)
-                    .foregroundColor(Color.movo.accent)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.vertical, Spacing.sm)
-                    .background(
-                        Capsule()
-                            .fill(Color.movo.accentTint)
-                            .overlay(
-                                Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
-                            )
-                    )
-                
-                Spacer().frame(height: Spacing.xxl)
+            Text("Your virtual cash card is ready.\nAdd it to Apple Wallet anytime.")
+                .foregroundColor(Color.movo.textTertiary)
+                .textStyle(Typography.body)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, Spacing.xl)
 
-                Text("Your virtual cash card is ready.\nAdd it to Apple Wallet anytime.")
-                    .foregroundColor(Color.movo.textTertiary)
-                    .textStyle(Typography.body)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, Spacing.huge)
+            Spacer().frame(height: Spacing.xxxl)
 
-                Spacer().frame(height: Spacing.xxl)
+            // MARK: - CTA
 
-                cardVisual
-                    .padding(.horizontal, Spacing.xl)
-
-                Spacer()
-
-                // MARK: - CTA
-
-                Button(action: onDone) {
-                    Text("Done")
+            Button(action: onDone) {
+                HStack(spacing: Spacing.sm) {
+                    Text("LET'S MOVO")
+                        .tracking(1.5)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 14, weight: .semibold))
                 }
-                .buttonStyle(MovoPrimaryButtonStyle())
-                .padding(.horizontal, Spacing.xxl)
-                .padding(.bottom, Spacing.xxxl)
             }
+            .buttonStyle(MovoPrimaryButtonStyle())
+            .padding(.horizontal, Spacing.xxl)
+            .padding(.bottom, Spacing.xxl)
         }
-    }
-
-    // MARK: - Card Visual
-
-    private var cardVisual: some View {
-        // Reuse the shared, brand-locked card art so this screen stays in
-        // sync with CardDetailSheet's hero.
-        CardDetailSheet.MovoCardHero(card: card)
-            .frame(width: 220)
-            .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Backdrop
-
-    private struct SuccessBackdrop: View {
-        var body: some View {
-            RadialGradient(
-                colors: [
-                    Color.movo.accent.opacity(0.14),
-                    Color.movo.background
-                ],
-                center: UnitPoint(x: 0.5, y: 0.20),
-                startRadius: 0,
-                endRadius: 360
-            )
-            .ignoresSafeArea()
-        }
+        .background(
+            ZStack {
+                Color.movo.background
+                RadialGradient(
+                    colors: [
+                        Color.movo.accent.opacity(0.14),
+                        Color.movo.background
+                    ],
+                    center: UnitPoint(x: 0.5, y: 0.25),
+                    startRadius: 0,
+                    endRadius: 220
+                )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Radius.sheet))
     }
 }

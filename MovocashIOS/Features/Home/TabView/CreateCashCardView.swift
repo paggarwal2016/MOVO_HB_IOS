@@ -82,12 +82,14 @@ struct CreateCashCardView: View {
         .onDisappear {
             SpinnerView.hideFullScreen()
         }
-        // Present the success screen immediately on top of this create screen.
-        // The create form stays silently behind the full-screen cover. Tapping Done
-        // dismisses the cover first; its onDismiss then dismisses the create sheet
-        // (the sheet can't dismiss while the cover is still presented over it).
+        // Present the success dialog centered over the screen.
         .fullScreenCover(item: $createdCard, onDismiss: { onFinished() }) { card in
-            CashCardCreateSuccess(card: card, onDone: { createdCard = nil })
+            ZStack {
+                Color.black.opacity(0.55).ignoresSafeArea()
+                CashCardCreateSuccess(card: card, onDone: { createdCard = nil })
+                    .frame(width: 320)
+            }
+            .presentationBackground(.clear)
         }
     }
 }

@@ -44,7 +44,7 @@ struct KYCSuccessView: View {
                 // no .clipped() — would cut the balloon's −12° tilt corners
 
                 VStack(spacing: Spacing.xl) {
-                    Text("Your account\u{2019}s ready! Let\u{2019}s movo.")
+                    Text("Your MOVO account\u{2019}s ready! Let\u{2019}s movo.")
                         .textStyle(Typography.heroTitle)
                         .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
@@ -57,6 +57,7 @@ struct KYCSuccessView: View {
                         .lineSpacing(4)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity)
+                        .padding(.horizontal, Spacing.xl)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, Spacing.screenHorizontal)

@@ -152,12 +152,12 @@ struct BankLinkedSuccessScreen: View {
             }
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text("\(institutionName) account has been linked")
+                Text("\(institutionName) is connected")
                     .textStyle(Typography.heroTitle)
                     .foregroundColor(Color.movo.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Let’s Movo. Add funds to spend anywhere.")
+                Text("Add money anytime and spend it anywhere.")
                     .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -208,10 +208,25 @@ struct BankLinkedSuccessScreen: View {
     }
 
     private var divider: some View {
-        Rectangle()
-            .fill(Color.movo.border)
-            .frame(height: Stroke.hairline)
-            .padding(.horizontal, Spacing.lg)
+        ZStack {
+            Rectangle()
+                .fill(Color.movo.border)
+                .frame(height: Stroke.hairline)
+                .padding(.horizontal, Spacing.lg)
+
+            Circle()
+                .fill(Color.movo.surface)
+                .frame(width: 32, height: 32)
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+                .overlay(
+                    Image(systemName: "arrow.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color.movo.textSecondary)
+                )
+        }
     }
 
     private func accountRow(

@@ -50,7 +50,7 @@ th:nth-child(1), td:nth-child(1) { width: 30%; }
 /* Amount column — enough for values like "$10.00"; never needs to be wide */
 th:nth-child(2), td:nth-child(2) { width: 20%; }
 /* Details column takes the remaining 48% — most room for description text */
-th { font-weight: var(--weight-semi); color: var(--fg); background: var(--surface); font-size: var(--size-eyebrow); letter-spacing: var(--track-eyebrow); text-transform: uppercase; }
+th { font-weight: var(--weight-semi); color: var(--fg); background: var(--surface); font-size: var(--size-eyebrow); letter-spacing: var(--track-eyebrow); text-transform: uppercase; white-space: nowrap; }
 td { color: var(--fg-secondary); }
 tr.odd  { background: var(--bg); }
 tr.even { background: var(--surface); }
