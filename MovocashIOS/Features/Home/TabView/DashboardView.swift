@@ -70,10 +70,12 @@ struct DashboardView: View {
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
     @State private var plaidInfoAllowFunding = true
-    // Set when the user taps "Continue" on the info sheet; consumed in onDismiss
-    // to start the Plaid flow once the sheet is gone.
     @State private var continueToPlaid = false
     @State private var startPlaidFlow = false
+    @State private var showFirstCardReward = false
+    @State private var firstCardRewardCard: VCardListResponse? = nil
+    @State private var didCheckFirstCardReward = false
+    @State private var pendingViewCardDetails = false
     
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -312,7 +314,7 @@ struct DashboardView: View {
             }
         }) {
             BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
-                .presentationDetents([.height(480)])
+                .presentationDetents([.height(430)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
                 .presentationBackground(Color.movo.cardSurface)
@@ -359,9 +361,55 @@ struct DashboardView: View {
         }
         .onAppear {
             showCreateCashCard = false
+            maybeShowFirstCardReward()
+        }
+        .onChange(of: dashboardVM.primaryLinkedCard?.id) { _ in
+            maybeShowFirstCardReward()
+        }
+        .fullScreenCover(isPresented: $showFirstCardReward, onDismiss: {
+            // Push CardDetailSheet only after the cover is fully gone.
+            if pendingViewCardDetails {
+                pendingViewCardDetails = false
+                selectedCard = firstCardRewardCard
+            }
+        }) {
+            FirstCardRewardView(
+                onViewDetails: {
+                    pendingViewCardDetails = true
+                    setFirstCardReward(false)
+                },
+                onClose: { setFirstCardReward(false) }
+            )
         }
     }
-    
+
+    /// Shows the one-time first-card reward for newly registered users.
+    ///
+    /// The `pendingFirstCardReward` flag is set on the post-registration landing
+    /// (`HomeTabBarView`); this consumes it using the primary card already
+    /// decoded from the Dashboard API (`dashboardVM.primaryLinkedCard`) — no extra
+    /// API call. If the card isn't ready yet at first appear, the flag stays set
+    /// and the `.onChange` on `primaryLinkedCard` retries once it loads. The
+    /// session guard prevents re-checking on tab re-entry.
+    private func maybeShowFirstCardReward() {
+        guard !didCheckFirstCardReward else { return }
+        guard UserDefaults.standard.bool(forKey: "pendingFirstCardReward") else { return }
+        guard let card = dashboardVM.primaryLinkedCard else { return }
+        didCheckFirstCardReward = true
+        firstCardRewardCard = card
+        setFirstCardReward(true)
+        UserDefaults.standard.set(false, forKey: "pendingFirstCardReward")
+    }
+
+    /// Show/hide the reward cover without its own bottom slide — `FirstCardRewardView`
+    /// runs the center zoom itself, on both present and dismiss.
+    private func setFirstCardReward(_ visible: Bool) {
+        // Qualify SwiftUI.Transaction — the app also defines a `Transaction` model.
+        var tx = SwiftUI.Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) { showFirstCardReward = visible }
+    }
+
     // MARK: - Subviews
     
     private var headerView: some View {

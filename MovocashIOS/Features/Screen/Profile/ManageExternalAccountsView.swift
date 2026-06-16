@@ -118,7 +118,7 @@ struct ManageExternalAccountsView: View {
             }
         }) {
             BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
-                .presentationDetents([.height(480)])
+                .presentationDetents([.height(430)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
                 .presentationBackground(Color.movo.cardSurface)
