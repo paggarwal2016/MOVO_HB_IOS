@@ -27,9 +27,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         clearOnFreshInstall()
 
         // 1. Firebase core (Analytics, Crashlytics — always active)
-        FirebaseApp.configure()
+        // FirebaseApp.configure()
         // 2. Analytics
-        Task { @MainActor in AnalyticsManager.shared.reapplyIdentity() }
+        // Task { @MainActor in AnalyticsManager.shared.reapplyIdentity() }
 
         // 3. Crashlytics — set user info after login
 

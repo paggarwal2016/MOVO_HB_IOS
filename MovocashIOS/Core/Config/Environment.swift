@@ -10,9 +10,11 @@ import Foundation
 // MARK: - AppEnvironment
 struct AppEnvironment {
     private init() {}
-    static let baseURL: URL = makeURL("https://api-staging.movocash.com")
+    static let baseURL: URL = makeURL("https://api.movo.money")
+    //static let baseURL: URL = makeURL("https://api-staging.movocash.com")
     //static let baseURL: URL = makeURL("https://api.dev.movo.money")       // SP URL
-    static let sdkURL: String = "https://api.qa.herringbank.com"          // SDK URL
+    
+    static let sdkURL: String = "https://api.qa.herringbank.com"// SDK URL
     
     private static func makeURL(_ string: String) -> URL {
         guard let url = URL(string: string) else {
