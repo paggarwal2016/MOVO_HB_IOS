@@ -69,6 +69,9 @@ public struct AddContactSheet: View {
     @FocusState private var focusedField: Field?
     /// Drives presentation of the native `CNContactPickerViewController`.
     @State private var showSystemPicker = false
+    /// True between tapping "Use phone contact" and the picker finishing presenting —
+    /// shows a loader during the picker's (out-of-process) launch delay.
+    @State private var isOpeningPicker = false
 
     private enum Field { case nickname, phone }
     
@@ -88,13 +91,17 @@ public struct AddContactSheet: View {
         .background(Color.movo.cardSurface.ignoresSafeArea())
         // Hosts the native contact picker; presents when `showSystemPicker` flips true.
         .background {
-            PhoneContactPicker(isPresented: $showSystemPicker) { name, phone in
+            PhoneContactPicker(
+                isPresented: $showSystemPicker,
+                onPresented: { isOpeningPicker = false }
+            ) { name, phone in
                 applyPickedContact(name: name, phone: phone)
             }
         }
-        // Loading overlay while the caller runs create-contact → check-intent.
+        // Loading overlay while the caller runs create-contact → check-intent,
+        // or while the native contact picker is launching.
         .overlay {
-            if isSubmitting {
+            if isSubmitting || isOpeningPicker {
                 SpinnerView()
             }
         }
@@ -151,6 +158,7 @@ public struct AddContactSheet: View {
     private func usePhoneContactButton() -> some View {
         UsePhoneContactButton {
             focusedField = nil
+            isOpeningPicker = true
             showSystemPicker = true
         }
         .padding(.horizontal, Spacing.lg)

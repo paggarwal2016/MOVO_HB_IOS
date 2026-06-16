@@ -94,7 +94,8 @@ final class AnalyticsManager: AnalyticsTracking {
             if let existingSub = try? await keychain.get(linkedSubKey, biometricPrompt: nil),
                existingSub == hashedSub,
                let stableId = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) {
-                Analytics.setUserID(stableId)
+//                Analytics.setUserID(stableId)
+                _ = stableId
                 return
             }
 
@@ -102,10 +103,10 @@ final class AnalyticsManager: AnalyticsTracking {
             let stableId = await DeviceManager.shared.deviceID().sha256Hashed
             try? await keychain.save(stableId, for: analyticsIdKey, protection: .backgroundSafe)
             try? await keychain.save(hashedSub, for: linkedSubKey, protection: .backgroundSafe)
-            Analytics.setUserID(stableId)
-            #if DEBUG
-            print("📊 [Analytics] identifyUser → new stableId set")
-            #endif
+//            Analytics.setUserID(stableId)
+//            #if DEBUG
+//            print("📊 [Analytics] identifyUser → new stableId set")
+//            #endif
         }
     }
 
@@ -117,7 +118,8 @@ final class AnalyticsManager: AnalyticsTracking {
                 await setAnonymousIdentity()
                 return
             }
-            Analytics.setUserID(stableId)
+//            Analytics.setUserID(stableId)
+            _ = stableId
             log(AnalyticsEvent.tokenRefreshed, params: [AnalyticsParam.reason: "silent_refresh"])
         }
     }
@@ -136,35 +138,36 @@ final class AnalyticsManager: AnalyticsTracking {
 
     private func setAnonymousIdentity() async {
         if let existing = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) {
-            Analytics.setUserID(existing)
-            #if DEBUG
-            print("📊 [Analytics] identifyUser → existing anonymousId reused")
-            #endif
+//            Analytics.setUserID(existing)
+            _ = existing
+//            #if DEBUG
+//            print("📊 [Analytics] identifyUser → existing anonymousId reused")
+//            #endif
             return
         }
         let anonId = "anon_\(UUID().uuidString)".sha256Hashed
         try? await keychain.save(anonId, for: analyticsIdKey, protection: .backgroundSafe)
-        Analytics.setUserID(anonId)
-        #if DEBUG
-        print("📊 [Analytics] identifyUser → new anonymousId set")
-        #endif
+//        Analytics.setUserID(anonId)
+//        #if DEBUG
+//        print("📊 [Analytics] identifyUser → new anonymousId set")
+//        #endif
     }
 
     // MARK: - Core
 
     func log(_ event: String, params: [String: Any]? = nil) {
-        #if DEBUG
-        let paramString = params?.map { "\($0.key): \($0.value)" }.joined(separator: ", ") ?? "none"
-        print("📊 [Analytics] Event: \(event) | Params: \(paramString)")
-        #endif
-        Analytics.logEvent(event, parameters: params)
+//        #if DEBUG
+//        let paramString = params?.map { "\($0.key): \($0.value)" }.joined(separator: ", ") ?? "none"
+//        print("📊 [Analytics] Event: \(event) | Params: \(paramString)")
+//        #endif
+//        Analytics.logEvent(event, parameters: params)
     }
 
     func setUserProperty(_ value: String, for key: String) {
-        #if DEBUG
-        print("📊 [Analytics] UserProperty: \(key) = \(value)")
-        #endif
-        Analytics.setUserProperty(value, forName: key)
+//        #if DEBUG
+//        print("📊 [Analytics] UserProperty: \(key) = \(value)")
+//        #endif
+//        Analytics.setUserProperty(value, forName: key)
     }
 
     // MARK: - Screen

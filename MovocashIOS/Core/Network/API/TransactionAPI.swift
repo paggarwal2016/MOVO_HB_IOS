@@ -69,7 +69,7 @@ enum TransactionAPI: Endpoint {
         case .lists:
             return nil
         case .filtered:
-            let request = UserActionRequest(userAction: "GET-TRANSACATIONS0DETAILS")
+            let request = UserActionRequest(userAction: "GET-TRANSACATIONS-DETAILS")
             return try JSONEncoder().encode(request)
         case .withdrawals(let request):
             return try JSONEncoder().encode(request)

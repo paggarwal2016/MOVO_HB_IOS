@@ -253,6 +253,11 @@
 			path = Font;
 			sourceTree = "<group>";
 		};
+		14CDC8512FE13A2E00C809EE /* Cert */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Cert;
+			sourceTree = "<group>";
+		};
 		14D7CA742FB3165B0032E35B /* Components */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Components;
@@ -344,6 +349,7 @@
 		146819572F4DE6CF00BED014 /* Network */ = {
 			isa = PBXGroup;
 			children = (
+				14CDC8512FE13A2E00C809EE /* Cert */,
 				145EB9F72F62A9560072DE68 /* API */,
 				146819522F4DE6CF00BED014 /* Endpoint.swift */,
 				146819532F4DE6CF00BED014 /* HTTPMethod.swift */,
@@ -623,6 +629,7 @@
 				1489F26B2F67E0C20046FAD4 /* TextInputAlert */,
 				14AC54BA2FA8952F0032574E /* Transaction */,
 				14B2CB892FA8BF7B0068FC23 /* Font */,
+				14CDC8512FE13A2E00C809EE /* Cert */,
 				14D7CA742FB3165B0032E35B /* Components */,
 				14DBC58E2F5014AD000D84FD /* Extensions */,
 				14DBC59B2F5081BE000D84FD /* Shield */,

@@ -34,6 +34,9 @@ struct QuickPayView: View {
     @State private var lastCheckedPhone: String = ""
     /// Drives presentation of the native `CNContactPickerViewController`.
     @State private var showSystemPicker = false
+    /// True between tapping "Use phone contact" and the picker finishing presenting —
+    /// shows a loader during the picker's (out-of-process) launch delay.
+    @State private var isOpeningPicker = false
     /// Drives the Continue/Cancel confirmation popup shown after check-intent succeeds.
     @State private var showConfirm = false
     /// True while the Pay-tap check-intent runs — blocks the screen with a spinner.
@@ -130,6 +133,7 @@ struct QuickPayView: View {
                             UsePhoneContactButton {
                                 amountFocused = false
                                 UIApplication.shared.dismissKeyboard()
+                                isOpeningPicker = true
                                 showSystemPicker = true
                             }
                         }
@@ -153,9 +157,9 @@ struct QuickPayView: View {
             }
             // The send (achVM) and the Pay-tap check-intent both show the spinner. The
             // keystroke check-intent on transVM still runs silently (see runCheckIntentIfReady).
-            .blur(radius: (achVM.state == .loading || isChecking) ? 3 : 0)
+            .blur(radius: (achVM.state == .loading || isChecking || isOpeningPicker) ? 3 : 0)
 
-            if achVM.state == .loading || isChecking {
+            if achVM.state == .loading || isChecking || isOpeningPicker {
                 Color.black.opacity(0.5).ignoresSafeArea()
                 SpinnerView()
             }
@@ -178,7 +182,10 @@ struct QuickPayView: View {
         .animation(.easeInOut(duration: 0.3), value: achVM.peerTransferSuccess?.id)
         // Hosts the native contact picker; presents when `showSystemPicker` flips true.
         .background {
-            PhoneContactPicker(isPresented: $showSystemPicker) { name, phone in
+            PhoneContactPicker(
+                isPresented: $showSystemPicker,
+                onPresented: { isOpeningPicker = false }
+            ) { name, phone in
                 applyPickedContact(name: name, phone: phone)
             }
         }

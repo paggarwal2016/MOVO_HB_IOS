@@ -7,65 +7,88 @@
 
 import Foundation
 import Security
+import CryptoKit
 
 final class SecureSessionDelegate: NSObject, URLSessionDelegate {
 
-    private let pinnedCertData: Data?
+    private let pinnedKeyHashes: Set<Data>
     private let pinningEnabled: Bool
 
     init(enabled: Bool = true) {
         self.pinningEnabled = enabled
-        if enabled {
-            if let path = Bundle.main.path(forResource: "server", ofType: "cer"),
-               let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                self.pinnedCertData = data
-            } else {
-                // Pinning is enabled but the certificate is missing from the bundle.
-                // Log and hard-fail — never silently downgrade to default TLS.
-                SecureLogger.error(
-                    "SSL pinning enabled but server.cer is missing from the bundle — all connections will be rejected",
-                    category: .security
-                )
-                self.pinnedCertData = nil
-            }
-        } else {
-            self.pinnedCertData = nil
+        let hashes = enabled ? Self.loadPinnedKeyHashes() : []
+
+        if enabled && hashes.isEmpty {
+            SecureLogger.error(
+                "SSL pinning enabled but no bundled certificate public key could be loaded — all connections will be rejected",
+                category: .security
+            )
         }
+        self.pinnedKeyHashes = hashes
     }
 
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping
                     (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        let (disposition, credential) = evaluate(challenge)
+        completionHandler(disposition, credential)
+    }
+
+    // MARK: - Challenge evaluation
+    private func evaluate(_ challenge: URLAuthenticationChallenge)
+        -> (URLSession.AuthChallengeDisposition, URLCredential?) {
 
         guard pinningEnabled else {
-            completionHandler(.performDefaultHandling, nil)
-            return
+            return (.performDefaultHandling, nil)
         }
-
-        guard let pinnedCertData else {
-            // Pinning is enabled but no cert loaded — hard fail, never downgrade.
-            SecureLogger.error(
-                "SSL challenge received but pinned cert is unavailable — rejecting connection",
-                category: .security
-            )
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            return
+        guard !pinnedKeyHashes.isEmpty else {
+            return reject("SSL challenge received but no pinned keys are available")
         }
-
-        guard let serverTrust = challenge.protectionSpace.serverTrust,
-              let certificateChain = SecTrustCopyCertificateChain(serverTrust) as? [SecCertificate],
-              let certificate = certificateChain.first else {
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            return
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+              let serverTrust = challenge.protectionSpace.serverTrust else {
+            return reject("Challenge is not a server-trust challenge")
         }
-
-        let serverData = SecCertificateCopyData(certificate) as Data
-
-        if serverData == pinnedCertData {
-            completionHandler(.useCredential, URLCredential(trust: serverTrust))
-        } else {
-            completionHandler(.cancelAuthenticationChallenge, nil)
+        guard SecTrustEvaluateWithError(serverTrust, nil) else {
+            return reject("Server trust evaluation failed")
         }
+        guard let chain = SecTrustCopyCertificateChain(serverTrust) as? [SecCertificate],
+              chain.contains(where: { Self.publicKeyHash(from: $0).map(pinnedKeyHashes.contains) ?? false }) else {
+            return reject("No certificate in the server chain matched a pinned key")
+        }
+        return (.useCredential, URLCredential(trust: serverTrust))
+    }
+
+    /// Logs the rejection reason and returns the cancel disposition.
+    private func reject(_ reason: String)
+        -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        SecureLogger.error("\(reason) — rejecting connection", category: .security)
+        return (.cancelAuthenticationChallenge, nil)
+    }
+
+    // MARK: - Key extraction
+    private static func loadPinnedKeyHashes() -> Set<Data> {
+        var urls: [URL] = []
+        if let server = Bundle.main.url(forResource: "server", withExtension: "cer") {
+            urls.append(server)
+        }
+        urls.append(contentsOf: Bundle.main.urls(forResourcesWithExtension: "cer", subdirectory: nil) ?? [])
+
+        return Set(urls.compactMap { url -> Data? in
+            guard let data = try? Data(contentsOf: url),
+                  let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
+                return nil
+            }
+            return publicKeyHash(from: certificate)
+        })
+    }
+
+    /// SHA-256 hash of a certificate's public key (external/DER representation).
+    private static func publicKeyHash(from certificate: SecCertificate) -> Data? {
+        guard let publicKey = SecCertificateCopyKey(certificate),
+              let keyData = SecKeyCopyExternalRepresentation(publicKey, nil) as Data? else {
+            return nil
+        }
+        return Data(SHA256.hash(data: keyData))
     }
 }
