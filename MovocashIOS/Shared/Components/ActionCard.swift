@@ -20,8 +20,7 @@ struct ActionCard: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             // Section eyebrow — the tile title (e.g. "QUICK SEND").
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.2)
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
 
             // Inner card — tappable empty state.
@@ -39,42 +38,49 @@ struct ActionCard: View {
                     .padding(.top, Spacing.md)
 
                     // Message — the section's `description` (e.g. "No recent contacts yet").
+                    // +3pt over Typography.subtitle (13pt regular, tracking 0)
                     if !description.isEmpty {
                         Text(description)
-                            .textStyle(Typography.subtitle)
+                            .font(.system(size: 16, weight: .regular))
+                            .tracking(0)
                             .foregroundStyle(theme.textSecondary.color)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
                     // Accent action — the API action's `label` (e.g. "Add someone").
+                    // +3pt over Typography.button (12pt semibold, tracking 0.2)
                     Text(buttonLabel)
-                        .textStyle(Typography.button)
+                        .font(.system(size: 15, weight: .semibold))
+                        .tracking(0.2)
                         .foregroundStyle(Color.movo.accent)
                         .padding(.bottom, Spacing.md)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.sm)
                 .padding(.horizontal, Spacing.lg)
-                .background(Color.movo.cardSurface)
+                .background(
+                    LinearGradient(
+                        stops: [
+                            .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
+                            .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
+                            .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint:   .bottomTrailing
+                    )
+                )
                 .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                        .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
+                        .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: DesignTokens.Stroke.hairline)
                 )
                 .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(isLoading)
         }
-        .padding(Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.movo.surface)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
-        )
     }
 }
 
