@@ -20,8 +20,7 @@ struct ActionCard: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             // Section eyebrow — the tile title (e.g. "QUICK SEND").
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.2)
+                .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
 
             // Inner card — tappable empty state.
@@ -56,25 +55,28 @@ struct ActionCard: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.sm)
                 .padding(.horizontal, Spacing.lg)
-                .background(Color.movo.cardSurface)
+                .background(
+                    LinearGradient(
+                        stops: [
+                            .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
+                            .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
+                            .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint:   .bottomTrailing
+                    )
+                )
                 .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                        .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
+                        .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: DesignTokens.Stroke.hairline)
                 )
                 .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(isLoading)
         }
-        .padding(Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.movo.surface)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
-        )
     }
 }
 
