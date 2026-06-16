@@ -247,7 +247,7 @@ struct QuickTransferView: View {
         Group {
             if displayCards.isEmpty {
                 HStack {
-                    Text("No cards available")
+                    Text("No funding source linked yet")
                         .textStyle(Typography.caption)
                         .foregroundColor(Color.movo.textTertiary)
                     Spacer()
