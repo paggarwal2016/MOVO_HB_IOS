@@ -99,55 +99,72 @@ struct LinkedAccountsSectionView: View {
 
     private var listState: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            
+
+            // Header — sits OUTSIDE the card, like CardSelectorView's section title.
             Text(title.uppercased())
                 .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
 
-            VStack(spacing: 0) {
-                ForEach(accounts.indices, id: \.self) { index in
-                    LinkedAccountRowView(account: accounts[index])
-                    if index < accounts.count - 1 {
-                        Rectangle()
-                            .fill(Color.movo.cardBorder)
-                            .frame(height: Stroke.hairline)
-                    }
-                }
-            }
+            // Card — only the accounts list + connect-another action carry the surface.
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
 
-            Button(action: onConnectAnother) {
-                HStack(spacing: 12) {
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.textSecondary))
-                            .scaleEffect(0.8)
-                    } else {
-                        Text(buttonLabel)
-                            .textStyle(Typography.body)
-                            .foregroundStyle(Color.movo.accent)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        MovoChevron(.disclosure)
+                VStack(spacing: 0) {
+                    ForEach(accounts.indices, id: \.self) { index in
+                        LinkedAccountRowView(account: accounts[index])
+                        if index < accounts.count - 1 {
+                            Rectangle()
+                                .fill(Color.movo.cardBorder)
+                                .frame(height: Stroke.hairline)
+                        }
                     }
                 }
-                .padding(.vertical, Spacing.md)
-                .padding(.top, Spacing.sm)
+
+                Button(action: onConnectAnother) {
+                    HStack(spacing: 12) {
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.textSecondary))
+                                .scaleEffect(0.8)
+                        } else {
+                            Text(buttonLabel.uppercased())
+                                .textStyle(Typography.eyebrow)
+                                .foregroundColor(Color.movo.accent)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            MovoChevron(.disclosure)
+                        }
+                    }
+                    .padding(.vertical, Spacing.md)
+                    .padding(.top, Spacing.sm)
+                }
+                .buttonStyle(.plain)
+                .disabled(isLoading)
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(Color.movo.cardBorder)
+                        .frame(height: Stroke.hairline)
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(isLoading)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.movo.cardBorder)
-                    .frame(height: Stroke.hairline)
-            }
+            .padding(DesignTokens.Spacing.lg)
+            // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid
+            // gradient with a silver hairline border.
+            .background(
+                LinearGradient(
+                    stops: [
+                        .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
+                        .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
+                        .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint:   .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                    .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: DesignTokens.Stroke.hairline)
+            )
         }
-        .padding(DesignTokens.Spacing.lg)
-        .background(Color.movo.cardSurface)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .strokeBorder(Color.movo.borderStrong, lineWidth: DesignTokens.Stroke.hairline)
-        )
     }
 }
 

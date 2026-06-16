@@ -70,7 +70,7 @@ struct BalanceCardView: View {
                 Spacer()
 
                 if showViewCard {
-                    MovoActionButton("View Card") { onViewCardTap() }
+                    MovoActionButton("View Card".uppercased()) { onViewCardTap() }
                 }
             }
         }

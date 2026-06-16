@@ -229,13 +229,23 @@ struct PayAnyoneAddContactView: View {
             }
             .padding(Spacing.cardPadding)
             .frame(maxWidth: .infinity)
+            // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid
+            // gradient with a silver hairline border.
             .background(
-                RoundedRectangle(cornerRadius: Radius.heroCard)
-                    .fill(Color.movo.cardSurface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.heroCard)
-                            .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
-                    )
+                LinearGradient(
+                    stops: [
+                        .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
+                        .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
+                        .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint:   .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                    .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: DesignTokens.Stroke.hairline)
             )
         }
     }
