@@ -49,7 +49,7 @@ actor NetworkService: NetworkServiceProtocol {
 
         self.session = URLSession(
             configuration: config,
-            delegate: SecureSessionDelegate(enabled: true),
+            delegate: SecureSessionDelegate(enabled: false),
             delegateQueue: nil
         )
         self.builder = RequestBuilder()
