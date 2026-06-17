@@ -142,12 +142,10 @@ struct QuickTransferView: View {
             if !focused && amountText.isEmpty { amountText = "0" }
         }
         .globalAlert()
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+        .onSessionExpired {
+            // Cancel the in-flight send only; RootView navigates to login.
             sendTask?.cancel()
             sendTask = nil
-            showConfirmSheet = false
-            showAccountSheet = false
-            (securedDismiss ?? dismiss)()
         }
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(

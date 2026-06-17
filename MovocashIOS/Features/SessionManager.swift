@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UIKit
 
 // MARK: - Session Gate
 
@@ -293,11 +294,29 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Reset App State
     private func resetAppState(_ appState: AppState) {
-        appState.context = nil
-        appState.otpVerified = false
-        appState.isAuthenticated = false
-        appState.flow = .choice
-        appState.invalidateProtectedShell()
+        // Backstop: silently drop any presented modal stack (sheets / full-screen
+        // covers) so nothing lingers over the login screen, regardless of which
+        // screen the session expired on. Non-animated → no visible transition.
+        // No-op if SwiftUI already tore the modal down with the shell.
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?
+            .rootViewController?
+            .dismiss(animated: false)
+
+        // Single, non-animated transition to login. Swapping `flow` to `.choice`
+        // and regenerating the protected-shell id tears down the entire protected
+        // tree — and any sheets/covers it presents — in one step, so the app lands
+        // directly on the login screen with no per-screen dismiss animations.
+        var transaction = SwiftUI.Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            appState.context = nil
+            appState.otpVerified = false
+            appState.isAuthenticated = false
+            appState.flow = .choice
+            appState.invalidateProtectedShell()
+        }
         // RSA keys are intentionally kept across logout so the biometric login
         // button re-appears on ChoiceScreen. Keys are only cleared when the user
         // explicitly disables biometrics in Settings or the server rejects the key.

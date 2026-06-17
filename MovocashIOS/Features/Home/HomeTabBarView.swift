@@ -105,11 +105,12 @@ struct HomeTabBarView: View {
         }
         .onChange(of: displayScale)  { _ in refreshHomeIcons() }
         .onChange(of: colorScheme)   { _ in refreshHomeIcons() }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+        .onSessionExpired {
+            // Cancel in-flight loads only. RootView performs the single, silent
+            // navigation to the login flow; no per-screen dismissal here.
             dashboardVM.cancelAllTasks()
             linkAccountVM.cancelAllTasks()
             vCardVM.cancelAllTasks()
-            selectedTab = .home
         }
         .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
             // Land on the dashboard tab (covers the profile-originated flows).

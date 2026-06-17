@@ -190,10 +190,6 @@ struct TransactionListView: View {
             .presentationDragIndicator(.visible)
         }
         .task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-            showFilterSheet = false
-            (securedDismiss ?? dismiss)()
-        }
     }
     
     // MARK: - Content
