@@ -108,3 +108,25 @@ extension View {
         modifier(SubtitleStyle())
     }
 }
+
+
+// MARK: - Session Expiry
+
+extension View {
+    /// Runs `action` when the server broadcasts `.sessionExpired` (a 401 or
+    /// session-timeout response).
+    ///
+    /// The handler fires synchronously, in the same notification cycle as the
+    /// poster and *before* `RootView`'s deferred session reset (which wipes
+    /// credentials and returns to the login flow). A screen uses it to cancel
+    /// in-flight work and close its own sheets / covers so nothing sensitive
+    /// lingers — and no in-flight request completes — once the session is gone.
+    ///
+    /// Centralizes the per-screen `onReceive(.sessionExpired)` cleanup so new
+    /// sheet/cover-presenting screens can opt in with a single, consistent call.
+    func onSessionExpired(perform action: @escaping () -> Void) -> some View {
+        onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            action()
+        }
+    }
+}

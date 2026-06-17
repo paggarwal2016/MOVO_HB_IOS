@@ -123,6 +123,11 @@ struct BankLinkedSuccessScreen: View {
             isSubmitting = false
             showConfirmSheet = false
         }
+        .onSessionExpired {
+            // Cancel the in-flight deposit only; RootView navigates to login.
+            transferTask?.cancel()
+            transferTask = nil
+        }
         // Load the MOVO primary from VCardAPI.getVCardsPrimary for the "To" field.
         // Works with or without an injected container (falls back to the shared
         // network) so the "To" row populates in every flow.

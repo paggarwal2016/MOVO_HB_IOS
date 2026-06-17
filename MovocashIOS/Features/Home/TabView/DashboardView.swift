@@ -352,24 +352,6 @@ struct DashboardView: View {
             needsDashboardRefresh = false
             Task { await dashboardVM.refresh() }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-            // Reset every navigation flag so the inner NavigationStack has no active
-            // destinations to animate away when the flow changes to .choice.
-            // This fires in the same notification cycle as MovocashIOSApp.onReceive
-            // (which is deferred by one Task), so these dismissals happen first.
-            selectedCard = nil
-            showTransactions = false
-            showViewCardList = false
-            showViewCard = false
-            showMoveMoney = false
-            showQuickPayView = false
-            showAllFrequents = false
-            showFundAccount = false
-            showInternalTransfer = false
-            showAccountDetail = false
-            showCreateCashCard = false
-            payeeFlow.reset()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
             // Collapse any dashboard-originated push (e.g. FundAccountView) back to
             // the dashboard in one transition, then refresh.

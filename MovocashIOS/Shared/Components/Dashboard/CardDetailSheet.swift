@@ -121,31 +121,26 @@ struct CardDetailSheet: View {
         } message: {
             Text("Are you sure you want to delete this card? This action cannot be undone.")
         }
-        .sheet(isPresented: $showAllTransactions) {
+        .fullScreenCover(isPresented: $showAllTransactions) {
             if let accountId = card.savingsAccountId {
                 TransactionListView(
                     container: container,
                     accountId: accountId,
                     mode: .individual,
-                    initialMax: 500
+                    initialMax: 50
                 )
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+        .onSessionExpired {
+            // Cancel in-flight wallet/delete/refresh work only; RootView navigates to login.
             walletTask?.cancel()
             walletTask = nil
             deleteTask?.cancel()
             deleteTask = nil
             refreshTask?.cancel()
             refreshTask = nil
-            showDeleteConfirm = false
-            showTransfer = false
-            showAllTransactions = false
-            isLoading = false
-            isDeleting = false
-            (securedDismiss ?? dismiss)()
         }
-        .sheet(isPresented: $showTransfer) {
+        .fullScreenCover(isPresented: $showTransfer) {
             // The transfer uses the card list directly; `clientId` (user-level) is
             // the only value not carried on the card, so it comes from the primary
             // account passed down from the Dashboard.

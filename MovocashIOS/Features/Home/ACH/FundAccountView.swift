@@ -151,13 +151,10 @@ struct FundAccountView: View {
             if focused && amount == "0" { amount = "" }
             if !focused && amount.isEmpty { amount = "0" }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+        .onSessionExpired {
+            // Cancel the in-flight transfer only; RootView navigates to login.
             transferTask?.cancel()
             transferTask = nil
-            isSubmitting = false
-            showConfirmSheet = false
-            showAccountSheet = false
-            (securedDismiss ?? dismiss)()
         }
         .sheet(isPresented: $showConfirmSheet) {
             let fromName = isProfileMode ? (primaryAccount?.displayName ?? "MOVO") : (selectedAccount?.accountName ?? "—")

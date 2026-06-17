@@ -226,12 +226,6 @@ struct InternalTransferView: View {
             guard loaded else { return }
             resolveCardSelection()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-            showConfirmSheet = false
-            showCardSheet = false
-            showFromCardSheet = false
-            (securedDismiss ?? dismiss)()
-        }
     }
 
     // MARK: - Nav Bar

@@ -205,13 +205,10 @@ struct QuickPayView: View {
             onCancel: { pendingSend = false; setConfirm(false) }
         )
         .globalAlert()
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+        .onSessionExpired {
+            // Cancel the in-flight send only; RootView navigates to login.
             sendTask?.cancel()
             sendTask = nil
-            isChecking = false
-            pendingSend = false
-            showConfirm = false
-            (securedDismiss ?? dismiss)()
         }
     }
 

@@ -55,7 +55,7 @@ struct SavingAccountDetailView: View {
                     container: container,
                     accountId: accountId,
                     mode: .individual,
-                    initialMax: 500
+                    initialMax: 50
                 )
             }
         }
