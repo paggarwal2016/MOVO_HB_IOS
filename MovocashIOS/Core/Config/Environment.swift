@@ -24,7 +24,7 @@ enum AppEnvironmentType {
     var sdkURLString: String {
         switch self {
         case .production, .staging, .dev:
-            return "https://api.qa.herringbank.com"
+            return "https://api.mobile-banking-prod.herringbank.com"
         }
     }
 }
@@ -32,7 +32,7 @@ enum AppEnvironmentType {
 // MARK: - AppEnvironment
 struct AppEnvironment {
     private init() {}
-    static let current: AppEnvironmentType = .staging // 🔁 Switch the Environment
+    static let current: AppEnvironmentType = .production // 🔁 Switch the Environment
     static let baseURL: URL   = makeURL(current.baseURLString)
     static let sdkURL: String = current.sdkURLString
 
@@ -60,5 +60,5 @@ final class AppConfig {
     
     /// When `true`, protection is applied automatically:
     /// When `false`, all of the above is disabled — screenshots and screen
-    static let isScreenProtectionEnabled: Bool = false
+    static let isScreenProtectionEnabled: Bool = true
 }
