@@ -2,6 +2,32 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSPinnedDomains</key>
+		<dict>
+			<key>api.movo.money</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<false/>
+				<key>NSPinnedCAIdentities</key>
+				<array>
+					<dict>
+						<!-- Google Trust Services "WR3" intermediate (server.cer) -->
+						<key>SPKI-SHA256-BASE64</key>
+						<string>OdSlmQD9NWJh4EbcOHBxkhygPwNSwA9Q91eounfbcoE=</string>
+					</dict>
+					<dict>
+						<!-- Backup: GTS Root R1 — survives WR3 intermediate rotation -->
+						<key>SPKI-SHA256-BASE64</key>
+						<string>hxqRlPTu1bMS/0DITB1SSu0vd4u/8l8TjPgfaAp63Gc=</string>
+					</dict>
+				</array>
+			</dict>
+		</dict>
+	</dict>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<false/>
 	<key>FirebaseMessagingAutoInitEnabled</key>

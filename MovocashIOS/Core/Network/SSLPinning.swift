@@ -24,6 +24,12 @@ final class SecureSessionDelegate: NSObject, URLSessionDelegate {
                 category: .security
             )
         }
+#if DEBUG
+        SecureLogger.debug(
+            "SSL pinning \(enabled ? "active with \(hashes.count) pinned key(s)" : "disabled")",
+            category: .security
+        )
+#endif
         self.pinnedKeyHashes = hashes
     }
 
@@ -45,9 +51,14 @@ final class SecureSessionDelegate: NSObject, URLSessionDelegate {
         guard !pinnedKeyHashes.isEmpty else {
             return reject("SSL challenge received but no pinned keys are available")
         }
-        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
-              let serverTrust = challenge.protectionSpace.serverTrust else {
-            return reject("Challenge is not a server-trust challenge")
+        // Only server-trust challenges are pinned. Any other challenge type
+        // (client certificate, HTTP basic/digest, etc.) is handed back to the
+        // default machinery — cancelling it here would break those auth flows.
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust else {
+            return (.performDefaultHandling, nil)
+        }
+        guard let serverTrust = challenge.protectionSpace.serverTrust else {
+            return reject("Server-trust challenge received without a serverTrust object")
         }
         guard SecTrustEvaluateWithError(serverTrust, nil) else {
             return reject("Server trust evaluation failed")
@@ -68,11 +79,11 @@ final class SecureSessionDelegate: NSObject, URLSessionDelegate {
 
     // MARK: - Key extraction
     private static func loadPinnedKeyHashes() -> Set<Data> {
-        var urls: [URL] = []
-        if let server = Bundle.main.url(forResource: "server", withExtension: "cer") {
-            urls.append(server)
-        }
-        urls.append(contentsOf: Bundle.main.urls(forResourcesWithExtension: "cer", subdirectory: nil) ?? [])
+        // Pin the public key of every bundled `.cer` (currently the Google Trust
+        // Services "WR3" intermediate, `server.cer`). Enumerating all certificates
+        // means a backup / rotation pin can be added simply by dropping another
+        // `.cer` into the bundle — no code change required.
+        let urls = Bundle.main.urls(forResourcesWithExtension: "cer", subdirectory: nil) ?? []
 
         return Set(urls.compactMap { url -> Data? in
             guard let data = try? Data(contentsOf: url),
