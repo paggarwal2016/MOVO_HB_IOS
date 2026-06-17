@@ -15,16 +15,13 @@ struct CreateCashCardView: View {
     let vm: VCardViewModel
     /// Dismisses this sheet (used by the close button).
     let onClose: () -> Void
-    /// Invoked when the user taps Done on the success screen. The presenter
-    /// dismisses this sheet (which tears down the success cover with it) and
-    /// refreshes its data.
-    let onFinished: () -> Void
+    /// Invoked after the card is created successfully. The presenter is expected
+    /// to dismiss this sheet and then present the success screen, passing along
+    /// the created card.
+    let onCreated: (VCardListResponse) -> Void
 
     // MARK: - State
 
-    /// The just-created card. Setting it presents the success cover on top of
-    /// this screen; the create form stays silently behind the full-screen cover.
-    @State private var createdCard: VCardListResponse? = nil
     @State private var nickname = ""
     @State private var pin = ""
     @State private var confirmPin = ""
@@ -58,7 +55,15 @@ struct CreateCashCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            CustomSheetHeader(
+                title: "Create your cash card",
+                subtitle: "Let's MOVO your way",
+                systemImage: "creditcard.fill",
+                iconTint: Color.movo.accent,
+                iconBackground: Color.movo.accentTint,
+                horizontalPadding: Spacing.xl,
+                closeAction: onClose
+            )
             VStack(spacing: Spacing.xl) {
                 nicknameField
                 pinSection
@@ -82,64 +87,6 @@ struct CreateCashCardView: View {
         .onDisappear {
             SpinnerView.hideFullScreen()
         }
-        // Present the success dialog centered over the screen.
-        .fullScreenCover(item: $createdCard, onDismiss: { onFinished() }) { card in
-            ZStack {
-                Color.black.opacity(0.55).ignoresSafeArea()
-                CashCardCreateSuccess(card: card, onDone: { createdCard = nil })
-                    .frame(width: 320)
-            }
-            .presentationBackground(.clear)
-        }
-    }
-}
-
-// MARK: - Header
-
-private extension CreateCashCardView {
-
-    var header: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.accentTint)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.button)
-                            .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
-                    )
-                MovoMVSymbol()
-                    .frame(width: 20, height: 20)
-            }
-            .frame(width: 38, height: 38)
-
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text("Create your cash card")
-                    .textStyle(Typography.cardTitle)
-                    .foregroundStyle(Color.movo.textPrimary)
-                Text("Let's MOVO your way")
-                    .textStyle(Typography.subtitle)
-                    .foregroundColor(Color.movo.accent)
-            }
-
-            Spacer()
-
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.movo.textSecondary)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        Circle()
-                            .fill(Color.movo.elevated.opacity(0.8))
-                            .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close")
-        }
-        .padding(.horizontal, Spacing.xl)
-        .padding(.top, Spacing.xl)
-        .padding(.bottom, Spacing.md)
     }
 }
 
@@ -288,7 +235,7 @@ private extension CreateCashCardView {
             await MainActor.run {
                 isLoading = false
                 SpinnerView.hideFullScreen()
-                if let card { createdCard = card }
+                if let card { onCreated(card) }
             }
         }
     }

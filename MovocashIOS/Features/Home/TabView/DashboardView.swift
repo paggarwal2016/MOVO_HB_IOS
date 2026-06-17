@@ -76,6 +76,10 @@ struct DashboardView: View {
     @State private var firstCardRewardCard: VCardListResponse? = nil
     @State private var didCheckFirstCardReward = false
     @State private var pendingViewCardDetails = false
+    /// The card just created in CreateCashCardView. Held while the create sheet
+    @State private var createdCashCard: VCardListResponse? = nil
+    /// Drives the post-create success cover.
+    @State private var showCashCardSuccess = false
     @State private var showInsufficientBalance = false
     /// true = branch A (no linked bank → open Plaid), false = branch B (has bank → open Fund screen)
     @State private var insufficientBalanceUsePlaid = false
@@ -108,14 +112,14 @@ struct DashboardView: View {
             }
         }
         .dimmingOverlay(isActive: isSheetActive)
-        .sheet(isPresented: $showCreateCashCard) {
+        .sheet(isPresented: $showCreateCashCard, onDismiss: {
+            if createdCashCard != nil { showCashCardSuccess = true }
+        }) {
             CreateCashCardView(
                 vm: vm,
                 onClose: { showCreateCashCard = false },
-                onFinished: {
-                    // Done on the success screen — dismiss the sheet (and the
-                    // success cover with it), then refresh in the background. The
-                    // refresh re-decrypts the MYCARDS payload and repopulates cards.
+                onCreated: { card in
+                    createdCashCard = card
                     showCreateCashCard = false
                     Task { await dashboardVM.refresh() }
                 }
@@ -124,6 +128,23 @@ struct DashboardView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
+        }
+        .fullScreenCover(isPresented: $showCashCardSuccess, onDismiss: {
+            createdCashCard = nil
+        }) {
+            if let card = createdCashCard {
+                ZStack {
+                    Color.black.opacity(0.55).ignoresSafeArea()
+                    CashCardCreateSuccess(card: card, onDone: {
+                        selectedCard = createdCashCard
+                        var tx = SwiftUI.Transaction()
+                        tx.disablesAnimations = true
+                        withTransaction(tx) { showCashCardSuccess = false }
+                    })
+                    .frame(width: 320)
+                }
+                .presentationBackground(.clear)
+            }
         }
         .sheet(isPresented: $showAccountDetail) {
             if let account = displayAccount {

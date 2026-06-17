@@ -46,6 +46,11 @@ struct ViewCardsListScreen: View {
     @State private var selectedCard: VCardListResponse?
     @State private var showCardDetail = false
     @State private var showCreateCard = false
+    /// The card just created. Held while the create sheet dismisses so the
+    /// success cover can present it next.
+    @State private var createdCard: VCardListResponse? = nil
+    /// Drives the post-create success cover.
+    @State private var showCreateSuccess = false
     @State private var deletedCardIds: Set<String> = []
     /// Set when a card is created or deleted here; triggers a dashboard refresh on exit.
     @State private var hasChanges = false
@@ -75,15 +80,20 @@ struct ViewCardsListScreen: View {
             }
         }
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showCreateCard) {
+        .sheet(isPresented: $showCreateCard, onDismiss: {
+            // Present the success cover only after the create sheet is fully gone.
+            if createdCard != nil { showCreateSuccess = true }
+        }) {
             CreateCashCardView(
                 vm: cardVM,
                 onClose: { showCreateCard = false },
-                onFinished: {
-                    // Done on the success screen — dismiss the sheet (and the
-                    // success cover with it), then reload this list in the background.
+                onCreated: { card in
+                    // Card created — hold it and dismiss the create sheet; the
+                    // success cover presents next via the sheet's onDismiss.
+                    createdCard = card
                     showCreateCard = false
                     hasChanges = true
+                    // Reload this list in the background so the new card appears.
                     Task { await cardVM.loadCards(primaryAccountId: primaryAccountId) }
                 }
             )
@@ -92,6 +102,24 @@ struct ViewCardsListScreen: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
+        }
+        .fullScreenCover(isPresented: $showCreateSuccess, onDismiss: {
+            createdCard = nil
+        }) {
+            if let card = createdCard {
+                ZStack {
+                    Color.black.opacity(0.55).ignoresSafeArea()
+                    CashCardCreateSuccess(card: card, onDone: {
+                        selectedCard = card
+                        showCardDetail = true
+                        var tx = SwiftUI.Transaction()
+                        tx.disablesAnimations = true
+                        withTransaction(tx) { showCreateSuccess = false }
+                    })
+                    .frame(width: 320)
+                }
+                .presentationBackground(.clear)
+            }
         }
         .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {
