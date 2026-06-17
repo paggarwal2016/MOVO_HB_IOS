@@ -81,6 +81,7 @@ struct CardItemView: View {
         }
         .padding(Spacing.lg)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .drawingGroup()
     }
 
     // MARK: - Surface layers
@@ -182,6 +183,7 @@ struct CardItemView: View {
         .padding(.vertical, Spacing.md)
         .padding(.bottom, 5)
         .frame(maxWidth: .infinity)
+        .drawingGroup()
         .contentShape(Rectangle())
         .onTapGesture { onDetail?() }
     }
@@ -247,7 +249,7 @@ struct CardSelectorView: View {
                             } else {
                                 let peek: CGFloat = index == 0 ? 0 : 28
                                 selectedIndex = index
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 1.0)) {
                                     targetOffset = CGFloat(-index) * cardStride + peek
                                 }
                             }
@@ -312,7 +314,7 @@ struct CardSelectorView: View {
                                 .onTapGesture {
                                     let peek: CGFloat = index == 0 ? 0 : 28
                                     selectedIndex = index
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 1.0)) {
                                         targetOffset = CGFloat(-index) * cardStride + peek
                                     }
                                 }
