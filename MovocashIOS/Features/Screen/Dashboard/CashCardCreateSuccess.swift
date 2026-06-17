@@ -29,7 +29,7 @@ struct CashCardCreateSuccess: View {
 
             Spacer().frame(height: Spacing.xxl)
 
-            Text("Your MOVO cash card created!")
+            Text("Your MOVOCASH card created!")
                 .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.accent)
                 .padding(.horizontal, Spacing.lg)
