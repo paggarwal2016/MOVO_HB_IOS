@@ -40,6 +40,7 @@ public struct MovoColorScheme: Sendable {
     public let accentTint:      ColorToken   // Accent backgrounds (badges, hover)
     public let accentBorder:    ColorToken   // Accent strokes / focus rings
     public let accentSoft:      ColorToken   // Accent halos / glow shadows
+    public let heritageGreenLine: ColorToken  // Illustration stroke green — adaptive brightness
 
     // Text
     public let textPrimary:     ColorToken   // Headlines, primary numbers
@@ -98,6 +99,7 @@ public struct MovoColorScheme: Sendable {
         accentTint:    DesignTokens.Palette.accent.opacity(0.12),
         accentBorder:  DesignTokens.Palette.accent.opacity(0.40),
         accentSoft:    DesignTokens.Palette.accent.opacity(0.06),
+        heritageGreenLine: DesignTokens.Palette.heritageGreenLine,
 
         textPrimary:   DesignTokens.Palette.textPrimary,
         textSecondary: DesignTokens.Palette.textSecondary,

@@ -21,7 +21,8 @@ extension Color {
         public static var accent:        Color { MovoTheme.color.accent.color }
         public static var accentTint:    Color { MovoTheme.color.accentTint.color }
         public static var accentBorder:  Color { MovoTheme.color.accentBorder.color }
-        public static var accentSoft:    Color { MovoTheme.color.accentSoft.color }
+        public static var accentSoft:       Color { MovoTheme.color.accentSoft.color }
+        public static var heritageGreenLine: Color { MovoTheme.color.heritageGreenLine.color }
 
         public static var textPrimary:   Color { MovoTheme.color.textPrimary.color }
         public static var textSecondary: Color { MovoTheme.color.textSecondary.color }

@@ -60,6 +60,15 @@ public enum DesignTokens {
         public static let accent = ColorToken(
             light: 0x629F86, dark: 0x629F86, name: "accent")
 
+        // Illustration line stroke — Heritage Green, lightened for hairline
+        // legibility on dark canvas surfaces. light: same as accent (reads on
+        // platinum bg at 2.5pt). dark: +25% HSL lightness for near-black (#0C1018).
+        public static let heritageGreenLine = ColorToken(
+            light: 0x629F86,   // = accent; adequate on #F2F3F6 at 2.5pt
+            dark:  0x7EC4A8,   // ~+25% L — reads cleanly on near-black at hairline
+            name: "heritageGreenLine"
+        )
+
         // Balloon illustration pigments — LOCKED, non-adaptive.
         // Used exclusively in RegistrationCelebrationHero for the balloon sheen and
         // shadow/knot. Do NOT use as text or interactive-element colors — these are

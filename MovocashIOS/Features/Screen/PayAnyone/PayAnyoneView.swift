@@ -560,113 +560,120 @@ struct PayAnyoneView: View {
 //    }
 //}
 
-// MARK: - Quick Pay / Send Money Illustration
+// MARK: - Quick Pay / Send Money Illustration (line-art)
 
 struct QuickPayHeroIllustration: View {
 
-    /// Virtual design canvas. Every coordinate below is expressed in this space,
-    /// then uniformly scaled and centered into whatever frame the parent supplies —
-    /// so the art never clips or drifts regardless of the outer `.frame`.
+    /// Virtual design canvas (pts). All coordinates below are in this space;
+    /// GeometryReader scales them uniformly into whatever frame the parent sets.
     private let design = CGSize(width: 140, height: 100)
 
     var body: some View {
-        Canvas { context, size in
-            let scale = min(size.width / design.width, size.height / design.height)
-            var ctx = context
-            // Center the scaled design within the available space.
-            ctx.translateBy(
-                x: (size.width - design.width * scale) / 2,
-                y: (size.height - design.height * scale) / 2
-            )
-            ctx.scaleBy(x: scale, y: scale)
-            // From here on, draw directly in design coordinates.
+        GeometryReader { geo in
+            let scale = min(geo.size.width / design.width,
+                            geo.size.height / design.height)
+            let ox = (geo.size.width  - design.width  * scale) / 2
+            let oy = (geo.size.height - design.height * scale) / 2
 
-            drawGlow(ctx)
-            drawFlowArc(ctx)
-            drawFigure(ctx, baseCenter: CGPoint(x: 26, y: 78), color: Color.movo.textTertiary, dim: true)
-            drawFigure(ctx, baseCenter: CGPoint(x: 114, y: 78), color: Color.movo.textPrimary, dim: false)
-            drawParticles(ctx)
-            drawCard(ctx, center: CGPoint(x: 70, y: 26))
+            ZStack {
+                // Canvas: glow, arcs, figure strokes, card stroke + magstripe
+                Canvas { context, size in
+                    var ctx = context
+                    ctx.translateBy(x: ox, y: oy)
+                    ctx.scaleBy(x: scale, y: scale)
+
+                    drawGlow(ctx)
+                    drawArc(ctx, from: CGPoint(x: 70, y: 28), to: CGPoint(x: 28, y: 56),
+                            control: CGPoint(x: 36, y: 8))
+                    drawArc(ctx, from: CGPoint(x: 70, y: 28), to: CGPoint(x: 112, y: 56),
+                            control: CGPoint(x: 104, y: 8))
+                    drawFigure(ctx, center: CGPoint(x: 26, y: 76), dim: true)
+                    drawFigure(ctx, center: CGPoint(x: 114, y: 76), dim: false)
+                    drawCard(ctx, center: CGPoint(x: 70, y: 26))
+                }
+
+                // MV symbol overlaid at card centre, scaled + rotated with the card
+                let mvSize: CGFloat = 18 * scale
+                MovoMVSymbol(
+                    bodyStyle: Color.movo.heritageGreenLine,
+                    accent: Color.movo.heritageGreenLine.opacity(0.55)
+                )
+                .frame(width: mvSize, height: mvSize)
+                .rotationEffect(.degrees(-8))
+                .position(x: ox + 70 * scale, y: oy + 26 * scale)
+            }
         }
     }
 
-    // MARK: - Background Glow
+    // MARK: - Background glow
 
     private func drawGlow(_ ctx: GraphicsContext) {
-        let glow = Path(ellipseIn: CGRect(x: 32, y: 18, width: 76, height: 58))
+        let glow = Path(ellipseIn: CGRect(x: 22, y: 10, width: 96, height: 68))
         ctx.fill(glow, with: .color(Color.movo.accent.opacity(0.06)))
     }
 
-    // MARK: - Money-flow Arc (sender → receiver)
+    // MARK: - Money-flow arc (card → figure)
 
-    private func drawFlowArc(_ ctx: GraphicsContext) {
+    private func drawArc(_ ctx: GraphicsContext,
+                         from: CGPoint, to: CGPoint, control: CGPoint) {
         var path = Path()
-        path.move(to: CGPoint(x: 42, y: 52))
-        path.addQuadCurve(to: CGPoint(x: 98, y: 52), control: CGPoint(x: 70, y: 8))
+        path.move(to: from)
+        path.addQuadCurve(to: to, control: control)
         ctx.stroke(
             path,
-            with: .color(Color.movo.accent.opacity(0.35)),
-            style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: [1.5, 4])
+            with: .color(Color.movo.heritageGreenLine.opacity(0.42)),
+            style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: [2, 4])
         )
     }
 
-    // MARK: - Figure (head + filled shoulders)
+    // MARK: - Line-art figure (round head + two-curve shoulder bust)
 
-    private func drawFigure(_ ctx: GraphicsContext, baseCenter: CGPoint, color: Color, dim: Bool) {
-        let cx = baseCenter.x
-        let baseY = baseCenter.y
-        let r: CGFloat = 8
+    private func drawFigure(_ ctx: GraphicsContext,
+                             center: CGPoint, dim: Bool) {
+        let cx   = center.x
+        let cy   = center.y          // base of figure (bottom of shoulders)
+        let r: CGFloat = 7
+        let headY = cy - 32          // head centre Y
+        let silver = Color.movo.silverTint
+        let opacity: Double = dim ? 0.42 : 0.88
 
-        // Head
-        let head = Path(ellipseIn: CGRect(x: cx - r, y: baseY - 34, width: r * 2, height: r * 2))
-        ctx.fill(head, with: .color(color.opacity(dim ? 0.55 : 0.95)))
+        // Head — stroke-only circle
+        let head = Path(ellipseIn: CGRect(x: cx - r, y: headY - r,
+                                          width: r * 2, height: r * 2))
+        ctx.stroke(head, with: .color(silver.opacity(opacity)),
+                   style: StrokeStyle(lineWidth: 2, lineCap: .round))
 
-        // Shoulders / torso — a filled rounded arch.
-        var torso = Path()
-        torso.move(to: CGPoint(x: cx - 13, y: baseY))
-        torso.addQuadCurve(to: CGPoint(x: cx + 13, y: baseY), control: CGPoint(x: cx, y: baseY - 24))
-        torso.closeSubpath()
-        ctx.fill(torso, with: .color(color.opacity(dim ? 0.45 : 0.85)))
+        // Shoulders — two-curve open arch (stroke only, no fill)
+        var shoulders = Path()
+        shoulders.move(to: CGPoint(x: cx - 13, y: cy))
+        shoulders.addQuadCurve(
+            to:      CGPoint(x: cx,       y: cy - 18),
+            control: CGPoint(x: cx - 13,  y: cy - 18)
+        )
+        shoulders.addQuadCurve(
+            to:      CGPoint(x: cx + 13, y: cy),
+            control: CGPoint(x: cx + 13, y: cy - 18)
+        )
+        ctx.stroke(shoulders, with: .color(silver.opacity(opacity)),
+                   style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
     }
 
-    // MARK: - Payment Card (hero element, sits on top)
+    // MARK: - Payment card (stroke-only, no fill)
 
     private func drawCard(_ ctx: GraphicsContext, center: CGPoint) {
         var c = ctx
         c.translateBy(x: center.x, y: center.y)
-        c.rotate(by: .degrees(-10))
+        c.rotate(by: .degrees(-8))
 
-        let w: CGFloat = 42
-        let h: CGFloat = 27
+        let w: CGFloat = 44
+        let h: CGFloat = 28
         let rect = CGRect(x: -w / 2, y: -h / 2, width: w, height: h)
-        let card = Path(roundedRect: rect, cornerRadius: 6)
 
-        // Surface fill so the card reads as opaque above the figures.
-        c.fill(card, with: .color(Color.movo.surface))
-        c.stroke(card, with: .color(Color.movo.accent), lineWidth: 1.4)
-
-        // Top accent stripe.
-        var stripe = Path()
-        stripe.move(to: CGPoint(x: -w / 2 + 5, y: -h / 2 + 7))
-        stripe.addLine(to: CGPoint(x: w / 2 - 5, y: -h / 2 + 7))
-        c.stroke(stripe, with: .color(Color.movo.accent.opacity(0.4)), lineWidth: 1)
-
-        // Dollar glyph.
-        let dollar = Text("$")
-            .font(.system(size: 13, weight: .bold))
-            .foregroundColor(Color.movo.accent)
-        c.draw(dollar, at: CGPoint(x: 0, y: 4))
-    }
-
-    // MARK: - Trailing particles (motion feel)
-
-    private func drawParticles(_ ctx: GraphicsContext) {
-        let points = [CGPoint(x: 46, y: 40), CGPoint(x: 52, y: 33), CGPoint(x: 58, y: 28)]
-        for (i, p) in points.enumerated() {
-            let s = 2.6 - CGFloat(i) * 0.5
-            let dot = Path(ellipseIn: CGRect(x: p.x - s / 2, y: p.y - s / 2, width: s, height: s))
-            ctx.fill(dot, with: .color(Color.movo.accent.opacity(0.5 - Double(i) * 0.12)))
-        }
+        // Card outline — stroke only, no fill
+        let outline = Path(roundedRect: rect, cornerRadius: 5)
+        c.stroke(outline,
+                 with: .color(Color.movo.heritageGreenLine),
+                 style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
     }
 }
 
