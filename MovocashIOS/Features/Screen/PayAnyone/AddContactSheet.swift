@@ -332,7 +332,7 @@ struct UsePhoneContactButton: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "person.crop.circle.badge.plus")
                     .font(.system(size: 14, weight: .semibold))
-                Text("Use phone contact")
+                Text("Use phone contacts")
                     .textStyle(Typography.button)
                 Spacer()
                 MovoChevron(.disclosure, color: Color.movo.textDisabled)
