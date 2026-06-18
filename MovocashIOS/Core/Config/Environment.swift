@@ -48,7 +48,7 @@ enum AppEnvironmentType {
 // MARK: - AppEnvironment
 struct AppEnvironment {
     private init() {}
-    static let current: AppEnvironmentType = .production // 🔁 Switch the Environment
+    static let current: AppEnvironmentType = .staging // 🔁 Switch the Environment
     static let baseURL: URL   = makeURL(current.baseURLString)
     static let sdkURL: String = current.sdkURLString
 

@@ -13,14 +13,17 @@ final class VCardViewModel: BaseViewModel {
     
     private let network: NetworkServiceProtocol
     private let analytics: AnalyticsTracking
+    private let primaryCardStore: PrimaryCardStore?
 
     init(
         network: NetworkServiceProtocol,
         alertManager: AlertManagerProtocol,
-        analytics: AnalyticsTracking? = nil
+        analytics: AnalyticsTracking? = nil,
+        primaryCardStore: PrimaryCardStore? = nil
     ) {
         self.network = network
         self.analytics = analytics ?? AnalyticsManager.shared
+        self.primaryCardStore = primaryCardStore
         super.init(alertManager: alertManager)
     }
 
@@ -41,6 +44,7 @@ final class VCardViewModel: BaseViewModel {
                 primaryLinkedCard = nil
                 apiCards = all
             }
+            if let primaryLinkedCard { primaryCardStore?.update(primaryLinkedCard) }
         } catch {
             // Error already surfaced by perform(_:) in getVCardsAll
         }
@@ -88,7 +92,9 @@ final class VCardViewModel: BaseViewModel {
                 print("[VCard decrypt]", json)
             }
 #endif
-            return try JSONDecoder().decode(VCardListResponse.self, from: plainData)
+            let card = try JSONDecoder().decode(VCardListResponse.self, from: plainData)
+            primaryCardStore?.update(card)
+            return card
         } catch NetworkError.noContent {
             return nil
         } catch {

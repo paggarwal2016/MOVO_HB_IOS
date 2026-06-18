@@ -23,9 +23,10 @@ struct DashboardView: View {
     @StateObject private var contactVM: ContactViewModel
     @StateObject private var payeeFlow: PayeeTransferModel
     @ObservedObject var dashboardVM: DashboardViewModel
-    
+    @ObservedObject private var primaryCardStore: PrimaryCardStore
+
     @Binding var selectedTab: Tab
-    
+
     private let container: AppContainer
     /// Title passed from the tab's MENU label (API-driven). Not currently rendered
     /// — the Home header shows the logo — but available for display if needed.
@@ -37,6 +38,7 @@ struct DashboardView: View {
         self.vm = vm
         self.screenTitle = screenTitle
         _selectedTab = selectedTab
+        _primaryCardStore = ObservedObject(wrappedValue: container.primaryCardStore)
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
@@ -166,8 +168,8 @@ struct DashboardView: View {
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
-                    preselectedFromCard: dashboardVM.primaryLinkedCard,
-                    primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                    preselectedFromCard: primaryCardStore.card,
+                    primaryLinkedCard: primaryCardStore.card,
                     initialCards: dashboardVM.apiCards,
                     container: container,
                     onDismiss: { needsDashboardRefresh = true }
@@ -209,7 +211,7 @@ struct DashboardView: View {
         .fullScreenCover(isPresented: $showQuickPayView) {
             QuickPayView(
                 container: container,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                primaryLinkedCard: primaryCardStore.card,
                 cards: dashboardVM.cards,
                 title: "Quick Pay", // dashboardVM.quickPayTitle
                 onSuccess: { needsDashboardRefresh = true }
@@ -221,7 +223,7 @@ struct DashboardView: View {
                 contactVM: contactVM,
                 container: container,
                 cards: dashboardVM.cards,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                primaryLinkedCard: primaryCardStore.card,
                 onSuccess: { needsDashboardRefresh = true }
             )
         }
@@ -229,7 +231,7 @@ struct DashboardView: View {
             payeeFlow,
             container: container,
             cards: dashboardVM.cards,
-            primaryLinkedCard: dashboardVM.primaryLinkedCard,
+            primaryLinkedCard: primaryCardStore.card,
             onSuccess: { needsDashboardRefresh = true }
         )
         .fullScreenCover(isPresented: $showFundAccount) {
@@ -267,8 +269,8 @@ struct DashboardView: View {
                     toClientId: account.clientId,
                     fromAccount: account,
                     nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
-                    preselectedFromCard: dashboardVM.primaryLinkedCard,
-                    primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                    preselectedFromCard: primaryCardStore.card,
+                    primaryLinkedCard: primaryCardStore.card,
                     initialCards: dashboardVM.apiCards,
                     container: container,
                     onDismiss: { needsDashboardRefresh = true }
@@ -297,7 +299,7 @@ struct DashboardView: View {
             ViewCardsListScreen(
                 cards: dashboardVM.cards,
                 primaryAccountId: dashboardVM.primaryAccount?.id,
-                primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                primaryLinkedCard: primaryCardStore.card,
                 primaryAccount: dashboardVM.primaryAccount,
                 container: container,
                 onChanged: { needsDashboardRefresh = true }
@@ -320,12 +322,12 @@ struct DashboardView: View {
                 CardDetailSheet(
                     card: card,
                     primaryAccountId: dashboardVM.primaryAccount?.id,
-                    primaryLinkedCard: dashboardVM.primaryLinkedCard,
+                    primaryLinkedCard: primaryCardStore.card,
                     primaryAccount: dashboardVM.primaryAccount,
                     cards: dashboardVM.cards,
                     savingVM: savingVM,
                     container: container,
-                    canDelete: card.id != dashboardVM.primaryLinkedCard?.id,
+                    canDelete: card.id != primaryCardStore.card?.id,
                     onDeleted: { needsDashboardRefresh = true },
                     onChanged: { needsDashboardRefresh = true }
                 )
@@ -409,7 +411,7 @@ struct DashboardView: View {
     ///
     /// The `pendingFirstCardReward` flag is set on the post-registration landing
     /// (`HomeTabBarView`); this consumes it using the primary card already
-    /// decoded from the Dashboard API (`dashboardVM.primaryLinkedCard`) — no extra
+    /// decoded from the Dashboard API (`primaryCardStore.card`) — no extra
     /// API call. If the card isn't ready yet at first appear, the flag stays set
     /// and the `.onChange` on `primaryLinkedCard` retries once it loads. The
     /// session guard prevents re-checking on tab re-entry.
@@ -493,10 +495,10 @@ struct DashboardView: View {
                     PrimaryAccountContent(
                         account: account,
                         accountData: accountData,
-                        hasVCards: dashboardVM.primaryLinkedCard != nil,
+                        hasVCards: primaryCardStore.card != nil,
                         onCardTap: { showPrimaryAccountDetails = true },
                         onViewCardTap: {
-                            selectedCard = dashboardVM.primaryLinkedCard
+                            selectedCard = primaryCardStore.card
                         },
                         onQuickAction: handleQuickAction
                     )

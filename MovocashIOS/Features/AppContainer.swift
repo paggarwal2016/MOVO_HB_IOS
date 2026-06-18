@@ -8,8 +8,17 @@
 import Foundation
 import Combine
 
+@MainActor
+final class PrimaryCardStore: ObservableObject {
+    func update(_ card: VCardListResponse?) {
+        guard card != self.card else { return }
+        self.card = card
+    }
+}
+
 final class AppContainer: ObservableObject {
 
+    let primaryCardStore = PrimaryCardStore()
     let network: NetworkServiceProtocol
     let keychain: KeychainManagerProtocol
     let alertManager: AlertManagerProtocol
@@ -54,7 +63,7 @@ final class AppContainer: ObservableObject {
     }
 
     func makeVCardViewModel() -> VCardViewModel {
-        VCardViewModel(network: network, alertManager: alertManager)
+        VCardViewModel(network: network, alertManager: alertManager, primaryCardStore: primaryCardStore)
     }
 
     func makeSavingsAccountViewModel() -> SavingsAccountViewModel {
@@ -85,7 +94,7 @@ final class AppContainer: ObservableObject {
     }
 
     func makeDashboardViewModel() -> DashboardViewModel {
-        DashboardViewModel(network: network, alertManager: alertManager)
+        DashboardViewModel(network: network, alertManager: alertManager, primaryCardStore: primaryCardStore)
     }
 
     func makePDFViewModel() -> PDFViewModel {
