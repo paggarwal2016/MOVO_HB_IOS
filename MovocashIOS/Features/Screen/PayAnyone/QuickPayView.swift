@@ -65,13 +65,10 @@ struct QuickPayView: View {
 
     private var amount: Double { Double(amountText) ?? 0 }
 
-    /// Pay enables once a 10-digit recipient number is entered (or picked from Contacts)
-    /// and the amount is positive. Nickname and note are optional. We intentionally use a
-    /// length check rather than strict NANP validation so legitimately-picked numbers
-    /// (incl. test 555 numbers) enable the button; the recipient is still resolved by
-    /// check-intent and validated at send time.
     private var isFormValid: Bool {
-        PhoneNumberValidator.sanitize(phoneNo).count >= 10 && amount > 0
+        PhoneNumberValidator.sanitize(phoneNo).count >= 10
+            && amount > 0
+            && availableBalanceDouble > 0
     }
 
     // MARK: - Balance helpers
