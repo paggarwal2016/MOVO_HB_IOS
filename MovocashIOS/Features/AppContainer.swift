@@ -10,6 +10,7 @@ import Combine
 
 @MainActor
 final class PrimaryCardStore: ObservableObject {
+    @Published private(set) var card: VCardListResponse?
     func update(_ card: VCardListResponse?) {
         guard card != self.card else { return }
         self.card = card
