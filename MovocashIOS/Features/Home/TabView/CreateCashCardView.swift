@@ -238,7 +238,11 @@ private extension CreateCashCardView {
             await MainActor.run {
                 isLoading = false
                 SpinnerView.hideFullScreen()
-                if let card { onCreated(card) }
+                if let card {
+                    operationKey = UUID().uuidString // next card create
+                    onCreated(card)
+                }
+                // failure operationKey unchanged so user retry sends the same key.
             }
         }
     }
