@@ -228,7 +228,7 @@ struct CardSelectorView: View {
                     Spacer()
                     if hasMore {
                         Button(action: { onShowMore?() }) {
-                            Eyebrow("SEE ALL (\(cards.count))")
+                            Eyebrow("SEE ALL")
                         }
                         .buttonStyle(.plain)
                     }
