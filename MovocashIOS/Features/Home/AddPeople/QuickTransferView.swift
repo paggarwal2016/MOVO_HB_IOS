@@ -19,17 +19,19 @@ struct QuickTransferView: View {
     /// caller didn't pre-resolve it.
     let recipientExists: Bool?
 
+    private var effectivePrimary: VCardListResponse? { primaryCardStore.card ?? primaryLinkedCard }
+
     private var accountBalance: Decimal {
-        Decimal(primaryLinkedCard?.savingsAccountAvailableBalance ?? 0)
+        Decimal(effectivePrimary?.savingsAccountAvailableBalance ?? 0)
     }
 
     private var primaryAccountNickname: String? {
-        primaryLinkedCard?.savingsAccountNickname ?? primaryLinkedCard?.name
+        effectivePrimary?.savingsAccountNickname ?? effectivePrimary?.name
     }
 
     // Primary card prepended so it is the first option in the selection sheet.
     private var displayCards: [VCardListResponse] {
-        guard let primary = primaryLinkedCard else { return cards }
+        guard let primary = effectivePrimary else { return cards }
         return [primary] + cards
     }
 
@@ -37,6 +39,7 @@ struct QuickTransferView: View {
     @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
+    @ObservedObject private var primaryCardStore: PrimaryCardStore
     @FocusState private var amountFocused: Bool
 
     @State private var amountText = "0"
@@ -59,7 +62,8 @@ struct QuickTransferView: View {
         self.onComplete = onComplete
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
-        _selectedCard = State(wrappedValue: primaryLinkedCard ?? cards.first)
+        _primaryCardStore = ObservedObject(wrappedValue: container.primaryCardStore)
+        _selectedCard = State(wrappedValue: container.primaryCardStore.card ?? primaryLinkedCard ?? cards.first)
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
@@ -140,6 +144,11 @@ struct QuickTransferView: View {
         .onChange(of: amountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
+        }
+        .onChange(of: primaryCardStore.card) { newPrimary in
+            if let newPrimary, selectedCard?.id == newPrimary.id {
+                selectedCard = newPrimary
+            }
         }
         .globalAlert()
         .onSessionExpired {

@@ -49,6 +49,7 @@ struct MovocashIOSApp: App {
             RootView(kycVM: kycVM)
                 .environmentObject(appState)
                 .environmentObject(container)
+                .environmentObject(container.primaryCardStore)
                 .environmentObject(lockManager)
                 .environmentObject(authVM)
                 .environmentObject(userVM)

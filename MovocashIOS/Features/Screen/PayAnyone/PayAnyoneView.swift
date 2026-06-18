@@ -22,9 +22,10 @@ struct PayAnyoneView: View {
     let primaryLinkedCard: VCardListResponse?
     /// Title shown in the nav bar — passed from the tab's MENU label.
     let screenTitle: String
-    
-    @State private var localPrimaryCard: VCardListResponse?
+    @ObservedObject private var primaryCardStore: PrimaryCardStore
     @Binding var selectedTab: Tab
+
+    private var effectivePrimary: VCardListResponse? { primaryCardStore.card ?? primaryLinkedCard }
     
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
@@ -52,7 +53,7 @@ struct PayAnyoneView: View {
         self.cards = cards
         self.primaryLinkedCard = primaryLinkedCard
         self.screenTitle = screenTitle
-        _localPrimaryCard = State(initialValue: primaryLinkedCard)
+        _primaryCardStore = ObservedObject(wrappedValue: container.primaryCardStore)
     }
     
     private var isFormValid: Bool {
@@ -124,12 +125,9 @@ struct PayAnyoneView: View {
                 handlePickedContact(name: name, phone: phone)
             }
         }
-        .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { handleTransferSuccess() }, onCancel: { reloadContacts() })
+        .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: effectivePrimary, onSuccess: { handleTransferSuccess() }, onCancel: { reloadContacts() })
         .fullScreenCover(isPresented: $showAllFrequents) {
-            AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: localPrimaryCard)
-        }
-        .onChange(of: primaryLinkedCard?.id) { _ in
-            localPrimaryCard = primaryLinkedCard
+            AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: effectivePrimary)
         }
         .onAppear {
             Task {
@@ -417,10 +415,7 @@ struct PayAnyoneView: View {
     }
     
     private func refreshPrimaryCard() {
-        Task {
-            guard let updated = try? await cardVM.fetchPrimaryCard() else { return }
-            localPrimaryCard = updated
-        }
+        Task { _ = try? await cardVM.fetchPrimaryCard() }
     }
     
     /// Runs only after a successful Quick Transfer when the user lands back on this
@@ -725,7 +720,7 @@ extension PayAnyoneView {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Eyebrow("Available to send")
-                let bal = Decimal(localPrimaryCard?.savingsAccountAvailableBalance ?? localPrimaryCard?.savingsAccountBalance ?? 0)
+                let bal = Decimal(effectivePrimary?.savingsAccountAvailableBalance ?? effectivePrimary?.savingsAccountBalance ?? 0)
                 BalanceText(amount: bal, dollarSize: 33, centsSize: 23, centsOpacity: 1.0)
             }
             Spacer()

@@ -54,7 +54,7 @@ nonisolated struct VCardsProvisionResponse: Decodable {
     let activationData: String
 }
 
-nonisolated struct VCardListResponse: Codable, Sendable {
+nonisolated struct VCardListResponse: Codable, Sendable, Equatable {
     let savingsAccountId: Int?
     let savingsAccountNickname: String?
     let savingsAccountBalance: Double?

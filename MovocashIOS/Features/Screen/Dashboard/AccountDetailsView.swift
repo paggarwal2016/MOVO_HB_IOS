@@ -252,7 +252,7 @@ struct EditNicknameView: View {
                 Text("Edit nickname")
                     .textStyle(Typography.cardHero)
                     .foregroundStyle(Color.movo.textPrimary)
-                Text("Give your primary account a name that's easy to recognize.")
+                Text("Give your card a name that's easy to recognize.")
                     .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
                     .lineSpacing(2)

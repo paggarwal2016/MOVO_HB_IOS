@@ -24,6 +24,7 @@ struct QuickPayView: View {
 
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
+    @ObservedObject private var primaryCardStore: PrimaryCardStore
 
     @State private var nickname: String = ""
     @State private var phoneNo: String = ""
@@ -61,7 +62,11 @@ struct QuickPayView: View {
         self.onSuccess = onSuccess
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+        _primaryCardStore = ObservedObject(wrappedValue: container.primaryCardStore)
     }
+
+    /// The card to use: shared store first, falling back to the passed-in prop.
+    private var effectivePrimary: VCardListResponse? { primaryCardStore.card ?? primaryLinkedCard }
 
     private var amount: Double { Double(amountText) ?? 0 }
 
@@ -74,10 +79,8 @@ struct QuickPayView: View {
     // MARK: - Balance helpers
 
     private var accountBalance: Decimal {
-        // primaryLinkedCard carries the balance (backfilled from PRIMARYACCOUNT in the
-        // dashboard VM). Mirror `displayBalance`'s available → ledger fallback.
-        Decimal(primaryLinkedCard?.savingsAccountAvailableBalance
-                ?? primaryLinkedCard?.savingsAccountBalance ?? 0)
+        Decimal(effectivePrimary?.savingsAccountAvailableBalance
+                ?? effectivePrimary?.savingsAccountBalance ?? 0)
     }
 
     private var availableBalanceDisplay: String {
@@ -260,7 +263,7 @@ struct QuickPayView: View {
     }
 
     private func sendMoney() async {
-        guard let fromCard = primaryLinkedCard else {
+        guard let fromCard = effectivePrimary else {
             ToastManager.shared.show("No funding account available.", style: .error)
             return
         }

@@ -29,6 +29,7 @@ struct CardDetailSheet: View {
     @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     
     @State private var showDeleteConfirm = false
+    @State private var showEditNickname = false
     @State private var isDeleting = false
     @State private var showTransfer = false
     @State private var showAllTransactions = false
@@ -94,6 +95,7 @@ struct CardDetailSheet: View {
                 VStack(spacing: 0) {
                     navBar
                     cardHero
+                    cardNicknameSection
                     cardBalanceSection
                     cardNumberRow
                     cardActions
@@ -111,7 +113,15 @@ struct CardDetailSheet: View {
                 Color.black.opacity(0.45).ignoresSafeArea()
                 SpinnerView()
             }
+
+            if showEditNickname {
+                Color.black.opacity(0.25)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: showEditNickname)
         .navigationBarBackButtonHidden(true)
         .alert("Delete Card", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -169,9 +179,79 @@ struct CardDetailSheet: View {
             await loadRecentTransactions()
             isLoading = false
         }
+        .sheet(isPresented: $showEditNickname) {
+            EditNicknameView(currentNickname: cardNickname) { newValue in
+                saveNickname(newValue)
+            }
+            .presentationDetents([.height(310)])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.movo.cardSurface)
+            .presentationCornerRadius(Radius.sheet)
+        }
         .onDisappear {
             // Refresh the Dashboard on the way back only if something changed here.
             if hasChanges { onChanged?() }
+        }
+    }
+
+    private var cardNickname: String {
+        (displayCard.savingsAccountNickname ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var hasNickname: Bool { !cardNickname.isEmpty }
+
+    private var cardNicknameSection: some View {
+        HStack(alignment: .center, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: 4) {
+                Eyebrow("nickname")
+                Text(hasNickname ? cardNickname : "Add a nickname")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(hasNickname ? Color.movo.textPrimary : Color.movo.textDisabled)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+
+            Spacer(minLength: Spacing.sm)
+
+            Button(action: { showEditNickname = true }) {
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: hasNickname ? "pencil" : "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(hasNickname ? "Edit" : "Add")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(Color.movo.accent)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .background(
+                    Capsule()
+                        .fill(Color.movo.accentTint)
+                        .overlay(Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(hasNickname ? "Edit nickname" : "Add nickname")
+        }
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.heroCard)
+                .fill(Color.movo.surface.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.heroCard)
+                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                )
+        )
+        .padding(.horizontal, Spacing.screenHorizontal)
+        .padding(.bottom, Spacing.lg)
+    }
+
+    private func saveNickname(_ newValue: String) {
+        guard let accountId = displayCard.savingsAccountId else { return }
+        refreshTask = Task {
+            await savingVM.updateNickname(name: newValue, accountId: accountId)
+            guard !Task.isCancelled else { return }
+            hasChanges = true
+            await refreshCardDetails()
         }
     }
 

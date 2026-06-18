@@ -17,7 +17,9 @@ struct AllFrequentsView: View {
     var onSuccess: () -> Void = {}
     
     @StateObject private var payeeFlow: PayeeTransferModel
-    
+    @ObservedObject private var primaryCardStore: PrimaryCardStore
+    private var effectivePrimary: VCardListResponse? { primaryCardStore.card ?? primaryLinkedCard }
+
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var search: String = ""
     @State private var isLoading: Bool = true
@@ -31,9 +33,7 @@ struct AllFrequentsView: View {
         self.primaryLinkedCard = primaryLinkedCard
         self.onSuccess = onSuccess
         _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
-        // Only start in the loading state when a fetch is actually needed. When the
-        // frequents are already cached (the common case), this avoids a spinner flash
-        // during the screen's present animation.
+        _primaryCardStore = ObservedObject(wrappedValue: container.primaryCardStore)
         _isLoading = State(initialValue: contactVM.frequents.isEmpty)
     }
     
@@ -73,7 +73,7 @@ struct AllFrequentsView: View {
             }
             .navigationBarHidden(true)
             .onAppear { load() }
-            .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: primaryLinkedCard, onSuccess: {
+            .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: effectivePrimary, onSuccess: {
                 onSuccess()
                 // Silently refresh the frequents list after a successful transfer.
                 Task { await contactVM.loadFrequent() }

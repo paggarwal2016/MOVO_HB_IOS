@@ -38,14 +38,17 @@ final class DashboardViewModel: BaseViewModel {
     // MARK: - Dependencies
 
     private let network: NetworkServiceProtocol
+    private let primaryCardStore: PrimaryCardStore?
 
     // MARK: - Init
 
     init(
         network: NetworkServiceProtocol,
-        alertManager: AlertManagerProtocol
+        alertManager: AlertManagerProtocol,
+        primaryCardStore: PrimaryCardStore? = nil
     ) {
         self.network = network
+        self.primaryCardStore = primaryCardStore
         super.init(alertManager: alertManager)
     }
 
@@ -104,6 +107,7 @@ final class DashboardViewModel: BaseViewModel {
             primaryLinkedCard = nil
             apiCards = []
             deletedCards = []
+            primaryCardStore?.update(nil)
             return
         }
 
@@ -125,6 +129,7 @@ final class DashboardViewModel: BaseViewModel {
                 primaryLinkedCard = all.first
                 apiCards = Array(all.dropFirst())
             }
+            primaryCardStore?.update(primaryLinkedCard)
         } catch {
             // Leave previously loaded cards in place on a transient decrypt/decode failure.
         }
