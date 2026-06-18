@@ -44,6 +44,7 @@ struct OTPScreen: View {
             
             VStack(alignment: .leading, spacing: Spacing.xxl) {
                 topBar
+                    .padding(.bottom, DesignTokens.Spacing.xl)
                 titleView
                 otpSectionView
                 Spacer()
@@ -65,15 +66,10 @@ private extension OTPScreen {
 
     private var topBar: some View {
         HStack {
-            Button(action: {
+            CustomBackButton() {
                 UIApplication.shared.dismissKeyboard()
                 onBack()
-            }) {
-                BackChevronIcon(tint: Color.movo.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             Spacer()
         }
     }

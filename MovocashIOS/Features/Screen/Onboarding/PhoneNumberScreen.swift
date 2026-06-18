@@ -227,15 +227,10 @@ struct PhoneNumberScreen: View {
     
     private var topBar: some View {
         HStack {
-            Button(action: {
+            CustomBackButton() {
                 UIApplication.shared.dismissKeyboard()
                 appState.flow = .choice
-            }) {
-                BackChevronIcon(tint: Color.movo.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             Spacer()
         }
     }

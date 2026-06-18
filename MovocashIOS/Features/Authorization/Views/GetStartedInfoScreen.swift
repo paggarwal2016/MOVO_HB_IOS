@@ -67,7 +67,7 @@ struct GetStartedInfoScreen: View {
                 topBar
                     .padding(.horizontal, DesignTokens.Spacing.lg)
                     .padding(.top, DesignTokens.Spacing.sm)
-                    .padding(.bottom, DesignTokens.Spacing.lg)
+                    .padding(.bottom, DesignTokens.Spacing.xxl)
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 0) {
@@ -99,15 +99,10 @@ private extension GetStartedInfoScreen {
     
     private var topBar: some View {
         HStack {
-            Button(action: { onBack() }) {
-                BackChevronIcon(tint: Color.movo.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
+            CustomBackButton() {
+                onBack()
             }
-            .buttonStyle(.plain)
-            
             Spacer()
-        
         }
     }
 }
