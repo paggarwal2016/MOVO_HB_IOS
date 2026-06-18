@@ -14,8 +14,10 @@ protocol Endpoint {
     var queryItems: [URLQueryItem]? { get }
     var body: Data? { get throws }
     var isAuth: Bool { get }
+    var idempotencyKey: String? { get }
 }
 
 extension Endpoint {
     var isAuth: Bool { false }
+    var idempotencyKey: String? { nil }
 }

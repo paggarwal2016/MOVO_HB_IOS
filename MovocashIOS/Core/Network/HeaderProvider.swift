@@ -81,7 +81,7 @@ struct HeaderType: OptionSet, Sendable {
 
 struct HeaderProvider {
 
-    static func headers(for type: HeaderType) async -> [String: String] {
+    static func headers(for type: HeaderType, idempotencyKey: String? = nil) async -> [String: String] {
         var headers = await baseHeaders()
 
         if type.contains(.secureDeviceInfo) {
@@ -112,7 +112,7 @@ struct HeaderProvider {
         }
         
         if type.contains(.Idempotency) {
-            headers["X-Idempotency-Key"] = UUID().uuidString
+            headers["X-Idempotency-Key"] = idempotencyKey ?? UUID().uuidString
         }
 
         return headers

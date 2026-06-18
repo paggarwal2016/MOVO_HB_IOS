@@ -22,6 +22,7 @@ struct CreateCashCardView: View {
 
     // MARK: - State
 
+    @State private var operationKey = UUID().uuidString
     @State private var nickname = ""
     @State private var pin = ""
     @State private var confirmPin = ""
@@ -220,6 +221,7 @@ private extension CreateCashCardView {
 private extension CreateCashCardView {
 
     func submit() {
+        guard !isLoading else { return }   // close the double-tap race before the view re-renders
         guard isValid else { return }
         focusedField = nil
         isLoading = true
@@ -229,8 +231,9 @@ private extension CreateCashCardView {
             pin: pin,
             userAction: "VCARD-CREATION"
         )
+        let key = operationKey
         Task {
-            let card = try? await vm.createVCard(request: request)
+            let card = try? await vm.createVCard(request: request, idempotencyKey: key)
             // Error (card == nil) is surfaced via BaseViewModel toast.
             await MainActor.run {
                 isLoading = false

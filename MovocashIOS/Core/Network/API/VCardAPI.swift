@@ -13,7 +13,7 @@ enum VCardAPI: Endpoint {
     case getVCardsList
     case postVCards(request: VCardsRequest)
     case vCardsProvision(request: VCardsProvisionRequest)
-    case createVCard(request: CreateVCardRequest)
+    case createVCard(request: CreateVCardRequest, idempotencyKey: String)
     case viewVCard(cardId: Int)
     
     // MARK: - API Version
@@ -56,6 +56,13 @@ enum VCardAPI: Endpoint {
         }
     }
     
+    // MARK: - Idempotency
+    // Only createVCard pins a stable key; all other cases use the default (nil).
+    var idempotencyKey: String? {
+        guard case .createVCard(_, let key) = self else { return nil }
+        return key
+    }
+
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { nil }
     
@@ -76,7 +83,7 @@ enum VCardAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .vCardsProvision(let request):
             return try JSONEncoder().encode(request)
-        case .createVCard(let request):
+        case .createVCard(let request, _):
             return try JSONEncoder().encode(request)
         case .viewVCard(let request):
             return try JSONEncoder().encode(request)

@@ -72,8 +72,12 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.securityViolation
         }
 
+        let idempotencyKey: String? = await endpoint.headerType.has(.Idempotency)
+            ? ((await endpoint.idempotencyKey) ?? UUID().uuidString)
+            : nil
+
         // Build the request
-        let request = try await builder.build(from: endpoint)
+        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
 
         guard let url = request.url else {
             throw NetworkError.invalidURL
@@ -93,7 +97,7 @@ actor NetworkService: NetworkServiceProtocol {
                 if attempt == 0 {
                     return try await performRequest(request, usesDeviceSession: usesDeviceSession)
                 } else {
-                    let retryRequest = try await builder.build(from: endpoint)
+                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
                     return try await performRequest(retryRequest, usesDeviceSession: usesDeviceSession)
                 }
             } catch let error as NetworkError {
@@ -134,7 +138,13 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.securityViolation
         }
 
-        let request = try await builder.build(from: endpoint)
+        // One idempotency key per logical request — reused across all retries
+        // (see request(_:) above for rationale).
+        let idempotencyKey: String? = await endpoint.headerType.has(.Idempotency)
+            ? ((await endpoint.idempotencyKey) ?? UUID().uuidString)
+            : nil
+
+        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
 
         guard let url = request.url else {
             throw NetworkError.invalidURL
@@ -151,7 +161,7 @@ actor NetworkService: NetworkServiceProtocol {
                 if attempt == 0 {
                     return try await performRawRequest(request, usesDeviceSession: usesDeviceSession)
                 } else {
-                    let retryRequest = try await builder.build(from: endpoint)
+                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
                     return try await performRawRequest(retryRequest, usesDeviceSession: usesDeviceSession)
                 }
             } catch let error as NetworkError {

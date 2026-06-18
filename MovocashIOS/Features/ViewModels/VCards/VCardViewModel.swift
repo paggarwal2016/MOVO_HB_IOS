@@ -174,10 +174,10 @@ final class VCardViewModel: BaseViewModel {
         }
     }
     
-    func createVCard(request: CreateVCardRequest) async throws -> VCardListResponse {
+    func createVCard(request: CreateVCardRequest, idempotencyKey: String) async throws -> VCardListResponse {
         do {
             let envelope: CreateVCardEncryptedResponse = try await perform {
-                try await self.network.request(VCardAPI.createVCard(request: request))
+                try await self.network.request(VCardAPI.createVCard(request: request, idempotencyKey: idempotencyKey))
             }
             guard let encryptedBase64 = envelope.data?.encryptedData else {
                 throw NetworkError.decodingError
