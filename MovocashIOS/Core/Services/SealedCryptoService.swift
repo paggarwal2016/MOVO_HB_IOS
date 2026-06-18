@@ -65,7 +65,7 @@ enum SealedCryptoService {
 
     // TODO: Replace with Keychain lookup before production.
     private static func loadSecretKey() throws -> [UInt8] {
-        let base64 = "iWXqDFMh19wGaaloJs8SG7/aWNmJJx9JjkJ9Pgju8no="
+        let base64 = AppConfig.cryptoKey
         guard let data = Data(base64Encoded: base64),
               data.count == secretKeyLength else {
             throw SealedCryptoError.keyLoadFailed

@@ -23,8 +23,24 @@ enum AppEnvironmentType {
 
     var sdkURLString: String {
         switch self {
-        case .production, .staging, .dev:
+        case .production:
+            return "https://api.mobile-banking-prod.herringbank.com"
+        case .staging, .dev:
             return "https://api.qa.herringbank.com"
+        }
+    }
+
+    var officeId: String {
+        switch self {
+        case .production:       return "5"
+        case .staging, .dev:    return "3"
+        }
+    }
+    
+    var cryptoKey: String {
+        switch self {
+        case .production:       return "kmFXWgS7Y3Hn2fnwG6EemF8gtkmLLySmrh4PloQH4gM="
+        case .staging, .dev:    return "iWXqDFMh19wGaaloJs8SG7/aWNmJJx9JjkJ9Pgju8no="
         }
     }
 }
@@ -32,7 +48,7 @@ enum AppEnvironmentType {
 // MARK: - AppEnvironment
 struct AppEnvironment {
     private init() {}
-    static let current: AppEnvironmentType = .staging // 🔁 Switch the Environment
+    static let current: AppEnvironmentType = .production // 🔁 Switch the Environment
     static let baseURL: URL   = makeURL(current.baseURLString)
     static let sdkURL: String = current.sdkURLString
 
@@ -54,9 +70,10 @@ enum APIVersion: String {
 final class AppConfig {
     private init() {}
     
-    static let baseURL: URL    = AppEnvironment.baseURL
-    static let sdkURL: String  = AppEnvironment.sdkURL
-    static let officeId: String = "3"
+    static let baseURL: URL      = AppEnvironment.baseURL
+    static let sdkURL: String    = AppEnvironment.sdkURL
+    static let officeId: String  = AppEnvironment.current.officeId
+    static let cryptoKey: String = AppEnvironment.current.cryptoKey
     
     /// When `true`, protection is applied automatically:
     /// When `false`, all of the above is disabled — screenshots and screen

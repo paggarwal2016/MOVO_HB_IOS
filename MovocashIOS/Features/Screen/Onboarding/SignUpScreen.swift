@@ -27,6 +27,7 @@ struct SignUpScreen: View {
                 // Top Bar
                 topBar
                     .padding(.top, DesignTokens.Spacing.sm)
+                    .padding(.bottom, DesignTokens.Spacing.xl)
                 
                 // Content
                 VStack(alignment: .leading, spacing: 0) {
@@ -78,13 +79,10 @@ struct SignUpScreen: View {
     
     private var topBar: some View {
         HStack {
-            Button(action: { onBack() }) {
-                BackChevronIcon(tint: Color.movo.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
+            CustomBackButton() {
+                UIApplication.shared.dismissKeyboard()
+                onBack()
             }
-            .buttonStyle(.plain)
-            
             Spacer()
         }
     }

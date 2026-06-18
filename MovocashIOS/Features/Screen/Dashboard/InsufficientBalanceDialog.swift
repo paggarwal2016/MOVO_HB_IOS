@@ -43,7 +43,7 @@ struct InsufficientBalanceDialog: View {
 
                 // Current balance row
                 HStack {
-                    Text("Current balance")
+                    Text("Available balance")
                         .textStyle(Typography.caption)
                         .foregroundColor(Color.movo.textTertiary)
                     Spacer()

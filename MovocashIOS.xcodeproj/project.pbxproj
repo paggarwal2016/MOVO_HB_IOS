@@ -18,6 +18,7 @@
 		142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142864562F92251B006F8C39 /* TokenRefreshable.swift */; };
 		14413D152FD9662C00EBC972 /* CustomContactEnrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
+		1463E7A72FE4117800371ADC /* CustomBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1463E7A62FE4117800371ADC /* CustomBackButton.swift */; };
 		146819772F4DE6CF00BED014 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194F2F4DE6CF00BED014 /* Environment.swift */; };
 		146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819552F4DE6CF00BED014 /* NetworkServiceProtocol.swift */; };
 		146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819542F4DE6CF00BED014 /* NetworkService.swift */; };
@@ -123,6 +124,7 @@
 		142864562F92251B006F8C39 /* TokenRefreshable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefreshable.swift; sourceTree = "<group>"; };
 		14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomContactEnrollView.swift; sourceTree = "<group>"; };
 		1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinInputAlertPresenter.swift; sourceTree = "<group>"; };
+		1463E7A62FE4117800371ADC /* CustomBackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomBackButton.swift; sourceTree = "<group>"; };
 		1468194F2F4DE6CF00BED014 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		146819522F4DE6CF00BED014 /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
 		146819532F4DE6CF00BED014 /* HTTPMethod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPMethod.swift; sourceTree = "<group>"; };
@@ -502,6 +504,7 @@
 				14D8165E2F73C30300B7D1EF /* ActionCard.swift */,
 				14D816602F73D3B100B7D1EF /* ContactsManager.swift */,
 				14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */,
+				1463E7A62FE4117800371ADC /* CustomBackButton.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -824,6 +827,7 @@
 				14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */,
 				1468198E2F4DE6CF00BED014 /* KeychainManager.swift in Sources */,
 				142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */,
+				1463E7A72FE4117800371ADC /* CustomBackButton.swift in Sources */,
 				14C56CAD2FC96FBF000A397E /* SecureContainerView.swift in Sources */,
 				14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */,
 				14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */,
