@@ -65,7 +65,9 @@ enum UserAPI: Endpoint {
         switch self {
         case .getProfile:
             return try JSONEncoder().encode(UserActionRequest(userAction: "GET-USER-DATA"))
-        case .deleteProfile, .profileTOS, .profileVirtualCardTOS:
+        case .deleteProfile:
+            return try JSONEncoder().encode(UserActionRequest(userAction: "DELETE-USER"))
+        case .profileTOS, .profileVirtualCardTOS:
             return nil
         case .saveUser(let request):
             return try JSONEncoder().encode(request)

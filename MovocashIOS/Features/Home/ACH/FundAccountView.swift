@@ -280,32 +280,7 @@ struct FundAccountView: View {
     // MARK: - Amount Display
 
     private var amountDisplay: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("$")
-                .textStyle(Typography.amountPrefix)
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
-
-            let parts = amount.split(separator: ".")
-            Text(parts.first.map(String.init) ?? "0")
-                .textStyle(Typography.amountInput)
-                .monospacedDigit()
-                .foregroundColor(Color.movo.textPrimary)
-
-            Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                .textStyle(Typography.amountPrefix)
-                .monospacedDigit()
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { showAmountPad() }
-        .overlay(
-            TextField("", text: $amount)
-                .keyboardType(.decimalPad)
-                .focused($isAmountFocused)
-                .opacity(0)
-        )
+        AmountInputDisplay(amountText: $amount, amountFocused: $isAmountFocused)
     }
 
     // MARK: - Transfer Panel (From / To rows)

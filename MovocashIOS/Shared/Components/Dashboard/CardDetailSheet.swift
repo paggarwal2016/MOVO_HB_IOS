@@ -422,7 +422,7 @@ struct CardDetailSheet: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Eyebrow("Movo available balance")
             BalanceText(
-                amount: displayCard.balance,
+                amount: displayCard.availableBalance,
                 dollarSize: 32,
                 centsSize: 22,
                 centsOpacity: 1.0
