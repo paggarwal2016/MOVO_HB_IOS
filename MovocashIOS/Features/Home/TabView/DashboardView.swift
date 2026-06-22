@@ -69,6 +69,10 @@ struct DashboardView: View {
     /// dashboard PAYANYONE section so it is captured at present time (avoids a
     /// state-vs-present race that would otherwise show the default title).
     @State private var selectedCard: VCardListResponse? = nil
+    /// Dedicated navigation flag for CardDetailSheet — decoupled from selectedCard
+    /// to avoid a SwiftUI NavigationStack corruption when the binding's `set`
+    /// closure mutates state mid-animation (causing a permanent blank dashboard).
+    @State private var showCardDetail = false
     @State private var isLinkingPlaid = false
     @State private var showPlaidInfo = false
     @State private var plaidInfoAllowFunding = true
@@ -137,6 +141,7 @@ struct DashboardView: View {
                     Color.black.opacity(0.55).ignoresSafeArea()
                     CashCardCreateSuccess(card: card, onDone: {
                         selectedCard = createdCashCard
+                        showCardDetail = true
                         var tx = SwiftUI.Transaction()
                         tx.disablesAnimations = true
                         withTransaction(tx) { showCashCardSuccess = false }
@@ -312,10 +317,10 @@ struct DashboardView: View {
                 .navigationBarBackButtonHidden(true)
             }
         }
-        .navigationDestination(isPresented: Binding(
-            get: { selectedCard != nil },
-            set: { if !$0 { selectedCard = nil } }
-        )) {
+        .onChange(of: showCardDetail) { isShowing in
+            if !isShowing { selectedCard = nil }
+        }
+        .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {
                 CardDetailSheet(
                     card: card,
@@ -488,6 +493,7 @@ struct DashboardView: View {
                         onCardTap: { showPrimaryAccountDetails = true },
                         onViewCardTap: {
                             selectedCard = primaryCardStore.card
+                            showCardDetail = true
                         },
                         onQuickAction: handleQuickAction
                     )
@@ -573,6 +579,7 @@ struct DashboardView: View {
                 onTap: { handleCreateCardTap() },
                 onEyeTap: { card in
                     selectedCard = card
+                    showCardDetail = true
                 },
                 onShowMore: { showViewCardList = true }
             )

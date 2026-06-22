@@ -58,6 +58,14 @@ final class SessionManager: ObservableObject {
     private let analytics: AnalyticsTracking
     private let network: NetworkServiceProtocol
 
+    /// Called once, synchronously, inside `resetAppState` before the flow
+    /// transitions away from `.home`. Use this to reset app-level shared state
+    /// (e.g. DashboardViewModel) that must not survive across user sessions.
+    /// Set by `AppContainer` at startup.
+    /// @MainActor so the closure body can call @MainActor methods (DashboardViewModel.reset,
+    /// PushManager.clearAll) synchronously — safe because resetAppState is itself @MainActor.
+    var onSessionEnd: (@MainActor () -> Void)?
+
     init(
         keychain: KeychainManagerProtocol,
         kycManager: KYCManagerProtocol,
@@ -216,17 +224,17 @@ final class SessionManager: ObservableObject {
         _ = try? await network.request(AuthAPI.logout) as SuccessResponse
         analytics.trackLogout()
         analytics.clearIdentity()
-        await PushManager.shared.deleteTokenOnLogout()
 
-        do {
-            try await keychain.delete("access_token")
-        } catch {
-            SecureLogger.error("Failed to delete tokens on logout: \(error.localizedDescription)", category: .auth)
-        }
-
+        await clearSessionKeychain()
         kycManager.clearSession()
 
         resetAppState(appState)
+
+        // FCM deregistration is best-effort and non-blocking — local teardown must
+        // not wait on it. deleteTokenOnLogout() calls Messaging.messaging().deleteToken()
+        // (Firebase SDK → Google's FCM servers) — no MOVO JWT required, so running
+        // after the credential delete is safe. Mirrors the same pattern in handleSessionExpired.
+        Task { await PushManager.shared.deleteTokenOnLogout() }
     }
 
     // MARK: - Soft Session Expiry (biometric re-auth — overlay, no navigation)
@@ -245,12 +253,7 @@ final class SessionManager: ObservableObject {
             style: .warning,
             position: .bottom
         )
-        Task {
-            try? await keychain.delete("access_token")
-            try? await keychain.delete("auth_session_id")
-            try? await keychain.delete("device_session_pubkey")
-            try? await keychain.delete("device_session_id")
-        }
+        Task { await clearSessionKeychain() }
     }
 
     // MARK: - Session Expiry (token invalid — zero API calls)
@@ -266,15 +269,26 @@ final class SessionManager: ObservableObject {
         analytics.clearIdentity()
         kycManager.clearSession()
 
-        try? await keychain.delete("access_token")
-        try? await keychain.delete("auth_session_id")
-        try? await keychain.delete("device_session_pubkey")
-        try? await keychain.delete("device_session_id")
+        await clearSessionKeychain()
 
         UserDefaults.standard.removeObject(forKey: "kycInProgress")
         appState.isNewRegistration = false
 
+        // Local teardown is synchronous and happens before this line.
+        // resetAppState fires onSessionEnd, which synchronously clears
+        // DashboardViewModel and PushManager.messages/unreadCount/latestMessage
+        // via AppContainer (see AppContainer.init — onSessionEnd subscriber).
         resetAppState(appState)
+
+        // FCM token deregistration is best-effort, non-blocking — session
+        // destruction must not wait on a network call. Fired after local teardown
+        // so the user is already on the login screen if this takes time.
+        // NOTE: push-state cleanup is intentionally split across two sites:
+        //   • PushManager.messages/unreadCount/latestMessage — sync, via onSessionEnd
+        //   • PushManager.fcmToken — async (Firebase round-trip), fired here
+        // Both target PushManager.shared (the one singleton). Firebase is currently
+        // stubbed so deleteTokenOnLogout() is a no-op; this is a pre-wire.
+        Task { await PushManager.shared.deleteTokenOnLogout() }
 
         let toastMessage = message.flatMap { $0.isEmpty ? nil : $0 }
             ?? "Your session has expired. Please sign in again."
@@ -292,8 +306,24 @@ final class SessionManager: ObservableObject {
         await handleSessionExpired(appState: appState)
     }
 
+    // MARK: - Keychain Teardown
+    /// Single source of truth for which session credentials are wiped on any
+    /// session-end path. Centralised here so logout(), handleSessionExpired(),
+    /// and softExpiry() can't drift apart in what they clear.
+    private func clearSessionKeychain() async {
+        for key in ["access_token", "auth_session_id", "device_session_pubkey", "device_session_id"] {
+            do { try await keychain.delete(key) }
+            catch { SecureLogger.error("Failed to delete \(key) from keychain: \(error.localizedDescription)", category: .auth) }
+        }
+    }
+
     // MARK: - Reset App State
     private func resetAppState(_ appState: AppState) {
+        // Notify AppContainer (and transitively DashboardViewModel) before the
+        // flow transitions. This is the single authoritative teardown point for
+        // all session-end paths (logout, 401, force logout, expiry).
+        onSessionEnd?()
+
         // Backstop: silently drop any presented modal stack (sheets / full-screen
         // covers) so nothing lingers over the login screen, regardless of which
         // screen the session expired on. Non-animated → no visible transition.

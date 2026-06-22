@@ -64,7 +64,7 @@ struct HomeTabBarView: View {
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
 
-    @StateObject private var dashboardVM: DashboardViewModel
+    @ObservedObject private var dashboardVM: DashboardViewModel
     @StateObject private var linkAccountVM: ACHViewModel
     @StateObject private var vCardVM: VCardViewModel
 
@@ -79,7 +79,7 @@ struct HomeTabBarView: View {
     @State private var homeIconUnselected: UIImage?
 
     init(container: AppContainer) {
-        _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
+        _dashboardVM = ObservedObject(wrappedValue: container.makeDashboardViewModel())
         _linkAccountVM = StateObject(wrappedValue: container.makeACHViewModel())
         _vCardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
@@ -97,7 +97,13 @@ struct HomeTabBarView: View {
         .task {
             guard !hasLoadedOnce else { return }
             hasLoadedOnce = true
-            await dashboardVM.fetchDashboard()
+            if dashboardVM.dashboard != nil {
+                // Shared VM already has data (e.g. biometric re-entry, onboarding → home).
+                // Silent stale check — no skeleton flash.
+                await dashboardVM.refreshIfStale(within: 30)
+            } else {
+                await dashboardVM.fetchDashboard()
+            }
         }
         .onAppear {
             handleOnAppear()
@@ -106,8 +112,11 @@ struct HomeTabBarView: View {
         .onChange(of: displayScale)  { _ in refreshHomeIcons() }
         .onChange(of: colorScheme)   { _ in refreshHomeIcons() }
         .onSessionExpired {
-            // Cancel in-flight loads only. RootView performs the single, silent
-            // navigation to the login flow; no per-screen dismissal here.
+            // Cancel in-flight tasks owned by this view's VMs.
+            // DashboardViewModel.reset() is handled in AppContainer.onSessionEnd
+            // (called from SessionManager.resetAppState) — not here — because
+            // HomeTabBarView may already be tearing down when the session ends,
+            // making this modifier unreliable for shared-state cleanup.
             dashboardVM.cancelAllTasks()
             linkAccountVM.cancelAllTasks()
             vCardVM.cancelAllTasks()
