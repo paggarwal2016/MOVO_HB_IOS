@@ -34,6 +34,7 @@ struct CardDetailSheet: View {
     @State private var showTransfer = false
     @State private var showAllTransactions = false
     @State private var isLoading = false
+    @State private var showFullCardNumber = false
     @State private var walletTask: Task<Void, Never>?
     @State private var deleteTask: Task<Void, Never>?
     @State private var refreshTask: Task<Void, Never>?
@@ -94,9 +95,8 @@ struct CardDetailSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     navBar
-                    cardHero
-                    cardNicknameSection
-                    cardBalanceSection
+                    cardSection
+                    availableBalanceRow
                     cardNumberRow
                     cardActions
                     if txVM.transactions.count > 0 {
@@ -200,51 +200,6 @@ struct CardDetailSheet: View {
 
     private var hasNickname: Bool { !cardNickname.isEmpty }
 
-    private var cardNicknameSection: some View {
-        HStack(alignment: .center, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 4) {
-                Eyebrow("nickname")
-                Text(hasNickname ? cardNickname : "Add a nickname")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(hasNickname ? Color.movo.textPrimary : Color.movo.textDisabled)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-
-            Spacer(minLength: Spacing.sm)
-
-            Button(action: { showEditNickname = true }) {
-                HStack(spacing: Spacing.xs) {
-                    Image(systemName: hasNickname ? "pencil" : "plus")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(hasNickname ? "Edit" : "Add")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundColor(Color.movo.accent)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
-                .background(
-                    Capsule()
-                        .fill(Color.movo.accentTint)
-                        .overlay(Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline))
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(hasNickname ? "Edit nickname" : "Add nickname")
-        }
-        .padding(Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface.opacity(0.85))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                )
-        )
-        .padding(.horizontal, Spacing.screenHorizontal)
-        .padding(.bottom, Spacing.lg)
-    }
-
     private func saveNickname(_ newValue: String) {
         guard let accountId = displayCard.savingsAccountId else { return }
         refreshTask = Task {
@@ -315,8 +270,15 @@ struct CardDetailSheet: View {
                 }
             }) {
                 HStack(spacing: Spacing.sm) {
-                    Image(systemName: "wallet.pass")
-                        .font(.system(size: 16, weight: .medium))
+                    Group {
+                        if #available(iOS 18.0, *) {
+                            Image(systemName: "wallet.bifold")
+                        } else {
+                            Image(systemName: "creditcard")
+                        }
+                    }
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Color.movo.background)
                     Text("Add to Apple Wallet")
                         .textStyle(Typography.bodyCompact)
                         .fontWeight(.semibold)
@@ -374,28 +336,44 @@ struct CardDetailSheet: View {
     // MARK: - Nav Bar
 
     private var navBar: some View {
-        HStack {
+        HStack(spacing: Spacing.sm) {
             CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
-            Spacer()
-            Text("My Card")
+            Text(hasNickname ? cardNickname : "My Card")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Button(action: { showEditNickname = true }) {
+                MovoEditIcon(size: 18)
+            }
+            .buttonStyle(.plain)
             Spacer()
-            Color.clear.frame(width: 32, height: 32)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
         .padding(.bottom, Spacing.sm)
     }
     
-    private var cardHero: some View {
-        MovoCardHero(card: displayCard)
-            .frame(width: 280)
-            .padding(.top, Spacing.lg)
-            .padding(.bottom, Spacing.md)
-            .frame(maxWidth: .infinity)
+    // MARK: - Card section (nickname row + card with balance overlay)
+
+    private var availableBalance: Decimal {
+        Decimal(displayCard.savingsAccountAvailableBalance ?? 0)
     }
-    
+
+    private var cardSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+
+            // Card image with balance overlaid — right side, below "HERRING BANK" text
+            Image("CardFrontHerring")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+        }
+        .frame(width: 280)
+        .padding(.top, Spacing.lg)
+        .padding(.bottom, Spacing.md)
+        .frame(maxWidth: .infinity)
+    }
+
     public struct MovoCardHero: View {
         public let card: VCardListResponse
 
@@ -405,8 +383,7 @@ struct CardDetailSheet: View {
                 .aspectRatio(contentMode: .fit)
         }
     }
-    
-    
+
     /// Card number grouped into blocks of four digits, e.g. "5194 5301 0000 9977".
     private var formattedCardNumber: String {
         guard let number = card.cardNumber, !number.isEmpty else { return "" }
@@ -418,17 +395,24 @@ struct CardDetailSheet: View {
         .joined(separator: " ")
     }
 
-    private var cardBalanceSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Eyebrow("Movo available balance")
+    /// Last-four-only display: "•••• •••• •••• 9944"
+    private var maskedCardNumber: String {
+        guard let number = card.cardNumber, number.count >= 4 else { return "•••• •••• •••• ••••" }
+        let lastFour = String(number.suffix(4))
+        return "•••• •••• •••• \(lastFour)"
+    }
+
+    private var availableBalanceRow: some View {
+        HStack {
+            Eyebrow("Available Balance")
+            Spacer()
             BalanceText(
-                amount: displayCard.balance,
-                dollarSize: 32,
-                centsSize: 22,
+                amount: availableBalance,
+                dollarSize: 18,
+                centsSize: 13,
                 centsOpacity: 1.0
             )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.lg)
         .background(
             RoundedRectangle(cornerRadius: Radius.heroCard)
@@ -446,18 +430,27 @@ struct CardDetailSheet: View {
         HStack(alignment: .center, spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 4) {
                 Eyebrow("Card number")
-                Text(formattedCardNumber)
-                    .font(.system(size: 15, weight: .medium, design: .monospaced))
-                    .foregroundColor(Color.movo.textPrimary)
-                    .tracking(1.5)
+                HStack(spacing: Spacing.sm) {
+                    Text(showFullCardNumber ? formattedCardNumber : maskedCardNumber)
+                        .font(.system(size: 15, weight: .medium, design: .monospaced))
+                        .foregroundColor(Color.movo.textPrimary)
+                        .tracking(1.5)
+                    Button(action: { showFullCardNumber.toggle() }) {
+                        Image(systemName: showFullCardNumber ? "eye.slash" : "eye")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color.movo.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(showFullCardNumber ? "Hide card number" : "Show card number")
+                }
                 Text("Exp \(card.expiration ?? "") · CVC \(card.cvc2 ?? "")")
                     .textStyle(Typography.captionSmall)
                     .foregroundColor(Color.movo.textTertiary)
                     .padding(.top, 2)
             }
-            
+
             Spacer(minLength: 0)
-            
+
             Button(action: copyCardNumber) {
                 Image(systemName: "doc.on.doc")
                     .font(.system(size: 16, weight: .medium))
