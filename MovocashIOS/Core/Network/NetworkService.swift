@@ -72,8 +72,16 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.securityViolation
         }
 
+        // Idempotency key — generated ONCE per logical request and reused on every
+        // retry below, so a slow-but-successful server can dedupe retries instead of
+        // treating them as new operations (critical for money movement). Only minted
+        // for endpoints that declare `.Idempotency`; otherwise nil.
+        let idempotencyKey: String? = await endpoint.headerType.has(.Idempotency)
+            ? UUID().uuidString
+            : nil
+
         // Build the request
-        let request = try await builder.build(from: endpoint)
+        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
 
         guard let url = request.url else {
             throw NetworkError.invalidURL
@@ -93,7 +101,7 @@ actor NetworkService: NetworkServiceProtocol {
                 if attempt == 0 {
                     return try await performRequest(request, usesDeviceSession: usesDeviceSession)
                 } else {
-                    let retryRequest = try await builder.build(from: endpoint)
+                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
                     return try await performRequest(retryRequest, usesDeviceSession: usesDeviceSession)
                 }
             } catch let error as NetworkError {
@@ -134,7 +142,12 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.securityViolation
         }
 
-        let request = try await builder.build(from: endpoint)
+        // Same idempotency contract as request(): one stable key reused on retries.
+        let idempotencyKey: String? = await endpoint.headerType.has(.Idempotency)
+            ? UUID().uuidString
+            : nil
+
+        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
 
         guard let url = request.url else {
             throw NetworkError.invalidURL
@@ -151,7 +164,7 @@ actor NetworkService: NetworkServiceProtocol {
                 if attempt == 0 {
                     return try await performRawRequest(request, usesDeviceSession: usesDeviceSession)
                 } else {
-                    let retryRequest = try await builder.build(from: endpoint)
+                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
                     return try await performRawRequest(retryRequest, usesDeviceSession: usesDeviceSession)
                 }
             } catch let error as NetworkError {
