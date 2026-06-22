@@ -129,6 +129,10 @@ extension VCardListResponse {
     var balance: Decimal {
         Decimal(savingsAccountBalance ?? 0)
     }
+
+    var availableBalance: Decimal {
+        Decimal(savingsAccountAvailableBalance ?? savingsAccountBalance ?? 0)
+    }
     
     var isActive: Bool {
         true

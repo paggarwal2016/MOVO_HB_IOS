@@ -355,11 +355,7 @@ struct CardDetailSheet: View {
     }
     
     // MARK: - Card section (nickname row + card with balance overlay)
-
-    private var availableBalance: Decimal {
-        Decimal(displayCard.savingsAccountAvailableBalance ?? 0)
-    }
-
+    
     private var cardSection: some View {
         VStack(alignment: .leading, spacing: 0) {
 
@@ -407,7 +403,7 @@ struct CardDetailSheet: View {
             Eyebrow("Available Balance")
             Spacer()
             BalanceText(
-                amount: availableBalance,
+                amount: displayCard.availableBalance,
                 dollarSize: 18,
                 centsSize: 13,
                 centsOpacity: 1.0

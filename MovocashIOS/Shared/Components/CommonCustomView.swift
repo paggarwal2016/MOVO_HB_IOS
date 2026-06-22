@@ -249,11 +249,10 @@ struct AmountInputDisplay: View {
     var amountFocused: FocusState<Bool>.Binding
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 2) {
             Text("$")
-                .textStyle(Typography.amountPrefix)
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
+                .textStyle(Typography.amountInput)
+                .foregroundColor(Color.movo.textPrimary)
 
             let parts = amountText.split(separator: ".")
             Text(parts.first.map(String.init) ?? "0")
@@ -264,8 +263,8 @@ struct AmountInputDisplay: View {
             Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
                 .textStyle(Typography.amountPrefix)
                 .monospacedDigit()
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
+                .foregroundColor(Color.movo.textPrimary)
+                .baselineOffset(0)
         }
         .contentShape(Rectangle())
         .onTapGesture { amountFocused.wrappedValue = true }
@@ -277,7 +276,6 @@ struct AmountInputDisplay: View {
         )
     }
 }
-
 
 // MARK: - Reusable Amount Preset Chips
 

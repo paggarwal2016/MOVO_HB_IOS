@@ -248,32 +248,7 @@ struct InternalTransferView: View {
 
     private var amountCard: some View {
         VStack(spacing: Spacing.xs) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("$")
-                    .textStyle(Typography.amountPrefix)
-                    .foregroundColor(Color.movo.textSecondary)
-                    .baselineOffset(25)
-
-                let parts = amountText.split(separator: ".")
-                Text(parts.first.map(String.init) ?? "0")
-                    .textStyle(Typography.amountInput)
-                    .monospacedDigit()
-                    .foregroundColor(Color.movo.textPrimary)
-
-                Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                    .textStyle(Typography.amountPrefix)
-                    .monospacedDigit()
-                    .foregroundColor(Color.movo.textSecondary)
-                    .baselineOffset(25)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { isAmountFocused = true }
-            .overlay(
-                TextField("", text: $amountText)
-                    .keyboardType(.decimalPad)
-                    .focused($isAmountFocused)
-                    .opacity(0)
-            )
+            AmountInputDisplay(amountText: $amountText, amountFocused: $isAmountFocused)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xxl)

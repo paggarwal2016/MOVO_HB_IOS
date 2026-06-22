@@ -54,6 +54,8 @@
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
 		14D2069C2FD69479001726E7 /* DeviceSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D2069B2FD69479001726E7 /* DeviceSessionManager.swift */; };
+		14D2CC802FE8FF95007A9EEB /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14D2CC7F2FE8FF95007A9EEB /* MobileBankingSDK */; };
+		14D2CDBE2FE93FCA007A9EEB /* MovoEditIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D2CDBD2FE93FCA007A9EEB /* MovoEditIcon.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
 		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
 		14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D52CBC2F9B908500CB648B /* EmptyStateView.swift */; };
@@ -71,10 +73,8 @@
 		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
 		14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */; };
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
-		9961D73F2FE8698E00B8AE66 /* MovoEditIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9961D73E2FE8698E00B8AE66 /* MovoEditIcon.swift */; };
 		99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */ = {isa = PBXBuildFile; fileRef = 99C2EAA22FC9AAB600384E28 /* terms-layout.css */; };
 		99C2EAA62FC9ABDE00384E28 /* StatusBarScrim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */; };
-		99C2F1D12FDB13F400384E28 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 99C2F1D02FDB13F400384E28 /* MobileBankingSDK */; };
 		99C2F1D32FDC610A00384E28 /* PhoneNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */; };
 		99C2F1D92FDED58100384E28 /* MovoChevron.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1D62FDED58100384E28 /* MovoChevron.swift */; };
 		99C2F1DB2FDED63800384E28 /* PhoneNumberValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1DA2FDED63800384E28 /* PhoneNumberValidator.swift */; };
@@ -160,6 +160,7 @@
 		14C623DE2F6AC39100D0B719 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		14C623E02F6AC7AC00D0B719 /* StatusRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusRow.swift; sourceTree = "<group>"; };
 		14D2069B2FD69479001726E7 /* DeviceSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSessionManager.swift; sourceTree = "<group>"; };
+		14D2CDBD2FE93FCA007A9EEB /* MovoEditIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovoEditIcon.swift; sourceTree = "<group>"; };
 		14D36C582F7AAF150024760F /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
 		14D36C592F7AAF150024760F /* SkeletonViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonViews.swift; sourceTree = "<group>"; };
 		14D52CBC2F9B908500CB648B /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
@@ -180,7 +181,6 @@
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
-		9961D73E2FE8698E00B8AE66 /* MovoEditIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovoEditIcon.swift; sourceTree = "<group>"; };
 		99C2EAA22FC9AAB600384E28 /* terms-layout.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "terms-layout.css"; sourceTree = "<group>"; };
 		99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarScrim.swift; sourceTree = "<group>"; };
 		99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNormalizer.swift; sourceTree = "<group>"; };
@@ -309,7 +309,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				99C2F1D12FDB13F400384E28 /* MobileBankingSDK in Frameworks */,
+				14D2CC802FE8FF95007A9EEB /* MobileBankingSDK in Frameworks */,
 				14BA4E3F2F7BB64000607891 /* FirebaseMessaging in Frameworks */,
 				14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */,
 				14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */,
@@ -483,7 +483,7 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				9961D73E2FE8698E00B8AE66 /* MovoEditIcon.swift */,
+				14D2CDBD2FE93FCA007A9EEB /* MovoEditIcon.swift */,
 				99C2F4482FE06CA100384E28 /* RegistrationCelebrationHero.swift */,
 				99C2F1DE2FDFA58D00384E28 /* BalanceText.swift */,
 				99C2F1DA2FDED63800384E28 /* PhoneNumberValidator.swift */,
@@ -651,7 +651,7 @@
 				14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */,
 				14BA4E3E2F7BB64000607891 /* FirebaseMessaging */,
 				147170002F8667AF00198064 /* LinkKit */,
-				99C2F1D02FDB13F400384E28 /* MobileBankingSDK */,
+				14D2CC7F2FE8FF95007A9EEB /* MobileBankingSDK */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -732,7 +732,7 @@
 			packageReferences = (
 				14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				14716FFF2F8667AF00198064 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
-				99C2F1CF2FDB13F400384E28 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				14D2CC7E2FE8FF95007A9EEB /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -799,6 +799,7 @@
 				14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */,
 				146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */,
 				14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */,
+				14D2CDBE2FE93FCA007A9EEB /* MovoEditIcon.swift in Sources */,
 				14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */,
 				146819842F4DE6CF00BED014 /* JailbreakDetector.swift in Sources */,
 				14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */,
@@ -807,7 +808,6 @@
 				14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
 				146E02212FA4A9020000C193 /* LinkedAccountsSectionView.swift in Sources */,
-				9961D73F2FE8698E00B8AE66 /* MovoEditIcon.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,
@@ -1220,12 +1220,12 @@
 				minimumVersion = 12.11.0;
 			};
 		};
-		99C2F1CF2FDB13F400384E28 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+		14D2CC7E2FE8FF95007A9EEB /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.16.0;
+				minimumVersion = 1.16.1;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -1251,9 +1251,9 @@
 			package = 14BA4E392F7BB64000607891 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
 		};
-		99C2F1D02FDB13F400384E28 /* MobileBankingSDK */ = {
+		14D2CC7F2FE8FF95007A9EEB /* MobileBankingSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 99C2F1CF2FDB13F400384E28 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			package = 14D2CC7E2FE8FF95007A9EEB /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
 			productName = MobileBankingSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
