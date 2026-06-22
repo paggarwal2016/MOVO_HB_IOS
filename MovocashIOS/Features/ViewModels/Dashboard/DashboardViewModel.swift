@@ -52,6 +52,20 @@ final class DashboardViewModel: BaseViewModel {
         super.init(alertManager: alertManager)
     }
 
+    // MARK: - Reset (called on logout so the shared instance doesn't leak stale data)
+
+    func reset() {
+        cancelAllTasks()
+        dashboard = nil
+        apiCards = []
+        deletedCards = []
+        primaryLinkedCard = nil
+        hasLoadedCards = false
+        isRefreshing = false
+        lastRefreshedAt = .distantPast
+        primaryCardStore?.update(nil)
+    }
+
     // MARK: - Fetch Dashboard (initial load — uses perform() for loading state)
 
     func fetchDashboard() async {
