@@ -75,9 +75,7 @@ struct DashboardView: View {
     @State private var continueToPlaid = false
     @State private var startPlaidFlow = false
     @State private var showFirstCardReward = false
-    @State private var firstCardRewardCard: VCardListResponse? = nil
     @State private var didCheckFirstCardReward = false
-    @State private var pendingViewCardDetails = false
     /// The card just created in CreateCashCardView. Held while the create sheet
     @State private var createdCashCard: VCardListResponse? = nil
     /// Drives the post-create success cover.
@@ -390,18 +388,10 @@ struct DashboardView: View {
         .onChange(of: dashboardVM.hasLoadedCards) { _ in
             maybeShowFirstCardReward()
         }
-        .fullScreenCover(isPresented: $showFirstCardReward, onDismiss: {
-            // Push CardDetailSheet only after the cover is fully gone.
-            if pendingViewCardDetails {
-                pendingViewCardDetails = false
-                selectedCard = firstCardRewardCard
-            }
-        }) {
+        .fullScreenCover(isPresented: $showFirstCardReward) {
+            // Both actions simply return to the Dashboard — neither opens Card Details.
             FirstCardRewardView(
-                onViewDetails: {
-                    pendingViewCardDetails = true
-                    setFirstCardReward(false)
-                },
+                onViewDetails: { setFirstCardReward(false) },
                 onClose: { setFirstCardReward(false) }
             )
         }
@@ -427,10 +417,9 @@ struct DashboardView: View {
         UserDefaults.standard.set(false, forKey: "pendingFirstCardReward")
 
         // First-time flow applies only when a secondary card (a non-primary card in
-        // the My Cards list) was issued alongside the primary. The review then opens
-        // Card Details for that secondary card. No secondary card → skip silently.
-        guard let secondaryCard = dashboardVM.cards.first else { return }
-        firstCardRewardCard = secondaryCard
+        // the My Cards list) was issued alongside the primary. The reward simply
+        // returns to the Dashboard when dismissed. No secondary card → skip silently.
+        guard dashboardVM.cards.first != nil else { return }
         setFirstCardReward(true)
     }
 
