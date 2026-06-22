@@ -59,7 +59,7 @@ struct FirstCardRewardView: View {
             // Reward eyebrow pill
             rewardPill
 
-            Text("Your first card is on us.")
+            Text("Your first cash card is on us.")
                 .textStyle(Typography.cardHero)
                 .foregroundColor(Color.movo.textPrimary)
                 .multilineTextAlignment(.center)

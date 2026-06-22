@@ -341,11 +341,23 @@ struct InternalTransferView: View {
             }
             .padding(.vertical, Spacing.md)
         } else {
-            Rectangle()
-                .fill(Color.movo.cardBorder)
-                .frame(height: Stroke.hairline)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.md)
+            ZStack {
+                Rectangle()
+                    .fill(Color.movo.cardBorder)
+                    .frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+                    .allowsHitTesting(false)
+                Circle()
+                    .fill(Color.movo.elevated)
+                    .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color.movo.textSecondary)
+                    )
+            }
+            .padding(.vertical, Spacing.md)
         }
     }
 
@@ -569,10 +581,12 @@ struct InternalTransferView: View {
 
     private func swapAccounts() {
         guard let oldFrom = selectedFromCard, let oldTo = selectedToCard else { return }
-        selectedFromCard = oldTo
-        selectedToCard = oldFrom
-        selectedFromAccount = allAccounts.first { $0.id == oldTo.savingsAccountId }
-        isSwapped.toggle()
+        withAnimation(.easeInOut(duration: 0.25)) {
+            selectedFromCard = oldTo
+            selectedToCard = oldFrom
+            selectedFromAccount = allAccounts.first { $0.id == oldTo.savingsAccountId }
+            isSwapped.toggle()
+        }
     }
 
     // MARK: - Submit

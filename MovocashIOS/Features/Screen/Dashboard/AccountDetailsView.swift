@@ -60,8 +60,17 @@ struct AccountDetailsView: View {
                 Eyebrow("\(account.isPrimary ? "PRIMARY" : "ACCOUNT") · ••\(account.accountNumber.suffix(4))")
             }
             Spacer()
-            CircularNavButton(systemName: "pencil") { showEditNickname = true }
-                .accessibilityLabel("Edit nickname")
+            Button(action: { showEditNickname = true }) {
+                MovoEditIcon(size: 13, tint: Color.movo.textSecondary)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        Circle()
+                            .fill(Color.movo.elevated)
+                            .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Edit nickname")
             CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
                 .accessibilityLabel("Close")
         }
@@ -242,9 +251,7 @@ struct EditNicknameView: View {
 
     private var iconHeader: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            Image(systemName: "pencil")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(Color.movo.accent)
+            MovoEditIcon(size: 22)
                 .frame(width: 44, height: 44)
                 .background(Color.movo.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.xl))
 
