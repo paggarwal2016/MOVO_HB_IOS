@@ -81,7 +81,11 @@ struct HeaderType: OptionSet, Sendable {
 
 struct HeaderProvider {
 
-    static func headers(for type: HeaderType) async -> [String: String] {
+    /// - Parameter idempotencyKey: When the endpoint requests `.Idempotency`, this
+    ///   key is used verbatim for the `X-Idempotency-Key` header. Callers pass a key
+    ///   that stays stable across retries of the same logical request so the server
+    ///   can dedupe. If `nil`, a fresh key is generated as a single-shot fallback.
+    static func headers(for type: HeaderType, idempotencyKey: String? = nil) async -> [String: String] {
         var headers = await baseHeaders()
 
         if type.contains(.secureDeviceInfo) {
@@ -112,7 +116,7 @@ struct HeaderProvider {
         }
         
         if type.contains(.Idempotency) {
-            headers["X-Idempotency-Key"] = UUID().uuidString
+            headers["X-Idempotency-Key"] = idempotencyKey ?? UUID().uuidString
         }
 
         return headers
