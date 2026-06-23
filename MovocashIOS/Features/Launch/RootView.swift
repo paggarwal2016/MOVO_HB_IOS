@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct RootView: View {
 
@@ -57,6 +58,7 @@ struct RootView: View {
                             await authVM.completeOTPVerification(code: code, appState: appState) { destination in
                                 switch destination {
                                 case .signupDetails:
+                                    legalAcceptedItems = []
                                     appState.flow = .signupDetails
                                 default:
                                     // Returning user — KYC already complete.
@@ -175,17 +177,13 @@ struct RootView: View {
                             Task {
                                 do {
                                     try await authVM.acceptAgreements()
+                                    // Normal forward entry — Get Started Info is behind
+                                    // Pick Document, so Back returns there (not a resume).
+                                    appState.kycStepResumed = false
                                     appState.flow = .pickDocument
                                 } catch {
                                     AlertManager.shared.showError(error.localizedDescription)
                                 }
-                            }
-                        },
-                        onNotNow: {
-                            Task {
-                                await sessionManager.logout(appState: appState)
-                                appState.flow = .choice
-                                legalAcceptedItems = []
                             }
                         },
                         onBack: {
@@ -198,7 +196,6 @@ struct RootView: View {
                             }
                         },
                         container: container,
-                        isLoading: authVM.state == .loading,
                         acceptedItems: $legalAcceptedItems
                     )
 
@@ -207,13 +204,31 @@ struct RootView: View {
                     BiometricEnrollView(
                         lockManager: lockManager,
                         onEnable: { return await advanceAfterSecurity() },
-                        onSkip:   { Task { await advanceAfterSecurity() } }
+                        onSkip:   { Task { await advanceAfterSecurity() } },
+                        onOpenSettings: {
+                            // User is leaving for Settings to enable a denied/disabled
+                            // biometric. iOS force-relaunches the app (cold launch) once
+                            // the permission changes; this flag lets StartupRouter resume
+                            // here instead of starting over at Choice.
+                            UserDefaults.standard.set(true, forKey: "onboardingBiometricAwaitingSettings")
+                        }
                     )
 
                 case .pickDocument:
                     PickDocumentView(
                         onBack: {
-                            appState.flow = .getStartedInfo
+                            if appState.kycStepResumed {
+                                // Resumed straight into KYC after a camera-permission
+                                // grant relaunch — no Get Started Info behind this screen,
+                                // so Back exits to Choice. Clear the resume markers so a
+                                // later manual kill won't re-resume here.
+                                appState.kycStepResumed = false
+                                UserDefaults.standard.removeObject(forKey: "onboardingKycStep")
+                                UserDefaults.standard.removeObject(forKey: "onboardingKycCameraAuth")
+                                appState.flow = .choice
+                            } else {
+                                appState.flow = .getStartedInfo
+                            }
                         },
                         onContinue: {
                             appState.flow = .kyc
@@ -383,19 +398,35 @@ struct RootView: View {
             }
         }
         .onChangeCompat(of: appState.flow) { newFlow in
-            if UserDefaults.standard.bool(forKey: "kycCompleted") {
-                // Post-dashboard — clear any stale onboarding persistence keys.
-                UserDefaults.standard.removeObject(forKey: "onboardingLastScreen")
-                UserDefaults.standard.removeObject(forKey: "onboardingContext")
-                return
-            }
-            // Mid-onboarding — persist the safe restoration target so that a
-            // kill→relaunch within the 10-minute window resumes the correct screen.
-            if let target = newFlow.restorationTarget {
-                UserDefaults.standard.set(target.rawValue, forKey: "onboardingLastScreen")
+            let defaults = UserDefaults.standard
+            // Clear every cold-launch resume marker, then re-set only the ones for the
+            // current step. On a Settings permission change iOS force-relaunches the app
+            // (cold launch); StartupRouter uses these markers + the captured permission
+            // status to resume the right screen. A manual kill leaves the permission
+            // unchanged, so it starts fresh at Choice.
+            defaults.removeObject(forKey: "onboardingKycStep")
+            defaults.removeObject(forKey: "onboardingKycCameraAuth")
+            defaults.removeObject(forKey: "onboardingBiometricContext")
+            defaults.removeObject(forKey: "onboardingBiometricAwaitingSettings")
+
+            switch newFlow {
+            case .pickDocument, .kyc:
+                defaults.set(true, forKey: "onboardingKycStep")
+                defaults.set(
+                    AVCaptureDevice.authorizationStatus(for: .video).rawValue,
+                    forKey: "onboardingKycCameraAuth"
+                )
+            case .enableBiometrics:
+                // Persist the onboarding context so a Settings-permission cold relaunch
+                // can restore the correct branch. The "awaiting Settings" flag is set
+                // separately by BiometricEnrollView only when the user is actually sent to
+                // Settings to enable a denied/disabled biometric — that flag plus
+                // biometrics becoming available is what StartupRouter resumes on.
                 if let ctx = appState.context?.rawValue {
-                    UserDefaults.standard.set(ctx, forKey: "onboardingContext")
+                    defaults.set(ctx, forKey: "onboardingBiometricContext")
                 }
+            default:
+                break
             }
         }
         .onChangeCompat(of: lockManager.state) { newState in

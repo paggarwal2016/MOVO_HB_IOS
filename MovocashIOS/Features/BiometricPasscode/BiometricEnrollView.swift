@@ -13,6 +13,10 @@ struct BiometricEnrollView: View {
     let lockManager: AppLockManager
     var onEnable: () async -> Bool  // user tapped "Enable"; returns false if passkey was cancelled/failed
     var onSkip: () -> Void          // user tapped "Skip"
+    /// Called when the user taps "Open Settings" to fix a denied/disabled biometric.
+    /// The onboarding flow uses this to persist a cold-launch resume marker; other
+    /// call sites (post-login settings) leave it nil.
+    var onOpenSettings: (() -> Void)? = nil
     
     @EnvironmentObject var authVM: AuthViewModel
     
@@ -121,6 +125,7 @@ struct BiometricEnrollView: View {
         ) {
             Button("Open Settings") {
                 wentToSettings = true
+                onOpenSettings?()
                 if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(settingsURL)
                 }
