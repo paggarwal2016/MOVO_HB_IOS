@@ -349,9 +349,7 @@ extension AuthViewModel {
 
 extension AuthViewModel {
 
-    // ── Enroll: POST /rsa ─────────────────────────────────────────────────────
-    // Called once when the user enables Face ID / biometric login.
-    func enrollRSA() async {
+    func enrollRSA() async throws {
         guard !isEnrolling else {
             SecureLogger.warning("enrollRSA already in progress — skipping", category: .auth)
             return
@@ -380,6 +378,7 @@ extension AuthViewModel {
         } catch {
             RSAKeyManager.shared.deleteKeyPair()   // keep local/server in sync on failure
             SecureLogger.error("RSA enrollment failed: \(error.localizedDescription)", category: .auth)
+            throw error
         }
     }
 
