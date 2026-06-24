@@ -51,6 +51,26 @@ enum StartupRouter {
         }
         _ = token
 
+        // ── 1a. Biometric-permission resume (runs before the kycCompleted gate) ──
+        // iOS force-relaunches the app (cold launch) when the user enables Face ID /
+        // Touch ID permission in Settings. If the user was sent to Settings from the
+        // Biometric Enrollment screen to grant a previously-denied permission, resume
+        // there. This must run before section 4's `guard kycCompleted` gate: by the time
+        // enrollment is shown, kycCompleted is already true, so the resume check cannot
+        // live inside that gate. Guarded by isBiometricAvailable so it only fires once
+        // the permission was actually granted; any other relaunch falls through.
+        if UserDefaults.standard.bool(forKey: "onboardingBiometricAwaitingSettings"),
+           lockManager.isBiometricAvailable {
+            appState.isAuthenticated = true
+            lockManager.resetToUnlocked()
+            if let ctxRaw = UserDefaults.standard.string(forKey: "onboardingBiometricContext") {
+                appState.pendingContext = PhoneFlowType(rawValue: ctxRaw)
+            }
+            SecureLogger.info("Boot route → .enableBiometrics (biometric enabled in Settings, resume)", category: .auth)
+            appState.pendingDestination = .enableBiometrics
+            return
+        }
+
         // ── 2. Server idle-timeout gate (PIN-only users) ──────────────────
         let lastActivity = UserDefaults.standard.double(forKey: "lastActivityAt")
         let hasRSA = RSAKeyManager.shared.keysExist()
@@ -133,22 +153,9 @@ enum StartupRouter {
                 return
             }
 
-            // Face ID permission resume: iOS also force-relaunches the app (cold launch)
-            // when the user enables Face ID / grants its permission in Settings. If the
-            // user was at the biometric step and biometrics are now available but were NOT
-            // at entry, this relaunch is the permission grant — resume BiometricEnrollView
-            // so the user can enroll. Any other termination (manual force-quit, memory
-            // kill) leaves availability unchanged and falls through to the secure default.
-            if UserDefaults.standard.bool(forKey: "onboardingBiometricAwaitingSettings"),
-               lockManager.isBiometricAvailable {
-                lockManager.resetToUnlocked()
-                if let ctxRaw = UserDefaults.standard.string(forKey: "onboardingBiometricContext") {
-                    appState.pendingContext = PhoneFlowType(rawValue: ctxRaw)
-                }
-                SecureLogger.info("Boot route → .enableBiometrics (biometric enabled in Settings, resume)", category: .auth)
-                appState.pendingDestination = .enableBiometrics
-                return
-            }
+            // Biometric-permission resume is handled earlier in bootstrap (section 1a),
+            // before the kycCompleted gate, since kycCompleted is already true by the time
+            // the Biometric Enrollment screen is shown.
 
             // Secure default for every other mid-onboarding cold launch (manual kill,
             // memory termination, etc.): start fresh at Choice with tokens cleared.
