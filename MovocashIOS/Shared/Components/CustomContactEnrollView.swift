@@ -21,6 +21,10 @@ struct CustomContactEnrollView: View {
     var continueTitle: String
     var cancelTitle: String
 
+    /// When false, the primary (continue) button is hidden and only Cancel shows.
+    /// Used by Invite mode when the number already belongs to a Movo user.
+    var showsContinue: Bool = true
+
     var continueAction: (() -> Void)?
     var cancelAction: (() -> Void)?
 
@@ -87,11 +91,13 @@ struct CustomContactEnrollView: View {
                         .lineSpacing(4)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    // Primary CTA
-                    Button(action: { handleContinue() } ) {
-                        Text(continueTitle)
+                    // Primary CTA — hidden when `showsContinue` is false.
+                    if showsContinue {
+                        Button(action: { handleContinue() } ) {
+                            Text(continueTitle)
+                        }
+                        .buttonStyle(MovoPrimaryButtonStyle())
                     }
-                    .buttonStyle(MovoPrimaryButtonStyle())
 
                     // Secondary CTA
                     Button(action: { handleCancel() }) {
@@ -140,6 +146,7 @@ extension View {
         avatarInitial: String,
         continueTitle: String = "Continue",
         cancelTitle: String = "Cancel",
+        showsContinue: Bool = true,
         onDismiss: (() -> Void)? = nil,
         onContinue: @escaping () -> Void,
         onCancel: @escaping () -> Void
@@ -152,6 +159,7 @@ extension View {
                 avatarInitial: avatarInitial,
                 continueTitle: continueTitle,
                 cancelTitle: cancelTitle,
+                showsContinue: showsContinue,
                 onDismiss: onDismiss,
                 onContinue: onContinue,
                 onCancel: onCancel
@@ -168,6 +176,7 @@ private struct ContactEnrollPopupModifier: ViewModifier {
     let avatarInitial: String
     let continueTitle: String
     let cancelTitle: String
+    let showsContinue: Bool
     let onDismiss: (() -> Void)?
     let onContinue: () -> Void
     let onCancel: () -> Void
@@ -182,6 +191,7 @@ private struct ContactEnrollPopupModifier: ViewModifier {
                     avatarInitial: avatarInitial,
                     continueTitle: continueTitle,
                     cancelTitle: cancelTitle,
+                    showsContinue: showsContinue,
                     continueAction: onContinue,
                     cancelAction: onCancel
                 )

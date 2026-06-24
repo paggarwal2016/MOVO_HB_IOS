@@ -87,6 +87,11 @@ struct DashboardView: View {
     @State private var showInsufficientBalance = false
     /// true = branch A (no linked bank → open Plaid), false = branch B (has bank → open Fund screen)
     @State private var insufficientBalanceUsePlaid = false
+    /// Drives the custom invite bottom sheet.
+    @State private var showInvite = false
+    /// Set when the invite SMS was sent, so the success alert shows after the
+    /// invite sheet dismisses (a root alert can't present over a sheet).
+    @State private var inviteSent = false
     
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -282,6 +287,33 @@ struct DashboardView: View {
                 .navigationBarBackButtonHidden(true)
             }
         }
+        .sheet(isPresented: $showInvite, onDismiss: {
+            // Show the success alert only after the sheet is fully gone — a root
+            // alert can't present over a sheet. Then "Let's Move On" → Dashboard.
+            guard inviteSent else { return }
+            inviteSent = false
+            AlertManager.shared.showCustom(
+                title: "Invite Sent",
+                message: "Invite sent successfully",
+                primary: "Let's Move On",
+                onPrimary: {
+                    NotificationCenter.default.post(name: .returnToDashboard, object: nil)
+                }
+            )
+        }) {
+            ShareInviteSheet(
+                container: container,
+                onClose: { showInvite = false },
+                onInviteSent: {
+                    // Mark success, then dismiss the sheet; the alert fires in onDismiss.
+                    inviteSent = true
+                    showInvite = false
+                }
+            )
+            .presentationDetents([.height(400)])
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.cardSurface)
+        }
         .sheet(isPresented: $showMoveMoney) {
             MoveMoneyMenuView(
                 onFundAccount: {
@@ -384,6 +416,7 @@ struct DashboardView: View {
             showFundAccount = false
             showInternalTransfer = false
             showPlaidInfo = false
+            showInvite = false
             needsDashboardRefresh = true
         }
         .onAppear {
@@ -447,12 +480,29 @@ struct DashboardView: View {
             selectedTab = .profile
         }
     }
+
+    /// Standalone invite CTA — accent-outlined pill (QuickActionButton `.custom`)
+    /// that opens the custom invite bottom sheet (ShareInviteSheet).
+    private var inviteButton: some View {
+        QuickActionButton(
+            title: "Invite someone to Movo",
+            icon: "person.badge.plus",
+            appearance: .init(fill: .clear, border: Color.movo.accent, text: Color.movo.accent),
+            uppercased: true
+        ) {
+            showInvite = true
+        }
+        .padding(.horizontal, 15)
+    }
     
     private var scrollContent: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 20) {
                 headerView
                 savingsSection
+                if dashboardVM.dashboard?.data != nil {
+                    inviteButton
+                }
             }
             .padding(.top, 56)
             .padding(.bottom, 24)
@@ -654,69 +704,20 @@ struct PrimaryAccountContent: View {
             if let moneyAction = accountData.actions.first(where: {
                 $0.action == "MOVE-MONEY" || $0.action == "FUND-ACCOUNT"
             }) {
-                QuickActionButton(action: moneyAction, style: .accent) {
+                QuickActionButton(
+                    title: moneyAction.label,
+                    icon: moneyAction.action == "FUND-ACCOUNT" ? "arrow.down.to.line" : "arrow.left.arrow.right",
+                    appearance: .accent
+                ) {
                     onQuickAction(moneyAction.action)
                 }
             }
-            
+
             if let txAction = accountData.actions.first(where: { $0.action == "ACTIVITY" }) {
-                QuickActionButton(action: txAction, style: .secondary) {
+                QuickActionButton(title: txAction.label, icon: "clock", appearance: .secondary) {
                     onQuickAction(txAction.action)
                 }
             }
-        }
-    }
-}
-
-
-// MARK: - Quick Action Pill Button
-
-private struct QuickActionButton: View {
-    enum Style { case accent, secondary }
-    
-    let action: DashboardAction
-    let style: Style
-    let onTap: () -> Void
-    
-    private var icon: String {
-        switch action.action {
-        case "FUND-ACCOUNT":  return "arrow.down.to.line"
-        case "MOVE-MONEY":    return "arrow.left.arrow.right"
-        case "ACTIVITY":      return "clock"
-        default:              return "circle"
-        }
-    }
-    
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 7) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                Text(action.label.uppercased())
-                    .font(.system(size: 13, weight: .semibold))
-                    .tracking(0.4)
-            }
-            .foregroundColor(style == .accent ? Color.movo.background : Color.movo.textPrimary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(pillBackground)
-        }
-        .buttonStyle(.plain)
-    }
-    
-    @ViewBuilder
-    private var pillBackground: some View {
-        switch style {
-        case .accent:
-            RoundedRectangle(cornerRadius: Radius.xl)
-                .fill(Color.movo.accent)
-        case .secondary:
-            RoundedRectangle(cornerRadius: Radius.xl)
-                .fill(Color.movo.elevated)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.xl)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                )
         }
     }
 }

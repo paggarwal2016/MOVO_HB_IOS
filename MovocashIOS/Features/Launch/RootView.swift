@@ -444,6 +444,8 @@ struct RootView: View {
                   appState.flow != .warmRelock
             else { return }
 
+            // Clear any transient alert so it can't sit above the biometric gate.
+            AlertManager.shared.dismiss()
             appState.flow = .warmRelock
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in

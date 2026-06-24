@@ -8,6 +8,7 @@
 import Security
 import SwiftUI
 import Combine
+import UIKit
 
 // MARK: - Lock State
 
@@ -166,6 +167,8 @@ final class AppLockManager: ObservableObject {
     /// survives the .inactive scene-phase bounce that happens when Settings opens,
     /// so the flag is still live when the real .active fires on return.
     private var permissionFlowActive: Bool = false
+    /// Token for the willEnterForeground observer that raises the auth cover.
+    private var foregroundCoverObserver: NSObjectProtocol?
 
     // MARK: - Init (Production)
 
@@ -190,6 +193,7 @@ final class AppLockManager: ObservableObject {
         if passcodeManager.isPasscodeSet || RSAKeyManager.shared.keysExist() {
             state = .locked
         }
+        observeForegroundForAuthCover()
     }
 
     // MARK: - Init (Testing)
@@ -249,6 +253,44 @@ final class AppLockManager: ObservableObject {
         permissionFlowActive = true
     }
 
+    deinit {
+        if let foregroundCoverObserver {
+            NotificationCenter.default.removeObserver(foregroundCoverObserver)
+        }
+    }
+
+    /// Raises the opaque auth cover the moment the app starts returning to the
+    /// foreground (before the first frame renders) — but only when this resume
+    /// will require biometric re-auth. The cover stays above all content/alerts
+    /// until the biometric gate completes its attempt (see BiometricGateView).
+    private func observeForegroundForAuthCover() {
+        foregroundCoverObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            // Delivered on the main thread; assumeIsolated lets us show the cover
+            // synchronously, before the foreground frame is drawn.
+            MainActor.assumeIsolated {
+                guard let self, self.shouldRelockOnForeground() else { return }
+                SecureWindowShield.shared.show(.auth)
+            }
+        }
+    }
+
+    /// Mirrors the re-lock decision in `handleScenePhase(.active)`, evaluated at
+    /// `willEnterForeground` (before `backgroundedAt` is cleared) so the cover is
+    /// raised only when the gate will actually appear.
+    private func shouldRelockOnForeground() -> Bool {
+        guard hasAuthMethod else { return false }
+        guard !skipNextLock && !permissionFlowActive else { return false }
+        guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return false }
+        guard let since = backgroundedAt else { return false }
+        let elapsed = clock.now().timeIntervalSince(since)
+        if !wasUnlockedWhenBackgrounded { return true }
+        return elapsed >= config.backgroundTimeout
+    }
+
     func handleScenePhase(_ phase: ScenePhase) {
         switch phase {
         case .background:
@@ -260,6 +302,7 @@ final class AppLockManager: ObservableObject {
             permissionFlowActive = false
             if suppress {
                 backgroundedAt = nil
+                SecureWindowShield.shared.hide(.auth)
                 return
             }
             guard let since = backgroundedAt else { return }
@@ -279,6 +322,8 @@ final class AppLockManager: ObservableObject {
                 state = .locked
                 if elapsed < config.backgroundTimeout && wasUnlockedWhenBackgrounded {
                     state = .unlocked
+                    // Warm resume within the window — no re-auth, drop the cover.
+                    SecureWindowShield.shared.hide(.auth)
                 }
                 // wasUnlockedWhenBackgrounded == false (user was on lock overlay
                 // when backgrounded) → stays locked regardless of elapsed time.
@@ -474,6 +519,8 @@ final class AppLockManager: ObservableObject {
 
     private func transitionToUnlocked() {
         state = .unlocked
+        // Authentication succeeded — reveal the (now authenticated) screen.
+        SecureWindowShield.shared.hide(.auth)
     }
 
     private func recordFailure() {

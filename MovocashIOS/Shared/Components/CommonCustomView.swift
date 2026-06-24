@@ -165,14 +165,21 @@ struct CustomTextField: View {
 // MARK: - Reusable USA Phone Field
 
 struct CustomPhoneField: View {
-    
+
     @Binding var phoneNumber: String
-    
+
     var countryCode: String = "+1"
     var placeholder: String = "(555) 000-0000"
 
     var cornerRadius: CGFloat = Radius.lg
     var height: CGFloat = 50
+
+    /// Optional external focus control. When provided, the parent can drive focus
+    /// (auto-present or dismiss the keyboard) and observe focus changes. Default
+    /// `nil` leaves existing callers (e.g. Quick Pay) entirely unaffected.
+    var isFocused: Binding<Bool>? = nil
+
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
 
@@ -191,6 +198,7 @@ struct CustomPhoneField: View {
                 .textStyle(Typography.body)
                 .foregroundColor(Color.movo.textPrimary)
                 .tint(Color.movo.accent)
+                .focused($fieldFocused)
                 .onChange(of: phoneNumber) { value in
                     phoneNumber = formatUSPhone(value)
                 }
@@ -205,6 +213,11 @@ struct CustomPhoneField: View {
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.thin)
                 )
         )
+        // Two-way sync between the internal FocusState and the optional binding.
+        .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
+        .onChange(of: isFocused?.wrappedValue) { newValue in
+            if let newValue, newValue != fieldFocused { fieldFocused = newValue }
+        }
     }
     
     // MARK: - USA Format
@@ -446,5 +459,81 @@ struct NoteCard: View {
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
         )
+    }
+}
+
+
+
+
+
+// MARK: - Quick Action Pill Button
+
+struct QuickActionButton: View {
+
+    // MARK: Appearance
+
+    /// Resolved look — fill, optional border, and shared text/icon color.
+    /// `.accent` and `.secondary` are common presets; build any other look with
+    /// the memberwise initializer (e.g. a transparent, accent-outlined pill).
+    struct Appearance {
+        var fill: Color
+        var border: Color?
+        var text: Color
+        var borderWidth: CGFloat = Stroke.thin
+
+        static let accent = Appearance(
+            fill: Color.movo.accent, border: nil, text: Color.movo.background
+        )
+        static let secondary = Appearance(
+            fill: Color.movo.elevated, border: Color.movo.border,
+            text: Color.movo.textPrimary, borderWidth: Stroke.hairline
+        )
+    }
+
+    // MARK: Config
+
+    let title: String
+    let icon: String
+    var appearance: Appearance = .accent
+    var cornerRadius: CGFloat = Radius.xl
+    var uppercased: Bool = true
+    let onTap: () -> Void
+
+    // MARK: Body
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                Text(uppercased ? title.uppercased() : title)
+                    .tracking(0.4)
+            }
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(appearance.text)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.lg)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(appearance.fill)
+                    .overlay {
+                        if let border = appearance.border {
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .strokeBorder(border, lineWidth: appearance.borderWidth)
+                        }
+                    }
+            )
+        }
+        .buttonStyle(PressableScaleStyle())
+        .accessibilityLabel(title)
+    }
+}
+
+/// Subtle press feedback (dim + scale) matching the app's other button styles.
+private struct PressableScaleStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeOut(duration: DesignTokens.Motion.fast), value: configuration.isPressed)
     }
 }

@@ -136,23 +136,25 @@ private extension ScreenSecurityManager {
 
     func updateShield() {
         guard AppConfig.isScreenProtectionEnabled else {
-            // Protection disabled via AppConfig: never show the shield, so
-            // recording and the app switcher show the live screen.
-            SecureWindowShield.shared.hide()
+            // Protection disabled via AppConfig: this manager never SHOWS the
+            // shield (recording / app switcher show the live screen). It also must
+            // not hide it here — the same window is reused as the biometric-auth
+            // cover, driven by AppLockManager. Hiding on foreground would tear that
+            // cover down before authentication completes.
             return
         }
 
         guard !isProtectionSuspended else {
-            SecureWindowShield.shared.hide()
+            SecureWindowShield.shared.hide(.protection)
             return
         }
 
         let shouldProtect = (isCaptured && sensitiveScreenVisible) || isInBackground
 
         if shouldProtect {
-            SecureWindowShield.shared.show()
+            SecureWindowShield.shared.show(.protection)
         } else {
-            SecureWindowShield.shared.hide()
+            SecureWindowShield.shared.hide(.protection)
         }
     }
 }

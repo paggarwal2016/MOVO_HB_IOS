@@ -148,6 +148,10 @@ struct BiometricGateView: View {
         showError = false
         let success = await authenticate()
         isLoading = false
+        // The gate is now the visible top layer (success → Home, failure → retry).
+        // Lift the auth cover so the gate's own UI is reachable. (No-op on cold
+        // launch, where the cover was never shown.)
+        SecureWindowShield.shared.hide(.auth)
         if success {
             onAuthenticated()
         } else {

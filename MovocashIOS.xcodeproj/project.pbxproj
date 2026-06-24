@@ -41,6 +41,7 @@
 		146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A02F4F0A2100BED014 /* AlertManager.swift */; };
 		146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146819A22F4F272500BED014 /* PhoneFormatter.swift */; };
 		146E02212FA4A9020000C193 /* LinkedAccountsSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */; };
+		1470D31D2FEBECC3009764FE /* ShareInviteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1470D31C2FEBECC3009764FE /* ShareInviteSheet.swift */; };
 		14716FFE2F86671600198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FFA2F86671600198064 /* PlaidService.swift */; };
 		147170012F8667AF00198064 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 147170002F8667AF00198064 /* LinkKit */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
@@ -148,6 +149,7 @@
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		146819A22F4F272500BED014 /* PhoneFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFormatter.swift; sourceTree = "<group>"; };
 		146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedAccountsSectionView.swift; sourceTree = "<group>"; };
+		1470D31C2FEBECC3009764FE /* ShareInviteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareInviteSheet.swift; sourceTree = "<group>"; };
 		14716FFA2F86671600198064 /* PlaidService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidService.swift; sourceTree = "<group>"; };
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
 		149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonCustomView.swift; sourceTree = "<group>"; };
@@ -508,6 +510,7 @@
 				14D816602F73D3B100B7D1EF /* ContactsManager.swift */,
 				14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */,
 				1463E7A62FE4117800371ADC /* CustomBackButton.swift */,
+				1470D31C2FEBECC3009764FE /* ShareInviteSheet.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -799,6 +802,7 @@
 				14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */,
 				146819A12F4F0A2100BED014 /* AlertManager.swift in Sources */,
 				14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */,
+				1470D31D2FEBECC3009764FE /* ShareInviteSheet.swift in Sources */,
 				14D2CDBE2FE93FCA007A9EEB /* MovoEditIcon.swift in Sources */,
 				14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */,
 				146819842F4DE6CF00BED014 /* JailbreakDetector.swift in Sources */,
