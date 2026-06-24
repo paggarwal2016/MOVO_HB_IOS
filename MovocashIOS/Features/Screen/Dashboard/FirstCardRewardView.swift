@@ -73,7 +73,12 @@ struct FirstCardRewardView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             Button(action: { animateOut { onViewDetails() } }) {
-                Text("Let's MOVO")
+                HStack(spacing: Spacing.sm) {
+                    Text("LET'S MOVO")
+                        .tracking(1.5)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 14, weight: .semibold))
+                }
             }
             .buttonStyle(MovoPrimaryButtonStyle())
             .padding(.top, Spacing.sm)
