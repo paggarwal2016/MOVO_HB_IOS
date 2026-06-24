@@ -351,10 +351,13 @@ final class SessionManager: ObservableObject {
         // button re-appears on ChoiceScreen. Keys are only cleared when the user
         // explicitly disables biometrics in Settings or the server rejects the key.
         UserDefaults.standard.removeObject(forKey: "kycCompleted")
-        // Clear onboarding persistence so a fresh session never restores stale state.
-        UserDefaults.standard.removeObject(forKey: "onboardingLastScreen")
-        UserDefaults.standard.removeObject(forKey: "onboardingContext")
+        // Clear the onboarding inactivity timer and KYC-resume markers so a fresh
+        // session starts clean.
         UserDefaults.standard.removeObject(forKey: "onboardingBackgroundedAt")
+        UserDefaults.standard.removeObject(forKey: "onboardingKycStep")
+        UserDefaults.standard.removeObject(forKey: "onboardingKycCameraAuth")
+        UserDefaults.standard.removeObject(forKey: "onboardingBiometricContext")
+        UserDefaults.standard.removeObject(forKey: "onboardingBiometricAwaitingSettings")
     }
 }
 

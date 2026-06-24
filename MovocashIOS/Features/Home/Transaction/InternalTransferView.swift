@@ -232,7 +232,18 @@ struct InternalTransferView: View {
 
     private var navBar: some View {
         HStack {
-            Color.clear.frame(width: 32, height: 32)
+            Button {
+                // Collapse the whole navigation stack straight to the dashboard
+                // in a single transition. Observers (RootView / HomeTabBarView /
+                // DashboardView) tear down this screen — no cascading dismisses.
+                NotificationCenter.default.post(name: .returnToDashboard, object: nil)
+            } label: {
+                MovoMVSymbol()
+                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
             Spacer()
             Text("Transfer Money")
                 .textStyle(Typography.cardTitle)

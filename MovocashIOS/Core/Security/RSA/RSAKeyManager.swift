@@ -19,6 +19,8 @@ enum BiometricLoginError: LocalizedError {
     case invalidPayload
     case keyNotFound
     case userCanceled
+    case authenticationFailed
+    case lockout
     case unsupportedAlgorithm
     case signatureFailed(String)
 
@@ -31,6 +33,8 @@ enum BiometricLoginError: LocalizedError {
         case .invalidPayload:                          return "Invalid payload data."
         case .keyNotFound:                             return "RSA private key not found in Keychain."
         case .userCanceled:                            return "Biometric authentication was cancelled."
+        case .authenticationFailed:                    return "Biometric authentication failed."
+        case .lockout:                                 return "Biometrics are locked. Unlock your phone with your passcode, then try again."
         case .unsupportedAlgorithm:                    return "RSA signing algorithm not supported on this device."
         case .signatureFailed(let message):            return message
         }
@@ -157,10 +161,22 @@ final class RSAKeyManager: Sendable {
         let status = SecItemCopyMatching(query as CFDictionary, &item)
 
         guard status == errSecSuccess, let privateKey = item else {
-            if status == errSecUserCanceled {
+            switch status {
+            case errSecUserCanceled:
                 throw BiometricLoginError.userCanceled
+            case errSecItemNotFound:
+                // The RSA key genuinely does not exist in the Keychain.
+                throw BiometricLoginError.keyNotFound
+            case errSecAuthFailed:
+                // Biometric authentication failed. This is either a single
+                // failed scan or a system-wide biometry lockout (≥5 failures).
+                // Distinguish the two so the caller can guide the user to
+                // unlock with the device passcode — there is no in-app passcode
+                // fallback (access control is .biometryAny only).
+                throw RSAKeyManager.classifyAuthFailure()
+            default:
+                throw BiometricLoginError.keyNotFound
             }
-            throw BiometricLoginError.keyNotFound
         }
 
         let secKey = privateKey as! SecKey
@@ -193,6 +209,23 @@ final class RSAKeyManager: Sendable {
     }
 
     // MARK: - Private Helpers
+
+    /// Called after the Keychain biometric read returns `errSecAuthFailed`.
+    /// Probes the current biometric state to tell a one-off failed scan apart
+    /// from a full biometry lockout, so the caller can show the right guidance.
+    private static func classifyAuthFailure() -> BiometricLoginError {
+        let context = LAContext()
+        var error: NSError?
+        let canEvaluate = context.canEvaluatePolicy(
+            .deviceOwnerAuthenticationWithBiometrics, error: &error
+        )
+        if !canEvaluate,
+           let laError = error as? LAError,
+           laError.code == .biometryLockout {
+            return .lockout
+        }
+        return .authenticationFailed
+    }
 
     private func ensureBiometryIsAvailable() throws {
         let context = LAContext()

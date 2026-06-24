@@ -8,6 +8,7 @@
 //
 
 import Foundation
+import AVFoundation
 
 @MainActor
 enum StartupRouter {
@@ -49,6 +50,26 @@ enum StartupRouter {
             return
         }
         _ = token
+
+        // ── 1a. Biometric-permission resume (runs before the kycCompleted gate) ──
+        // iOS force-relaunches the app (cold launch) when the user enables Face ID /
+        // Touch ID permission in Settings. If the user was sent to Settings from the
+        // Biometric Enrollment screen to grant a previously-denied permission, resume
+        // there. This must run before section 4's `guard kycCompleted` gate: by the time
+        // enrollment is shown, kycCompleted is already true, so the resume check cannot
+        // live inside that gate. Guarded by isBiometricAvailable so it only fires once
+        // the permission was actually granted; any other relaunch falls through.
+        if UserDefaults.standard.bool(forKey: "onboardingBiometricAwaitingSettings"),
+           lockManager.isBiometricAvailable {
+            appState.isAuthenticated = true
+            lockManager.resetToUnlocked()
+            if let ctxRaw = UserDefaults.standard.string(forKey: "onboardingBiometricContext") {
+                appState.pendingContext = PhoneFlowType(rawValue: ctxRaw)
+            }
+            SecureLogger.info("Boot route → .enableBiometrics (biometric enabled in Settings, resume)", category: .auth)
+            appState.pendingDestination = .enableBiometrics
+            return
+        }
 
         // ── 2. Server idle-timeout gate (PIN-only users) ──────────────────
         let lastActivity = UserDefaults.standard.double(forKey: "lastActivityAt")
@@ -114,18 +135,31 @@ enum StartupRouter {
                 return
             }
 
-            if let raw = UserDefaults.standard.string(forKey: "onboardingLastScreen"),
-               let savedFlow = AuthFlow(rawValue: raw) {
+            // Camera-permission resume: iOS force-relaunches the app (cold launch)
+            // when the camera permission is changed in Settings. If the user was at the
+            // KYC step and the camera is now authorized but was NOT at entry, this
+            // relaunch is the permission grant — resume Pick Document with the session
+            // intact. Any other termination (manual force-quit, memory kill) leaves the
+            // camera status unchanged and falls through to the secure default below.
+            if UserDefaults.standard.bool(forKey: "onboardingKycStep"),
+               let storedAuth = UserDefaults.standard.object(forKey: "onboardingKycCameraAuth") as? Int,
+               AVCaptureDevice.authorizationStatus(for: .video).rawValue == AVAuthorizationStatus.authorized.rawValue,
+               storedAuth != AVAuthorizationStatus.authorized.rawValue {
                 lockManager.resetToUnlocked()
-                if let ctxRaw = UserDefaults.standard.string(forKey: "onboardingContext") {
-                    appState.pendingContext = PhoneFlowType(rawValue: ctxRaw)
-                }
-                SecureLogger.info("Boot route → \(savedFlow.rawValue) (mid-onboarding)", category: .auth)
-                appState.pendingDestination = savedFlow
+                appState.pendingContext = .getStarted   // KYC only occurs during registration
+                appState.kycStepResumed = true          // no Get Started Info behind Pick Document
+                SecureLogger.info("Boot route → .pickDocument (camera permission granted, resume KYC)", category: .auth)
+                appState.pendingDestination = .pickDocument
                 return
             }
 
-            SecureLogger.info("Boot route → .choice (no restorable screen)", category: .auth)
+            // Biometric-permission resume is handled earlier in bootstrap (section 1a),
+            // before the kycCompleted gate, since kycCompleted is already true by the time
+            // the Biometric Enrollment screen is shown.
+
+            // Secure default for every other mid-onboarding cold launch (manual kill,
+            // memory termination, etc.): start fresh at Choice with tokens cleared.
+            SecureLogger.info("Boot route → .choice (mid-onboarding, restart)", category: .auth)
             keychain.clearAuthTokens()
             appState.isAuthenticated = false
             appState.pendingDestination = .choice

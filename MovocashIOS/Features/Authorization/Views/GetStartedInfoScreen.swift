@@ -21,12 +21,10 @@ struct GetStartedInfoScreen: View {
 
     // MARK: Callbacks
     let onReady:  () -> Void
-    let onNotNow: () -> Void
     let onBack:   () -> Void
 
     // MARK: Dependencies
     let container: AppContainer
-    var isLoading: Bool = false
 
     // MARK: State
     @Binding var acceptedItems: Set<String>
@@ -41,14 +39,8 @@ struct GetStartedInfoScreen: View {
     ]
 
     private let legalItems: [LegalItem] = [
-//        LegalItem(subtitle: "How we handle your personal data",
-//                  documentType: .privacy),
-//        LegalItem(subtitle: "Herring Bank's privacy practices",
-//                  documentType: .herringPrivacy),
         LegalItem(subtitle: "Deposit account agreement and disclosures",
                   documentType: .tos),
-//        LegalItem(subtitle: "Digital agreement and consent",
-//                  documentType: .cardholderAgreement)
     ]
 
     private var allAccepted: Bool {
@@ -191,35 +183,12 @@ private extension GetStartedInfoScreen {
             selectedItem = item
         } label: {
             HStack(spacing: DesignTokens.Spacing.md) {
-
                 // MARK: Illustration
-
                 Group {
-                    switch item.documentType {
-                    case .privacy:
-                        ShieldKeyholeIcon(
-                            stroke: iconStroke,
-                            accent: iconAccent
-                        )
-
-                    case .herringPrivacy:
-                        HerringShieldIcon(
-                            stroke: iconStroke,
-                            accent: iconAccent
-                        )
-
-                    case .tos:
-                        DocumentLinesIcon(
-                            stroke: iconStroke,
-                            accent: iconAccent
-                        )
-
-                    case .cardholderAgreement:
-                        SignatureIcon(
-                            stroke: iconStroke,
-                            accent: iconAccent
-                        )
-                    }
+                    DocumentLinesIcon(
+                        stroke: iconStroke,
+                        accent: iconAccent
+                    )
                 }
                 .frame(width: 44, height: 44)
                 .background(

@@ -259,7 +259,15 @@ struct FundAccountView: View {
 
     private var navBar: some View {
         HStack {
-            Color.clear.frame(width: 32, height: 32)
+            Button {
+                NotificationCenter.default.post(name: .returnToDashboard, object: nil)
+            } label: {
+                MovoMVSymbol()
+                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
             Spacer()
             Text(isProfileMode ? "Withdraw Funds" : "Fund Account")
                 .textStyle(Typography.cardTitle)

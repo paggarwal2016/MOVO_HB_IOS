@@ -349,9 +349,7 @@ extension AuthViewModel {
 
 extension AuthViewModel {
 
-    // ── Enroll: POST /rsa ─────────────────────────────────────────────────────
-    // Called once when the user enables Face ID / biometric login.
-    func enrollRSA() async {
+    func enrollRSA() async throws {
         guard !isEnrolling else {
             SecureLogger.warning("enrollRSA already in progress — skipping", category: .auth)
             return
@@ -380,6 +378,7 @@ extension AuthViewModel {
         } catch {
             RSAKeyManager.shared.deleteKeyPair()   // keep local/server in sync on failure
             SecureLogger.error("RSA enrollment failed: \(error.localizedDescription)", category: .auth)
+            throw error
         }
     }
 
@@ -470,6 +469,21 @@ extension AuthViewModel {
             // With Task.detached this should never fire. If you see this log, something
             // inside the flow is explicitly cancelling the task — investigate immediately.
             SecureLogger.warning("⚠️ Unexpected CancellationError in detached biometric task — investigate", category: .auth)
+            return false
+        } catch let biometricError as BiometricLoginError {
+            SecureLogger.error("biometric login failed: \(biometricError)", category: .auth)
+            switch biometricError {
+            case .userCanceled:
+                // User dismissed the prompt — no toast, "Try Again" remains available.
+                break
+            case .lockout:
+                // Biometry is locked at the OS level. Repeated "Try Again" taps cannot
+                // succeed until the device is unlocked with the passcode, so tell the
+                // user exactly that instead of the generic failure message.
+                ToastManager.shared.show(biometricError.localizedDescription, style: .error, position: .bottom)
+            default:
+                ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
+            }
             return false
         } catch {
             SecureLogger.error("biometric login failed: \(error)", category: .auth)

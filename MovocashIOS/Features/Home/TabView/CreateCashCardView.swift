@@ -64,14 +64,20 @@ struct CreateCashCardView: View {
                 horizontalPadding: Spacing.xl,
                 closeAction: onClose
             )
-            VStack(spacing: Spacing.xl) {
-                nicknameField
-                pinSection
-                confirmPinSection
+            // Scrollable field area absorbs keyboard avoidance smoothly: the
+            // ScrollView adjusts its content inset when the keyboard shows /
+            // hides / swaps type, instead of the whole VStack reflowing against
+            // a collapsing Spacer — which was the source of the jerk.
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: Spacing.xl) {
+                    nicknameField
+                    pinSection
+                    confirmPinSection
+                }
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.xl)
             }
-            .padding(.horizontal, Spacing.xl)
-            .padding(.top, Spacing.xl)
-            Spacer()
+            .scrollDismissesKeyboard(.interactively)
             actionButtons
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.lg)
@@ -80,6 +86,8 @@ struct CreateCashCardView: View {
         .padding(.top, Spacing.xxl)
         .background(Color.movo.surface.ignoresSafeArea())
         .onAppear {
+            // Focus just after the sheet-present animation settles (matches the
+            // app's PIN-entry convention in OTPScreen).
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 focusedField = .nickname
             }
@@ -184,7 +192,6 @@ private extension CreateCashCardView {
         .buttonStyle(MovoPrimaryButtonStyle())
         .disabled(!isValid || isLoading)
         .opacity(isValid && !isLoading ? 1.0 : 0.4)
-        .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: isValid)
     }
 
     // MARK: - Small helpers
