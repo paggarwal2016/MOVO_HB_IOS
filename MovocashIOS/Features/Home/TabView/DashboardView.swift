@@ -128,7 +128,7 @@ struct DashboardView: View {
                     Task { await dashboardVM.refresh() }
                 }
             )
-            .presentationDetents([.height(280)])
+            .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)

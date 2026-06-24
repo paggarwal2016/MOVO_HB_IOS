@@ -98,7 +98,7 @@ struct ViewCardsListScreen: View {
                 }
             )
             .secured()
-            .presentationDetents([.height(280)])
+            .presentationDetents([.height(480)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
