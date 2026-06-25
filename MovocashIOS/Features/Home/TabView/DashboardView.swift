@@ -288,14 +288,12 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showInvite, onDismiss: {
-            // Show the success alert only after the sheet is fully gone — a root
-            // alert can't present over a sheet. Then "Let's Move On" → Dashboard.
             guard inviteSent else { return }
             inviteSent = false
             AlertManager.shared.showCustom(
                 title: "Invite Sent",
                 message: "Invite sent successfully",
-                primary: "Let's Move On",
+                primary: "LET'S MOVO",
                 onPrimary: {
                     NotificationCenter.default.post(name: .returnToDashboard, object: nil)
                 }
@@ -487,7 +485,12 @@ struct DashboardView: View {
         QuickActionButton(
             title: "Invite someone to Movo",
             icon: "person.badge.plus",
-            appearance: .init(fill: .clear, border: Color.movo.accent, text: Color.movo.accent),
+            appearance: .init(
+                fill: .clear,
+                fillStyle: AnyShapeStyle(LinearGradient.cardVoid),
+                border: DesignTokens.Palette.silverTint.color.opacity(0.35),
+                text: Color.movo.accent
+            ),
             uppercased: true
         ) {
             showInvite = true

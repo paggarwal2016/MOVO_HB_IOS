@@ -419,3 +419,22 @@ extension View {
         modifier(CardArtworkShadow())
     }
 }
+
+// MARK: - Card "void" gradient
+
+extension LinearGradient {
+    /// The shared "void" surface gradient used by card-like surfaces
+    /// (card visual, action cards, linked-accounts rows, invite button).
+    /// Three locked stops, top-leading → bottom-trailing.
+    static var cardVoid: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
+                .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
+                .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
+            ],
+            startPoint: .topLeading,
+            endPoint:   .bottomTrailing
+        )
+    }
+}

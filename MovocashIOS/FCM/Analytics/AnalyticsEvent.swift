@@ -75,6 +75,8 @@ enum AnalyticsEvent {
     static let contactRemoveFavoriteFailed      = "contact_favorite_remove_failed"
     static let contactFrequent                  = "contact_frequent"
     static let contactFrequentFailed            = "contact_frequent_failed"
+    static let contactReferralInvite            = "contact_referral_invite"
+    static let contactReferralInviteFailed      = "contact_referral_invite_failed"
 
     // MARK: - VCards
     static let vcardViewed                = "vcard_viewed"
@@ -113,6 +115,7 @@ enum AnalyticsParam {
     static let institutionName  = "institution_name"
     static let lockoutRound     = "lockout_round"
     static let lockoutDuration  = "lockout_duration"
+    static let referralCode     = "referral_code"
 }
 
 // MARK: - User Property Values

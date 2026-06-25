@@ -75,17 +75,7 @@ struct LinkedAccountsSectionView: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(
-                    stops: [
-                        .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
-                        .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
-                        .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint:   .bottomTrailing
-                )
-            )
+            .background(LinearGradient.cardVoid)
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
@@ -148,17 +138,7 @@ struct LinkedAccountsSectionView: View {
             .padding(DesignTokens.Spacing.lg)
             // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid
             // gradient with a silver hairline border.
-            .background(
-                LinearGradient(
-                    stops: [
-                        .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
-                        .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
-                        .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint:   .bottomTrailing
-                )
-            )
+            .background(LinearGradient.cardVoid)
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)

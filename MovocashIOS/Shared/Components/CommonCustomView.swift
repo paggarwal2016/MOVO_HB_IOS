@@ -477,6 +477,9 @@ struct QuickActionButton: View {
     /// the memberwise initializer (e.g. a transparent, accent-outlined pill).
     struct Appearance {
         var fill: Color
+        /// Optional richer fill (e.g. a gradient). Takes precedence over `fill`
+        /// when set; `fill` remains the simple solid-color fallback.
+        var fillStyle: AnyShapeStyle? = nil
         var border: Color?
         var text: Color
         var borderWidth: CGFloat = Stroke.thin
@@ -514,7 +517,7 @@ struct QuickActionButton: View {
             .padding(.vertical, Spacing.lg)
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(appearance.fill)
+                    .fill(appearance.fillStyle ?? AnyShapeStyle(appearance.fill))
                     .overlay {
                         if let border = appearance.border {
                             RoundedRectangle(cornerRadius: cornerRadius)

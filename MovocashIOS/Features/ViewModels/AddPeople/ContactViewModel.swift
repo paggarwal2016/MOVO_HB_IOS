@@ -430,7 +430,7 @@ final class ContactViewModel: BaseViewModel {
     }
     
     
-    // MARK: - Private
+    // MARK: - Add Favourite
     
     private func addFavourite(contactId: String, nickname: String, phoneNumber: String) async {
         let request = ContactRequest.AddFavourite(
@@ -458,12 +458,11 @@ final class ContactViewModel: BaseViewModel {
         }
     }
     
+    //MARK: - Remove Favourite
     
     private func removeFavourite(contactId: String) async {
-        let request = ContactRequest.DeleteFavourite(
-            contact_id: contactId,
-            userAction: "DELETE-CONTACT"
-        )
+        let request = ContactRequest.DeleteFavourite(contact_id: contactId,
+                                                     userAction: "DELETE-CONTACT")
         do {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.deleteFavourite(request: request))
@@ -475,6 +474,27 @@ final class ContactViewModel: BaseViewModel {
         } catch is CancellationError {
         } catch {
             analytics.log(AnalyticsEvent.contactRemoveFavoriteFailed, params: [
+                AnalyticsParam.errorCode: error.localizedDescription
+            ])
+        }
+    }
+    
+    //MARK: - Referral Invite
+    
+    func inviteUser(phone: String, referral: String) async {
+        let request = ContactRequest.Referral(invitee_phone: phone,
+                                              referral_code: referral,
+                                              userAction: "REFERRAL-INVITE")
+        do {
+            let _: ContactActionResponse = try await perform {
+                try await self.network.request(ContactAPI.referralInvite(request: request))
+            }
+            analytics.log(AnalyticsEvent.contactReferralInvite, params: [
+                AnalyticsParam.referralCode: referral
+            ])
+        } catch is CancellationError {
+        } catch {
+            analytics.log(AnalyticsEvent.contactReferralInviteFailed, params: [
                 AnalyticsParam.errorCode: error.localizedDescription
             ])
         }

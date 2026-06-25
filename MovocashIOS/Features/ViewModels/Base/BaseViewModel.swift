@@ -67,15 +67,6 @@ class BaseViewModel: ObservableObject {
     }
 
     // MARK: - Task Management
-    // viewModel.performTask { await callmethods } not used Task { }
-
-    @discardableResult
-    func performTask(_ operation: @escaping @Sendable () async -> Void) -> Task<Void, Never> {
-        activeTasks = activeTasks.filter { !$0.isCancelled }
-        let task = Task { @MainActor in await operation() }
-        activeTasks.append(task)
-        return task
-    }
 
     func cancelAllTasks() {
         activeTasks.forEach { $0.cancel() }

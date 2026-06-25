@@ -15,6 +15,7 @@ struct ShareInviteSheet: View {
     let onInviteSent: () -> Void
 
     @StateObject private var transVM: TransactionViewModel
+    @StateObject private var contactVM: ContactViewModel
     @State private var phoneNo: String = ""
     @State private var isPhoneFocused = false
     @State private var showSystemPicker = false
@@ -31,12 +32,12 @@ struct ShareInviteSheet: View {
     }
 
     private var inviteSMSBody: String {
-        "Join me on Movo! Download the app: \(Self.appStoreURL) and enter invite code: \(inviteCode)"
+        "You've been invited to join MOVO. Download the app: \(Self.appStoreURL) and enter invite code: \(inviteCode) to get started."
     }
 
     private var recipientE164: String {
-        String(phoneNo.filter(\.isNumber).suffix(10))
-    } // "+1" + String(phoneNo.filter(\.isNumber).suffix(10))
+        "+1" + String(phoneNo.filter(\.isNumber).suffix(10))
+    }
 
     private static func randomInviteCode() -> String {
         let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -49,6 +50,7 @@ struct ShareInviteSheet: View {
         self.onClose = onClose
         self.onInviteSent = onInviteSent
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
+        _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
     }
 
     private var isNumberValid: Bool {
@@ -128,6 +130,14 @@ struct ShareInviteSheet: View {
                 // Open the SMS composer only after the popup's cover is fully gone.
                 if pendingInvite {
                     pendingInvite = false
+                    guard MFMessageComposeViewController.canSendText() else {
+                        ToastManager.shared.show(
+                            "iMessage is not supported on the Simulator.",
+                            style: .error,
+                            position: .bottom
+                        )
+                        return
+                    }
                     showMessageComposer = true
                 }
             },
@@ -142,7 +152,8 @@ struct ShareInviteSheet: View {
                 body: inviteSMSBody,
                 onFinish: { result in
                     guard result == .sent else { return }
-                    // TODO: notify the skinny processor that the invite was sent.
+                    // Notify the skinny processor that the invite was sent.
+                    Task { await contactVM.inviteUser(phone: recipientE164, referral: inviteCode) }
 
                     onInviteSent()
                 }

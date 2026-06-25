@@ -17,15 +17,7 @@ struct CreateCardView: View {
         ZStack(alignment: .bottomTrailing) {
 
             // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid gradient.
-            LinearGradient(
-                stops: [
-                    .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
-                    .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
-                    .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
-                ],
-                startPoint: .topLeading,
-                endPoint:   .bottomTrailing
-            )
+            LinearGradient.cardVoid
 
             CardMockIllustration()
                 .frame(width: 140, height: 162)

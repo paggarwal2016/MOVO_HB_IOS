@@ -59,17 +59,7 @@ struct ActionCard: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.sm)
                 .padding(.horizontal, Spacing.lg)
-                .background(
-                    LinearGradient(
-                        stops: [
-                            .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
-                            .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
-                            .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint:   .bottomTrailing
-                    )
-                )
+                .background(LinearGradient.cardVoid)
                 .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
@@ -233,17 +223,7 @@ struct PayAnyoneAddContactView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid
             // gradient with a silver hairline border.
-            .background(
-                LinearGradient(
-                    stops: [
-                        .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
-                        .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
-                        .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint:   .bottomTrailing
-                )
-            )
+            .background(LinearGradient.cardVoid)
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)

@@ -40,4 +40,9 @@ enum ContactRequest {
         let userAction: String
     }
     
+    struct Referral: Codable, Equatable, Sendable {
+        let invitee_phone: String
+        let referral_code: String
+        let userAction: String
+    }
 }
