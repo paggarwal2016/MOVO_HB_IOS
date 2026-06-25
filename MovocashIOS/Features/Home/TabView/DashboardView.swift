@@ -294,6 +294,7 @@ struct DashboardView: View {
                 title: "Invite Sent",
                 message: "Invite sent successfully",
                 primary: "LET'S MOVO",
+                primaryIcon: "arrow.right",
                 onPrimary: {
                     NotificationCenter.default.post(name: .returnToDashboard, object: nil)
                 }

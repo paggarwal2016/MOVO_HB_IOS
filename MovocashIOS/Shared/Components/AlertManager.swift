@@ -11,7 +11,7 @@ import Combine
 enum AppAlertType {
     case error(message: String)
     case confirmation(title: String, message: String)
-    case custom(title: String, message: String, primary: String, secondary: String?)
+    case custom(title: String, message: String, primary: String, secondary: String?, primaryIcon: String?)
     case textInput(title: String, message: String, placeholder: String)
 }
 
@@ -59,10 +59,10 @@ final class AlertManager: ObservableObject, AlertManagerProtocol {
         currentAlert = IdentifiedAlert(type: .confirmation(title: title, message: message))
     }
 
-    func showCustom(title: String, message: String, primary: String, secondary: String? = nil, onPrimary: (() -> Void)? = nil, onSecondary: (() -> Void)? = nil) {
+    func showCustom(title: String, message: String, primary: String, secondary: String? = nil, primaryIcon: String? = nil, onPrimary: (() -> Void)? = nil, onSecondary: (() -> Void)? = nil) {
         primaryAction = onPrimary
         secondaryAction = onSecondary
-        currentAlert = IdentifiedAlert(type: .custom(title: title, message: message, primary: primary, secondary: secondary))
+        currentAlert = IdentifiedAlert(type: .custom(title: title, message: message, primary: primary, secondary: secondary, primaryIcon: primaryIcon))
     }
 
     // MARK: NEW — Text Input Alert
@@ -98,10 +98,13 @@ struct GlobalAlertModifier: ViewModifier {
     func body(content: Content) -> some View {
         ZStack(alignment: .bottom) {
             content
-                // Existing native alerts (exclude textInput)
+                // Native alerts for .error / .confirmation only. .custom and
+                // .textInput are rendered as design-system overlays below, so they
+                // are filtered out of the native-alert binding.
                 .alert(item: Binding(
                     get: {
                         if case .textInput = alertManager.currentAlert?.type { return nil }
+                        if case .custom = alertManager.currentAlert?.type { return nil }
                         return alertManager.currentAlert
                     },
                     set: { newValue in Task { @MainActor in alertManager.currentAlert = newValue } }
@@ -118,23 +121,25 @@ struct GlobalAlertModifier: ViewModifier {
                             primaryButton: .destructive(Text("Yes")) { alertManager.triggerPrimary() },
                             secondaryButton: .cancel { alertManager.triggerSecondary() }
                         )
-                    case .custom(let title, let message, let primary, let secondary):
-                        if let secondary {
-                            return Alert(
-                                title: Text(title), message: Text(message),
-                                primaryButton: .default(Text(primary)) { alertManager.triggerPrimary() },
-                                secondaryButton: .cancel(Text(secondary)) { alertManager.triggerSecondary() }
-                            )
-                        } else {
-                            return Alert(
-                                title: Text(title), message: Text(message),
-                                dismissButton: .default(Text(primary)) { alertManager.triggerPrimary() }
-                            )
-                        }
-                    case .textInput:
-                        return Alert(title: Text("")) // never reached
+                    case .custom, .textInput:
+                        return Alert(title: Text("")) // never reached — handled by overlays
                     }
                 }
+
+            // Design-system styled custom alert overlay.
+            if case .custom(let title, let message, let primary, let secondary, let primaryIcon) = alertManager.currentAlert?.type {
+                CustomAlertView(
+                    title: title,
+                    message: message,
+                    primary: primary,
+                    secondary: secondary,
+                    primaryIcon: primaryIcon,
+                    onPrimary: { alertManager.triggerPrimary() },
+                    onSecondary: { alertManager.triggerSecondary() }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                .zIndex(1)
+            }
 
             // NEW — TextInput overlay alert
             if case .textInput(let title, let message, let placeholder) = alertManager.currentAlert?.type {

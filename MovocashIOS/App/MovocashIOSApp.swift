@@ -64,11 +64,11 @@ struct MovocashIOSApp: App {
                 // Inbound invite universal links (requires the hosted AASA file to
                 // open the app). Both paths cover SwiftUI's link delivery channels.
                 .onOpenURL { url in
-                    DeepLinkRouter.shared.handle(universalLink: url, isAuthenticated: appState.isAuthenticated)
+                    DeepLinkRouter.shared.handle(universalLink: url, appState: appState)
                 }
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                     if let url = activity.webpageURL {
-                        DeepLinkRouter.shared.handle(universalLink: url, isAuthenticated: appState.isAuthenticated)
+                        DeepLinkRouter.shared.handle(universalLink: url, appState: appState)
                     }
                 }
                 .task {

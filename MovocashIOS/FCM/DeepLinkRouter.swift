@@ -62,10 +62,11 @@ class DeepLinkRouter: ObservableObject {
     /// Movo invite link (`https://…herringbank.com/invite?code=<6-char code>`).
     ///
     /// Invites are for prospective users: an existing (authenticated) member is
-    /// informed and the code is not stored. A new user's code is persisted so it
-    /// can be applied when the registration redemption API lands.
+    /// informed and the code is not stored. For a new user the code is persisted
+    /// and the app routes straight to `EnterInviteCodeScreen`, which autofills it
+    /// from `pendingInviteCode`.
     @discardableResult
-    func handle(universalLink url: URL, isAuthenticated: Bool) -> Bool {
+    func handle(universalLink url: URL, appState: AppState) -> Bool {
         guard
             let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
             comps.host?.hasSuffix("herringbank.com") == true,
@@ -78,7 +79,7 @@ class DeepLinkRouter: ObservableObject {
 
         SecureLogger.info("Invite deeplink received", category: .general)
 
-        guard !isAuthenticated else {
+        guard !appState.isAuthenticated else {
             ToastManager.shared.show(
                 "You're already a Movo member — invites are for new users.",
                 style: .info,
@@ -87,12 +88,19 @@ class DeepLinkRouter: ObservableObject {
             return true
         }
 
+        // Persist so EnterInviteCodeScreen can autofill it on appear.
         pendingInviteCode = code
-        ToastManager.shared.show(
-            "Invite applied — sign up to redeem.",
-            style: .success,
-            position: .bottom
-        )
+
+        // Route to the invite screen. On a cold launch the link arrives while the
+        // splash is still showing and StartupRouter.postBootstrap is about to set
+        // `flow` from `pendingDestination` — so set `pendingDestination` to win that
+        // transition. When the app is already running, set `flow` directly.
+        if appState.flow == .splash {
+            appState.pendingDestination = .enterInviteCode
+            appState.pendingContext = .getStarted
+        } else {
+            appState.flow = .enterInviteCode
+        }
         // TODO: apply `pendingInviteCode` during registration (redemption API).
         return true
     }

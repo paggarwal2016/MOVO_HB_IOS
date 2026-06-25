@@ -45,6 +45,7 @@
 		14716FFE2F86671600198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FFA2F86671600198064 /* PlaidService.swift */; };
 		147170012F8667AF00198064 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 147170002F8667AF00198064 /* LinkKit */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
+		1495840E2FED768D005E64A9 /* CustomAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1495840D2FED768D005E64A9 /* CustomAlertView.swift */; };
 		149C19EC2FD1937A00FFC014 /* CommonCustomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */; };
 		14BA4E3B2F7BB64000607891 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3A2F7BB64000607891 /* FirebaseAnalytics */; };
 		14BA4E3D2F7BB64000607891 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14BA4E3C2F7BB64000607891 /* FirebaseCrashlytics */; };
@@ -152,6 +153,7 @@
 		1470D31C2FEBECC3009764FE /* ShareInviteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareInviteSheet.swift; sourceTree = "<group>"; };
 		14716FFA2F86671600198064 /* PlaidService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidService.swift; sourceTree = "<group>"; };
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
+		1495840D2FED768D005E64A9 /* CustomAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomAlertView.swift; sourceTree = "<group>"; };
 		149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonCustomView.swift; sourceTree = "<group>"; };
 		14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -485,6 +487,7 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				1495840D2FED768D005E64A9 /* CustomAlertView.swift */,
 				14D2CDBD2FE93FCA007A9EEB /* MovoEditIcon.swift */,
 				99C2F4482FE06CA100384E28 /* RegistrationCelebrationHero.swift */,
 				99C2F1DE2FDFA58D00384E28 /* BalanceText.swift */,
@@ -820,6 +823,7 @@
 				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
 				14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */,
 				1420296D2F9616D600A72366 /* SignUpViewModel.swift in Sources */,
+				1495840E2FED768D005E64A9 /* CustomAlertView.swift in Sources */,
 				14C383882FBB0C0D002C2215 /* StartupRouter.swift in Sources */,
 				14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */,
 				14413D152FD9662C00EBC972 /* CustomContactEnrollView.swift in Sources */,

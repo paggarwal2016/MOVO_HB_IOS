@@ -20,6 +20,7 @@ enum AuthAPI: Endpoint {
     case nonceRSA(request: RSANonceRequest)
     case deviceConfig
     case logout
+    case waitList(request: WaitListRequest)
     
     var isAuth: Bool { true }
 
@@ -40,6 +41,7 @@ enum AuthAPI: Endpoint {
         case .nonceRSA:          return "/rsa/nonce"
         case .deviceConfig:      return "/get/config"//"/device/config"
         case .logout:            return "/auth/logout"
+        case .waitList:          return "/waitlist/join"
         }
     }
 
@@ -47,7 +49,7 @@ enum AuthAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .messengerOTP, .tokenSMS, .tokenAccess,
-                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements:
+                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements, .waitList:
             return .POST
         case .deviceConfig:
             return .GET
@@ -62,7 +64,8 @@ enum AuthAPI: Endpoint {
              .deviceConfig:
             return [.officeId]
         case .tokenSMS,
-             .tokenRSA:
+             .tokenRSA,
+             .waitList:
             return [.officeId, .secureDeviceInfo]
         case .emailOTP,
              .emailVerify,
@@ -112,6 +115,8 @@ enum AuthAPI: Endpoint {
         case .logout:
             let request = UserActionRequest(
                 userAction: "LOGOUT")
+            return try JSONEncoder().encode(request)
+        case .waitList(let request):
             return try JSONEncoder().encode(request)
         }
     }

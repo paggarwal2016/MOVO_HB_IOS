@@ -131,13 +131,25 @@ struct CustomSheetHeader: View {
 // MARK: - Reusable Custom TextField
 
 struct CustomTextField: View {
-    
+
     @Binding var text: String
 
     var placeholder: String = "Nickname (e.g., Mom, Roommate)"
     var keyboardType: UIKeyboardType = .default
     var cornerRadius: CGFloat = Radius.lg
     var height: CGFloat = 50
+
+    /// Internal focus state — drives the accent border highlight while editing.
+    @FocusState private var isFocused: Bool
+
+    /// Accent while focused, neutral border otherwise.
+    private var borderColor: Color {
+        isFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
+    }
+
+    private var borderWidth: CGFloat {
+        isFocused ? Stroke.medium : Stroke.thin
+    }
 
     var body: some View {
 
@@ -148,6 +160,7 @@ struct CustomTextField: View {
             .textStyle(Typography.body)
             .foregroundColor(Color.movo.textPrimary)
             .tint(Color.movo.accent)
+            .focused($isFocused)
             .padding(.horizontal, Spacing.lg)
             .frame(height: height)
             .background(
@@ -155,9 +168,10 @@ struct CustomTextField: View {
                     .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: cornerRadius)
-                            .strokeBorder(Color.movo.border, lineWidth: Stroke.thin)
+                            .strokeBorder(borderColor, lineWidth: borderWidth)
                     )
             )
+            .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: isFocused)
     }
 }
 

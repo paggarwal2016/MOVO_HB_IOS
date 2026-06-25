@@ -121,14 +121,22 @@ struct ChoiceScreen: View {
     private var actionStack: some View {
         VStack(spacing: Spacing.md) {
             
-            if hasCompletedSignup {
-                Button("Get Started") { appState.flow = .getStartedPhone }.buttonStyle(OutlineButtonStyle())
-                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
-            } else {
-                Button("Get Started") { appState.flow = .getStartedPhone }.buttonStyle(MovoPrimaryButtonStyle())
-                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
-            }
+//            if hasCompletedSignup {
+//                Button("Get Started") { appState.flow = .getStartedPhone }.buttonStyle(OutlineButtonStyle())
+//                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
+//            } else {
+//                Button("Get Started") { appState.flow = .getStartedPhone }.buttonStyle(MovoPrimaryButtonStyle())
+//                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
+//            }
             
+//            Button("Log In") { appState.referralCode = ""; appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
+            
+            if hasCompletedSignup {
+                Button("Log In") { appState.referralCode = ""; appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
+            } else {
+                Button("Accept an Invite") { appState.flow = .enterInviteCode }.buttonStyle(MovoPrimaryButtonStyle())
+            }
+            Button("Join the Waitlist") { appState.referralCode = ""; appState.flow = .waitlist }.buttonStyle(OutlineButtonStyle())
             
             if RSAKeyManager.shared.keysExist() {
                 Button {

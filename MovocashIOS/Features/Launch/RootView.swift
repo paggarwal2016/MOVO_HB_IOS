@@ -42,6 +42,22 @@ struct RootView: View {
                 case .choice:
                     ChoiceScreen()
 
+                case .enterInviteCode:
+                    EnterInviteCodeScreen(flowType: .getStarted)
+
+                case .waitlist:
+                    WaitlistScreen(
+                        onBack: {
+                            UIApplication.shared.dismissKeyboard()
+                            appState.flow = .choice
+                        },
+                        onSubmitted: {
+                            // The success alert is shown by WaitlistScreen; this just
+                            // returns to Choice once the user acknowledges it.
+                            appState.flow = .choice
+                        }
+                    )
+
                 case .loginPhone:
                     PhoneNumberScreen(flowType: .login)
 

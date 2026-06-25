@@ -58,9 +58,15 @@ struct CustomContactEnrollView: View {
                             .fill(avatarFill)
                             .frame(width: 76, height: 76)
                             .overlay {
-                                Text(avatarInitial.isEmpty ? "?" : avatarInitial)
-                                    .font(.system(size: 30, weight: .semibold))
-                                    .foregroundColor(avatarText)
+                                if avatarInitial.isEmpty {
+                                    Image(systemName: "person.fill")
+                                        .font(.system(size: 34, weight: .regular))
+                                        .foregroundColor(avatarText)
+                                } else {
+                                    Text(avatarInitial)
+                                        .font(.system(size: 30, weight: .semibold))
+                                        .foregroundColor(avatarText)
+                                }
                             }
 
                         Circle()

@@ -32,7 +32,15 @@ struct ShareInviteSheet: View {
     }
 
     private var inviteSMSBody: String {
-        "You've been invited to join MOVO. Download the app: \(Self.appStoreURL) and enter invite code: \(inviteCode) to get started."
+        """
+        You've been invited to join MovoCash.
+
+        Invite code: \(inviteCode)
+
+        Get started: \(inviteURL)
+
+        Don't have the app yet? Download it here: \(Self.appStoreURL)
+        """
     }
 
     private var recipientE164: String {
@@ -178,7 +186,7 @@ struct ShareInviteSheet: View {
         Task {
             // Let the keyboard finish resigning before the call / popup appears.
             try? await Task.sleep(nanoseconds: 150_000_000)
-            await transVM.checkIntent(phoneNumber: normalized)
+            await transVM.checkIntent(phoneNumber: normalized, userAction: "CHECK-REFERRAL-INTENT")
             SpinnerView.hideFullScreen()
             guard transVM.checkIntentResult != nil else { return }
             showConfirm = true
