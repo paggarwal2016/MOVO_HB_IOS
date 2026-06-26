@@ -22,6 +22,25 @@ nonisolated struct ContactsData: Decodable, Sendable {
     let contacts: [ContactRecord]
 }
 
+// MARK: - Referral Invite List (GET-REFERRAL-LIST)
+
+nonisolated struct ReferralInviteListResponse: Decodable, Sendable {
+    /// `data` is a flat array of invitees.
+    let data: [ReferralInvitee]
+}
+
+nonisolated struct ReferralInvitee: Decodable, Sendable {
+    let inviteePhone: String?
+    let joined: Bool?
+    let nickname: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case inviteePhone = "invitee_phone"
+        case joined
+        case nickname
+    }
+}
+
 // MARK: - Contact
 
 nonisolated struct ContactRecord: Decodable, Identifiable, Sendable, Hashable {

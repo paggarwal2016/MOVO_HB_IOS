@@ -4,23 +4,28 @@
 //
 //  Design-system styled replacement for the native alert used by
 //  `AlertManager.showCustom`. A centered, fintech-grade modal: dimmed backdrop,
-//  an icon badge, a clear title/message hierarchy, a full-width primary CTA, and
-//  an optional tertiary secondary action. Entrance is animated by the presenter
-//  (`GlobalAlertModifier`) via a scale + opacity transition.
+//  a top badge (tick / Movo mark / error), a clear title/message hierarchy, a
+//  full-width primary CTA, and an optional tertiary secondary action. Entrance is
+//  animated by the presenter (`GlobalAlertModifier`) via a scale + opacity transition.
 //
 
 import SwiftUI
 
+// MARK: - Top badge style
+
+/// The image shown in the alert's top badge.
+enum CustomAlertIcon {
+    case success   // green tick
+    case movo      // Movo "M" logomark
+    case error     // red error mark
+    case none      // no badge
+}
+
 // MARK: - CustomAlertConfig
 
 struct CustomAlertConfig {
-    /// Badge icon shown above the title. Defaults to a success check — the custom
-    /// alert is used for confirmations ("Invite Sent", "You're on the waitlist").
-    var icon: String?           = "checkmark.circle.fill"
-    var iconTint: Color         = Color.movo.accent
-    var iconBackground: Color   = Color.movo.accentTint
-    var cardBackground: Color   = Color.movo.elevated
-    var cornerRadius: CGFloat   = Radius.sheet
+    var cardBackground: Color = Color.movo.elevated
+    var cornerRadius: CGFloat = Radius.sheet
 }
 
 // MARK: - CustomAlertView
@@ -32,6 +37,8 @@ struct CustomAlertView: View {
     var secondary: String? = nil
     /// Optional SF Symbol shown trailing the primary button label (e.g. "arrow.right").
     var primaryIcon: String? = nil
+    /// Top badge image.
+    var icon: CustomAlertIcon = .success
     var config: CustomAlertConfig = .init()
     var onPrimary: () -> Void
     var onSecondary: () -> Void
@@ -50,21 +57,7 @@ struct CustomAlertView: View {
     private var card: some View {
         VStack(spacing: 0) {
 
-            // Icon badge
-            if let icon = config.icon {
-                ZStack {
-                    Circle()
-                        .fill(config.iconBackground)
-                    Image(systemName: icon)
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(config.iconTint)
-                }
-                .frame(width: 64, height: 64)
-                .overlay(
-                    Circle().strokeBorder(config.iconTint.opacity(0.15), lineWidth: Stroke.thin)
-                )
-                .padding(.bottom, 18)
-            }
+            iconBadge
 
             // Title
             Text(title)
@@ -116,5 +109,48 @@ struct CustomAlertView: View {
                 .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
         )
         .shadow(color: .black.opacity(0.35), radius: 30, x: 0, y: 14)
+    }
+
+    // MARK: - Badge
+
+    @ViewBuilder
+    private var iconBadge: some View {
+        switch icon {
+        case .success:
+            badge(tint: Color.movo.accent, background: Color.movo.accentTint) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(Color.movo.accent)
+            }
+        case .movo:
+            badge(tint: Color.movo.accent, background: Color.movo.accentTint) {
+                MovoMVSymbol()
+                    .frame(width: 34, height: 34)
+            }
+        case .error:
+            badge(tint: Color.movo.danger, background: Color.movo.dangerTint) {
+                Image(systemName: "exclamationmark")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(Color.movo.danger)
+            }
+        case .none:
+            EmptyView()
+        }
+    }
+
+    private func badge<Content: View>(
+        tint: Color,
+        background: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        ZStack {
+            Circle().fill(background)
+            content()
+        }
+        .frame(width: 64, height: 64)
+        .overlay(
+            Circle().strokeBorder(tint.opacity(0.15), lineWidth: Stroke.thin)
+        )
+        .padding(.bottom, 18)
     }
 }

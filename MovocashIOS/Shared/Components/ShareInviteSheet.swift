@@ -11,12 +11,21 @@ import MessageUI
 
 struct ShareInviteSheet: View {
     let onClose: () -> Void
-  
     let onInviteSent: () -> Void
+    let inviterName: String
+
+    /// The dashboard INVITE-A-FRIEND section — drives the header copy and invitee list.
+    let invite: DashboardInviteAFriend?
+
+    private var sheetTitle: String { invite?.title ?? "Invite someone to Movo" }
+    private var sheetSubtitle: String { invite?.description ?? "Send a join code to a contact" }
+    /// Already-invited list comes from the GET-REFERRAL-LIST API (not the dashboard).
+    private var invitees: [ReferralInvitee] { contactVM.referralInvitees }
 
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var contactVM: ContactViewModel
     @State private var phoneNo: String = ""
+    @State private var nickname: String = ""
     @State private var isPhoneFocused = false
     @State private var showSystemPicker = false
     @State private var showConfirm = false
@@ -30,16 +39,24 @@ struct ShareInviteSheet: View {
     private var inviteURL: String {
         "\(AppEnvironment.sdkURL)/invite?code=\(inviteCode)"
     }
-
+    
     private var inviteSMSBody: String {
-        """
-        You've been invited to join MovoCash.
+        let inviter = inviterName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let opener = inviter.isEmpty
+            ? "You've been invited to become the next Movoian!"
+            : "\(inviter) invited you to become the next Movoian!"
+        return """
+        \(opener)
 
-        Invite code: \(inviteCode)
+        Download the app:
+        \(Self.appStoreURL)
 
-        Get started: \(inviteURL)
+        Enter your code:
+        \(inviteCode)
 
-        Don't have the app yet? Download it here: \(Self.appStoreURL)
+        Let's MOVO!
+
+        Android support coming soon.
         """
     }
 
@@ -53,8 +70,12 @@ struct ShareInviteSheet: View {
     }
 
     init(container: AppContainer,
+         inviterName: String = "",
+         invite: DashboardInviteAFriend? = nil,
          onClose: @escaping () -> Void,
          onInviteSent: @escaping () -> Void) {
+        self.inviterName = inviterName
+        self.invite = invite
         self.onClose = onClose
         self.onInviteSent = onInviteSent
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
@@ -65,11 +86,90 @@ struct ShareInviteSheet: View {
         phoneNo.filter(\.isNumber).count == 10
     }
 
+    // MARK: - Invitees list
+
+    private var inviteesList: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            LabeledDivider(text: "INVITED")
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: Spacing.xs) {
+                    ForEach(invitees.indices, id: \.self) { index in
+                        inviteeRow(invitees[index])
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, Spacing.xl)
+    }
+
+    private func inviteeRow(_ invitee: ReferralInvitee) -> some View {
+        let phone = displayPhone(invitee.inviteePhone)
+        let name = invitee.nickname?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasName = name?.isEmpty == false
+        return HStack(spacing: Spacing.md) {
+            // Monogram avatar: nickname's first letter, else phone's first digit.
+            Text(initial(for: invitee))
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color.movo.accent)
+                .frame(width: 38, height: 38)
+                .background(Circle().fill(Color.movo.accentTint))
+
+            VStack(alignment: .leading, spacing: 2) {
+                if hasName {
+                    Text(name!)
+                        .textStyle(Typography.bodyCompact)
+                        .foregroundColor(Color.movo.textPrimary)
+                    Text(phone)
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textTertiary)
+                } else {
+                    Text(phone)
+                        .textStyle(Typography.bodyCompact)
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+            }
+
+            Spacer()
+
+            StatusPill(invitee.joined == true ? "Joined" : "Invited",
+                       variant: invitee.joined == true ? .success : .neutral)
+        }
+        .padding(.vertical, Spacing.xs)
+    }
+
+    /// Avatar initial — first letter of the nickname if present, otherwise the first
+    /// digit of the phone number (falling back to the first character).
+    private func initial(for invitee: ReferralInvitee) -> String {
+        if let name = invitee.nickname?.trimmingCharacters(in: .whitespacesAndNewlines),
+           let first = name.first {
+            return String(first).uppercased()
+        }
+        let phone = invitee.inviteePhone ?? ""
+        if let digit = phone.first(where: { $0.isNumber }) {
+            return String(digit)
+        }
+        return phone.first.map { String($0) } ?? "?"
+    }
+
+    /// Formats an E.164 US number (`+19999666666`) as `(999) 966-6666`; falls back to
+    /// the raw value for anything unexpected.
+    private func displayPhone(_ raw: String?) -> String {
+        guard let raw else { return "" }
+        let digits = raw.filter(\.isNumber)
+        let national = (digits.count == 11 && digits.hasPrefix("1")) ? String(digits.dropFirst()) : digits
+        guard national.count == 10 else { return raw }
+        let area = national.prefix(3)
+        let mid = national.dropFirst(3).prefix(3)
+        let last = national.suffix(4)
+        return "(\(area)) \(mid)-\(last)"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             CustomSheetHeader(
-                title: "Invite someone to Movo",
-                subtitle: "Send a join code to a contact",
+                title: sheetTitle,
+                subtitle: sheetSubtitle,
                 systemImage: "person.badge.plus",
                 iconTint: Color.movo.accent,
                 iconBackground: Color.movo.accentTint,
@@ -79,6 +179,8 @@ struct ShareInviteSheet: View {
 
             VStack(spacing: Spacing.lg) {
                 CustomPhoneField(phoneNumber: $phoneNo, isFocused: $isPhoneFocused)
+
+                CustomTextField(text: $nickname, placeholder: "Nickname (optional)")
 
                 LabeledDivider(text: "OR PICK FROM")
 
@@ -91,17 +193,19 @@ struct ShareInviteSheet: View {
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.lg)
 
-            Spacer(minLength: Spacing.xl)
+            // Already-invited list (from the dashboard INVITE-A-FRIEND section).
+            if !invitees.isEmpty {
+                inviteesList
+                    .padding(.top, Spacing.xl)
+            }
 
-            infoBanner
-                .padding(.horizontal, Spacing.xl)
-                .padding(.bottom, Spacing.lg)
+            Spacer()
 
             Button {
                 sendInviteTapped()
             } label: {
                 HStack(spacing: Spacing.sm) {
-                    Text("SEND INVITE")
+                    Text("CONTINUE")
                         .tracking(1.5)
                     Image(systemName: "arrow.right")
                         .font(.system(size: 14, weight: .semibold))
@@ -113,15 +217,15 @@ struct ShareInviteSheet: View {
             .padding(.horizontal, Spacing.xl)
             .padding(.bottom, Spacing.xxl)
         }
-        .padding(.top, Spacing.xxl)
         .background(Color.movo.cardSurface.ignoresSafeArea())
         // Hosts the native contact picker; presents when `showSystemPicker` flips true.
         .background {
             PhoneContactPicker(
                 isPresented: $showSystemPicker,
                 onPresented: { SpinnerView.hideFullScreen() }
-            ) { _, phone in
+            ) { name, phone in
                 phoneNo = Self.normalizedUSDigits(from: phone)
+                nickname = name.trimmingCharacters(in: .whitespacesAndNewlines)
             }
         }
         // Invite-mode enroll popup. exists == true → number is already a Movo user,
@@ -131,8 +235,8 @@ struct ShareInviteSheet: View {
             title: transVM.checkIntentResult?.message ?? "",
             message: transVM.checkIntentResult?.disclaimer ?? "",
             avatarInitial: "",
-            continueTitle: "Send Invite",
-            cancelTitle: "Cancel",
+            continueTitle: "SEND INVITE",
+            cancelTitle: "CANCEL",
             showsContinue: !(transVM.checkIntentResult?.exists ?? false),
             onDismiss: {
                 // Open the SMS composer only after the popup's cover is fully gone.
@@ -161,7 +265,14 @@ struct ShareInviteSheet: View {
                 onFinish: { result in
                     guard result == .sent else { return }
                     // Notify the skinny processor that the invite was sent.
-                    Task { await contactVM.inviteUser(phone: recipientE164, referral: inviteCode) }
+                    let trimmedNickname = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                    Task {
+                        await contactVM.inviteUser(
+                            phone: recipientE164,
+                            referral: inviteCode,
+                            nickname: trimmedNickname.isEmpty ? nil : trimmedNickname
+                        )
+                    }
 
                     onInviteSent()
                 }
@@ -172,6 +283,8 @@ struct ShareInviteSheet: View {
                 isPhoneFocused = true
             }
         }
+        // Load the already-invited list from GET-REFERRAL-LIST.
+        .task { await contactVM.loadReferralInvitees() }
         // Safety: never leave the full-screen spinner up if the sheet goes away.
         .onDisappear { SpinnerView.hideFullScreen() }
     }

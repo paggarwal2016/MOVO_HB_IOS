@@ -287,7 +287,7 @@ struct DashboardView: View {
                 .navigationBarBackButtonHidden(true)
             }
         }
-        .sheet(isPresented: $showInvite, onDismiss: {
+        .fullScreenCover(isPresented: $showInvite, onDismiss: {
             guard inviteSent else { return }
             inviteSent = false
             AlertManager.shared.showCustom(
@@ -302,6 +302,10 @@ struct DashboardView: View {
         }) {
             ShareInviteSheet(
                 container: container,
+                inviterName: [dashboardVM.userDetails?.firstName, dashboardVM.userDetails?.lastName]
+                    .compactMap { $0 }
+                    .joined(separator: " "),
+                invite: dashboardVM.inviteAFriend,
                 onClose: { showInvite = false },
                 onInviteSent: {
                     // Mark success, then dismiss the sheet; the alert fires in onDismiss.
@@ -309,9 +313,6 @@ struct DashboardView: View {
                     showInvite = false
                 }
             )
-            .presentationDetents([.height(400)])
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
         }
         .sheet(isPresented: $showMoveMoney) {
             MoveMoneyMenuView(
@@ -484,7 +485,7 @@ struct DashboardView: View {
     /// that opens the custom invite bottom sheet (ShareInviteSheet).
     private var inviteButton: some View {
         QuickActionButton(
-            title: "Invite someone to Movo",
+            title: dashboardVM.inviteAFriend?.title ?? "Invite someone to Movo",
             icon: "person.badge.plus",
             appearance: .init(
                 fill: .clear,
@@ -496,7 +497,6 @@ struct DashboardView: View {
         ) {
             showInvite = true
         }
-        .padding(.horizontal, 15)
     }
     
     private var scrollContent: some View {
@@ -504,9 +504,6 @@ struct DashboardView: View {
             LazyVStack(spacing: 20) {
                 headerView
                 savingsSection
-                if dashboardVM.dashboard?.data != nil {
-                    inviteButton
-                }
             }
             .padding(.top, 56)
             .padding(.bottom, 24)
@@ -609,6 +606,8 @@ struct DashboardView: View {
                 myCardsSectionView(data)
             case .userDetails, .rewards, .menu, .unknown:
                 EmptyView()
+            case .inviteAFriend:
+                inviteButton
             }
         }
         .padding(.horizontal, 15)

@@ -17,6 +17,7 @@ enum ContactAPI: Endpoint {
     case getFavourites(request: ContactRequest.GetLists)
     case getRecent
     case referralInvite(request: ContactRequest.Referral)
+    case referrelInviteList
 
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -32,20 +33,22 @@ enum ContactAPI: Endpoint {
         case .getFavourites:               return "/contacts"
         case .getRecent:                   return "/recent-transfer"
         case .referralInvite:              return "/referral/invite"
+        case .referrelInviteList:          return "/referral/invite"
         }
     }
 
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .addFavourite:     return .POST
-        case .deleteFavourite:  return .DELETE
-        case .create:           return .POST
-        case .makeFavourite:    return .PATCH
-        case .getContacts:      return .PUT
-        case .getFavourites:    return .PUT
-        case .getRecent:        return .PUT
-        case .referralInvite:   return .POST
+        case .addFavourite:       return .POST
+        case .deleteFavourite:    return .DELETE
+        case .create:             return .POST
+        case .makeFavourite:      return .PATCH
+        case .getContacts:        return .PUT
+        case .getFavourites:      return .PUT
+        case .getRecent:          return .PUT
+        case .referralInvite:     return .POST
+        case .referrelInviteList: return .PUT
         }
     }
 
@@ -78,6 +81,8 @@ enum ContactAPI: Endpoint {
             return try JSONEncoder().encode(UserActionRequest(userAction: "RECENT-TRANSFER"))
         case .referralInvite(let request):
             return try JSONEncoder().encode(request)
+        case .referrelInviteList:
+            return try JSONEncoder().encode(UserActionRequest(userAction: "GET-REFERRAL-LIST"))
         }
     }
 }

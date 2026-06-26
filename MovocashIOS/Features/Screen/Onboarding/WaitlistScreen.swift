@@ -18,6 +18,10 @@ struct WaitlistScreen: View {
     @State private var email: String = ""
     @State private var isSubmitting = false
 
+    /// Drives the full-screen success confirmation shown after a successful join.
+    @State private var showSuccess = false
+    @State private var successMessage = ""
+
     let onBack: () -> Void
     let onSubmitted: () -> Void
 
@@ -65,6 +69,12 @@ struct WaitlistScreen: View {
             StatusBarScrim()
         }
         .onTapGesture { UIApplication.shared.dismissKeyboard() }
+        .fullScreenCover(isPresented: $showSuccess) {
+            WaitlistSuccessView() {
+                showSuccess = false
+                onSubmitted()
+            }
+        }
     }
 
     // MARK: - Top bar
@@ -150,13 +160,9 @@ struct WaitlistScreen: View {
                 )
                 SpinnerView.hideFullScreen()
                 isSubmitting = false
-                // Confirm success with an alert; return to Choice once acknowledged.
-                AlertManager.shared.showCustom(
-                    title: "You're on the waitlist",
-                    message: message ?? "We'll email you when MovoCash opens up.",
-                    primary: "OK",
-                    onPrimary: { onSubmitted() }
-                )
+                // Show the full-screen success confirmation; returns to Choice on done.
+                successMessage = message ?? "We'll email you when MovoCash opens up."
+                showSuccess = true
             } catch {
                 SpinnerView.hideFullScreen()
                 isSubmitting = false

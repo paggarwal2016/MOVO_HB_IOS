@@ -74,6 +74,12 @@ final class AuthViewModel: ObservableObject {
                         deviceInfo: .current
                     ))
             )
+            // The server returns HTTP 200 with `success: false` for the waitlist gate
+            // (and similar). That is NOT an OTP send — surface the message so the
+            // caller stays on the phone screen and shows it (waitlist alert / error).
+            guard response.success != false else {
+                throw NetworkError.serverMessage(response.message ?? "Something went wrong")
+            }
             state = .otpSent
             showOTP = true
             // Fetch the X25519 device-session config now, in the background, so the
@@ -201,8 +207,29 @@ final class AuthViewModel: ObservableObject {
             try await sendOTP()
             appState.flow = .otp
         } catch {
-            alertManager.showError(error.localizedDescription)
+            if let message = waitlistMessage(from: error) {
+                AlertManager.shared.showCustom(
+                    title: "Join the waitlist",
+                    message: message,
+                    primary: "LET'S MOVO",
+                    secondary: "Skip",
+                    primaryIcon: "arrow.right",
+                    icon: .movo,
+                    onPrimary: { appState.flow = .waitlist },
+                    onSecondary: { appState.flow = .choice }
+                )
+            } else {
+                alertManager.showError(error.localizedDescription)
+            }
         }
+    }
+
+    /// Returns the server message when an error is the backend's "join the waitlist"
+    /// gate (a `serverMessage` whose text mentions the wait list), else `nil`.
+    private func waitlistMessage(from error: Error) -> String? {
+        guard let net = error as? NetworkError, case .serverMessage(let msg) = net else { return nil }
+        let normalized = msg.lowercased().replacingOccurrences(of: " ", with: "")
+        return normalized.contains("waitlist") ? msg : nil
     }
 
     // MARK: - Send Email OTP

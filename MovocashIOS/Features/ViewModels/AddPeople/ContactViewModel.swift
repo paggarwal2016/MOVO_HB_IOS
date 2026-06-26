@@ -480,10 +480,28 @@ final class ContactViewModel: BaseViewModel {
     }
     
     //MARK: - Referral Invite
-    
-    func inviteUser(phone: String, referral: String) async {
+
+    /// People the user has already invited, fetched via GET-REFERRAL-LIST.
+    @Published var referralInvitees: [ReferralInvitee] = []
+
+    /// Loads the referral invite list (`ContactAPI.referrelInviteList`) into
+    /// `referralInvitees`. Used by ShareInviteSheet to show the already-invited list.
+    func loadReferralInvitees() async {
+        do {
+            let response: ReferralInviteListResponse = try await perform {
+                try await self.network.request(ContactAPI.referrelInviteList)
+            }
+            referralInvitees = response.data
+        } catch is CancellationError {
+        } catch {
+            SecureLogger.error("Referral list load failed: \(error.localizedDescription)", category: .network)
+        }
+    }
+
+    func inviteUser(phone: String, referral: String, nickname: String? = nil) async {
         let request = ContactRequest.Referral(invitee_phone: phone,
                                               referral_code: referral,
+                                              nickname: nickname,
                                               userAction: "REFERRAL-INVITE")
         do {
             let _: ContactActionResponse = try await perform {

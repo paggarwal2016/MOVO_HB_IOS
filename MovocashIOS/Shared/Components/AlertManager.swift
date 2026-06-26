@@ -11,7 +11,7 @@ import Combine
 enum AppAlertType {
     case error(message: String)
     case confirmation(title: String, message: String)
-    case custom(title: String, message: String, primary: String, secondary: String?, primaryIcon: String?)
+    case custom(title: String, message: String, primary: String, secondary: String?, primaryIcon: String?, icon: CustomAlertIcon)
     case textInput(title: String, message: String, placeholder: String)
 }
 
@@ -59,10 +59,10 @@ final class AlertManager: ObservableObject, AlertManagerProtocol {
         currentAlert = IdentifiedAlert(type: .confirmation(title: title, message: message))
     }
 
-    func showCustom(title: String, message: String, primary: String, secondary: String? = nil, primaryIcon: String? = nil, onPrimary: (() -> Void)? = nil, onSecondary: (() -> Void)? = nil) {
+    func showCustom(title: String, message: String, primary: String, secondary: String? = nil, primaryIcon: String? = nil, icon: CustomAlertIcon = .success, onPrimary: (() -> Void)? = nil, onSecondary: (() -> Void)? = nil) {
         primaryAction = onPrimary
         secondaryAction = onSecondary
-        currentAlert = IdentifiedAlert(type: .custom(title: title, message: message, primary: primary, secondary: secondary, primaryIcon: primaryIcon))
+        currentAlert = IdentifiedAlert(type: .custom(title: title, message: message, primary: primary, secondary: secondary, primaryIcon: primaryIcon, icon: icon))
     }
 
     // MARK: NEW — Text Input Alert
@@ -127,13 +127,14 @@ struct GlobalAlertModifier: ViewModifier {
                 }
 
             // Design-system styled custom alert overlay.
-            if case .custom(let title, let message, let primary, let secondary, let primaryIcon) = alertManager.currentAlert?.type {
+            if case .custom(let title, let message, let primary, let secondary, let primaryIcon, let icon) = alertManager.currentAlert?.type {
                 CustomAlertView(
                     title: title,
                     message: message,
                     primary: primary,
                     secondary: secondary,
                     primaryIcon: primaryIcon,
+                    icon: icon,
                     onPrimary: { alertManager.triggerPrimary() },
                     onSecondary: { alertManager.triggerSecondary() }
                 )

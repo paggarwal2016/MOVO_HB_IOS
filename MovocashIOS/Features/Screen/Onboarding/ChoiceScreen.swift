@@ -129,13 +129,10 @@ struct ChoiceScreen: View {
 //                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
 //            }
             
-//            Button("Log In") { appState.referralCode = ""; appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
+            Button("Accept an Invite") { appState.flow = .enterInviteCode }.buttonStyle(MovoPrimaryButtonStyle())
             
-            if hasCompletedSignup {
-                Button("Log In") { appState.referralCode = ""; appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
-            } else {
-                Button("Accept an Invite") { appState.flow = .enterInviteCode }.buttonStyle(MovoPrimaryButtonStyle())
-            }
+            Button("Log In") { appState.referralCode = ""; appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
+                        
             Button("Join the Waitlist") { appState.referralCode = ""; appState.flow = .waitlist }.buttonStyle(OutlineButtonStyle())
             
             if RSAKeyManager.shared.keysExist() {
