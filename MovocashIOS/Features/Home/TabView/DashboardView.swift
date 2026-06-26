@@ -89,6 +89,9 @@ struct DashboardView: View {
     @State private var insufficientBalanceUsePlaid = false
     /// Drives the custom invite bottom sheet.
     @State private var showInvite = false
+    /// Set when the invite sheet is opened via "See all invitees", so it fetches
+    /// and shows the already-invited list (GET-REFERRAL-LIST) below the form.
+    @State private var showInvitedList = false
     /// Set when the invite SMS was sent, so the success alert shows after the
     /// invite sheet dismisses (a root alert can't present over a sheet).
     @State private var inviteSent = false
@@ -288,6 +291,7 @@ struct DashboardView: View {
             }
         }
         .fullScreenCover(isPresented: $showInvite, onDismiss: {
+            showInvitedList = false
             guard inviteSent else { return }
             inviteSent = false
             AlertManager.shared.showCustom(
@@ -306,6 +310,7 @@ struct DashboardView: View {
                     .compactMap { $0 }
                     .joined(separator: " "),
                 invite: dashboardVM.inviteAFriend,
+                showInvitedList: showInvitedList,
                 onClose: { showInvite = false },
                 onInviteSent: {
                     // Mark success, then dismiss the sheet; the alert fires in onDismiss.
@@ -481,22 +486,23 @@ struct DashboardView: View {
         }
     }
 
-    /// Standalone invite CTA — accent-outlined pill (QuickActionButton `.custom`)
-    /// that opens the custom invite bottom sheet (ShareInviteSheet).
+    /// INVITE-A-FRIEND card — green CTA that opens the custom invite bottom sheet
+    /// (ShareInviteSheet), plus a "See all invitees" row with an avatar stack when
+    /// the dashboard payload includes invitees.
     private var inviteButton: some View {
-        QuickActionButton(
+        InviteAFriendCard(
             title: dashboardVM.inviteAFriend?.title ?? "Invite someone to Movo",
-            icon: "person.badge.plus",
-            appearance: .init(
-                fill: .clear,
-                fillStyle: AnyShapeStyle(LinearGradient.cardVoid),
-                border: DesignTokens.Palette.silverTint.color.opacity(0.35),
-                text: Color.movo.accent
-            ),
-            uppercased: true
-        ) {
-            showInvite = true
-        }
+            invitees: dashboardVM.inviteAFriend?.invitees ?? [],
+            onInvite: {
+                showInvitedList = false
+                showInvite = true
+            },
+            onSeeAll: {
+                // Same sheet as Invite, but it also fetches + shows the invited list.
+                showInvitedList = true
+                showInvite = true
+            }
+        )
     }
     
     private var scrollContent: some View {

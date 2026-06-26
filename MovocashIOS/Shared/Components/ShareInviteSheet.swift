@@ -17,10 +17,12 @@ struct ShareInviteSheet: View {
     /// The dashboard INVITE-A-FRIEND section — drives the header copy and invitee list.
     let invite: DashboardInviteAFriend?
 
+    /// When true (opened via "See all invitees"), the sheet fetches the
+    /// already-invited list (GET-REFERRAL-LIST) and shows it below the form.
+    let showInvitedList: Bool
+
     private var sheetTitle: String { invite?.title ?? "Invite someone to Movo" }
     private var sheetSubtitle: String { invite?.description ?? "Send a join code to a contact" }
-    /// Already-invited list comes from the GET-REFERRAL-LIST API (not the dashboard).
-    private var invitees: [ReferralInvitee] { contactVM.referralInvitees }
 
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var contactVM: ContactViewModel
@@ -31,15 +33,12 @@ struct ShareInviteSheet: View {
     @State private var showConfirm = false
     @State private var pendingInvite = false
     @State private var showMessageComposer = false
+    @State private var isLoadingInvitees = false
 
     @State private var inviteCode: String = ShareInviteSheet.randomInviteCode()
 
     private static let appStoreURL = "https://apps.apple.com/app/id1538828856"
 
-    private var inviteURL: String {
-        "\(AppEnvironment.sdkURL)/invite?code=\(inviteCode)"
-    }
-    
     private var inviteSMSBody: String {
         let inviter = inviterName.trimmingCharacters(in: .whitespacesAndNewlines)
         let opener = inviter.isEmpty
@@ -72,10 +71,12 @@ struct ShareInviteSheet: View {
     init(container: AppContainer,
          inviterName: String = "",
          invite: DashboardInviteAFriend? = nil,
+         showInvitedList: Bool = false,
          onClose: @escaping () -> Void,
          onInviteSent: @escaping () -> Void) {
         self.inviterName = inviterName
         self.invite = invite
+        self.showInvitedList = showInvitedList
         self.onClose = onClose
         self.onInviteSent = onInviteSent
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
@@ -84,85 +85,6 @@ struct ShareInviteSheet: View {
 
     private var isNumberValid: Bool {
         phoneNo.filter(\.isNumber).count == 10
-    }
-
-    // MARK: - Invitees list
-
-    private var inviteesList: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            LabeledDivider(text: "INVITED")
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: Spacing.xs) {
-                    ForEach(invitees.indices, id: \.self) { index in
-                        inviteeRow(invitees[index])
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, Spacing.xl)
-    }
-
-    private func inviteeRow(_ invitee: ReferralInvitee) -> some View {
-        let phone = displayPhone(invitee.inviteePhone)
-        let name = invitee.nickname?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hasName = name?.isEmpty == false
-        return HStack(spacing: Spacing.md) {
-            // Monogram avatar: nickname's first letter, else phone's first digit.
-            Text(initial(for: invitee))
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color.movo.accent)
-                .frame(width: 38, height: 38)
-                .background(Circle().fill(Color.movo.accentTint))
-
-            VStack(alignment: .leading, spacing: 2) {
-                if hasName {
-                    Text(name!)
-                        .textStyle(Typography.bodyCompact)
-                        .foregroundColor(Color.movo.textPrimary)
-                    Text(phone)
-                        .textStyle(Typography.caption)
-                        .foregroundColor(Color.movo.textTertiary)
-                } else {
-                    Text(phone)
-                        .textStyle(Typography.bodyCompact)
-                        .foregroundColor(Color.movo.textPrimary)
-                }
-            }
-
-            Spacer()
-
-            StatusPill(invitee.joined == true ? "Joined" : "Invited",
-                       variant: invitee.joined == true ? .success : .neutral)
-        }
-        .padding(.vertical, Spacing.xs)
-    }
-
-    /// Avatar initial — first letter of the nickname if present, otherwise the first
-    /// digit of the phone number (falling back to the first character).
-    private func initial(for invitee: ReferralInvitee) -> String {
-        if let name = invitee.nickname?.trimmingCharacters(in: .whitespacesAndNewlines),
-           let first = name.first {
-            return String(first).uppercased()
-        }
-        let phone = invitee.inviteePhone ?? ""
-        if let digit = phone.first(where: { $0.isNumber }) {
-            return String(digit)
-        }
-        return phone.first.map { String($0) } ?? "?"
-    }
-
-    /// Formats an E.164 US number (`+19999666666`) as `(999) 966-6666`; falls back to
-    /// the raw value for anything unexpected.
-    private func displayPhone(_ raw: String?) -> String {
-        guard let raw else { return "" }
-        let digits = raw.filter(\.isNumber)
-        let national = (digits.count == 11 && digits.hasPrefix("1")) ? String(digits.dropFirst()) : digits
-        guard national.count == 10 else { return raw }
-        let area = national.prefix(3)
-        let mid = national.dropFirst(3).prefix(3)
-        let last = national.suffix(4)
-        return "(\(area)) \(mid)-\(last)"
     }
 
     var body: some View {
@@ -193,13 +115,11 @@ struct ShareInviteSheet: View {
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.lg)
 
-            // Already-invited list (from the dashboard INVITE-A-FRIEND section).
-            if !invitees.isEmpty {
-                inviteesList
-                    .padding(.top, Spacing.xl)
+            if showInvitedList {
+                invitedListSection
+            } else {
+                Spacer()
             }
-
-            Spacer()
 
             Button {
                 sendInviteTapped()
@@ -279,12 +199,15 @@ struct ShareInviteSheet: View {
             )
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                isPhoneFocused = true
+            if showInvitedList {
+                // Fetch the invited list; keep the keyboard down so the list is visible.
+                loadInvitees()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    isPhoneFocused = true
+                }
             }
         }
-        // Load the already-invited list from GET-REFERRAL-LIST.
-        .task { await contactVM.loadReferralInvitees() }
         // Safety: never leave the full-screen spinner up if the sheet goes away.
         .onDisappear { SpinnerView.hideFullScreen() }
     }
@@ -314,27 +237,108 @@ struct ShareInviteSheet: View {
         return String(national.prefix(10))
     }
 
-    private var infoBanner: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            Image(systemName: "info.circle")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(Color.movo.accent)
-            Text("MovoCash is on iPhone only right now. Make sure they have an iPhone before you invite them.")
-                .textStyle(Typography.subtitle)
-                .foregroundStyle(Color.movo.textSecondary)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    // MARK: - Invited list ("See all invitees")
+
+    /// Fetches the already-invited list via GET-REFERRAL-LIST.
+    private func loadInvitees() {
+        isLoadingInvitees = true
+        Task {
+            await contactVM.loadReferralInvitees()
+            isLoadingInvitees = false
         }
-        .padding(Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.lg)
-                .fill(Color.movo.accentTint)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.lg)
-                        .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
+    }
+
+    @ViewBuilder
+    private var invitedListSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            LabeledDivider(text: "INVITED")
+
+            if isLoadingInvitees {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, Spacing.lg)
+            } else if contactVM.referralInvitees.isEmpty {
+                Text("No invites yet")
+                    .textStyle(Typography.subtitle)
+                    .foregroundColor(Color.movo.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, Spacing.lg)
+            } else {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: Spacing.sm) {
+                        ForEach(Array(contactVM.referralInvitees.enumerated()), id: \.offset) { _, invitee in
+                            inviteeRow(invitee)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.lg)
+    }
+
+    private func inviteeRow(_ invitee: ReferralInvitee) -> some View {
+        let name = invitee.nickname?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasName = !(name?.isEmpty ?? true)
+        let phone = displayPhone(invitee.inviteePhone)
+        let joined = invitee.joined ?? false
+        return HStack(spacing: Spacing.md) {
+            ZStack {
+                Circle().fill(Color.movo.elevatedHigh)
+                Text(inviteeInitials(name: name, phone: invitee.inviteePhone))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+            }
+            .frame(width: 40, height: 40)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(hasName ? (name ?? phone) : phone)
+                    .textStyle(Typography.body)
+                    .foregroundColor(Color.movo.textPrimary)
+                if hasName {
+                    Text(phone)
+                        .textStyle(Typography.subtitle)
+                        .foregroundColor(Color.movo.textSecondary)
+                }
+            }
+
+            Spacer(minLength: Spacing.sm)
+
+            Text(joined ? "JOINED" : "INVITED")
+                .textStyle(Typography.pill)
+                .foregroundColor(joined ? Color.movo.accent : Color.movo.textSecondary)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, Spacing.xxs)
+                .background(
+                    Capsule().fill(joined ? Color.movo.accentTint : Color.movo.elevated)
                 )
-        )
+        }
+        .padding(.vertical, Spacing.xs)
+    }
+
+    /// Formats an E.164 US number (`+19999666666`) as `(999) 966-6666`; falls back
+    /// to the raw value for anything unexpected.
+    private func displayPhone(_ raw: String?) -> String {
+        guard let raw else { return "" }
+        let digits = raw.filter(\.isNumber)
+        let national = (digits.count == 11 && digits.hasPrefix("1")) ? String(digits.dropFirst()) : digits
+        guard national.count == 10 else { return raw }
+        let area = national.prefix(3)
+        let mid = national.dropFirst(3).prefix(3)
+        let last = national.suffix(4)
+        return "(\(area)) \(mid)-\(last)"
+    }
+
+    /// Nickname initials when present, otherwise the last two phone digits
+    /// (matching the dashboard avatar fallback).
+    private func inviteeInitials(name: String?, phone: String?) -> String {
+        if let name, !name.isEmpty {
+            let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
+            if !letters.isEmpty { return String(letters).uppercased() }
+        }
+        let digits = (phone ?? "").filter(\.isNumber)
+        return digits.count >= 2 ? String(digits.suffix(2)) : "#"
     }
 }
 

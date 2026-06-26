@@ -259,3 +259,113 @@ struct PayAnyoneAddContactView: View {
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - Invite a friend
+
+/// Renders the dashboard INVITE-A-FRIEND section.
+///
+/// - No invitees → just the green "Invite a friend" CTA.
+/// - One or more invitees → the CTA on top, plus a "See all invitees" row
+///   beneath it with an overlapping avatar stack (the last two phone digits
+///   stand in for each invitee, since the dashboard payload has no nickname).
+struct InviteAFriendCard: View {
+
+    let title: String
+    let invitees: [DashboardInviteAFriend.Invitee]
+    var onInvite: () -> Void
+    var onSeeAll: () -> Void
+
+    private var hasInvitees: Bool { !invitees.isEmpty }
+
+    /// Avatars drawn before the rest collapse into a "+N" bubble (matches the
+    /// "DK AR +3" layout in the design).
+    private let maxAvatars = 2
+    private let cornerRadius = Radius.xxl
+
+    var body: some View {
+        VStack(spacing: 0) {
+            inviteButton
+
+            if hasInvitees {
+                seeAllRow
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35),
+                              lineWidth: Stroke.hairline)
+        )
+    }
+
+    /// Green-filled CTA with dark text/icon, per the design.
+    private var inviteButton: some View {
+        Button(action: onInvite) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "person.badge.plus")
+                Text(title.uppercased())
+            }
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(Color.movo.background)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.lg)
+            .background(Color.movo.accent)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var seeAllRow: some View {
+        Button(action: onSeeAll) {
+            HStack(spacing: Spacing.md) {
+                avatarStack
+                Text("See all invitees".uppercased())
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color.movo.textPrimary)
+                Spacer(minLength: Spacing.sm)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.lg)
+            .frame(maxWidth: .infinity)
+            .background(LinearGradient.cardVoid)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var avatarStack: some View {
+        let shown = Array(invitees.prefix(maxAvatars))
+        let overflow = invitees.count - shown.count
+        return HStack(spacing: -12) {
+            ForEach(Array(shown.enumerated()), id: \.offset) { _, invitee in
+                avatarCircle(text: phoneInitial(invitee),
+                             fill: Color.movo.accent,
+                             foreground: Color.movo.background)
+            }
+            if overflow > 0 {
+                avatarCircle(text: "+\(overflow)",
+                             fill: Color.movo.elevatedHigh,
+                             foreground: Color.movo.textPrimary)
+            }
+        }
+    }
+
+    private func avatarCircle(text: String, fill: Color, foreground: Color) -> some View {
+        Text(text)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(foreground)
+            .frame(width: 38, height: 38)
+            .background(Circle().fill(fill))
+            // Ring in the row's background color so overlapping circles read cleanly.
+            .overlay(Circle().strokeBorder(Color.movo.cardVoid, lineWidth: 2))
+    }
+
+    /// Last two digits of the invitee's phone number (per product decision);
+    /// falls back to "#" when the number is missing or too short.
+    private func phoneInitial(_ invitee: DashboardInviteAFriend.Invitee) -> String {
+        let digits = (invitee.inviteePhone ?? "").filter(\.isNumber)
+        guard digits.count >= 2 else { return "#" }
+        return String(digits.suffix(2))
+    }
+}
