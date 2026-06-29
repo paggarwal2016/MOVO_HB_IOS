@@ -42,7 +42,8 @@ enum ContactRequest {
     
     struct Referral: Codable, Equatable, Sendable {
         let invitee_phone: String
-        let nickname: String?
+        let invitee_nickname: String?
         let userAction: String
+        let relation: String?
     }
 }

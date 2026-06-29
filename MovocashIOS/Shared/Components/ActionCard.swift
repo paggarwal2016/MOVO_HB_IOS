@@ -287,6 +287,9 @@ struct InviteAFriendCard: View {
             inviteButton
 
             if hasInvitees {
+                Rectangle()
+                    .fill(DesignTokens.Palette.silverTint.color.opacity(0.35))
+                    .frame(height: Stroke.hairline)
                 seeAllRow
             }
         }
@@ -303,13 +306,15 @@ struct InviteAFriendCard: View {
         Button(action: onInvite) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "person.badge.plus")
+                    .foregroundColor(Color.movo.textPrimary)
                 Text(title.uppercased())
+                    .foregroundColor(Color.movo.textPrimary)
             }
             .font(.system(size: 13, weight: .semibold))
             .foregroundColor(Color.movo.background)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.lg)
-            .background(Color.movo.accent)
+            .background(LinearGradient.cardVoid)
         }
         .buttonStyle(.plain)
     }

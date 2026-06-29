@@ -504,8 +504,9 @@ final class ContactViewModel: BaseViewModel {
     @discardableResult
     func inviteUser(phone: String, nickname: String? = nil) async -> String? {
         let request = ContactRequest.Referral(invitee_phone: phone,
-                                              nickname: nickname,
-                                              userAction: "REFERRAL-INVITE")
+                                              invitee_nickname: nickname,
+                                              userAction: "REFERRAL-INVITE",
+                                              relation: "FRI")
         do {
             let response: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.referralInvite(request: request))
