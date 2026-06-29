@@ -302,7 +302,7 @@ final class ContactViewModel: BaseViewModel {
     // MARK: - Load API Contacts
     
     func loadApiContacts() async {
-        let request = ContactRequest.GetLists(responseFlag: "getnewContact", userAction: "GET_CONTACTS")
+        let request = ContactRequest.GetLists(responseFlag: "getnewContact", userAction: "GET-CONTACTS")
         do {
             let response: ContactListResponse = try await perform {
                 try await self.network.request(ContactAPI.getContacts(request: request))
@@ -324,7 +324,7 @@ final class ContactViewModel: BaseViewModel {
     
     func loadFavourites() async {
         let request = ContactRequest.GetLists(responseFlag: "getFavContact",
-                                              userAction: "GET_FAVOURITES")
+                                              userAction: "GET-FAVOURITES")
         do {
             let response: ContactListResponse = try await perform {
                 try await self.network.request(ContactAPI.getFavourites(request: request))
@@ -413,7 +413,7 @@ final class ContactViewModel: BaseViewModel {
     // MARK: - Mark Favourite (PATCH by id)
     
     func markFavourite(id: String, isFav: Bool) async {
-        let request = ContactRequest.MarkFavourite(is_fav: isFav, userAction: "ADD_FAVOURITE")
+        let request = ContactRequest.MarkFavourite(is_fav: isFav, userAction: "ADD-FAVOURITE")
         do {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.makeFavourite(id: id, request: request))

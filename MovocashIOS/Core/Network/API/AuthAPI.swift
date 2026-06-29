@@ -96,7 +96,7 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .tokenAccess:
             let request = UserActionRequest(
-                userAction: "GET_ACCESS_TOKEN")
+                userAction: "GET-ACCESS-TOKEN")
             return try JSONEncoder().encode(request)
         case .acceptAgreements:
             let request = AgreementRequest(accepted: true, Agreement: [Agreement(AgreementType: .tos, action: .accepted)], userAction: "AGREEMENT")

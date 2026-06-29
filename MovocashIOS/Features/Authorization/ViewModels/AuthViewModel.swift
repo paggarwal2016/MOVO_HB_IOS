@@ -371,7 +371,7 @@ extension AuthViewModel {
                 AuthAPI.enrollRSA(request: RSAEnrollRequest(
                     publicKey: publicKey,
                     deviceId: deviceId,
-                    userAction: "RSA_CREATION"
+                    userAction: "RSA-CREATION"
                 ))
             )
             SecureLogger.info("RSA key enrolled successfully", category: .auth)
@@ -412,7 +412,7 @@ extension AuthViewModel {
         do {
             // Step 1 — GET /rsa/nonce
             let nonceResponse: RSANonceResponse = try await network.request(
-                AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId, userAction: "RSA_NONCE"))
+                AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId, userAction: "RSA-NONCE"))
             )
             SecureLogger.info("nonce fetched successfully", category: .auth)
 
@@ -435,7 +435,7 @@ extension AuthViewModel {
                 AuthAPI.tokenRSA(request: RSATokenRequest(
                     signedMessage: signedMessage,
                     deviceId: deviceId,
-                    userAction: "RSA_LOGIN"
+                    userAction: "RSA-LOGIN"
                 ))
             )
 

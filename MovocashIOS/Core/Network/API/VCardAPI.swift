@@ -69,7 +69,7 @@ enum VCardAPI: Endpoint {
     private func encodeBody() throws -> Data? {
         switch self {
         case .getVCardsPrimary:
-            return try JSONEncoder().encode(UserActionRequest(userAction: "GET_PRIMARY_CARD"))
+            return try JSONEncoder().encode(UserActionRequest(userAction: "GET-PRIMARY-CARD"))
         case .getVCardsList:
             return try JSONEncoder().encode(UserActionRequest(userAction: "GET-ALL-CARD"))
         case .postVCards(let request):
