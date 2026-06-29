@@ -11,7 +11,7 @@ import MessageUI
 
 struct ShareInviteSheet: View {
     let onClose: () -> Void
-    let onInviteSent: () -> Void
+    let onInviteSent: (String?) -> Void
     let inviterName: String
 
     /// The dashboard INVITE-A-FRIEND section — drives the header copy and invitee list.
@@ -35,8 +35,6 @@ struct ShareInviteSheet: View {
     @State private var showMessageComposer = false
     @State private var isLoadingInvitees = false
 
-    @State private var inviteCode: String = ShareInviteSheet.randomInviteCode()
-
     private static let appStoreURL = "https://apps.apple.com/app/id1538828856"
 
     private var inviteSMSBody: String {
@@ -56,15 +54,8 @@ struct ShareInviteSheet: View {
         """
     }
     
-    // Enter your code: \(inviteCode)
-
     private var recipientE164: String {
         "+1" + String(phoneNo.filter(\.isNumber).suffix(10))
-    }
-
-    private static func randomInviteCode() -> String {
-        let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        return String((0..<6).compactMap { _ in chars.randomElement() })
     }
 
     init(container: AppContainer,
@@ -72,7 +63,7 @@ struct ShareInviteSheet: View {
          invite: DashboardInviteAFriend? = nil,
          showInvitedList: Bool = false,
          onClose: @escaping () -> Void,
-         onInviteSent: @escaping () -> Void) {
+         onInviteSent: @escaping (String?) -> Void) {
         self.inviterName = inviterName
         self.invite = invite
         self.showInvitedList = showInvitedList
@@ -156,6 +147,7 @@ struct ShareInviteSheet: View {
             avatarInitial: "",
             continueTitle: "SEND INVITE",
             cancelTitle: "CANCEL",
+            continueIcon: true,
             showsContinue: !(transVM.checkIntentResult?.exists ?? false),
             onDismiss: {
                 // Open the SMS composer only after the popup's cover is fully gone.
@@ -183,17 +175,18 @@ struct ShareInviteSheet: View {
                 body: inviteSMSBody,
                 onFinish: { result in
                     guard result == .sent else { return }
-                    // Notify the skinny processor that the invite was sent.
+                    // Notify the skinny processor that the invite was sent, then
+                    // surface the server's success message via onInviteSent.
                     let trimmedNickname = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                    SpinnerView.showFullScreen()
                     Task {
-                        await contactVM.inviteUser(
+                        let message = await contactVM.inviteUser(
                             phone: recipientE164,
-                            referral: inviteCode,
                             nickname: trimmedNickname.isEmpty ? nil : trimmedNickname
                         )
+                        SpinnerView.hideFullScreen()
+                        onInviteSent(message)
                     }
-
-                    onInviteSent()
                 }
             )
         }

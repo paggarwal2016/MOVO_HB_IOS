@@ -55,6 +55,7 @@ struct WaitListRequest: Encodable, Sendable {
     let firstName: String
     let lastName: String
     let email: String
+    let phoneNumber: String
     let deviceInfo: DeviceInfo
     let userAction: String
 
@@ -62,6 +63,7 @@ struct WaitListRequest: Encodable, Sendable {
         case firstName = "first_name"
         case lastName  = "last_name"
         case email
+        case phoneNumber = "invitee_phone"
         case deviceInfo
         case userAction
     }

@@ -115,7 +115,7 @@ enum AnalyticsParam {
     static let institutionName  = "institution_name"
     static let lockoutRound     = "lockout_round"
     static let lockoutDuration  = "lockout_duration"
-    static let referralCode     = "referral_code"
+    static let referralPhone    = "referral_Phone"
 }
 
 // MARK: - User Property Values

@@ -95,6 +95,8 @@ struct DashboardView: View {
     /// Set when the invite SMS was sent, so the success alert shows after the
     /// invite sheet dismisses (a root alert can't present over a sheet).
     @State private var inviteSent = false
+    /// Server success message from the invite API, surfaced in the post-dismiss alert.
+    @State private var inviteMessage: String?
     
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
@@ -296,7 +298,7 @@ struct DashboardView: View {
             inviteSent = false
             AlertManager.shared.showCustom(
                 title: "Invite Sent",
-                message: "Invite sent successfully",
+                message: inviteMessage ?? "Invite sent successfully",
                 primary: "LET'S MOVO",
                 primaryIcon: "arrow.right",
                 onPrimary: {
@@ -312,8 +314,10 @@ struct DashboardView: View {
                 invite: dashboardVM.inviteAFriend,
                 showInvitedList: showInvitedList,
                 onClose: { showInvite = false },
-                onInviteSent: {
-                    // Mark success, then dismiss the sheet; the alert fires in onDismiss.
+                onInviteSent: { message in
+                    // Capture the server message, mark success, then dismiss the
+                    // sheet; the alert fires in onDismiss.
+                    inviteMessage = message
                     inviteSent = true
                     showInvite = false
                 }

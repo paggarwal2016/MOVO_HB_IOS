@@ -498,23 +498,29 @@ final class ContactViewModel: BaseViewModel {
         }
     }
 
-    func inviteUser(phone: String, referral: String, nickname: String? = nil) async {
+    /// Notifies the skinny processor that an invite was sent.
+    /// - Returns: the server's success message (`nil` when empty or on failure) so
+    ///   the caller can surface it instead of a hardcoded string.
+    @discardableResult
+    func inviteUser(phone: String, nickname: String? = nil) async -> String? {
         let request = ContactRequest.Referral(invitee_phone: phone,
-                                              referral_code: referral,
                                               nickname: nickname,
                                               userAction: "REFERRAL-INVITE")
         do {
-            let _: ContactActionResponse = try await perform {
+            let response: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.referralInvite(request: request))
             }
             analytics.log(AnalyticsEvent.contactReferralInvite, params: [
-                AnalyticsParam.referralCode: referral
+                AnalyticsParam.referralPhone: phone
             ])
+            return response.message.isEmpty ? nil : response.message
         } catch is CancellationError {
+            return nil
         } catch {
             analytics.log(AnalyticsEvent.contactReferralInviteFailed, params: [
                 AnalyticsParam.errorCode: error.localizedDescription
             ])
+            return nil
         }
     }
 }

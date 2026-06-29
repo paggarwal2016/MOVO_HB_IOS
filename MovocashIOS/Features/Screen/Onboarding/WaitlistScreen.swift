@@ -16,6 +16,7 @@ struct WaitlistScreen: View {
     @State private var firstName: String = ""
     @State private var lastName: String = ""
     @State private var email: String = ""
+    @State private var phoneNumber: String = ""
     @State private var isSubmitting = false
 
     /// Drives the full-screen success confirmation shown after a successful join.
@@ -25,15 +26,22 @@ struct WaitlistScreen: View {
     let onBack: () -> Void
     let onSubmitted: () -> Void
 
-    /// All three fields are required: non-empty names plus a valid email.
+    /// All fields are required: non-empty names, a valid email, and a valid US phone.
     private var isValid: Bool {
-        !trimmed(firstName).isEmpty && !trimmed(lastName).isEmpty && isValidEmail
+        !trimmed(firstName).isEmpty && !trimmed(lastName).isEmpty && isValidEmail && normalizedPhone != nil
     }
 
     /// Mirrors the rule used in `SignUpViewModel` so email validation stays consistent.
     private var isValidEmail: Bool {
         let pattern = #"^[^@\s]+@[^@\s]+\.[^@\s]+$"#
         return email.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    /// Normalized E.164 phone (`+1XXXXXXXXXX`) when the entry is a valid US number,
+    /// else `nil`. `PhoneNormalizer` strips the display formatting before validating.
+    private var normalizedPhone: String? {
+        if case .success(let e164) = PhoneNormalizer.normalizePhone(phoneNumber) { return e164 }
+        return nil
     }
 
     var body: some View {
@@ -56,6 +64,9 @@ struct WaitlistScreen: View {
                     .padding(.bottom, DesignTokens.Spacing.xl)
 
                 emailField
+                    .padding(.bottom, DesignTokens.Spacing.xl)
+
+                phoneField
                     .padding(.bottom, DesignTokens.Spacing.xxl)
 
                 Spacer()
@@ -132,6 +143,13 @@ struct WaitlistScreen: View {
         }
     }
 
+    private var phoneField: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Eyebrow("Phone number")
+            CustomPhoneField(phoneNumber: $phoneNumber)
+        }
+    }
+
     // MARK: - Submit
 
     private var submitButton: some View {
@@ -148,7 +166,7 @@ struct WaitlistScreen: View {
 
     private func submit() {
         UIApplication.shared.dismissKeyboard()
-        guard isValid, !isSubmitting else { return }
+        guard isValid, !isSubmitting, let phone = normalizedPhone else { return }
         isSubmitting = true
         SpinnerView.showFullScreen()
         Task {
@@ -156,7 +174,8 @@ struct WaitlistScreen: View {
                 let message = try await authVM.joinTheWaitList(
                     firstName: trimmed(firstName),
                     lastName: trimmed(lastName),
-                    email: trimmed(email)
+                    email: trimmed(email),
+                    phoneNumber: phone
                 )
                 SpinnerView.hideFullScreen()
                 isSubmitting = false

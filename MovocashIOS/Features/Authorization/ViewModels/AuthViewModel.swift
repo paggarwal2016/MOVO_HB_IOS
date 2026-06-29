@@ -526,12 +526,13 @@ extension AuthViewModel {
     /// failure so the caller can surface the error.
     /// - Returns: the server's success message, if any, for the caller to display.
     @discardableResult
-    func joinTheWaitList(firstName: String, lastName: String, email: String) async throws -> String? {
+    func joinTheWaitList(firstName: String, lastName: String, email: String, phoneNumber: String) async throws -> String? {
         let response: SuccessResponse = try await network.request(
             AuthAPI.waitList(request: WaitListRequest(
                 firstName: firstName,
                 lastName: lastName,
                 email: email,
+                phoneNumber: phoneNumber,
                 deviceInfo: .current,
                 userAction: "WAIT-LIST-JOIN"
             ))
