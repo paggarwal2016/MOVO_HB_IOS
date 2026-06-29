@@ -504,7 +504,14 @@ final class AppLockManager: ObservableObject {
     func logout() {
         lockoutTask?.cancel()
         lockoutTask = nil
-        try? passcodeManager.clearAll()
+        // Keep the biometric enrollment sentinel (Secure Enclave bio.key) across
+        // logout, mirroring how the RSA key pair is intentionally retained (see
+        // SessionManager.resetAppState). This keeps the Profile Face ID toggle ON
+        // after a biometric re-login, which routes straight to Home and never goes
+        // through BiometricEnrollView (the only path that recreates the sentinel).
+        // The sentinel is still removed on explicit disable (revokeBiometrics) or
+        // re-enrollment (enrollBiometricKey clears + recreates it).
+        try? passcodeManager.clearPasscode()
         failedAttempts         = 0
         lockoutRound           = 0
         lockoutMessage         = nil

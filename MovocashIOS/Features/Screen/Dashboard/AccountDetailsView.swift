@@ -33,6 +33,7 @@ struct AccountDetailsView: View {
             accountRows
         }
         .padding(.top, Spacing.xxxl)
+        .background(Color.movo.cardSurface.ignoresSafeArea())
         .sheet(isPresented: $showEditNickname) {
             EditNicknameView(currentNickname: displayNickname) { newValue in
                 withAnimation(.easeInOut(duration: 0.2)) {

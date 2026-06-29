@@ -65,7 +65,7 @@ final class AuthViewModel: ObservableObject {
                     MessengerOTPRequest(
                         phoneNumber: phoneNumber,
                         context: context?.rawValue ?? "",
-                        userAction: "SEND_OTP",
+                        userAction: "SEND-OTP",
                         deviceInfo: .current
                     ))
             )
