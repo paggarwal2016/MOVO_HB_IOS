@@ -15,6 +15,9 @@ nonisolated struct RefreshTokenResponse: Decodable {
 nonisolated struct SuccessResponse: Decodable {
     let success: Bool?
     let message: String?
+    /// Optional secondary copy (e.g. Send-OTP "Your invite checks out…"). When
+    /// present on a successful send, it's shown in a Continue alert before the OTP screen.
+    let description: String?
 }
 
 nonisolated struct APIErrorResponse: Decodable {

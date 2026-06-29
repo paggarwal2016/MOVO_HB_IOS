@@ -16,6 +16,14 @@ final class AuthViewModel: ObservableObject {
     @Published var phoneDisplayText: String = ""
     @Published var email: String = ""
     @Published var context: PhoneFlowType?
+    /// `message` + `description` from the most recent successful Send-OTP. When the
+    /// server includes a `description` (e.g. registration "Pre-approved!"),
+    /// submitPhoneNumber shows them in a Continue alert before the OTP screen.
+    private(set) var lastSendMessage: String?
+    private(set) var lastSendDescription: String?
+    /// Display-formatted phone carried into WaitlistScreen's phone field when the
+    /// user accepts the waitlist gate ("LET'S MOVO"). Cleared on a manual waitlist open.
+    var waitlistPrefillPhone: String = ""
     private var isEnrolling = false
     /// In-flight biometric login. Runs as a detached task so neither the hosting
     /// view's `.task` cancellation nor the caller's actor context can abort an
@@ -55,7 +63,7 @@ final class AuthViewModel: ObservableObject {
 
     // MARK: - Send OTP
 
-    func sendOTP() async throws {
+    func sendOTP(showToast: Bool = true) async throws {
         guard state != .loading else { return }
         state = .loading
 
@@ -75,17 +83,21 @@ final class AuthViewModel: ObservableObject {
             guard response.success != false else {
                 throw NetworkError.serverMessage(response.message ?? "Something went wrong")
             }
+            lastSendMessage = response.message
+            lastSendDescription = response.description
             state = .otpSent
             showOTP = true
             // Fetch the X25519 device-session config now, in the background, so the
             // movo-info key is ready for tokenSMS (OTP validation). This is the only
             // place /get/config is requested — i.e. only on a fresh login.
             deviceConfigTask = Task { [weak self] in try? await self?.configure() }
-            ToastManager.shared.show(
-                response.message ?? "OTP sent successfully",
-                style: .success,
-                position: .bottom
-            )
+            if showToast {
+                ToastManager.shared.show(
+                    response.message ?? "OTP sent successfully",
+                    style: .success,
+                    position: .bottom
+                )
+            }
         } catch {
             state = .idle
             throw error
@@ -198,8 +210,28 @@ final class AuthViewModel: ObservableObject {
         context = appState.context
 
         do {
-            try await sendOTP()
-            appState.flow = .otp
+            // Suppress the toast here — when the server returns a `description`
+            // (registration "Pre-approved!"), we surface it in a Continue alert
+            // instead; otherwise we show the toast ourselves below.
+            try await sendOTP(showToast: false)
+            if let description = lastSendDescription, !description.isEmpty {
+                AlertManager.shared.showCustom(
+                    title: lastSendMessage ?? "Pre-approved!",
+                    message: description,
+                    primary: "Continue",
+                    primaryIcon: "arrow.right",
+                    icon: .success,
+                    onPrimary: { appState.flow = .otp }
+                )
+            } else {
+                // No description (e.g. login) — keep the original toast + direct navigation.
+                ToastManager.shared.show(
+                    lastSendMessage ?? "OTP sent successfully",
+                    style: .success,
+                    position: .bottom
+                )
+                appState.flow = .otp
+            }
         } catch {
             if let message = waitlistMessage(from: error) {
                 AlertManager.shared.showCustom(
@@ -209,7 +241,13 @@ final class AuthViewModel: ObservableObject {
                     secondary: "Skip",
                     primaryIcon: "arrow.right",
                     icon: .movo,
-                    onPrimary: { appState.flow = .waitlist },
+                    onPrimary: {
+                        // Carry the entered phone into the waitlist form's phone field.
+                        self.waitlistPrefillPhone = self.phoneDisplayText.isEmpty
+                            ? String(self.phoneNumber.filter(\.isNumber).suffix(10))
+                            : self.phoneDisplayText
+                        appState.flow = .waitlist
+                    },
                     onSecondary: { appState.flow = .choice }
                 )
             } else {

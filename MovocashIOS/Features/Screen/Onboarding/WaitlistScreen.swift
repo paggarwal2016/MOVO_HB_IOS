@@ -26,6 +26,12 @@ struct WaitlistScreen: View {
     let onBack: () -> Void
     let onSubmitted: () -> Void
 
+    init(initialPhone: String = "", onBack: @escaping () -> Void, onSubmitted: @escaping () -> Void) {
+        _phoneNumber = State(initialValue: initialPhone)
+        self.onBack = onBack
+        self.onSubmitted = onSubmitted
+    }
+
     /// All fields are required: non-empty names, a valid email, and a valid US phone.
     private var isValid: Bool {
         !trimmed(firstName).isEmpty && !trimmed(lastName).isEmpty && isValidEmail && normalizedPhone != nil

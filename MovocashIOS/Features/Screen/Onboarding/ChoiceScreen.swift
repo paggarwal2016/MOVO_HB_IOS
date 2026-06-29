@@ -129,7 +129,7 @@ struct ChoiceScreen: View {
                 Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
             }
         
-            Button("Join the Waitlist") { appState.flow = .waitlist }.buttonStyle(OutlineButtonStyle())
+            Button("Join the Waitlist") { authVM.waitlistPrefillPhone = ""; appState.flow = .waitlist }.buttonStyle(OutlineButtonStyle())
             
             if RSAKeyManager.shared.keysExist() {
                 Button {

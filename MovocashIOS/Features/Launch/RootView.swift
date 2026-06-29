@@ -44,6 +44,7 @@ struct RootView: View {
 
                 case .waitlist:
                     WaitlistScreen(
+                        initialPhone: authVM.waitlistPrefillPhone,
                         onBack: {
                             UIApplication.shared.dismissKeyboard()
                             appState.flow = .choice
