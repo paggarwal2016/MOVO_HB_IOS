@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 enum AuthFlow: String {
-    case splash, choice, enterInviteCode, waitlist, loginPhone, getStartedPhone, otp, signupDetails, emailVerification, getStartedInfo, enableBiometrics, pickDocument, kyc, kycSuccess, appLock, warmRelock, home
+    case splash, choice, waitlist, loginPhone, getStartedPhone, otp, signupDetails, emailVerification, getStartedInfo, enableBiometrics, pickDocument, kyc, kycSuccess, appLock, warmRelock, home
 }
 
 enum PhoneFlowType: String {
@@ -25,10 +25,6 @@ enum NetworkStatus {
 final class AppState: ObservableObject {
     @Published var flow: AuthFlow = .splash
     @Published var context: PhoneFlowType?
-    /// Referral / invite code entered on EnterInviteCodeScreen. Persisted here
-    /// (not on AuthViewModel) so it survives the phone screen's `authVM.reset()`,
-    /// and is included in the Send OTP request during registration.
-    @Published var referralCode: String = ""
     @Published var otpVerified: Bool = false
     @Published var kycVerified: Bool = false
     @Published var isAuthenticated: Bool = false

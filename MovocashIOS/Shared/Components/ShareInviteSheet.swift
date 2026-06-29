@@ -50,14 +50,13 @@ struct ShareInviteSheet: View {
         Download the app:
         \(Self.appStoreURL)
 
-        Enter your code:
-        \(inviteCode)
+        Android support coming soon.
 
         Let's MOVO!
-
-        Android support coming soon.
         """
     }
+    
+    // Enter your code: \(inviteCode)
 
     private var recipientE164: String {
         "+1" + String(phoneNo.filter(\.isNumber).suffix(10))

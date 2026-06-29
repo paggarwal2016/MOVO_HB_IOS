@@ -61,16 +61,6 @@ struct MovocashIOSApp: App {
                 .globalAlert()
                 .sensitiveScreen() // Layer 2: shield during recording + app-switcher (whole app)
                 .secured(forwardDismiss: false) // Layer 1: blank screenshots & recordings of the main hierarchy
-                // Inbound invite universal links (requires the hosted AASA file to
-                // open the app). Both paths cover SwiftUI's link delivery channels.
-                .onOpenURL { url in
-                    DeepLinkRouter.shared.handle(universalLink: url, appState: appState)
-                }
-                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-                    if let url = activity.webpageURL {
-                        DeepLinkRouter.shared.handle(universalLink: url, appState: appState)
-                    }
-                }
                 .task {
                     await StartupRouter.postBootstrap(
                         appState: appState,

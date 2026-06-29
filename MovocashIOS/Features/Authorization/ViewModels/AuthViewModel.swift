@@ -16,10 +16,6 @@ final class AuthViewModel: ObservableObject {
     @Published var phoneDisplayText: String = ""
     @Published var email: String = ""
     @Published var context: PhoneFlowType?
-    /// Referral / invite code captured on EnterInviteCodeScreen and carried via
-    /// AppState. Set in `submitPhoneNumber` and sent with the OTP request (and on
-    /// resend, which calls `sendOTP` directly). Empty when not an invite flow.
-    var referralCode: String = ""
     private var isEnrolling = false
     /// In-flight biometric login. Runs as a detached task so neither the hosting
     /// view's `.task` cancellation nor the caller's actor context can abort an
@@ -70,7 +66,6 @@ final class AuthViewModel: ObservableObject {
                         phoneNumber: phoneNumber,
                         context: context?.rawValue ?? "",
                         userAction: "SEND_OTP",
-                        referralCode: referralCode.isEmpty ? nil : referralCode,
                         deviceInfo: .current
                     ))
             )
@@ -201,7 +196,6 @@ final class AuthViewModel: ObservableObject {
         guard case .success(let e164) = PhoneNormalizer.normalizePhone(phoneNumber) else { return }
         phoneNumber = e164
         context = appState.context
-        referralCode = appState.referralCode
 
         do {
             try await sendOTP()

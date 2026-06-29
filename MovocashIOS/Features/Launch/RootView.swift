@@ -42,9 +42,6 @@ struct RootView: View {
                 case .choice:
                     ChoiceScreen()
 
-                case .enterInviteCode:
-                    EnterInviteCodeScreen(flowType: .getStarted)
-
                 case .waitlist:
                     WaitlistScreen(
                         onBack: {

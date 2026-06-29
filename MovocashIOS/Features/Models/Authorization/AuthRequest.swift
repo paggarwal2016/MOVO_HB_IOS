@@ -13,9 +13,6 @@ struct MessengerOTPRequest: Encodable, Sendable {
     let phoneNumber: String
     let context: String
     let userAction: String
-    /// Invite/referral code from EnterInviteCodeScreen. Optional — omitted from
-    /// the JSON body (synthesized `encodeIfPresent`) for non-invite registrations.
-    let referralCode: String?
     let deviceInfo: DeviceInfo
 }
 
