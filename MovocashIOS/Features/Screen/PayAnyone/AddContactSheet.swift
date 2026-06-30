@@ -90,7 +90,7 @@ public struct AddContactSheet: View {
             header()
             usePhoneContactButton()
                 .padding(.bottom, Spacing.lg)
-            LabeledDivider(text: "OR ENTER MANUALLY")
+            LabeledDivider(text: "OR ENTER PHONE NUMBER")
             form()
             Spacer()
             cta
@@ -267,6 +267,10 @@ struct LabeledDivider: View {
             Text(text)
                 .textStyle(Typography.micro)
                 .foregroundColor(Color.movo.textTertiary)
+                // Keep the label on one line at its intrinsic width so the flexible
+                // side rules can't squeeze it into wrapping.
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
         }
     }

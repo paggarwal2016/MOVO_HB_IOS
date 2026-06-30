@@ -97,7 +97,7 @@ struct ShareInviteSheet: View {
                     showSystemPicker = true
                 }
                 
-                LabeledDivider(text: "OR ENTER MANUALLY")
+                LabeledDivider(text: "OR ENTER PHONE NUMBER")
                 
                 CustomPhoneField(phoneNumber: $phoneNo, isFocused: $isPhoneFocused)
 

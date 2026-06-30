@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import AVFoundation
 
 struct RootView: View {
 
@@ -409,38 +408,6 @@ struct RootView: View {
                     let passkeyDone = await authVM.isPasskeyRegistered()
                     appState.flow = passkeyDone ? .home : .enableBiometrics
                 }
-            }
-        }
-        .onChangeCompat(of: appState.flow) { newFlow in
-            let defaults = UserDefaults.standard
-            // Clear every cold-launch resume marker, then re-set only the ones for the
-            // current step. On a Settings permission change iOS force-relaunches the app
-            // (cold launch); StartupRouter uses these markers + the captured permission
-            // status to resume the right screen. A manual kill leaves the permission
-            // unchanged, so it starts fresh at Choice.
-            defaults.removeObject(forKey: "onboardingKycStep")
-            defaults.removeObject(forKey: "onboardingKycCameraAuth")
-            defaults.removeObject(forKey: "onboardingBiometricContext")
-            defaults.removeObject(forKey: "onboardingBiometricAwaitingSettings")
-
-            switch newFlow {
-            case .pickDocument, .kyc:
-                defaults.set(true, forKey: "onboardingKycStep")
-                defaults.set(
-                    AVCaptureDevice.authorizationStatus(for: .video).rawValue,
-                    forKey: "onboardingKycCameraAuth"
-                )
-            case .enableBiometrics:
-                // Persist the onboarding context so a Settings-permission cold relaunch
-                // can restore the correct branch. The "awaiting Settings" flag is set
-                // separately by BiometricEnrollView only when the user is actually sent to
-                // Settings to enable a denied/disabled biometric — that flag plus
-                // biometrics becoming available is what StartupRouter resumes on.
-                if let ctx = appState.context?.rawValue {
-                    defaults.set(ctx, forKey: "onboardingBiometricContext")
-                }
-            default:
-                break
             }
         }
         .onChangeCompat(of: lockManager.state) { newState in

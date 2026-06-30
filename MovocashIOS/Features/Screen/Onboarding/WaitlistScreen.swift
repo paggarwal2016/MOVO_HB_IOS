@@ -38,9 +38,11 @@ struct WaitlistScreen: View {
     }
 
     /// Mirrors the rule used in `SignUpViewModel` so email validation stays consistent.
+    /// Trims first: iOS autofill/paste often appends a trailing space, which the
+    /// whitespace-rejecting regex would otherwise treat as invalid (button stuck disabled).
     private var isValidEmail: Bool {
         let pattern = #"^[^@\s]+@[^@\s]+\.[^@\s]+$"#
-        return email.range(of: pattern, options: .regularExpression) != nil
+        return trimmed(email).range(of: pattern, options: .regularExpression) != nil
     }
 
     /// Normalized E.164 phone (`+1XXXXXXXXXX`) when the entry is a valid US number,
@@ -69,10 +71,10 @@ struct WaitlistScreen: View {
                 lastNameField
                     .padding(.bottom, DesignTokens.Spacing.xl)
 
-                emailField
+                phoneField
                     .padding(.bottom, DesignTokens.Spacing.xl)
 
-                phoneField
+                emailField
                     .padding(.bottom, DesignTokens.Spacing.xxl)
 
                 Spacer()
@@ -110,7 +112,7 @@ struct WaitlistScreen: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-            Text("Join the waitlist")
+            Text("Join the Waitlist")
                 .textStyle(Typography.heroTitle)
                 .foregroundStyle(Color.movo.textPrimary)
                 .lineSpacing(2)
@@ -162,7 +164,7 @@ struct WaitlistScreen: View {
         Button {
             submit()
         } label: {
-            Text("Join waitlist")
+            Text("Join Waitlist")
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         .disabled(!isValid || isSubmitting)
