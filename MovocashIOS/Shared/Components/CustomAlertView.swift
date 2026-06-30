@@ -108,7 +108,6 @@ struct CustomAlertView: View {
             RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous)
                 .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
         )
-        .shadow(color: .black.opacity(0.35), radius: 30, x: 0, y: 14)
     }
 
     // MARK: - Badge

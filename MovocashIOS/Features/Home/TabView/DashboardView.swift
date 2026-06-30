@@ -497,6 +497,7 @@ struct DashboardView: View {
         InviteAFriendCard(
             title: dashboardVM.inviteAFriend?.title ?? "Invite someone to Movo",
             invitees: dashboardVM.inviteAFriend?.invitees ?? [],
+            totalInvites: dashboardVM.inviteAFriend?.totalInvites,
             onInvite: {
                 showInvitedList = false
                 showInvite = true

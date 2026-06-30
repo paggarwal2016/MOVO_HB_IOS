@@ -264,7 +264,16 @@ nonisolated struct DashboardInviteAFriend: Decodable, Sendable {
     let title: String
     let description: String?
     let invitees: [Invitee]?
+    let totalInvites: Int?
     let actions: [DashboardAction]?
+
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case description
+        case invitees
+        case totalInvites = "total_invites"
+        case actions
+    }
 
     nonisolated struct Invitee: Decodable, Sendable {
         let inviteePhone: String?

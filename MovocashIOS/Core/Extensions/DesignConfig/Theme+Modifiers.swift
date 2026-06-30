@@ -261,7 +261,7 @@ public struct MovoTextButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .textStyle(Typography.bodyCompact)
-            .foregroundColor(Color.movo.accent)
+            .foregroundColor(Color.movo.textPrimary)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
             .opacity(configuration.isPressed ? 0.6 : 1.0)

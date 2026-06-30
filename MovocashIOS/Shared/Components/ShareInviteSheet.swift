@@ -81,7 +81,7 @@ struct ShareInviteSheet: View {
         VStack(spacing: 0) {
             CustomSheetHeader(
                 title: sheetTitle,
-                subtitle: sheetSubtitle,
+                subtitle: "", //sheetSubtitle
                 systemImage: "person.badge.plus",
                 iconTint: Color.movo.accent,
                 iconBackground: Color.movo.accentTint,
@@ -90,17 +90,18 @@ struct ShareInviteSheet: View {
             )
 
             VStack(spacing: Spacing.lg) {
-                CustomPhoneField(phoneNumber: $phoneNo, isFocused: $isPhoneFocused)
-
-                CustomTextField(text: $nickname, placeholder: "Nickname (optional)")
-
-                LabeledDivider(text: "OR PICK FROM")
 
                 UsePhoneContactButton {
                     isPhoneFocused = false   // dismiss keyboard before opening the picker
                     SpinnerView.showFullScreen()
                     showSystemPicker = true
                 }
+                
+                LabeledDivider(text: "OR ENTER MANUALLY")
+                
+                CustomPhoneField(phoneNumber: $phoneNo, isFocused: $isPhoneFocused)
+
+                CustomTextField(text: $nickname, placeholder: "Nickname (optional)")
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.lg)
@@ -278,9 +279,14 @@ struct ShareInviteSheet: View {
         return HStack(spacing: Spacing.md) {
             ZStack {
                 Circle().fill(Color.movo.elevatedHigh)
-                Text(inviteeInitials(name: name, phone: invitee.inviteePhone))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color.movo.textPrimary)
+                if hasName, let initial = name?.first {
+                    Text(String(initial).uppercased())
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                } else {
+                    MovoMVSymbol()
+                        .frame(width: 20, height: 20)
+                }
             }
             .frame(width: 40, height: 40)
 
@@ -320,17 +326,6 @@ struct ShareInviteSheet: View {
         let mid = national.dropFirst(3).prefix(3)
         let last = national.suffix(4)
         return "(\(area)) \(mid)-\(last)"
-    }
-
-    /// Nickname initials when present, otherwise the last two phone digits
-    /// (matching the dashboard avatar fallback).
-    private func inviteeInitials(name: String?, phone: String?) -> String {
-        if let name, !name.isEmpty {
-            let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
-            if !letters.isEmpty { return String(letters).uppercased() }
-        }
-        let digits = (phone ?? "").filter(\.isNumber)
-        return digits.count >= 2 ? String(digits.suffix(2)) : "#"
     }
 }
 

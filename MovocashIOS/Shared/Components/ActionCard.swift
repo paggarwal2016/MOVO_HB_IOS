@@ -272,14 +272,12 @@ struct InviteAFriendCard: View {
 
     let title: String
     let invitees: [DashboardInviteAFriend.Invitee]
+    var totalInvites: Int? = nil
     var onInvite: () -> Void
     var onSeeAll: () -> Void
 
     private var hasInvitees: Bool { !invitees.isEmpty }
-
-    /// Avatars drawn before the rest collapse into a "+N" bubble (matches the
-    /// "DK AR +3" layout in the design).
-    private let maxAvatars = 2
+    private let maxAvatars = 3
     private let cornerRadius = Radius.xxl
 
     var body: some View {
@@ -341,36 +339,59 @@ struct InviteAFriendCard: View {
 
     private var avatarStack: some View {
         let shown = Array(invitees.prefix(maxAvatars))
-        let overflow = invitees.count - shown.count
+        let total = totalInvites ?? invitees.count
+        let remaining = max(0, total - shown.count)
         return HStack(spacing: -12) {
             ForEach(Array(shown.enumerated()), id: \.offset) { _, invitee in
-                avatarCircle(text: phoneInitial(invitee),
-                             fill: Color.movo.accent,
-                             foreground: Color.movo.background)
+                inviteeAvatar(invitee)
             }
-            if overflow > 0 {
-                avatarCircle(text: "+\(overflow)",
-                             fill: Color.movo.elevatedHigh,
-                             foreground: Color.movo.textPrimary)
+            if remaining > 0 {
+                avatarCircle(fill: Color.movo.elevatedHigh) {
+                    Text("+\(remaining)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                }
             }
         }
     }
 
-    private func avatarCircle(text: String, fill: Color, foreground: Color) -> some View {
-        Text(text)
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundColor(foreground)
+    /// With a nickname: its first letter on the teal circle. Without one: the
+    /// Movo "MV" logomark in its brand colors on a dark circle (elevatedHigh)
+    /// so the colored mark reads clearly.
+    @ViewBuilder
+    private func inviteeAvatar(_ invitee: DashboardInviteAFriend.Invitee) -> some View {
+        if let initial = nicknameInitial(invitee) {
+            avatarCircle(fill: Color.movo.accent) {
+                Text(initial)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color.movo.background)
+            }
+        } else {
+            avatarCircle(fill: Color.movo.elevatedHigh) {
+                MovoMVSymbol()
+                    .frame(width: 18, height: 18)
+            }
+        }
+    }
+
+    private func avatarCircle<Content: View>(
+        fill: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
             .frame(width: 38, height: 38)
             .background(Circle().fill(fill))
             // Ring in the row's background color so overlapping circles read cleanly.
             .overlay(Circle().strokeBorder(Color.movo.cardVoid, lineWidth: 2))
     }
 
-    /// Last two digits of the invitee's phone number (per product decision);
-    /// falls back to "#" when the number is missing or too short.
-    private func phoneInitial(_ invitee: DashboardInviteAFriend.Invitee) -> String {
-        let digits = (invitee.inviteePhone ?? "").filter(\.isNumber)
-        guard digits.count >= 2 else { return "#" }
-        return String(digits.suffix(2))
+    /// First letter of the invitee's nickname (uppercased), or `nil` when there
+    /// is no usable nickname — in which case the caller shows the Movo logo.
+    private func nicknameInitial(_ invitee: DashboardInviteAFriend.Invitee) -> String? {
+        guard let first = invitee.nickname?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .first
+        else { return nil }
+        return String(first).uppercased()
     }
 }

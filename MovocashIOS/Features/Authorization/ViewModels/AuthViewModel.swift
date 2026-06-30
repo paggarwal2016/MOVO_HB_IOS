@@ -237,9 +237,8 @@ final class AuthViewModel: ObservableObject {
                 AlertManager.shared.showCustom(
                     title: "Join the waitlist",
                     message: message,
-                    primary: "LET'S MOVO",
-                    secondary: "Skip",
-                    primaryIcon: "arrow.right",
+                    primary: "LET'S MOVO!",
+                    secondary: "SKIP",
                     icon: .movo,
                     onPrimary: {
                         // Carry the entered phone into the waitlist form's phone field.

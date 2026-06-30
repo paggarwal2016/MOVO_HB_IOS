@@ -34,7 +34,7 @@ struct CustomSheetHeader: View {
     
     var body: some View {
         
-        HStack(alignment: .top, spacing: Spacing.lg) {
+        HStack(alignment: subtitle.isEmpty ? .center : .top, spacing: Spacing.lg) {
             
             // MARK: Icon
             
@@ -77,12 +77,14 @@ struct CustomSheetHeader: View {
                 Text(title)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.movo.textPrimary)
-
-                Text(subtitle)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(Color.movo.textTertiary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(Color.movo.textTertiary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             // Fill the available width so the subtitle uses the full first line before
             // wrapping (a lineLimit(2) Text otherwise reports a narrow "balanced" ideal
@@ -139,28 +141,45 @@ struct CustomTextField: View {
     var cornerRadius: CGFloat = Radius.lg
     var height: CGFloat = 50
 
+    /// Capitalization behavior. Defaults to `.never` so existing callers are
+    /// unchanged; name/nickname forms can pass `.sentences` / `.words`.
+    var autocapitalization: TextInputAutocapitalization = .never
+
+    /// Keyboard return-key label. Defaults to `.return`.
+    var submitLabel: SubmitLabel = .return
+
+    /// Optional external focus control (mirrors `CustomPhoneField`). When provided,
+    /// the parent can drive/observe focus — e.g. auto-focus on appear or advance to
+    /// the next field. Default `nil` leaves existing callers entirely unaffected.
+    var isFocused: Binding<Bool>? = nil
+
+    /// Called when the keyboard's submit/return key is pressed (e.g. advance focus).
+    var onSubmit: (() -> Void)? = nil
+
     /// Internal focus state — drives the accent border highlight while editing.
-    @FocusState private var isFocused: Bool
+    @FocusState private var fieldFocused: Bool
 
     /// Accent while focused, neutral border otherwise.
     private var borderColor: Color {
-        isFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
+        fieldFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
     }
 
     private var borderWidth: CGFloat {
-        isFocused ? Stroke.medium : Stroke.thin
+        fieldFocused ? Stroke.medium : Stroke.thin
     }
 
     var body: some View {
 
         TextField(placeholder, text: $text)
             .keyboardType(keyboardType)
-            .textInputAutocapitalization(.never)
+            .textInputAutocapitalization(autocapitalization)
             .autocorrectionDisabled()
+            .submitLabel(submitLabel)
             .textStyle(Typography.body)
             .foregroundColor(Color.movo.textPrimary)
             .tint(Color.movo.accent)
-            .focused($isFocused)
+            .focused($fieldFocused)
+            .onSubmit { onSubmit?() }
             .padding(.horizontal, Spacing.lg)
             .frame(height: height)
             .background(
@@ -171,7 +190,12 @@ struct CustomTextField: View {
                             .strokeBorder(borderColor, lineWidth: borderWidth)
                     )
             )
-            .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: isFocused)
+            .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: fieldFocused)
+            // Two-way sync between the internal FocusState and the optional binding.
+            .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
+            .onChange(of: isFocused?.wrappedValue) { newValue in
+                if let newValue, newValue != fieldFocused { fieldFocused = newValue }
+            }
     }
 }
 
@@ -194,6 +218,15 @@ struct CustomPhoneField: View {
     var isFocused: Binding<Bool>? = nil
 
     @FocusState private var fieldFocused: Bool
+
+    /// Accent while focused, neutral border otherwise (matches CustomTextField).
+    private var borderColor: Color {
+        fieldFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
+    }
+
+    private var borderWidth: CGFloat {
+        fieldFocused ? Stroke.medium : Stroke.thin
+    }
 
     var body: some View {
 
@@ -224,9 +257,10 @@ struct CustomPhoneField: View {
                 .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.thin)
+                        .strokeBorder(borderColor, lineWidth: borderWidth)
                 )
         )
+        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: fieldFocused)
         // Two-way sync between the internal FocusState and the optional binding.
         .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
         .onChange(of: isFocused?.wrappedValue) { newValue in

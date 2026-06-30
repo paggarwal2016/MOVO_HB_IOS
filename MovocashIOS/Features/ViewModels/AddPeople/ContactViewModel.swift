@@ -43,10 +43,9 @@ final class ContactViewModel: BaseViewModel {
         phoneInput.filter(\.isNumber)
     }
 
-    /// Validates that nickname is present and phone has 10 digits.
+    /// Validates the phone number (10 digits). Nickname is optional.
     var canSubmit: Bool {
-        !nickname.trimmingCharacters(in: .whitespaces).isEmpty
-            && digits.count == 10
+        digits.count == 10
     }
 
     var helperMessage: String {
@@ -64,7 +63,8 @@ final class ContactViewModel: BaseViewModel {
     
     func buildResult(countryCode: String) -> AddContactSheet.Result? {
         let trimmedNickname = nickname.trimmingCharacters(in: .whitespaces)
-        guard !trimmedNickname.isEmpty, digits.count == 10 else { return nil }
+        // Nickname is optional; only the phone number is required.
+        guard digits.count == 10 else { return nil }
         let e164 = "\(countryCode)\(digits)"
         return .init(
             nickname: trimmedNickname,
