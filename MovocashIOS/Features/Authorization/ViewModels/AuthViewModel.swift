@@ -450,7 +450,7 @@ extension AuthViewModel {
     // ── Login: GET /rsa/nonce → sign → POST /auth/token-rsa ──────────────────
     // Returns true on success. Caller unlocks the app silently after success.
     @discardableResult
-    func loginWithBiometric(appState: AppState) async -> Bool {
+    func loginWithBiometric(appState: AppState, navigateOnSuccess: Bool = true) async -> Bool {
         // Join an attempt that's already running rather than starting a second flow
         // (which would trigger a duplicate nonce request / Face ID prompt).
         if let existing = biometricLoginTask {
@@ -462,7 +462,7 @@ extension AuthViewModel {
         // the login still completes instead of throwing CancellationError mid-flight.
         let task = Task.detached(priority: .userInitiated) { [weak self] () -> Bool in
             guard let self else { return false }
-            return await self.performBiometricLogin(appState: appState)
+            return await self.performBiometricLogin(appState: appState, navigateOnSuccess: navigateOnSuccess)
         }
         biometricLoginTask = task
         defer { biometricLoginTask = nil }
@@ -470,7 +470,7 @@ extension AuthViewModel {
     }
 
     @discardableResult
-    private func performBiometricLogin(appState: AppState) async -> Bool {
+    private func performBiometricLogin(appState: AppState, navigateOnSuccess: Bool) async -> Bool {
 
         let deviceId = await DeviceManager.shared.deviceID()
 
@@ -525,7 +525,9 @@ extension AuthViewModel {
             await MainActor.run {
                 lockManager.unlockAfterRSAAuth()
                 UserDefaults.standard.set(true, forKey: "kycCompleted")
-                appState.flow = passkeyDone ? .home : .enableBiometrics
+                if navigateOnSuccess {
+                    appState.flow = passkeyDone ? .home : .enableBiometrics
+                }
             }
 
             return true

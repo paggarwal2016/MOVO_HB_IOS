@@ -72,9 +72,11 @@ struct ChoiceScreen: View {
                 guard !isBiometricLoading else { return }
                 isBiometricLoading = true
                 Task {
-                    let success = await authVM.loginWithBiometric(appState: appState)
+                    let success = await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
                     isBiometricLoading = false
-                    if !success {
+                    if success {
+                        appState.flow = .home
+                    } else {
                         showBiometricError = true
                     }
                 }
@@ -136,9 +138,11 @@ struct ChoiceScreen: View {
                     guard !isBiometricLoading else { return }
                     isBiometricLoading = true
                     Task {
-                        let success = await authVM.loginWithBiometric(appState: appState)
+                        let success = await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
                         isBiometricLoading = false
-                        if !success {
+                        if success {
+                            appState.flow = .home
+                        } else {
                             showBiometricError = true
                         }
                     }

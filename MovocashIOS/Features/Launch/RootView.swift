@@ -254,7 +254,7 @@ struct RootView: View {
                         biometricIcon: lockManager.biometricType.systemImageName,
                         biometricLabel: lockManager.biometricType.displayName,
                         authenticate: {
-                            await authVM.loginWithBiometric(appState: appState)
+                            await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
                         },
                         onAuthenticated: {
                             appState.flow = .home
@@ -273,7 +273,7 @@ struct RootView: View {
                         biometricIcon: lockManager.biometricType.systemImageName,
                         biometricLabel: lockManager.biometricType.displayName,
                         authenticate: {
-                            await authVM.loginWithBiometric(appState: appState)
+                            await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
                         },
                         onAuthenticated: {
                             appState.flow = .home
