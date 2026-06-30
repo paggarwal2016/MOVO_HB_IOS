@@ -256,11 +256,8 @@ public struct SuccessConfirmationView: View {
     
     private var bottomActions: some View {
         Button(action: vm.done) {
-            HStack(spacing: Spacing.sm) {
-                Text("LET'S MOVO")
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 14, weight: .semibold))
-            }
+            Text("LET'S MOVO!")
+                .tracking(1.5)
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         .padding(.horizontal, Spacing.lg)
