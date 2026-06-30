@@ -228,7 +228,7 @@ final class AppLockManager: ObservableObject {
     var isBiometricHardwarePresent: Bool { biometricManager.isHardwarePresent }
     var biometricType: BiometricType     { biometricManager.biometricType }
     var hardwareBiometricType: BiometricType { biometricManager.hardwareBiometricType }
-    var isBiometricEnabled: Bool         { passcodeManager.isBiometricKeyEnrolled }
+    var isBiometricEnabled: Bool         { passcodeManager.isBiometricKeyEnrolled || RSAKeyManager.shared.keysExist() }
     var isBiometricPermissionDenied: Bool { biometricManager.isAppPermissionDenied }
     var maxPasscodeAttempts: Int         { config.maxAttempts }
     /// True when any auth method is enrolled — passcode (legacy) or RSA
