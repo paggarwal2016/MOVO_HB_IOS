@@ -17,10 +17,6 @@ struct ShareInviteSheet: View {
     /// The dashboard INVITE-A-FRIEND section — drives the header copy and invitee list.
     let invite: DashboardInviteAFriend?
 
-    /// When true (opened via "See all invitees"), the sheet fetches the
-    /// already-invited list (GET-REFERRAL-LIST) and shows it below the form.
-    let showInvitedList: Bool
-
     private var sheetTitle: String { invite?.title ?? "Invite someone to Movo" }
     private var sheetSubtitle: String { invite?.description ?? "Send a join code to a contact" }
 
@@ -61,12 +57,10 @@ struct ShareInviteSheet: View {
     init(container: AppContainer,
          inviterName: String = "",
          invite: DashboardInviteAFriend? = nil,
-         showInvitedList: Bool = false,
          onClose: @escaping () -> Void,
          onInviteSent: @escaping (String?) -> Void) {
         self.inviterName = inviterName
         self.invite = invite
-        self.showInvitedList = showInvitedList
         self.onClose = onClose
         self.onInviteSent = onInviteSent
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
@@ -106,21 +100,16 @@ struct ShareInviteSheet: View {
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.lg)
 
-            if showInvitedList {
+            // Only shown once the invited list has actually loaded (non-empty).
+            if !contactVM.referralInvitees.isEmpty {
                 invitedListSection
-            } else {
-                Spacer()
             }
-
+            Spacer()
             Button {
                 sendInviteTapped()
             } label: {
-                HStack(spacing: Spacing.sm) {
-                    Text("CONTINUE")
-                        .tracking(1.5)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 14, weight: .semibold))
-                }
+                Text("CONTINUE")
+                    .tracking(1.5)
             }
             .buttonStyle(MovoPrimaryButtonStyle())
             .disabled(!isNumberValid)
@@ -148,7 +137,6 @@ struct ShareInviteSheet: View {
             avatarInitial: "",
             continueTitle: "SEND INVITE",
             cancelTitle: "CANCEL",
-            continueIcon: true,
             showsContinue: !(transVM.checkIntentResult?.exists ?? false),
             onDismiss: {
                 // Open the SMS composer only after the popup's cover is fully gone.
@@ -192,14 +180,7 @@ struct ShareInviteSheet: View {
             )
         }
         .onAppear {
-            if showInvitedList {
-                // Fetch the invited list; keep the keyboard down so the list is visible.
-                loadInvitees()
-            } else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    isPhoneFocused = true
-                }
-            }
+            loadInvitees()
         }
         // Safety: never leave the full-screen spinner up if the sheet goes away.
         .onDisappear { SpinnerView.hideFullScreen() }
@@ -245,23 +226,11 @@ struct ShareInviteSheet: View {
     private var invitedListSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             LabeledDivider(text: "INVITED")
-
-            if isLoadingInvitees {
-                ProgressView()
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, Spacing.lg)
-            } else if contactVM.referralInvitees.isEmpty {
-                Text("No invites yet")
-                    .textStyle(Typography.subtitle)
-                    .foregroundColor(Color.movo.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, Spacing.lg)
-            } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: Spacing.sm) {
-                        ForEach(Array(contactVM.referralInvitees.enumerated()), id: \.offset) { _, invitee in
-                            inviteeRow(invitee)
-                        }
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: Spacing.sm) {
+                    ForEach(Array(contactVM.referralInvitees.enumerated()), id: \.offset) { _, invitee in
+                        inviteeRow(invitee)
                     }
                 }
             }
@@ -277,42 +246,67 @@ struct ShareInviteSheet: View {
         let phone = displayPhone(invitee.inviteePhone)
         let joined = invitee.joined ?? false
         return HStack(spacing: Spacing.md) {
+            // Avatar — accent-tinted with a ring once the invitee has joined,
+            // neutral while still pending.
             ZStack {
-                Circle().fill(Color.movo.elevatedHigh)
+                Circle().fill(joined ? Color.movo.accentTint : Color.movo.elevatedHigh)
                 if hasName, let initial = name?.first {
                     Text(String(initial).uppercased())
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color.movo.textPrimary)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(joined ? Color.movo.accent : Color.movo.textPrimary)
                 } else {
                     MovoMVSymbol()
-                        .frame(width: 20, height: 20)
+                        .frame(width: 16, height: 16)
                 }
             }
-            .frame(width: 40, height: 40)
+            .frame(width: 44, height: 44)
+            .overlay(
+                Circle().strokeBorder(
+                    joined ? Color.movo.accent.opacity(0.5) : Color.clear,
+                    lineWidth: Stroke.thin
+                )
+            )
 
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(hasName ? (name ?? phone) : phone)
                     .textStyle(Typography.body)
                     .foregroundColor(Color.movo.textPrimary)
+                    .lineLimit(1)
                 if hasName {
                     Text(phone)
                         .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textSecondary)
+                        .lineLimit(1)
                 }
             }
 
             Spacer(minLength: Spacing.sm)
 
-            Text(joined ? "JOINED" : "INVITED")
-                .textStyle(Typography.pill)
-                .foregroundColor(joined ? Color.movo.accent : Color.movo.textSecondary)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xxs)
-                .background(
-                    Capsule().fill(joined ? Color.movo.accentTint : Color.movo.elevated)
-                )
+            // Status chip — icon + label so state reads at a glance.
+            HStack(spacing: Spacing.xxs) {
+                Image(systemName: joined ? "checkmark.seal.fill" : "paperplane.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(joined ? "JOINED" : "INVITED")
+                    .textStyle(Typography.pill)
+            }
+            .foregroundColor(joined ? Color.movo.accent : Color.movo.textSecondary)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xxs + 2)
+            .background(
+                Capsule().fill(joined ? Color.movo.accentTint : Color.movo.elevated)
+            )
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(.vertical, Spacing.md)
+        .padding(.horizontal, Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                .fill(Color.movo.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.25),
+                              lineWidth: Stroke.hairline)
+        )
     }
 
     /// Formats an E.164 US number (`+19999666666`) as `(999) 966-6666`; falls back

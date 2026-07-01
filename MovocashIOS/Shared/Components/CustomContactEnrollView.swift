@@ -21,9 +21,6 @@ struct CustomContactEnrollView: View {
     var continueTitle: String
     var cancelTitle: String
 
-    /// When true, a trailing arrow (→) is shown after the continue title.
-    var continueIcon: Bool = false
-
     /// When false, the primary (continue) button is hidden and only Cancel shows.
     /// Used by Invite mode when the number already belongs to a Movo user.
     var showsContinue: Bool = true
@@ -103,13 +100,7 @@ struct CustomContactEnrollView: View {
                     // Primary CTA — hidden when `showsContinue` is false.
                     if showsContinue {
                         Button(action: { handleContinue() } ) {
-                            HStack(spacing: Spacing.sm) {
-                                Text(continueTitle)
-                                if continueIcon {
-                                    Image(systemName: "arrow.right")
-                                        .font(.system(size: 14, weight: .semibold))
-                                }
-                            }
+                            Text(continueTitle)
                         }
                         .buttonStyle(MovoPrimaryButtonStyle())
                     }
@@ -161,7 +152,6 @@ extension View {
         avatarInitial: String,
         continueTitle: String = "Continue",
         cancelTitle: String = "Cancel",
-        continueIcon: Bool = false,
         showsContinue: Bool = true,
         onDismiss: (() -> Void)? = nil,
         onContinue: @escaping () -> Void,
@@ -175,7 +165,6 @@ extension View {
                 avatarInitial: avatarInitial,
                 continueTitle: continueTitle,
                 cancelTitle: cancelTitle,
-                continueIcon: continueIcon,
                 showsContinue: showsContinue,
                 onDismiss: onDismiss,
                 onContinue: onContinue,
@@ -193,7 +182,6 @@ private struct ContactEnrollPopupModifier: ViewModifier {
     let avatarInitial: String
     let continueTitle: String
     let cancelTitle: String
-    var continueIcon: Bool = false
     let showsContinue: Bool
     let onDismiss: (() -> Void)?
     let onContinue: () -> Void
@@ -209,7 +197,6 @@ private struct ContactEnrollPopupModifier: ViewModifier {
                     avatarInitial: avatarInitial,
                     continueTitle: continueTitle,
                     cancelTitle: cancelTitle,
-                    continueIcon: continueIcon,
                     showsContinue: showsContinue,
                     continueAction: onContinue,
                     cancelAction: onCancel

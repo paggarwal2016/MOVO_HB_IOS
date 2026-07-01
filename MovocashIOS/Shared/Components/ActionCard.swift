@@ -273,8 +273,9 @@ struct InviteAFriendCard: View {
     let title: String
     let invitees: [DashboardInviteAFriend.Invitee]
     var totalInvites: Int? = nil
-    var onInvite: () -> Void
-    var onSeeAll: () -> Void
+    /// Single tap action for the whole card — opens the invite sheet (which also
+    /// shows the invited list and fetches it via loadInvitees()).
+    var onTap: () -> Void
 
     private var hasInvitees: Bool { !invitees.isEmpty }
     private let maxAvatars = 3
@@ -283,13 +284,6 @@ struct InviteAFriendCard: View {
     var body: some View {
         VStack(spacing: 0) {
             inviteButton
-
-            if hasInvitees {
-                Rectangle()
-                    .fill(DesignTokens.Palette.silverTint.color.opacity(0.35))
-                    .frame(height: Stroke.hairline)
-                seeAllRow
-            }
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
@@ -299,40 +293,33 @@ struct InviteAFriendCard: View {
         )
     }
 
-    /// Green-filled CTA with dark text/icon, per the design.
     private var inviteButton: some View {
-        Button(action: onInvite) {
+        // The full card is tappable and opens the invite sheet's invited-list
+        // section, which fetches the list via loadInvitees().
+        Button(action: onTap) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "person.badge.plus")
-                    .foregroundColor(Color.movo.textPrimary)
+                    .foregroundColor(Color.movo.accent)
                 Text(title.uppercased())
                     .foregroundColor(Color.movo.textPrimary)
+
+                Spacer(minLength: Spacing.sm)
+
+                if hasInvitees {
+                    avatarStack
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color.movo.textSecondary)
+                }
             }
             .font(.system(size: 13, weight: .semibold))
             .foregroundColor(Color.movo.background)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.lg)
-            .background(LinearGradient.cardVoid)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var seeAllRow: some View {
-        Button(action: onSeeAll) {
-            HStack(spacing: Spacing.md) {
-                avatarStack
-                Text("See all invitees".uppercased())
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Color.movo.textPrimary)
-                Spacer(minLength: Spacing.sm)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color.movo.textSecondary)
-            }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.lg)
-            .frame(maxWidth: .infinity)
             .background(LinearGradient.cardVoid)
+            // Make the entire row area tappable, not just the text/icons.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
