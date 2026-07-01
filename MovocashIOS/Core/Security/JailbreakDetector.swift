@@ -14,23 +14,41 @@ actor JailbreakDetector {
     static let shared = JailbreakDetector()
     private init() {}
 
-    // Cached — a device does not become un-jailbroken between checks.
-    private var _cached: Bool?
+    private var _flagged = false
 
     var isJailbroken: Bool {
         #if targetEnvironment(simulator)
         return false
         #else
-        if let cached = _cached { return cached }
-        let result = runChecks()
-        _cached = result
-        return result
+        if _flagged { return true }
+        if runChecks() {
+            _flagged = true
+            return true
+        }
+        return false
+        #endif
+    }
+
+    /// Forces a fresh evaluation. Backs the "Retry Check" action on
+    func recheck() -> Bool {
+        isJailbroken
+    }
+
+    /// the session cache (`_flagged`); `isJailbroken` remains the authoritative,
+    /// caching path (and the only writer of `_flagged`), so the two never race.
+    nonisolated func isCompromisedSnapshot() -> Bool {
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        return runChecks()
         #endif
     }
 
     // MARK: - Aggregator
+    // `nonisolated`: these read only the filesystem / syscalls and never touch
+    // actor-isolated state, so they are safe to run synchronously off the actor.
 
-    private func runChecks() -> Bool {
+    nonisolated private func runChecks() -> Bool {
         checkSuspiciousPaths()
             || canWriteOutsideSandbox()
             || checkSymbolicLinks()
@@ -41,7 +59,7 @@ actor JailbreakDetector {
     // MARK: - Suspicious Path Detection
     // Uses lstat(2) instead of FileManager to reduce the hook surface area.
 
-    private func checkSuspiciousPaths() -> Bool {
+    nonisolated private func checkSuspiciousPaths() -> Bool {
         let paths: [String] = [
             // Jailbreak app stores
             "/Applications/Cydia.app",
@@ -83,6 +101,23 @@ actor JailbreakDetector {
             "/private/etc/apt",
             "/private/var/stash",
             "/private/var/lib/cydia",
+
+            // Rootless jailbreaks (Dopamine, palera1n-rootless, XinaA15, Fugu15).
+            // These bootstrap into /var/jb instead of / — the app stays sandboxed,
+            // so the sandbox-write check below does NOT fire for them. Path presence
+            // is the reliable signal. /var/jb is the bootstrap symlink; the rest are
+            // the package manager, hooking engine (ElleKit), and strap markers.
+            "/var/jb",
+            "/var/jb/.procursus_strapped",
+            "/var/jb/basebin",
+            "/var/jb/basebin/.installed_dopamine",
+            "/var/jb/usr/bin/sileo",
+            "/var/jb/Applications/Sileo.app",
+            "/var/jb/Applications/Zebra.app",
+            "/var/jb/etc/apt",
+            "/var/jb/Library/MobileSubstrate/MobileSubstrate.dylib",
+            "/var/jb/usr/lib/libellekit.dylib",
+            "/var/jb/usr/lib/libhooker.dylib",
         ]
 
         var st = stat()
@@ -97,7 +132,7 @@ actor JailbreakDetector {
     // Uses open(2) directly to reduce the FileManager hook surface.
     // Targets /private/ root — outside every app sandbox on stock iOS.
 
-    private func canWriteOutsideSandbox() -> Bool {
+    nonisolated private func canWriteOutsideSandbox() -> Bool {
         let path = "/private/jb_probe_\(arc4random()).tmp"
         let fd = Darwin.open(path, O_WRONLY | O_CREAT | O_TRUNC, 0o644)
         guard fd >= 0 else { return false }
@@ -114,7 +149,7 @@ actor JailbreakDetector {
     // /usr/share, etc.) can legitimately be symlinks on stock iOS and must not
     // be used as jailbreak signals.
 
-    private func checkSymbolicLinks() -> Bool {
+    nonisolated private func checkSymbolicLinks() -> Bool {
         var st = stat()
         if lstat("/Applications", &st) == 0, (st.st_mode & S_IFMT) == S_IFLNK {
             SecureLogger.warning("JailbreakDetector: /Applications is a symlink", category: .security)
@@ -129,7 +164,7 @@ actor JailbreakDetector {
     // sandbox blocks DYLD injection entirely, and Xcode itself sets DYLD_INSERT_LIBRARIES
     // when debugging on a real device — making that check a reliable false-positive source.
 
-    private func checkInjectedLibraries() -> Bool {
+    nonisolated private func checkInjectedLibraries() -> Bool {
         let patterns: [String] = [
             "frida",            // FridaGadget / frida-agent / frida-gadget
             "mobilesubstrate",
@@ -142,6 +177,9 @@ actor JailbreakDetector {
             "sslkillswitch",
             "tweakinject",
             "substitute",
+            "ellekit",           // ElleKit — the hooking engine used by rootless jailbreaks
+            "libellekit",
+            "roothide",          // RootHide Dopamine variant
         ]
 
         for i in 0..<_dyld_image_count() {
@@ -160,7 +198,7 @@ actor JailbreakDetector {
     // Reads the P_TRACED flag from the kernel process table via sysctl.
     // Skipped in DEBUG builds so Xcode attaches normally during development.
 
-    private func checkDebugger() -> Bool {
+    nonisolated private func checkDebugger() -> Bool {
         #if DEBUG
         return false
         #else

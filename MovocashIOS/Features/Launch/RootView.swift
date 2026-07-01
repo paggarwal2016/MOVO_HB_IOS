@@ -21,6 +21,20 @@ struct RootView: View {
 
     @State private var legalAcceptedItems: Set<String> = []
 
+    /// Client-side jailbreak/integrity gate. When true, CompromisedDeviceView
+    /// covers the whole app and blocks all interaction. Seeded from a synchronous,
+    /// cache-free snapshot so the block wins the very first frame (no pre-render
+    /// flash of the real UI on a compromised device); the launch check, the
+    /// foreground re-check, and the network layer's `.deviceCompromised` broadcast
+    /// then re-confirm and catch instrumentation attached after launch.
+    /// Bypassable on a rooted device — defense in depth, not a guarantee.
+    @State private var deviceCompromised = JailbreakDetector.shared.isCompromisedSnapshot()
+
+    /// Ensures the compromise telemetry event is emitted exactly once per session,
+    /// regardless of whether the flag was raised at frame 1, on foreground, or by
+    /// the network layer.
+    @State private var compromiseReported = false
+
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -320,9 +334,34 @@ struct RootView: View {
             .environmentObject(lockManager)
             .environmentObject(sessionManager)
 
+            // ── Compromised-device gate ────────────────────────────────────
+            // Renders above the entire flow and blocks all interaction with it.
+            // Also enforced at the network layer (NetworkError.jailbreakDetected).
+            if deviceCompromised {
+                Color.movo.background
+                    .ignoresSafeArea()
+                CompromisedDeviceView(onRetry: {
+                    // Re-evaluate. A device cannot un-jailbreak within a session, so a
+                    // confirmed positive stays flagged (the detector caches it). The
+                    // gate only clears if a relaunch cleared the cache. No programmatic
+                    // exit — the block simply stays up (Apple HIG: never quit an app).
+                    let stillCompromised = await JailbreakDetector.shared.recheck()
+                    deviceCompromised = stillCompromised
+                    return stillCompromised
+                })
+            }
         }
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
+            // Re-check integrity on foreground: instrumentation (Frida, a debugger)
+            // can be attached after launch, so re-evaluate every time the app returns
+            // to active. A positive result stays flagged for the session.
+            if newPhase == .active {
+                Task {
+                    if await JailbreakDetector.shared.isJailbroken { deviceCompromised = true }
+                    reportCompromiseIfNeeded(trigger: "foreground")
+                }
+            }
             // Onboarding inactivity tracking — only active before the dashboard is reached.
             // Post-dashboard users are governed by AppLockManager's background timeout.
             guard !UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
@@ -429,6 +468,20 @@ struct RootView: View {
             AlertManager.shared.dismiss()
             appState.flow = .warmRelock
         }
+        .task {
+            // Proactive integrity check at launch — shows the gate before any
+            // flow renders on a compromised device (no network call required).
+            // The synchronous snapshot may already have flagged it at frame 1;
+            // this confirms via the authoritative caching path.
+            if await JailbreakDetector.shared.isJailbroken { deviceCompromised = true }
+            reportCompromiseIfNeeded(trigger: "launch")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceCompromised)) { _ in
+            // Raised by the network layer (NetworkService) when it rejects a call
+            // on a flagged device — see DeviceIntegrityNotifier.
+            deviceCompromised = true
+            reportCompromiseIfNeeded(trigger: "network")
+        }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
             guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
             let message = notification.userInfo?["message"] as? String
@@ -441,6 +494,23 @@ struct RootView: View {
                 await sessionManager.handleSessionExpired(appState: appState, message: message)
             }
         }
+    }
+
+    // MARK: - Device Integrity
+
+    /// Reports the compromise telemetry event exactly once per session so the
+    /// backend/fraud team has visibility into flagged devices. Fires only on the
+    /// first detection, never on repeated foreground/network re-checks. No PII or
+    /// path details are logged — only that a jailbreak was detected and what
+    /// triggered the check.
+    @MainActor
+    private func reportCompromiseIfNeeded(trigger: String) {
+        guard deviceCompromised, !compromiseReported else { return }
+        compromiseReported = true
+        container.analytics.log(AnalyticsEvent.suspiciousActivity, params: [
+            AnalyticsParam.reason: "jailbreak_detected",
+            AnalyticsParam.type: trigger
+        ])
     }
 
     // MARK: -

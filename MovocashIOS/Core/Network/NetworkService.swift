@@ -67,8 +67,9 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.unauthorized
         }
 
-        // Security check
+        // Security check — reject and raise the app-wide compromised-device gate.
         if await JailbreakDetector.shared.isJailbroken {
+            await DeviceIntegrityNotifier.broadcastCompromised()
             throw NetworkError.securityViolation
         }
 
@@ -139,6 +140,7 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         if await JailbreakDetector.shared.isJailbroken {
+            await DeviceIntegrityNotifier.broadcastCompromised()
             throw NetworkError.securityViolation
         }
 

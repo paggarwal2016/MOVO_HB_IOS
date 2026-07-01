@@ -14,6 +14,22 @@ extension Notification.Name {
     /// single transition. Observed by RootView (root swap), HomeTabBarView (tab),
     /// DashboardView and ManageExternalAccountsView (reset their nav pushes).
     static let returnToDashboard = Notification.Name("returnToDashboard")
+    /// Broadcast when the device is flagged as jailbroken/compromised (e.g. the
+    /// network layer rejecting a call). Observed by RootView to raise the app-wide
+    /// hard block. See `DeviceIntegrityNotifier`.
+    static let deviceCompromised = Notification.Name("deviceCompromised")
+}
+
+// MARK: - Device Integrity Broadcast
+
+/// Central, main-actor broadcaster for the compromised-device signal. Any layer
+/// that detects a jailbreak (e.g. `NetworkService` rejecting an outbound call)
+/// posts through here so the SwiftUI gate in `RootView` can raise on the main
+/// actor without cross-thread `@State` mutation.
+enum DeviceIntegrityNotifier {
+    @MainActor static func broadcastCompromised() {
+        NotificationCenter.default.post(name: .deviceCompromised, object: nil)
+    }
 }
 
 enum NetworkError: LocalizedError, Sendable {
@@ -74,7 +90,8 @@ enum NetworkError: LocalizedError, Sendable {
             return "Request failed: \(reason)"
 
         case .securityViolation:
-            return "Secure connection failed. Please check your network."
+            // Thrown only when JailbreakDetector flags the device (see NetworkService).
+            return "For your security, this action is blocked on this device."
 
         case .invalidURL:
             return "Invalid URL"
