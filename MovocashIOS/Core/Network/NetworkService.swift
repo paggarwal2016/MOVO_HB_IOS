@@ -73,6 +73,14 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.securityViolation
         }
 
+        // Independent integrity tripwire — a separately implemented check (see
+        // DeviceIntegrity) so a single hook on isJailbroken cannot disable both
+        // gates on the money-movement path.
+        if DeviceIntegrity.tripwire() {
+            await DeviceIntegrityNotifier.broadcastCompromised()
+            throw NetworkError.securityViolation
+        }
+
         // Idempotency key — generated ONCE per logical request and reused on every
         // retry below, so a slow-but-successful server can dedupe retries instead of
         // treating them as new operations (critical for money movement). Only minted
@@ -140,6 +148,12 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         if await JailbreakDetector.shared.isJailbroken {
+            await DeviceIntegrityNotifier.broadcastCompromised()
+            throw NetworkError.securityViolation
+        }
+
+        // Independent integrity tripwire — see request() above.
+        if DeviceIntegrity.tripwire() {
             await DeviceIntegrityNotifier.broadcastCompromised()
             throw NetworkError.securityViolation
         }

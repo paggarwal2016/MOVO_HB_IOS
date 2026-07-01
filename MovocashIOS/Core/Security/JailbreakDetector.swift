@@ -9,6 +9,10 @@ import Foundation
 import MachO
 import Darwin
 
+// C signature of ptrace(2). PT_DENY_ATTACH is not declared in the iOS SDK, so we
+// resolve ptrace dynamically (see `denyDebugger`) rather than link it statically.
+private typealias PtraceFn = @convention(c) (Int32, pid_t, UnsafeMutablePointer<CChar>?, Int32) -> Int32
+
 actor JailbreakDetector {
 
     static let shared = JailbreakDetector()
@@ -54,6 +58,43 @@ actor JailbreakDetector {
             || checkSymbolicLinks()
             || checkInjectedLibraries()
             || checkDebugger()
+            || checkParentProcess()
+    }
+
+    // MARK: - Anti-Debug (active)
+
+    /// Instructs the kernel to refuse debugger attachment for this process
+    /// (`PT_DENY_ATTACH` — the kernel SIGKILLs any attach attempt). Call once, as
+    /// early as possible, at launch. No-op on simulator and in DEBUG so Xcode can
+    /// attach during development. Complements the passive `checkDebugger()` read.
+    nonisolated static func denyDebugger() {
+        #if targetEnvironment(simulator) || DEBUG
+        return
+        #else
+        // PT_DENY_ATTACH == 31. Resolve ptrace dynamically to avoid a static symbol.
+        guard let handle = dlopen(nil, RTLD_NOW),
+              let sym = dlsym(handle, "ptrace") else { return }
+        let ptrace = unsafeBitCast(sym, to: PtraceFn.self)
+        _ = ptrace(31, 0, nil, 0)
+        dlclose(handle)
+        #endif
+    }
+
+    // MARK: - Parent Process Check
+    // A normally launched iOS app is reparented to launchd (pid 1). A different
+    // parent means the process was spawned under a debugger/injector. Skipped in
+    // DEBUG, where Xcode's debugserver is the parent.
+
+    nonisolated private func checkParentProcess() -> Bool {
+        #if DEBUG
+        return false
+        #else
+        if getppid() != 1 {
+            SecureLogger.warning("JailbreakDetector: unexpected parent process", category: .security)
+            return true
+        }
+        return false
+        #endif
     }
 
     // MARK: - Suspicious Path Detection
@@ -209,6 +250,39 @@ actor JailbreakDetector {
         // P_TRACED = 0x00000800 — set by the kernel when a debugger is attached.
         if (Int32(info.kp_proc.p_flag) & 0x00000800) != 0 {
             SecureLogger.warning("JailbreakDetector: debugger attached (P_TRACED)", category: .security)
+            return true
+        }
+        return false
+        #endif
+    }
+}
+
+// MARK: - Independent Integrity Tripwire
+
+/// A second, independently implemented integrity check for use inline at the most
+/// sensitive operations (money movement, login, KYC). It deliberately does NOT
+/// route through `JailbreakDetector.runChecks()` and uses a different primitive
+/// (`access(2)` rather than `lstat`/`open`), so a hook that blinds the primary
+/// detector does not automatically blind this path — an attacker must locate and
+/// defeat multiple, separately written checks rather than one shared getter.
+enum DeviceIntegrity {
+    // `nonisolated`: touches only C syscalls / logging, no actor state — so it can
+    // be called synchronously from the NetworkService actor. Without this, the
+    // project's default MainActor isolation would make it MainActor-bound.
+    nonisolated static func tripwire() -> Bool {
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        let markers = [
+            "/var/jb",
+            "/private/var/jb",
+            "/usr/lib/libjailbreak.dylib",
+            "/Library/MobileSubstrate/MobileSubstrate.dylib",
+            "/private/var/lib/apt",
+            "/usr/bin/ssh",
+        ]
+        for marker in markers where access(marker, F_OK) == 0 {
+            SecureLogger.warning("DeviceIntegrity tripwire: marker present — \(marker)", category: .security)
             return true
         }
         return false
