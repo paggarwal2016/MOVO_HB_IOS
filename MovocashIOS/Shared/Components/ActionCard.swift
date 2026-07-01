@@ -307,10 +307,10 @@ struct InviteAFriendCard: View {
 
                 if hasInvitees {
                     avatarStack
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color.movo.textSecondary)
                 }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
             }
             .font(.system(size: 13, weight: .semibold))
             .foregroundColor(Color.movo.background)
