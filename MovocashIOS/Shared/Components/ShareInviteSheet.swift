@@ -296,7 +296,7 @@ struct ShareInviteSheet: View {
                 Capsule().fill(joined ? Color.movo.accentTint : Color.movo.elevated)
             )
         }
-        .padding(.vertical, Spacing.md)
+        .padding(.vertical, Spacing.sm)
         .padding(.horizontal, Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)

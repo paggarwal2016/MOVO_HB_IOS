@@ -23,6 +23,20 @@ struct WaitlistScreen: View {
     @State private var showSuccess = false
     @State private var successMessage = ""
 
+    /// The form fields, in tab order — used for focus tracking + scroll-into-view.
+    private enum Field: Hashable { case firstName, lastName, phone, email }
+    @State private var focusedField: Field?
+
+    private func focusBinding(_ field: Field) -> Binding<Bool> {
+        Binding(
+            get: { focusedField == field },
+            set: { isOn in
+                if isOn { focusedField = field }
+                else if focusedField == field { focusedField = nil }
+            }
+        )
+    }
+
     let onBack: () -> Void
     let onSubmitted: () -> Void
 
@@ -60,30 +74,51 @@ struct WaitlistScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 topBar
                     .padding(.top, DesignTokens.Spacing.sm)
-                    .padding(.bottom, DesignTokens.Spacing.xxl)
+                    .padding(.bottom, DesignTokens.Spacing.lg)
 
-                header
-                    .padding(.bottom, DesignTokens.Spacing.xxl)
+                // Scrollable form — lets the focused field scroll clear of the
+                // keyboard while the submit button (below) floats above it.
+                ScrollViewReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            header
+                                .padding(.bottom, DesignTokens.Spacing.xxl)
 
-                firstNameField
-                    .padding(.bottom, DesignTokens.Spacing.xl)
+                            firstNameField
+                                .id(Field.firstName)
+                                .padding(.bottom, DesignTokens.Spacing.xl)
 
-                lastNameField
-                    .padding(.bottom, DesignTokens.Spacing.xl)
+                            lastNameField
+                                .id(Field.lastName)
+                                .padding(.bottom, DesignTokens.Spacing.xl)
 
-                phoneField
-                    .padding(.bottom, DesignTokens.Spacing.xl)
+                            phoneField
+                                .id(Field.phone)
+                                .padding(.bottom, DesignTokens.Spacing.xl)
 
-                emailField
-                    .padding(.bottom, DesignTokens.Spacing.xxl)
+                            emailField
+                                .id(Field.email)
+                                .padding(.bottom, DesignTokens.Spacing.md)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    // When focus changes, bring the active field fully into view
+                    // above the keyboard with a smooth animation.
+                    .onChange(of: focusedField) { field in
+                        guard let field else { return }
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(field, anchor: .center)
+                        }
+                    }
+                }
 
-                Spacer()
                 submitButton
+                    .padding(.top, DesignTokens.Spacing.md)
                     .padding(.bottom, DesignTokens.Spacing.xl)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, DesignTokens.Spacing.lg)
-            .padding(.bottom, DesignTokens.Spacing.xl)
             
             StatusBarScrim()
         }
@@ -129,14 +164,22 @@ struct WaitlistScreen: View {
     private var firstNameField: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Eyebrow("First name")
-            CustomTextField(text: $firstName, placeholder: "Your first name")
+            CustomTextField(
+                text: $firstName,
+                placeholder: "Your first name",
+                isFocused: focusBinding(.firstName)
+            )
         }
     }
 
     private var lastNameField: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Eyebrow("Last name")
-            CustomTextField(text: $lastName, placeholder: "Your last name")
+            CustomTextField(
+                text: $lastName,
+                placeholder: "Your last name",
+                isFocused: focusBinding(.lastName)
+            )
         }
     }
 
@@ -146,7 +189,8 @@ struct WaitlistScreen: View {
             CustomTextField(
                 text: $email,
                 placeholder: "you@email.com",
-                keyboardType: .emailAddress
+                keyboardType: .emailAddress,
+                isFocused: focusBinding(.email)
             )
         }
     }
@@ -154,7 +198,7 @@ struct WaitlistScreen: View {
     private var phoneField: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Eyebrow("Phone number")
-            CustomPhoneField(phoneNumber: $phoneNumber)
+            CustomPhoneField(phoneNumber: $phoneNumber, isFocused: focusBinding(.phone))
         }
     }
 

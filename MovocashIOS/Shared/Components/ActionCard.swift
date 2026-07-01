@@ -356,7 +356,7 @@ struct InviteAFriendCard: View {
         } else {
             avatarCircle(fill: Color.movo.elevatedHigh) {
                 MovoMVSymbol()
-                    .frame(width: 18, height: 18)
+                    .frame(width: 15, height: 15)
             }
         }
     }
