@@ -49,7 +49,7 @@ actor NetworkService: NetworkServiceProtocol {
 
         self.session = URLSession(
             configuration: config,
-            delegate: SecureSessionDelegate(enabled: false),
+            delegate: SecureSessionDelegate(enabled: AppEnvironment.current.isPinningEnabled),
             delegateQueue: nil
         )
         self.builder = RequestBuilder()

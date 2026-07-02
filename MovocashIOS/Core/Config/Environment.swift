@@ -43,7 +43,38 @@ enum AppEnvironmentType {
         case .staging, .dev:    return "iWXqDFMh19wGaaloJs8SG7/aWNmJJx9JjkJ9Pgju8no="
         }
     }
+
+    // MARK: - SSL Pinning
+    var pinnedCertificateNames: [String] {
+        switch self {
+        case .dev:        return ["dev-server", "dev-intermediate"]
+        case .staging:    return ["stage-server", "stage-intermediate"]   // add staging certs
+        case .production: return []   // add prod certs
+        }
+    }
+
+    var certificateSubdirectory: String? {
+        switch self {
+        case .dev:        return "dev"
+        case .staging:    return "staging"
+        case .production: return "prod"
+        }
+    }
+
+    var isPinningEnabled: Bool {
+        switch self {
+        case .dev:        return true
+        case .staging:    return false
+        case .production: return false
+        }
+    }
 }
+
+
+
+
+
+
 
 // MARK: - AppEnvironment
 struct AppEnvironment {
