@@ -261,7 +261,7 @@ public struct MovoTextButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .textStyle(Typography.bodyCompact)
-            .foregroundColor(Color.movo.accent)
+            .foregroundColor(Color.movo.textPrimary)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
             .opacity(configuration.isPressed ? 0.6 : 1.0)
@@ -417,5 +417,24 @@ extension View {
     /// Applies the brand-locked two-layer drop shadow used by the MOVO card visualization.
     public func cardArtworkShadow() -> some View {
         modifier(CardArtworkShadow())
+    }
+}
+
+// MARK: - Card "void" gradient
+
+extension LinearGradient {
+    /// The shared "void" surface gradient used by card-like surfaces
+    /// (card visual, action cards, linked-accounts rows, invite button).
+    /// Three locked stops, top-leading → bottom-trailing.
+    static var cardVoid: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
+                .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
+                .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
+            ],
+            startPoint: .topLeading,
+            endPoint:   .bottomTrailing
+        )
     }
 }

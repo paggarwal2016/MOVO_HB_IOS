@@ -49,6 +49,26 @@ struct UserActionRequest: Encodable, Sendable {
     let userAction: String
 }
 
+// MARK: - Waitlist
+
+struct WaitListRequest: Encodable, Sendable {
+    let firstName: String
+    let lastName: String
+    let email: String
+    let phoneNumber: String
+    let deviceInfo: DeviceInfo
+    let userAction: String
+
+    enum CodingKeys: String, CodingKey {
+        case firstName = "first_name"
+        case lastName  = "last_name"
+        case email
+        case phoneNumber = "invitee_phone"
+        case deviceInfo
+        case userAction
+    }
+}
+
 // MARK: - Email
 
 struct EmailVerifyRequest: Encodable, Sendable {

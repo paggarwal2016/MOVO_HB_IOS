@@ -52,7 +52,7 @@ struct MoveMoneyMenuView: View {
             .padding(.bottom, Spacing.sm)
         }
         .padding(.top, Spacing.xxl)
-        .background(Color.movo.background.ignoresSafeArea())
+        .background(Color.movo.cardSurface.ignoresSafeArea())
         .background(
             GeometryReader { geo in
                 Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
@@ -63,7 +63,7 @@ struct MoveMoneyMenuView: View {
         }
         .presentationDetents([.height(detentHeight)])
         .presentationDragIndicator(.visible)
-        .presentationBackground(Color.movo.background)
+        .presentationBackground(Color.movo.cardSurface)
     }
 
     private func optionRow(

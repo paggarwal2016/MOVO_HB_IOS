@@ -158,6 +158,13 @@ final class DashboardViewModel: BaseViewModel {
         }.first
     }
 
+    var inviteAFriend: DashboardInviteAFriend? {
+        dashboard?.data.compactMap { section -> DashboardInviteAFriend? in
+            guard case .inviteAFriend(let d) = section else { return nil }
+            return d
+        }.first
+    }
+
     var primaryAccount: SavingsAccountInfo? {
         guard let account = rawPrimaryAccount else { return nil }
         return SavingsAccountInfo(dashboardAccount: account)

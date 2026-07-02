@@ -1,0 +1,248 @@
+//
+//  WaitlistScreen.swift
+//  MovocashIOS
+//
+//  Created by Vinu on 25/06/26.
+//
+
+import SwiftUI
+
+/// Join-the-Waitlist screen. Collects first name, last name + email for prospective
+/// users who don't have an invite, and submits via `AuthViewModel.joinTheWaitList`.
+/// The parent handles the success toast + navigation through `onSubmitted`.
+struct WaitlistScreen: View {
+    @EnvironmentObject private var authVM: AuthViewModel
+
+    @State private var firstName: String = ""
+    @State private var lastName: String = ""
+    @State private var email: String = ""
+    @State private var phoneNumber: String = ""
+    @State private var isSubmitting = false
+
+    /// Drives the full-screen success confirmation shown after a successful join.
+    @State private var showSuccess = false
+    @State private var successMessage = ""
+
+    /// The form fields, in tab order — used for focus tracking + scroll-into-view.
+    private enum Field: Hashable { case firstName, lastName, phone, email }
+    @State private var focusedField: Field?
+
+    private func focusBinding(_ field: Field) -> Binding<Bool> {
+        Binding(
+            get: { focusedField == field },
+            set: { isOn in
+                if isOn { focusedField = field }
+                else if focusedField == field { focusedField = nil }
+            }
+        )
+    }
+
+    let onBack: () -> Void
+    let onSubmitted: () -> Void
+
+    init(initialPhone: String = "", onBack: @escaping () -> Void, onSubmitted: @escaping () -> Void) {
+        _phoneNumber = State(initialValue: initialPhone)
+        self.onBack = onBack
+        self.onSubmitted = onSubmitted
+    }
+
+    /// All fields are required: non-empty names, a valid email, and a valid US phone.
+    private var isValid: Bool {
+        !trimmed(firstName).isEmpty && !trimmed(lastName).isEmpty && isValidEmail && normalizedPhone != nil
+    }
+
+    /// Mirrors the rule used in `SignUpViewModel` so email validation stays consistent.
+    /// Trims first: iOS autofill/paste often appends a trailing space, which the
+    /// whitespace-rejecting regex would otherwise treat as invalid (button stuck disabled).
+    private var isValidEmail: Bool {
+        let pattern = #"^[^@\s]+@[^@\s]+\.[^@\s]+$"#
+        return trimmed(email).range(of: pattern, options: .regularExpression) != nil
+    }
+
+    /// Normalized E.164 phone (`+1XXXXXXXXXX`) when the entry is a valid US number,
+    /// else `nil`. `PhoneNormalizer` strips the display formatting before validating.
+    private var normalizedPhone: String? {
+        if case .success(let e164) = PhoneNormalizer.normalizePhone(phoneNumber) { return e164 }
+        return nil
+    }
+
+    var body: some View {
+        ZStack {
+            MovoBackground()
+            AmbientGlowView()
+
+            VStack(alignment: .leading, spacing: 0) {
+                topBar
+                    .padding(.top, DesignTokens.Spacing.sm)
+                    .padding(.bottom, DesignTokens.Spacing.lg)
+
+                // Scrollable form — lets the focused field scroll clear of the
+                // keyboard while the submit button (below) floats above it.
+                ScrollViewReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            header
+                                .padding(.bottom, DesignTokens.Spacing.xxl)
+
+                            firstNameField
+                                .id(Field.firstName)
+                                .padding(.bottom, DesignTokens.Spacing.xl)
+
+                            lastNameField
+                                .id(Field.lastName)
+                                .padding(.bottom, DesignTokens.Spacing.xl)
+
+                            phoneField
+                                .id(Field.phone)
+                                .padding(.bottom, DesignTokens.Spacing.xl)
+
+                            emailField
+                                .id(Field.email)
+                                .padding(.bottom, DesignTokens.Spacing.md)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    // When focus changes, bring the active field fully into view
+                    // above the keyboard with a smooth animation.
+                    .onChange(of: focusedField) { field in
+                        guard let field else { return }
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(field, anchor: .center)
+                        }
+                    }
+                }
+
+                submitButton
+                    .padding(.top, DesignTokens.Spacing.md)
+                    .padding(.bottom, DesignTokens.Spacing.xl)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            
+            StatusBarScrim()
+        }
+        .onTapGesture { UIApplication.shared.dismissKeyboard() }
+        .fullScreenCover(isPresented: $showSuccess) {
+            WaitlistSuccessView() {
+                showSuccess = false
+                onSubmitted()
+            }
+        }
+    }
+
+    // MARK: - Top bar
+
+    private var topBar: some View {
+        HStack {
+            CustomBackButton() {
+                UIApplication.shared.dismissKeyboard()
+                onBack()
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            Text("Join the Waitlist")
+                .textStyle(Typography.heroTitle)
+                .foregroundStyle(Color.movo.textPrimary)
+                .lineSpacing(2)
+
+            Text("We'll let you know when MovoCash opens up. No invite needed.")
+                .textStyle(Typography.body)
+                .foregroundStyle(Color.movo.textTertiary)
+                .lineSpacing(2)
+        }
+    }
+
+    // MARK: - Fields
+
+    private var firstNameField: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Eyebrow("First name")
+            CustomTextField(
+                text: $firstName,
+                placeholder: "Your first name",
+                isFocused: focusBinding(.firstName)
+            )
+        }
+    }
+
+    private var lastNameField: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Eyebrow("Last name")
+            CustomTextField(
+                text: $lastName,
+                placeholder: "Your last name",
+                isFocused: focusBinding(.lastName)
+            )
+        }
+    }
+
+    private var emailField: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Eyebrow("Email")
+            CustomTextField(
+                text: $email,
+                placeholder: "you@email.com",
+                keyboardType: .emailAddress,
+                isFocused: focusBinding(.email)
+            )
+        }
+    }
+
+    private var phoneField: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Eyebrow("Phone number")
+            CustomPhoneField(phoneNumber: $phoneNumber, isFocused: focusBinding(.phone))
+        }
+    }
+
+    // MARK: - Submit
+
+    private var submitButton: some View {
+        Button {
+            submit()
+        } label: {
+            Text("Join Waitlist")
+        }
+        .buttonStyle(MovoPrimaryButtonStyle())
+        .disabled(!isValid || isSubmitting)
+        .opacity((isValid && !isSubmitting) ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: isValid)
+    }
+
+    private func submit() {
+        UIApplication.shared.dismissKeyboard()
+        guard isValid, !isSubmitting, let phone = normalizedPhone else { return }
+        isSubmitting = true
+        SpinnerView.showFullScreen()
+        Task {
+            do {
+                let message = try await authVM.joinTheWaitList(
+                    firstName: trimmed(firstName),
+                    lastName: trimmed(lastName),
+                    email: trimmed(email),
+                    phoneNumber: phone
+                )
+                SpinnerView.hideFullScreen()
+                isSubmitting = false
+                // Show the full-screen success confirmation; returns to Choice on done.
+                successMessage = message ?? "We'll email you when MovoCash opens up."
+                showSuccess = true
+            } catch {
+                SpinnerView.hideFullScreen()
+                isSubmitting = false
+                AlertManager.shared.showError(error.localizedDescription)
+            }
+        }
+    }
+
+    private func trimmed(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}

@@ -190,6 +190,7 @@ struct FundAccountView: View {
                             }
                         } else {
                             let request = ACHRequest(
+                                source: "manual",
                                 amount: Int(amount) ?? 0,
                                 achAccountId: account.achAccountId,
                                 userAction: "SUBMITS-ACH-DEPOSIT"
@@ -263,8 +264,7 @@ struct FundAccountView: View {
                 NotificationCenter.default.post(name: .returnToDashboard, object: nil)
             } label: {
                 MovoMVSymbol()
-                    .frame(width: 28, height: 28)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 22, height: 22)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -491,6 +491,7 @@ struct FundAccountView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.sm)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Avatars
@@ -620,7 +621,7 @@ struct BankAccountPickerSheet: View {
                                     .animation(.spring(duration: 0.2), value: isSelected)
                             }
                             .padding(Spacing.md)
-                            .background(Color.movo.cardSurface)
+                            .background(Color.movo.surface)
                             .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
                             .overlay(
                                 RoundedRectangle(cornerRadius: Radius.lg)
@@ -636,10 +637,10 @@ struct BankAccountPickerSheet: View {
                 .padding(Spacing.lg)
             }
             .scrollContentBackground(.hidden)
-            .background(Color.movo.background.ignoresSafeArea())
+            .background(Color.movo.cardSurface.ignoresSafeArea())
             .navigationTitle("Select Account")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.movo.background, for: .navigationBar)
+            .toolbarBackground(Color.movo.cardSurface, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

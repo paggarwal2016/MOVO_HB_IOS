@@ -34,7 +34,7 @@ struct CustomSheetHeader: View {
     
     var body: some View {
         
-        HStack(alignment: .top, spacing: Spacing.lg) {
+        HStack(alignment: subtitle.isEmpty ? .center : .top, spacing: Spacing.lg) {
             
             // MARK: Icon
             
@@ -77,12 +77,14 @@ struct CustomSheetHeader: View {
                 Text(title)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.movo.textPrimary)
-
-                Text(subtitle)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(Color.movo.textTertiary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(Color.movo.textTertiary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             // Fill the available width so the subtitle uses the full first line before
             // wrapping (a lineLimit(2) Text otherwise reports a narrow "balanced" ideal
@@ -131,7 +133,7 @@ struct CustomSheetHeader: View {
 // MARK: - Reusable Custom TextField
 
 struct CustomTextField: View {
-    
+
     @Binding var text: String
 
     var placeholder: String = "Nickname (e.g., Mom, Roommate)"
@@ -139,15 +141,45 @@ struct CustomTextField: View {
     var cornerRadius: CGFloat = Radius.lg
     var height: CGFloat = 50
 
+    /// Capitalization behavior. Defaults to `.never` so existing callers are
+    /// unchanged; name/nickname forms can pass `.sentences` / `.words`.
+    var autocapitalization: TextInputAutocapitalization = .never
+
+    /// Keyboard return-key label. Defaults to `.return`.
+    var submitLabel: SubmitLabel = .return
+
+    /// Optional external focus control (mirrors `CustomPhoneField`). When provided,
+    /// the parent can drive/observe focus — e.g. auto-focus on appear or advance to
+    /// the next field. Default `nil` leaves existing callers entirely unaffected.
+    var isFocused: Binding<Bool>? = nil
+
+    /// Called when the keyboard's submit/return key is pressed (e.g. advance focus).
+    var onSubmit: (() -> Void)? = nil
+
+    /// Internal focus state — drives the accent border highlight while editing.
+    @FocusState private var fieldFocused: Bool
+
+    /// Accent while focused, neutral border otherwise.
+    private var borderColor: Color {
+        fieldFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
+    }
+
+    private var borderWidth: CGFloat {
+        fieldFocused ? Stroke.medium : Stroke.thin
+    }
+
     var body: some View {
 
         TextField(placeholder, text: $text)
             .keyboardType(keyboardType)
-            .textInputAutocapitalization(.never)
+            .textInputAutocapitalization(autocapitalization)
             .autocorrectionDisabled()
+            .submitLabel(submitLabel)
             .textStyle(Typography.body)
             .foregroundColor(Color.movo.textPrimary)
             .tint(Color.movo.accent)
+            .focused($fieldFocused)
+            .onSubmit { onSubmit?() }
             .padding(.horizontal, Spacing.lg)
             .frame(height: height)
             .background(
@@ -155,9 +187,15 @@ struct CustomTextField: View {
                     .fill(Color.movo.cardSurface)
                     .overlay(
                         RoundedRectangle(cornerRadius: cornerRadius)
-                            .strokeBorder(Color.movo.border, lineWidth: Stroke.thin)
+                            .strokeBorder(borderColor, lineWidth: borderWidth)
                     )
             )
+            .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: fieldFocused)
+            // Two-way sync between the internal FocusState and the optional binding.
+            .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
+            .onChange(of: isFocused?.wrappedValue) { newValue in
+                if let newValue, newValue != fieldFocused { fieldFocused = newValue }
+            }
     }
 }
 
@@ -165,14 +203,30 @@ struct CustomTextField: View {
 // MARK: - Reusable USA Phone Field
 
 struct CustomPhoneField: View {
-    
+
     @Binding var phoneNumber: String
-    
+
     var countryCode: String = "+1"
     var placeholder: String = "(555) 000-0000"
 
     var cornerRadius: CGFloat = Radius.lg
     var height: CGFloat = 50
+
+    /// Optional external focus control. When provided, the parent can drive focus
+    /// (auto-present or dismiss the keyboard) and observe focus changes. Default
+    /// `nil` leaves existing callers (e.g. Quick Pay) entirely unaffected.
+    var isFocused: Binding<Bool>? = nil
+
+    @FocusState private var fieldFocused: Bool
+
+    /// Accent while focused, neutral border otherwise (matches CustomTextField).
+    private var borderColor: Color {
+        fieldFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
+    }
+
+    private var borderWidth: CGFloat {
+        fieldFocused ? Stroke.medium : Stroke.thin
+    }
 
     var body: some View {
 
@@ -191,6 +245,7 @@ struct CustomPhoneField: View {
                 .textStyle(Typography.body)
                 .foregroundColor(Color.movo.textPrimary)
                 .tint(Color.movo.accent)
+                .focused($fieldFocused)
                 .onChange(of: phoneNumber) { value in
                     phoneNumber = formatUSPhone(value)
                 }
@@ -202,9 +257,15 @@ struct CustomPhoneField: View {
                 .fill(Color.movo.cardSurface)
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.thin)
+                        .strokeBorder(borderColor, lineWidth: borderWidth)
                 )
         )
+        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: fieldFocused)
+        // Two-way sync between the internal FocusState and the optional binding.
+        .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
+        .onChange(of: isFocused?.wrappedValue) { newValue in
+            if let newValue, newValue != fieldFocused { fieldFocused = newValue }
+        }
     }
     
     // MARK: - USA Format
@@ -446,5 +507,84 @@ struct NoteCard: View {
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
         )
+    }
+}
+
+
+
+
+
+// MARK: - Quick Action Pill Button
+
+struct QuickActionButton: View {
+
+    // MARK: Appearance
+
+    /// Resolved look — fill, optional border, and shared text/icon color.
+    /// `.accent` and `.secondary` are common presets; build any other look with
+    /// the memberwise initializer (e.g. a transparent, accent-outlined pill).
+    struct Appearance {
+        var fill: Color
+        /// Optional richer fill (e.g. a gradient). Takes precedence over `fill`
+        /// when set; `fill` remains the simple solid-color fallback.
+        var fillStyle: AnyShapeStyle? = nil
+        var border: Color?
+        var text: Color
+        var borderWidth: CGFloat = Stroke.thin
+
+        static let accent = Appearance(
+            fill: Color.movo.accent, border: nil, text: Color.movo.background
+        )
+        static let secondary = Appearance(
+            fill: Color.movo.elevated, border: Color.movo.border,
+            text: Color.movo.textPrimary, borderWidth: Stroke.hairline
+        )
+    }
+
+    // MARK: Config
+
+    let title: String
+    let icon: String
+    var appearance: Appearance = .accent
+    var cornerRadius: CGFloat = Radius.xl
+    var uppercased: Bool = true
+    let onTap: () -> Void
+
+    // MARK: Body
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                Text(uppercased ? title.uppercased() : title)
+                    .tracking(0.4)
+            }
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(appearance.text)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.lg)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(appearance.fillStyle ?? AnyShapeStyle(appearance.fill))
+                    .overlay {
+                        if let border = appearance.border {
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .strokeBorder(border, lineWidth: appearance.borderWidth)
+                        }
+                    }
+            )
+        }
+        .buttonStyle(PressableScaleStyle())
+        .accessibilityLabel(title)
+    }
+}
+
+/// Subtle press feedback (dim + scale) matching the app's other button styles.
+private struct PressableScaleStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeOut(duration: DesignTokens.Motion.fast), value: configuration.isPressed)
     }
 }

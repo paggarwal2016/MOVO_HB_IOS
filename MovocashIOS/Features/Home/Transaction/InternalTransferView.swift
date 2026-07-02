@@ -239,8 +239,7 @@ struct InternalTransferView: View {
                 NotificationCenter.default.post(name: .returnToDashboard, object: nil)
             } label: {
                 MovoMVSymbol()
-                    .frame(width: 28, height: 28)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 22, height: 22)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -506,6 +505,9 @@ struct InternalTransferView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.sm)
+        // Make the whole row hittable, not just the text/icons — so a tap anywhere
+        // on the card (including the empty spacer area) triggers the picker.
+        .contentShape(Rectangle())
     }
 
     private var cardLoadingRow: some View {
@@ -568,7 +570,8 @@ struct InternalTransferView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
             .background(
-                Capsule().fill(isValid ? Color.movo.accent : Color.movo.elevated)
+                RoundedRectangle(cornerRadius: Radius.largeButton)
+                    .fill(isValid ? Color.movo.accent : Color.movo.elevated)
             )
         }
         .disabled(!isValid)

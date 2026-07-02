@@ -23,6 +23,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
 
+        // Active anti-debug — instruct the kernel to refuse debugger attachment,
+        // as early as possible in the launch path. No-op on simulator / DEBUG.
+        JailbreakDetector.denyDebugger()
+
         // 0. Wipe auth state on fresh install — keychain survives uninstall, UserDefaults does not
         clearOnFreshInstall()
 

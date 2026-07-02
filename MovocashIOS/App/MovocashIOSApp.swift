@@ -73,7 +73,7 @@ struct MovocashIOSApp: App {
                             #if targetEnvironment(simulator)
                             return false
                             #else
-                            return await authVM.loginWithBiometric(appState: appState)
+                            return await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
                             #endif
                         }
                     )

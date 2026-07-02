@@ -16,6 +16,14 @@ final class AuthViewModel: ObservableObject {
     @Published var phoneDisplayText: String = ""
     @Published var email: String = ""
     @Published var context: PhoneFlowType?
+    /// `message` + `description` from the most recent successful Send-OTP. When the
+    /// server includes a `description` (e.g. registration "Pre-approved!"),
+    /// submitPhoneNumber shows them in a Continue alert before the OTP screen.
+    private(set) var lastSendMessage: String?
+    private(set) var lastSendDescription: String?
+    /// Display-formatted phone carried into WaitlistScreen's phone field when the
+    /// user accepts the waitlist gate ("LET'S MOVO"). Cleared on a manual waitlist open.
+    var waitlistPrefillPhone: String = ""
     private var isEnrolling = false
     /// In-flight biometric login. Runs as a detached task so neither the hosting
     /// view's `.task` cancellation nor the caller's actor context can abort an
@@ -55,7 +63,7 @@ final class AuthViewModel: ObservableObject {
 
     // MARK: - Send OTP
 
-    func sendOTP() async throws {
+    func sendOTP(showToast: Bool = true) async throws {
         guard state != .loading else { return }
         state = .loading
 
@@ -65,21 +73,31 @@ final class AuthViewModel: ObservableObject {
                     MessengerOTPRequest(
                         phoneNumber: phoneNumber,
                         context: context?.rawValue ?? "",
-                        userAction: "SEND_OTP",
+                        userAction: "SEND-OTP",
                         deviceInfo: .current
                     ))
             )
+            // The server returns HTTP 200 with `success: false` for the waitlist gate
+            // (and similar). That is NOT an OTP send — surface the message so the
+            // caller stays on the phone screen and shows it (waitlist alert / error).
+            guard response.success != false else {
+                throw NetworkError.serverMessage(response.message ?? "Something went wrong")
+            }
+            lastSendMessage = response.message
+            lastSendDescription = response.description
             state = .otpSent
             showOTP = true
             // Fetch the X25519 device-session config now, in the background, so the
             // movo-info key is ready for tokenSMS (OTP validation). This is the only
             // place /get/config is requested — i.e. only on a fresh login.
             deviceConfigTask = Task { [weak self] in try? await self?.configure() }
-            ToastManager.shared.show(
-                response.message ?? "OTP sent successfully",
-                style: .success,
-                position: .bottom
-            )
+            if showToast {
+                ToastManager.shared.show(
+                    response.message ?? "OTP sent successfully",
+                    style: .success,
+                    position: .bottom
+                )
+            }
         } catch {
             state = .idle
             throw error
@@ -192,11 +210,57 @@ final class AuthViewModel: ObservableObject {
         context = appState.context
 
         do {
-            try await sendOTP()
-            appState.flow = .otp
+            // Suppress the toast here — when the server returns a `description`
+            // (registration "Pre-approved!"), we surface it in a Continue alert
+            // instead; otherwise we show the toast ourselves below.
+            try await sendOTP(showToast: false)
+            if let description = lastSendDescription, !description.isEmpty {
+                AlertManager.shared.showCustom(
+                    title: lastSendMessage ?? "Pre-approved!",
+                    message: description,
+                    primary: "Continue",
+                    primaryIcon: "arrow.right",
+                    icon: .success,
+                    onPrimary: { appState.flow = .otp }
+                )
+            } else {
+                // No description (e.g. login) — keep the original toast + direct navigation.
+                ToastManager.shared.show(
+                    lastSendMessage ?? "OTP sent successfully",
+                    style: .success,
+                    position: .bottom
+                )
+                appState.flow = .otp
+            }
         } catch {
-            alertManager.showError(error.localizedDescription)
+            if let message = waitlistMessage(from: error) {
+                AlertManager.shared.showCustom(
+                    title: "Join the waitlist",
+                    message: message,
+                    primary: "LET'S MOVO!",
+                    secondary: "SKIP",
+                    icon: .movo,
+                    onPrimary: {
+                        // Carry the entered phone into the waitlist form's phone field.
+                        self.waitlistPrefillPhone = self.phoneDisplayText.isEmpty
+                            ? String(self.phoneNumber.filter(\.isNumber).suffix(10))
+                            : self.phoneDisplayText
+                        appState.flow = .waitlist
+                    },
+                    onSecondary: { appState.flow = .choice }
+                )
+            } else {
+                alertManager.showError(error.localizedDescription)
+            }
         }
+    }
+
+    /// Returns the server message when an error is the backend's "join the waitlist"
+    /// gate (a `serverMessage` whose text mentions the wait list), else `nil`.
+    private func waitlistMessage(from error: Error) -> String? {
+        guard let net = error as? NetworkError, case .serverMessage(let msg) = net else { return nil }
+        let normalized = msg.lowercased().replacingOccurrences(of: " ", with: "")
+        return normalized.contains("waitlist") ? msg : nil
     }
 
     // MARK: - Send Email OTP
@@ -385,7 +449,7 @@ extension AuthViewModel {
     // ── Login: GET /rsa/nonce → sign → POST /auth/token-rsa ──────────────────
     // Returns true on success. Caller unlocks the app silently after success.
     @discardableResult
-    func loginWithBiometric(appState: AppState) async -> Bool {
+    func loginWithBiometric(appState: AppState, navigateOnSuccess: Bool = true) async -> Bool {
         // Join an attempt that's already running rather than starting a second flow
         // (which would trigger a duplicate nonce request / Face ID prompt).
         if let existing = biometricLoginTask {
@@ -397,7 +461,7 @@ extension AuthViewModel {
         // the login still completes instead of throwing CancellationError mid-flight.
         let task = Task.detached(priority: .userInitiated) { [weak self] () -> Bool in
             guard let self else { return false }
-            return await self.performBiometricLogin(appState: appState)
+            return await self.performBiometricLogin(appState: appState, navigateOnSuccess: navigateOnSuccess)
         }
         biometricLoginTask = task
         defer { biometricLoginTask = nil }
@@ -405,7 +469,7 @@ extension AuthViewModel {
     }
 
     @discardableResult
-    private func performBiometricLogin(appState: AppState) async -> Bool {
+    private func performBiometricLogin(appState: AppState, navigateOnSuccess: Bool) async -> Bool {
 
         let deviceId = await DeviceManager.shared.deviceID()
 
@@ -460,7 +524,9 @@ extension AuthViewModel {
             await MainActor.run {
                 lockManager.unlockAfterRSAAuth()
                 UserDefaults.standard.set(true, forKey: "kycCompleted")
-                appState.flow = passkeyDone ? .home : .enableBiometrics
+                if navigateOnSuccess {
+                    appState.flow = passkeyDone ? .home : .enableBiometrics
+                }
             }
 
             return true
@@ -490,6 +556,27 @@ extension AuthViewModel {
             ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
             return false
         }
+    }
+}
+
+extension AuthViewModel {
+
+    /// Submits a waitlist entry to `POST /waitlist/join`. Throws on network/decode
+    /// failure so the caller can surface the error.
+    /// - Returns: the server's success message, if any, for the caller to display.
+    @discardableResult
+    func joinTheWaitList(firstName: String, lastName: String, email: String, phoneNumber: String) async throws -> String? {
+        let response: SuccessResponse = try await network.request(
+            AuthAPI.waitList(request: WaitListRequest(
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                phoneNumber: phoneNumber,
+                deviceInfo: .current,
+                userAction: "WAIT-LIST-JOIN"
+            ))
+        )
+        return response.message
     }
 }
 

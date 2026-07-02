@@ -219,12 +219,12 @@ final class TransactionViewModel: BaseViewModel {
     /// Calls `POST /transactions/check-intent` for the given phone number.
     /// Sets `checkIntentResult` on success; leaves it `nil` on error so the
     /// Pay button stays enabled (the transfer itself will fail if ineligible).
-    func checkIntent(phoneNumber: String) async {
+    func checkIntent(phoneNumber: String, userAction: String = "PEER-TRANSFER") async {
         checkIntentResult = nil
         do {
             let request = TransactionRequest.CheckMode(
                 phoneNumber: phoneNumber,
-                userAction: "PEER-TRANSFER"
+                userAction: userAction
             )
             let response: CheckIntentResponse = try await perform {
                 try await self.network.request(TransactionAPI.checkType(request))

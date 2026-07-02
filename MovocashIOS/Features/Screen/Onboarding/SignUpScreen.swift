@@ -9,10 +9,7 @@ import SwiftUI
 
 struct SignUpScreen: View {
     @StateObject private var vm = SignUpViewModel()
-    @FocusState private var emailFocused: Bool
-    @State private var externalError: String?
-    private var hasError: Bool { externalError != nil }
-    
+
     let onBack: () -> Void
     let onContinue: (String) -> Void
     let onSignIn: () -> Void
@@ -55,24 +52,6 @@ struct SignUpScreen: View {
             .padding(.bottom, DesignTokens.Spacing.xl)
         }
         .onTapGesture { UIApplication.shared.dismissKeyboard() }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                emailFocused = true
-            }
-        }
-    }
-    
-    // MARK: - Field Styling
-    
-    private var fieldBorderColor: Color {
-        if hasError { return Color.movo.danger }
-        if emailFocused { return Color.movo.accent.opacity(0.55) }
-        return Color.movo.borderStrong
-    }
-    
-    private var fieldBorderWidth: CGFloat {
-        if hasError || emailFocused { return DesignTokens.Stroke.medium }
-        return DesignTokens.Stroke.hairline
     }
     
     // MARK: - Top Bar
@@ -106,36 +85,13 @@ struct SignUpScreen: View {
     // MARK: - Email Field
     
     private var emailField: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-            Text("Email address")
-                .textStyle(Typography.caption)
-                .foregroundColor(Color.movo.textTertiary)
-            
-            TextField("Enter your email", text: $vm.email)
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
-                .textContentType(.emailAddress)
-                .foregroundStyle(Color.movo.textPrimary)
-                .tint(Color.movo.accent)
-                .focused($emailFocused)
-                .padding()
-                .background(
-                    RoundedRectangle(
-                        cornerRadius: DesignTokens.Radius.xl,
-                        style: .continuous
-                    )
-                    .fill(Color.movo.cardSurface)
-                )
-                .overlay(
-                    RoundedRectangle(
-                        cornerRadius: DesignTokens.Radius.xl,
-                        style: .continuous
-                    )
-                    .strokeBorder(
-                        fieldBorderColor,
-                        lineWidth: fieldBorderWidth
-                    )
-                )
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Eyebrow("Email")
+            CustomTextField(
+                text: $vm.email,
+                placeholder: "you@email.com",
+                keyboardType: .emailAddress
+            )
         }
     }
 }

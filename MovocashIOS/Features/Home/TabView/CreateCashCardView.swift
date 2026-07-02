@@ -64,24 +64,28 @@ struct CreateCashCardView: View {
                 horizontalPadding: Spacing.xl,
                 closeAction: onClose
             )
-            // Scrollable field area absorbs keyboard avoidance smoothly: the
-            // ScrollView adjusts its content inset when the keyboard shows /
-            // hides / swaps type, instead of the whole VStack reflowing against
-            // a collapsing Spacer — which was the source of the jerk.
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: Spacing.xl) {
-                    nicknameField
-                    pinSection
-                    confirmPinSection
+            GeometryReader { geo in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        VStack(spacing: Spacing.xl) {
+                            nicknameField
+                            pinSection
+                            confirmPinSection
+                        }
+                        .padding(.horizontal, Spacing.xl)
+                        .padding(.top, Spacing.xl)
+
+                        Spacer(minLength: Spacing.xl)
+
+                        actionButtons
+                            .padding(.horizontal, Spacing.xl)
+                            .padding(.top, Spacing.lg)
+                            .padding(.bottom, Spacing.xxxl)
+                    }
+                    .frame(minHeight: geo.size.height)
                 }
-                .padding(.horizontal, Spacing.xl)
-                .padding(.top, Spacing.xl)
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
-            actionButtons
-                .padding(.horizontal, Spacing.xl)
-                .padding(.top, Spacing.lg)
-                .padding(.bottom, Spacing.xxxl)
         }
         .padding(.top, Spacing.xxl)
         .background(Color.movo.surface.ignoresSafeArea())
@@ -182,12 +186,8 @@ private extension CreateCashCardView {
 
     var actionButtons: some View {
         Button(action: submit) {
-            HStack(spacing: Spacing.sm) {
-                Text("LET'S MOVO")
-                    .tracking(1.5)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 14, weight: .semibold))
-            }
+            Text("LET'S MOVO!")
+                .tracking(1.5)
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         .disabled(!isValid || isLoading)

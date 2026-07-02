@@ -17,8 +17,7 @@ struct ChoiceScreen: View {
     @AppStorage("hasCompletedSignup") private var hasCompletedSignup = false
 
     @State private var isBiometricLoading = false
-    @State private var showBiometricError = false
-    
+
     private var biometricType: LABiometryType {
         let ctx = LAContext()
         _ = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
@@ -66,25 +65,36 @@ struct ChoiceScreen: View {
             }
         }
         .background(Color.movo.background)
-        .alert("Sign-In Failed", isPresented: $showBiometricError) {
-            Button("Use Phone Number") { appState.flow = .loginPhone }
-            Button("Try Again") {
-                guard !isBiometricLoading else { return }
-                isBiometricLoading = true
-                Task {
-                    let success = await authVM.loginWithBiometric(appState: appState)
-                    isBiometricLoading = false
-                    if !success {
-                        showBiometricError = true
-                    }
-                }
+    }
+
+    // MARK: - Biometric login
+    private func runBiometricLogin() {
+        guard !isBiometricLoading else { return }
+        isBiometricLoading = true
+        Task {
+            let success = await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
+            isBiometricLoading = false
+            if success {
+                appState.flow = .home
+            } else {
+                presentBiometricError()
             }
-        } message: {
-            Text("Biometric sign-in was unsuccessful. You can try again or log in with your phone number.")
         }
     }
-    
-    
+
+    private func presentBiometricError() {
+        AlertManager.shared.showCustom(
+            title: "Sign-In Failed",
+            message: "Biometric sign-in was unsuccessful. You can try again or log in with your phone number.",
+            primary: "Try Again",
+            secondary: "Use Phone Number",
+            icon: .error,
+            onPrimary: { runBiometricLogin() },
+            onSecondary: { appState.flow = .loginPhone }
+        )
+    }
+
+
     private var hero: some View {
         VStack(spacing: 0) {
             
@@ -122,25 +132,28 @@ struct ChoiceScreen: View {
         VStack(spacing: Spacing.md) {
             
             if hasCompletedSignup {
-                Button("Get Started") { appState.flow = .getStartedPhone }.buttonStyle(OutlineButtonStyle())
+                Button("Accept an Invite") { appState.flow = .getStartedPhone }.buttonStyle(OutlineButtonStyle())
                 Button("Log In") { appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
             } else {
-                Button("Get Started") { appState.flow = .getStartedPhone }.buttonStyle(MovoPrimaryButtonStyle())
+                Button("Accept an Invite") { appState.flow = .getStartedPhone }.buttonStyle(MovoPrimaryButtonStyle())
                 Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
             }
-            
+        
+            Button {
+                authVM.waitlistPrefillPhone = ""
+                appState.flow = .waitlist
+            } label: {
+                Text("Join the Waitlist")
+                    .textStyle(Typography.buttonLarge)
+                    .foregroundColor(Color.movo.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
             
             if RSAKeyManager.shared.keysExist() {
                 Button {
-                    guard !isBiometricLoading else { return }
-                    isBiometricLoading = true
-                    Task {
-                        let success = await authVM.loginWithBiometric(appState: appState)
-                        isBiometricLoading = false
-                        if !success {
-                            showBiometricError = true
-                        }
-                    }
+                    runBiometricLogin()
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         if isBiometricLoading {

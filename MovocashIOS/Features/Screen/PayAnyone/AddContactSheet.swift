@@ -66,14 +66,21 @@ public struct AddContactSheet: View {
     /// The sheet stays open and shows a loading overlay until the enroll popup appears
     /// (success) or this flag clears (failure).
     @Binding private var isSubmitting: Bool
-    @FocusState private var focusedField: Field?
+    /// Focus flags bridged into the reusable fields (CustomTextField / CustomPhoneField).
+    /// Setting one true focuses that field; the system clears the other automatically.
+    @State private var nicknameFocused = false
+    @State private var phoneFocused = false
     /// Drives presentation of the native `CNContactPickerViewController`.
     @State private var showSystemPicker = false
     /// True between tapping "Use phone contact" and the picker finishing presenting —
     /// shows a loader during the picker's (out-of-process) launch delay.
     @State private var isOpeningPicker = false
 
-    private enum Field { case nickname, phone }
+    /// Clears focus on both fields (dismisses the keyboard).
+    private func dismissKeyboard() {
+        nicknameFocused = false
+        phoneFocused = false
+    }
     
     // MARK: Body
     
@@ -81,10 +88,10 @@ public struct AddContactSheet: View {
 
         VStack(spacing: 0) {
             header()
-            form()
-            LabeledDivider(text: "OR PICK FROM")
-                .padding(.bottom, Spacing.md)
             usePhoneContactButton()
+                .padding(.bottom, Spacing.lg)
+            LabeledDivider(text: "OR ENTER PHONE NUMBER")
+            form()
             Spacer()
             cta
         }
@@ -132,7 +139,7 @@ public struct AddContactSheet: View {
             }
             // Brief delay so the sheet animation completes before keyboard appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                focusedField = .nickname
+                nicknameFocused = true
             }
         }
     }
@@ -157,7 +164,7 @@ public struct AddContactSheet: View {
     /// Opens the native system contact picker (no Contacts permission required).
     private func usePhoneContactButton() -> some View {
         UsePhoneContactButton {
-            focusedField = nil
+            dismissKeyboard()
             isOpeningPicker = true
             showSystemPicker = true
         }
@@ -177,81 +184,27 @@ public struct AddContactSheet: View {
     
     private func form() -> some View {
         VStack(spacing: Spacing.sm + 2) {
-            
-            // Nickname
-            TextField(
-                "",
+
+            // Nickname — reuses the shared field; advances focus to phone on "Next".
+            CustomTextField(
                 text: $vm.nickname,
-                prompt: Text("Nickname (e.g., Mom, Roommate)")
-                    .foregroundColor(Color.movo.textDisabled)
+                placeholder: "Nickname (optional)",
+                cornerRadius: Radius.button,
+                autocapitalization: .sentences,
+                submitLabel: .next,
+                isFocused: $nicknameFocused,
+                onSubmit: { phoneFocused = true }
             )
-            .textStyle(Typography.body)
-            .foregroundColor(Color.movo.textPrimary)
-            .submitLabel(.next)
-            .onSubmit { focusedField = .phone }
-            .focused($focusedField, equals: .nickname)
-            .padding(.horizontal, Spacing.md + 2)
-            .padding(.vertical, Spacing.md + 1)
-            .background(
-                RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.cardSurface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.button)
-                            .strokeBorder(
-                                focusedField == .nickname
-                                ? Color.movo.accentBorder
-                                : Color.movo.border,
-                                lineWidth: Stroke.hairline
-                            )
-                    )
-            )
-            
+
             // Phone with +1 prefix + helper text
             VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: Spacing.sm + 2) {
-                    Text(countryCode)
-                        .textStyle(Typography.body)
-                        .foregroundColor(Color.movo.textTertiary)
-                        .padding(.trailing, Spacing.sm + 2)
-                        .overlay(
-                            Rectangle()
-                                .fill(Color.movo.cardBorder)
-                                .frame(width: Stroke.hairline)
-                                .padding(.vertical, Spacing.xs),
-                            alignment: .trailing
-                        )
-                    
-                    TextField(
-                        "",
-                        text: $vm.phoneInput,
-                        prompt: Text("(555) 000-0000")
-                            .foregroundColor(Color.movo.textDisabled)
-                    )
-                    .textStyle(Typography.body)
-                    .foregroundColor(Color.movo.textPrimary)
-                    .keyboardType(.phonePad)
-                    .submitLabel(.done)
-                    .focused($focusedField, equals: .phone)
-                    .onChange(of: vm.phoneInput) { newValue in
-                        vm.phoneInput = ContactViewModel.formatPhone(newValue)
-                    }
-                }
-                .padding(.horizontal, Spacing.md + 2)
-                .padding(.vertical, Spacing.md + 1)
-                .background(
-                    RoundedRectangle(cornerRadius: Radius.button)
-                        .fill(Color.movo.cardSurface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Radius.button)
-                                .strokeBorder(
-                                    focusedField == .phone
-                                    ? Color.movo.accentBorder
-                                    : Color.movo.border,
-                                    lineWidth: Stroke.hairline
-                                )
-                        )
+                CustomPhoneField(
+                    phoneNumber: $vm.phoneInput,
+                    countryCode: countryCode,
+                    cornerRadius: Radius.button,
+                    isFocused: $phoneFocused
                 )
-                
+
                 // Helper text — fades to red if validation fails after first attempt
                 Text(vm.helperMessage)
                     .textStyle(Typography.caption)
@@ -288,7 +241,7 @@ public struct AddContactSheet: View {
             vm.helperIsError = true
             return
         }
-        focusedField = nil
+        dismissKeyboard()
         // Hand off to the caller, which owns the async create-contact → check-intent
         // Task. The sheet stays open (showing the loading CTA) and is dismissed by the
         // caller only after check-intent succeeds; on failure it remains open.
@@ -296,7 +249,7 @@ public struct AddContactSheet: View {
     }
     
     private func cancelTapped() {
-        focusedField = nil
+        dismissKeyboard()
         vm.clear()
         onCancel?()
         dismiss()
@@ -314,6 +267,10 @@ struct LabeledDivider: View {
             Text(text)
                 .textStyle(Typography.micro)
                 .foregroundColor(Color.movo.textTertiary)
+                // Keep the label on one line at its intrinsic width so the flexible
+                // side rules can't squeeze it into wrapping.
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
         }
     }

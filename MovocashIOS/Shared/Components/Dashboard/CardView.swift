@@ -88,15 +88,7 @@ struct CardItemView: View {
 
     /// LinearGradient: topLeading → bottomTrailing, three locked-dark stops.
     private var cardSurface: some View {
-        LinearGradient(
-            stops: [
-                .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
-                .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
-                .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
-            ],
-            startPoint: .topLeading,
-            endPoint:   .bottomTrailing
-        )
+        LinearGradient.cardVoid
     }
 
     /// Faint silver light sweep anchored to top-leading corner.

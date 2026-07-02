@@ -43,10 +43,9 @@ final class ContactViewModel: BaseViewModel {
         phoneInput.filter(\.isNumber)
     }
 
-    /// Validates that nickname is present and phone has 10 digits.
+    /// Validates the phone number (10 digits). Nickname is optional.
     var canSubmit: Bool {
-        !nickname.trimmingCharacters(in: .whitespaces).isEmpty
-            && digits.count == 10
+        digits.count == 10
     }
 
     var helperMessage: String {
@@ -64,7 +63,8 @@ final class ContactViewModel: BaseViewModel {
     
     func buildResult(countryCode: String) -> AddContactSheet.Result? {
         let trimmedNickname = nickname.trimmingCharacters(in: .whitespaces)
-        guard !trimmedNickname.isEmpty, digits.count == 10 else { return nil }
+        // Nickname is optional; only the phone number is required.
+        guard digits.count == 10 else { return nil }
         let e164 = "\(countryCode)\(digits)"
         return .init(
             nickname: trimmedNickname,
@@ -430,7 +430,7 @@ final class ContactViewModel: BaseViewModel {
     }
     
     
-    // MARK: - Private
+    // MARK: - Add Favourite
     
     private func addFavourite(contactId: String, nickname: String, phoneNumber: String) async {
         let request = ContactRequest.AddFavourite(
@@ -458,12 +458,11 @@ final class ContactViewModel: BaseViewModel {
         }
     }
     
+    //MARK: - Remove Favourite
     
     private func removeFavourite(contactId: String) async {
-        let request = ContactRequest.DeleteFavourite(
-            contact_id: contactId,
-            userAction: "DELETE-CONTACT"
-        )
+        let request = ContactRequest.DeleteFavourite(contact_id: contactId,
+                                                     userAction: "DELETE-CONTACT")
         do {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.deleteFavourite(request: request))
@@ -477,6 +476,52 @@ final class ContactViewModel: BaseViewModel {
             analytics.log(AnalyticsEvent.contactRemoveFavoriteFailed, params: [
                 AnalyticsParam.errorCode: error.localizedDescription
             ])
+        }
+    }
+    
+    //MARK: - Referral Invite
+
+    /// People the user has already invited, fetched via GET-REFERRAL-LIST.
+    @Published var referralInvitees: [ReferralInvitee] = []
+
+    /// Loads the referral invite list (`ContactAPI.referrelInviteList`) into
+    /// `referralInvitees`. Used by ShareInviteSheet to show the already-invited list.
+    func loadReferralInvitees() async {
+        do {
+            let response: ReferralInviteListResponse = try await perform {
+                try await self.network.request(ContactAPI.referrelInviteList)
+            }
+            referralInvitees = response.data
+        } catch is CancellationError {
+        } catch {
+            SecureLogger.error("Referral list load failed: \(error.localizedDescription)", category: .network)
+        }
+    }
+
+    /// Notifies the skinny processor that an invite was sent.
+    /// - Returns: the server's success message (`nil` when empty or on failure) so
+    ///   the caller can surface it instead of a hardcoded string.
+    @discardableResult
+    func inviteUser(phone: String, nickname: String? = nil) async -> String? {
+        let request = ContactRequest.Referral(invitee_phone: phone,
+                                              invitee_nickname: nickname,
+                                              userAction: "REFERRAL-INVITE",
+                                              relation: "FRI")
+        do {
+            let response: ContactActionResponse = try await perform {
+                try await self.network.request(ContactAPI.referralInvite(request: request))
+            }
+            analytics.log(AnalyticsEvent.contactReferralInvite, params: [
+                AnalyticsParam.referralPhone: phone
+            ])
+            return response.message.isEmpty ? nil : response.message
+        } catch is CancellationError {
+            return nil
+        } catch {
+            analytics.log(AnalyticsEvent.contactReferralInviteFailed, params: [
+                AnalyticsParam.errorCode: error.localizedDescription
+            ])
+            return nil
         }
     }
 }

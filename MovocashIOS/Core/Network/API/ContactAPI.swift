@@ -16,6 +16,8 @@ enum ContactAPI: Endpoint {
     case getContacts(request: ContactRequest.GetLists)
     case getFavourites(request: ContactRequest.GetLists)
     case getRecent
+    case referralInvite(request: ContactRequest.Referral)
+    case referrelInviteList
 
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -23,26 +25,30 @@ enum ContactAPI: Endpoint {
     // MARK: - URL Path
     var path: String {
         switch self {
-        case .addFavourite:              return "/contacts/favourite"
-        case .deleteFavourite:           return "/contacts"
-        case .create:                    return "/contacts"
-        case .makeFavourite(let id, _):   return "/contacts/\(id)"
-        case .getContacts:               return "/contacts"
-        case .getFavourites:             return "/contacts"
-        case .getRecent:                 return "/recent-transfer"
+        case .addFavourite:                return "/contacts/favourite"
+        case .deleteFavourite:             return "/contacts"
+        case .create:                      return "/contacts"
+        case .makeFavourite(let id, _):    return "/contacts/\(id)"
+        case .getContacts:                 return "/contacts"
+        case .getFavourites:               return "/contacts"
+        case .getRecent:                   return "/recent-transfer"
+        case .referralInvite:              return "/referral/invite"
+        case .referrelInviteList:          return "/referral/invite"
         }
     }
 
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .addFavourite:     return .POST
-        case .deleteFavourite:  return .DELETE
-        case .create:           return .POST
-        case .makeFavourite:    return .PATCH
-        case .getContacts:      return .PUT
-        case .getFavourites:    return .PUT
-        case .getRecent:        return .PUT
+        case .addFavourite:       return .POST
+        case .deleteFavourite:    return .DELETE
+        case .create:             return .POST
+        case .makeFavourite:      return .PATCH
+        case .getContacts:        return .PUT
+        case .getFavourites:      return .PUT
+        case .getRecent:          return .PUT
+        case .referralInvite:     return .POST
+        case .referrelInviteList: return .PUT
         }
     }
 
@@ -73,6 +79,10 @@ enum ContactAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .getRecent:
             return try JSONEncoder().encode(UserActionRequest(userAction: "RECENT-TRANSFER"))
+        case .referralInvite(let request):
+            return try JSONEncoder().encode(request)
+        case .referrelInviteList:
+            return try JSONEncoder().encode(UserActionRequest(userAction: "GET-REFERRAL-LIST"))
         }
     }
 }
