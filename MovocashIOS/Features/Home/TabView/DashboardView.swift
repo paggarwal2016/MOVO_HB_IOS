@@ -222,7 +222,7 @@ struct DashboardView: View {
                 container: container,
                 primaryLinkedCard: primaryCardStore.card,
                 cards: dashboardVM.cards,
-                title: "Quick Pay", // dashboardVM.quickPayTitle
+                title: "Movo Pay", // dashboardVM.quickPayTitle
                 onSuccess: { needsDashboardRefresh = true }
             )
         }
