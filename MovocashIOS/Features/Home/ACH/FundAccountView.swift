@@ -190,6 +190,7 @@ struct FundAccountView: View {
                             }
                         } else {
                             let request = ACHRequest(
+                                source: "manual",
                                 amount: Int(amount) ?? 0,
                                 achAccountId: account.achAccountId,
                                 userAction: "SUBMITS-ACH-DEPOSIT"

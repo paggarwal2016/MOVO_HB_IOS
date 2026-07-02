@@ -372,6 +372,7 @@ struct BankLinkedSuccessScreen: View {
         let snapToName = toName
         let snapToMask = toMask
         let request = ACHRequest(
+            source: "manual",
             amount: Int(amountText) ?? 0,
             achAccountId: account.achAccountId,
             userAction: "SUBMITS-ACH-DEPOSIT"

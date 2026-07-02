@@ -148,21 +148,25 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         onPresented: (() -> Void)? = nil,
         onLinking: (() -> Void)? = nil
     ) async -> ACHAccount? {
+        async let presenterTask = waitForPresentableViewController()
+
         let tokenResponse: GetPlaidLinkTokenResponse
         do {
             tokenResponse = try await fetchLinkToken(accountID: accountID)
         } catch {
+            _ = await presenterTask
             SecureLogger.error("[Plaid] link token fetch failed — \(error.localizedDescription)", category: .payment)
             return nil
         }
 
         guard !tokenResponse.linkToken.isEmpty else {
+            _ = await presenterTask
             SecureLogger.error("[Plaid] backend returned an empty link token", category: .payment)
             AlertManager.shared.showError("Unable to start bank linking. Please try again.")
             return nil
         }
 
-        guard let presenter = await waitForPresentableViewController() else {
+        guard let presenter = await presenterTask else {
             // Device/app-level: nothing available to present Plaid from.
             SecureLogger.error("[Plaid] no presentable view controller", category: .payment)
             AlertManager.shared.showError(PlaidLinkError.noPresenter.localizedDescription)
@@ -201,7 +205,31 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             SecureLogger.info("[Plaid] linking account on backend (POST /ach/plaid/link)", category: .payment)
             let response = try await run { try await self.service.linkPlaidAccount(request: request) }
             self.linkedAccount = response
+
             SecureLogger.info("[Plaid] backend link succeeded — status=\(response.status) accountsAdded=\(response.accountsAdded.count)", category: .payment)
+
+            // Sync the linked accounts to the Movo middleware (POST /ach/plaid/accounts).
+            let accountsRequest = PlaidAccountRequest(
+                status: response.status,
+                accountsAdded: response.accountsAdded.map {
+                    PlaidAccount(
+                        plaidAccountId: $0.plaidAccountId,
+                        resourceId: $0.resourceId,
+                        savingsId: $0.savingsId,
+                        customerId: $0.clientId,
+                        officeId: $0.officeId
+                    )
+                },
+                userAction: "LINK-PLAID-ACCOUNT-SAVED"
+            )
+            do {
+                let syncData = try await self.network.requestData(AchAPI.achPlaidAccount(request: accountsRequest))
+                let syncBody = String(data: syncData, encoding: .utf8) ?? "<\(syncData.count) bytes>"
+                SecureLogger.info("[Plaid] middleware sync response (POST /ach/plaid/accounts): \(syncBody)", category: .payment)
+            } catch {
+                SecureLogger.error("[Plaid] middleware sync failed — \(error.localizedDescription)", category: .payment)
+            }
+
             return Self.makeLinkedAccount(
                 from: plaidResult.metadata,
                 savingsId: response.accountsAdded.first?.resourceId ?? 0
