@@ -73,7 +73,6 @@ private extension String {
 final class AnalyticsManager: AnalyticsTracking {
     static let shared = AnalyticsManager()
     private let keychain: KeychainManagerProtocol = KeychainManager.shared
-    private let analyticsIdKey = "analytics_stable_id"
     private let linkedSubKey   = "analytics_linked_sub"
     private init() {}
 
@@ -89,6 +88,8 @@ final class AnalyticsManager: AnalyticsTracking {
                 return
             }
 
+            // Previous PII-safe implementation (SHA-256 hashed, device-anchored stable ID).
+            /*
             let hashedSub = sub.sha256Hashed
 
             // If this sub is already linked, reuse the stored stable ID
@@ -104,6 +105,10 @@ final class AnalyticsManager: AnalyticsTracking {
             try? await keychain.save(stableId, for: analyticsIdKey, protection: .backgroundSafe)
             try? await keychain.save(hashedSub, for: linkedSubKey, protection: .backgroundSafe)
             Analytics.setUserID(stableId)
+            */
+
+            // Set the raw user id as the Firebase UserID.
+            Analytics.setUserID(sub)
         }
     }
 
@@ -111,11 +116,25 @@ final class AnalyticsManager: AnalyticsTracking {
     /// Firebase identity is unchanged even though token rotated.
     func reapplyIdentity() {
         _ = Task {
+            // Read the raw user id directly from the stored access token so the
+            // Firebase UserID (which must be re-set each launch) stays consistent
+            // with identifyUser(from:).
+            guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+                  let sub = JWTHelper.extractSub(from: token) else {
+                await setAnonymousIdentity()
+                return
+            }
+
+            // Previous PII-safe implementation (hashed, device-anchored stable ID).
+            /*
             guard let stableId = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) else {
                 await setAnonymousIdentity()
                 return
             }
             Analytics.setUserID(stableId)
+            */
+
+            Analytics.setUserID(sub)
             log(AnalyticsEvent.tokenRefreshed, params: [AnalyticsParam.reason: "silent_refresh"])
         }
     }
@@ -133,13 +152,10 @@ final class AnalyticsManager: AnalyticsTracking {
     // MARK: - Anonymous (pre-login)
 
     private func setAnonymousIdentity() async {
-        if let existing = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) {
-            Analytics.setUserID(existing)
-            return
-        }
-        let anonId = "anon_\(UUID().uuidString)".sha256Hashed
-        try? await keychain.save(anonId, for: analyticsIdKey, protection: .backgroundSafe)
-        Analytics.setUserID(anonId)
+        // No authenticated user (pre-login / after logout): clear the Firebase
+        // UserID so events aren't attributed to any account. Firebase continues
+        // anonymous tracking via its own app-instance ID.
+        Analytics.setUserID(nil)
     }
 
     // MARK: - Core
