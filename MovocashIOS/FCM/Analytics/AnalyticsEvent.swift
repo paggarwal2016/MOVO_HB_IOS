@@ -93,6 +93,10 @@ enum AnalyticsEvent {
     static let vcardFetchFailed           = "vcard_fetch_failed"
     static let vcardCreated               = "vcard_created"
     static let vcardCreateFailed          = "vcard_create_failed"
+    static let cardActivated              = "card_activated"
+    static let cardActivationFailed       = "card_activation_failed"
+    static let walletAdd                  = "wallet_add"
+    static let walletAddFailed            = "wallet_add_failed"
 
     // MARK: - Plaid Link
     static let plaidLinkStarted           = "plaid_link_started"
