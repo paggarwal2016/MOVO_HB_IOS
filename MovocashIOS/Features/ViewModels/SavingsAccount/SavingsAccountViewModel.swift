@@ -60,8 +60,7 @@ final class SavingsAccountViewModel: BaseViewModel {
                 )
             }
             analytics.log(AnalyticsEvent.savingsNicknameUpdated, params: [
-                AnalyticsParam.accountId: accountId,
-                AnalyticsParam.accountName: name
+                AnalyticsParam.accountId: accountId
             ])
             //await loadAccounts()
             ToastManager.shared.show("Nickname updated!", style: .success, position: .bottom)
@@ -87,16 +86,14 @@ final class SavingsAccountViewModel: BaseViewModel {
                     SavingsAccountAPI.create(SavingsAccountRequest.CreateAccount(nickname: trimmed, userAction: ""))
                 )
             }
-            analytics.log(AnalyticsEvent.savingsAccountCreated, params: [
-                AnalyticsParam.accountName: trimmed
-            ])
+            analytics.log(AnalyticsEvent.savingsAccountCreated)
             await loadAccounts()
             ToastManager.shared.show("\"\(trimmed)\" account created!", style: .success, position: .bottom)
         } catch is CancellationError {
             // cancelled — no action
         } catch {
             analytics.log(AnalyticsEvent.savingsAccountCreateFailed, params: [
-                AnalyticsParam.accountName: trimmed
+                AnalyticsParam.errorCode: error.localizedDescription
             ])
             // error surfaced via BaseViewModel toast
         }

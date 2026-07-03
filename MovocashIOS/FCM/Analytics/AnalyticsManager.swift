@@ -36,8 +36,9 @@ protocol AnalyticsTracking {
 }
 
 extension AnalyticsTracking {
-    func log(_ event: String, params: [String: Any]? = nil) {}
-    func setUserProperty(_ value: String, for key: String) {}
+    /// Convenience: forwards to the two-arg requirement so it dynamic-dispatches
+    /// to the real implementation instead of a no-op default.
+    func log(_ event: String) { log(event, params: nil) }
 }
 
 
@@ -94,8 +95,7 @@ final class AnalyticsManager: AnalyticsTracking {
             if let existingSub = try? await keychain.get(linkedSubKey, biometricPrompt: nil),
                existingSub == hashedSub,
                let stableId = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) {
-//                Analytics.setUserID(stableId)
-                _ = stableId
+                Analytics.setUserID(stableId)
                 return
             }
 
@@ -103,10 +103,7 @@ final class AnalyticsManager: AnalyticsTracking {
             let stableId = await DeviceManager.shared.deviceID().sha256Hashed
             try? await keychain.save(stableId, for: analyticsIdKey, protection: .backgroundSafe)
             try? await keychain.save(hashedSub, for: linkedSubKey, protection: .backgroundSafe)
-//            Analytics.setUserID(stableId)
-//            #if DEBUG
-//            print("📊 [Analytics] identifyUser → new stableId set")
-//            #endif
+            Analytics.setUserID(stableId)
         }
     }
 
@@ -118,8 +115,7 @@ final class AnalyticsManager: AnalyticsTracking {
                 await setAnonymousIdentity()
                 return
             }
-//            Analytics.setUserID(stableId)
-            _ = stableId
+            Analytics.setUserID(stableId)
             log(AnalyticsEvent.tokenRefreshed, params: [AnalyticsParam.reason: "silent_refresh"])
         }
     }
@@ -138,36 +134,32 @@ final class AnalyticsManager: AnalyticsTracking {
 
     private func setAnonymousIdentity() async {
         if let existing = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) {
-//            Analytics.setUserID(existing)
-            _ = existing
-//            #if DEBUG
-//            print("📊 [Analytics] identifyUser → existing anonymousId reused")
-//            #endif
+            Analytics.setUserID(existing)
             return
         }
         let anonId = "anon_\(UUID().uuidString)".sha256Hashed
         try? await keychain.save(anonId, for: analyticsIdKey, protection: .backgroundSafe)
-//        Analytics.setUserID(anonId)
-//        #if DEBUG
-//        print("📊 [Analytics] identifyUser → new anonymousId set")
-//        #endif
+        Analytics.setUserID(anonId)
     }
 
     // MARK: - Core
 
-    func log(_ event: String, params: [String: Any]? = nil) {
-//        #if DEBUG
-//        let paramString = params?.map { "\($0.key): \($0.value)" }.joined(separator: ", ") ?? "none"
-//        print("📊 [Analytics] Event: \(event) | Params: \(paramString)")
-//        #endif
-//        Analytics.logEvent(event, parameters: params)
+    func log(_ event: String, params: [String: Any]?) {
+        Analytics.logEvent(event, parameters: params.map(Self.sanitize))
+    }
+
+    /// Firebase silently drops string parameter values longer than 100 characters.
+    /// Truncate them so long values (e.g. localized error text) survive as a usable
+    /// prefix instead of being discarded.
+    private static func sanitize(_ params: [String: Any]) -> [String: Any] {
+        params.mapValues { value in
+            guard let string = value as? String, string.count > 100 else { return value }
+            return String(string.prefix(100))
+        }
     }
 
     func setUserProperty(_ value: String, for key: String) {
-//        #if DEBUG
-//        print("📊 [Analytics] UserProperty: \(key) = \(value)")
-//        #endif
-//        Analytics.setUserProperty(value, forName: key)
+        Analytics.setUserProperty(value, forName: key)
     }
 
     // MARK: - Screen

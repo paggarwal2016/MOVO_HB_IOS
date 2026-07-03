@@ -225,6 +225,7 @@ struct DashboardView: View {
                 title: "Movo Pay", // dashboardVM.quickPayTitle
                 onSuccess: { needsDashboardRefresh = true }
             )
+            .trackScreen(AnalyticsScreen.quickPay)
         }
         
         .fullScreenCover(isPresented: $showAllFrequents) {

@@ -60,6 +60,7 @@ struct SavingAccountDetailView: View {
             }
         }
         .task { await loadDetail() }
+        .trackScreen(AnalyticsScreen.savingsDetail)
     }
 
     // MARK: - Skeleton

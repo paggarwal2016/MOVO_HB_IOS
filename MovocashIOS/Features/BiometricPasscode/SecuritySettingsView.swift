@@ -36,6 +36,7 @@ struct SecuritySettingsView: View {
         }
         .navigationTitle("Security")
         .navigationBarTitleDisplayMode(.inline)
+        .trackScreen(AnalyticsScreen.securitySettings)
         // Error banner
         .safeAreaInset(edge: .top) {
             if let msg = lockManager.revocationError {

@@ -169,6 +169,7 @@ struct TransactionListView: View {
             StatusBarScrim()
         }
         .background(Color.movo.background)
+        .trackScreen(AnalyticsScreen.transactionHistory)
         .sheet(isPresented: $showFilterSheet) {
             TransactionFilterView(filter: $pendingFilter, showLast4: mode == .common) {
                 activeFilter = pendingFilter

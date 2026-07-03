@@ -511,9 +511,8 @@ final class ContactViewModel: BaseViewModel {
             let response: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.referralInvite(request: request))
             }
-            analytics.log(AnalyticsEvent.contactReferralInvite, params: [
-                AnalyticsParam.referralPhone: phone
-            ])
+            // No PII: the invitee's phone number is deliberately NOT logged.
+            analytics.log(AnalyticsEvent.contactReferralInvite)
             return response.message.isEmpty ? nil : response.message
         } catch is CancellationError {
             return nil

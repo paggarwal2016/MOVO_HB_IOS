@@ -79,6 +79,7 @@ struct FundAccountInfoView: View {
 
             }
         }
+        .trackScreen(AnalyticsScreen.fundAccount)
         // "Fund account" → link a bank via Plaid (link-only; success screen shows
         // "Done"). When the link succeeds, advance into the onboarding fund step.
         .sheet(isPresented: $showBankLink, onDismiss: {

@@ -74,6 +74,7 @@
 		14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE28A2F5AD88E008A8DC4 /* AppLockManager.swift */; };
 		14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */; };
 		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
+		14E44E742FF7C3E5001E358D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 14E44E732FF7C3E5001E358D /* PrivacyInfo.xcprivacy */; };
 		14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */; };
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
 		99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */ = {isa = PBXBuildFile; fileRef = 99C2EAA22FC9AAB600384E28 /* terms-layout.css */; };
@@ -183,6 +184,7 @@
 		14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderProvider.swift; sourceTree = "<group>"; };
 		14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
 		14E42FF32FAA2D0C00B2025C /* MovocashIOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOS.entitlements; sourceTree = "<group>"; };
+		14E44E732FF7C3E5001E358D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewScreen.swift; sourceTree = "<group>"; };
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
@@ -526,6 +528,7 @@
 		146819762F4DE6CF00BED014 /* MovocashIOS */ = {
 			isa = PBXGroup;
 			children = (
+				14E44E732FF7C3E5001E358D /* PrivacyInfo.xcprivacy */,
 				99C2EAA32FC9AAB600384E28 /* Resources */,
 				14E42FF32FAA2D0C00B2025C /* MovocashIOS.entitlements */,
 				14B2CB892FA8BF7B0068FC23 /* Font */,
@@ -762,6 +765,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				146819902F4DE6CF00BED014 /* Assets.xcassets in Resources */,
+				14E44E742FF7C3E5001E358D /* PrivacyInfo.xcprivacy in Resources */,
 				140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */,
 				14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */,
 				99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */,

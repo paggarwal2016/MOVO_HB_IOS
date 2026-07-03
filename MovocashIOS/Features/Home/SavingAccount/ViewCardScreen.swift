@@ -45,6 +45,7 @@ struct ViewCardScreen: View {
                 SpinnerView()
             }
         }
+        .trackScreen(AnalyticsScreen.cardDetail)
         .pinInputAlert(
             isPresented: $showAddCard,
             title: "Activate Card",

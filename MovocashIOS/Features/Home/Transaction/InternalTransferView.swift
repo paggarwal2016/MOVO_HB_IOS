@@ -159,6 +159,7 @@ struct InternalTransferView: View {
                 .zIndex(1)
             }
         }
+        .trackScreen(AnalyticsScreen.internalTransfer)
         .animation(.easeInOut(duration: 0.3), value: achVM.peerTransferSuccess?.id)
         .background(Color.movo.background.ignoresSafeArea())
         .navigationBarHidden(true)

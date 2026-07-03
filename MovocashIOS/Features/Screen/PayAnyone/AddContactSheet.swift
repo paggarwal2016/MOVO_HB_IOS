@@ -96,6 +96,7 @@ public struct AddContactSheet: View {
             cta
         }
         .background(Color.movo.cardSurface.ignoresSafeArea())
+        .trackScreen(AnalyticsScreen.addContact)
         // Hosts the native contact picker; presents when `showSystemPicker` flips true.
         .background {
             PhoneContactPicker(

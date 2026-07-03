@@ -209,11 +209,18 @@ final class AuthViewModel: ObservableObject {
         phoneNumber = e164
         context = appState.context
 
+        if context == .getStarted {
+            analytics.log(AnalyticsEvent.signupStarted)
+        }
+
         do {
             // Suppress the toast here — when the server returns a `description`
             // (registration "Pre-approved!"), we surface it in a Continue alert
             // instead; otherwise we show the toast ourselves below.
             try await sendOTP(showToast: false)
+            if context == .getStarted {
+                analytics.log(AnalyticsEvent.signupPhoneSubmitted)
+            }
             if let description = lastSendDescription, !description.isEmpty {
                 AlertManager.shared.showCustom(
                     title: lastSendMessage ?? "Pre-approved!",
@@ -310,7 +317,11 @@ final class AuthViewModel: ObservableObject {
     func checkEmailVerified() async -> EmailVerificationCheck {
         do {
             let response: UserProfileAPIResponse = try await network.request(UserAPI.getProfile)
-            return response.data.emailVerified ? .verified : .notVerified
+            if response.data.emailVerified {
+                analytics.log(AnalyticsEvent.signupEmailVerified)
+                return .verified
+            }
+            return .notVerified
         } catch {
             return .failed
         }
@@ -323,6 +334,7 @@ final class AuthViewModel: ObservableObject {
         state = .loading
         do {
             let _: SuccessResponse = try await network.request(AuthAPI.acceptAgreements)
+            analytics.log(AnalyticsEvent.signupTermsAccepted)
             state = .idle
         } catch {
             state = .idle
@@ -456,6 +468,8 @@ extension AuthViewModel {
             return await existing.value
         }
 
+        analytics.trackLoginAttempt(method: .biometric)
+
         // Run the flow in a detached task: it does NOT inherit cancellation from the
         // caller's task, so if the hosting view's `.task` is cancelled by a re-render
         // the login still completes instead of throwing CancellationError mid-flight.
@@ -522,6 +536,7 @@ extension AuthViewModel {
             // appState is an @MainActor-bound ObservableObject; mutating it from a
             // detached task without this hop is a data race.
             await MainActor.run {
+                analytics.trackLogin(method: .biometric)
                 lockManager.unlockAfterRSAAuth()
                 UserDefaults.standard.set(true, forKey: "kycCompleted")
                 if navigateOnSuccess {
@@ -541,17 +556,20 @@ extension AuthViewModel {
             switch biometricError {
             case .userCanceled:
                 // User dismissed the prompt — no toast, "Try Again" remains available.
-                break
+                analytics.trackLoginFailed(method: .biometric, errorCode: "user_cancelled")
             case .lockout:
                 // Biometry is locked at the OS level. Repeated "Try Again" taps cannot
                 // succeed until the device is unlocked with the passcode, so tell the
                 // user exactly that instead of the generic failure message.
+                analytics.trackLoginFailed(method: .biometric, errorCode: "biometric_lockout")
                 ToastManager.shared.show(biometricError.localizedDescription, style: .error, position: .bottom)
             default:
+                analytics.trackLoginFailed(method: .biometric, errorCode: "\(biometricError)")
                 ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
             }
             return false
         } catch {
+            analytics.trackLoginFailed(method: .biometric, errorCode: error.localizedDescription)
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
             ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
             return false
