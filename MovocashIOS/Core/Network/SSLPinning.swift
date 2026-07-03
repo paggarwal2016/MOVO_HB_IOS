@@ -15,13 +15,12 @@ final class SecureSessionDelegate: NSObject, URLSessionDelegate {
     private let pinningEnabled: Bool
     
     init(
-        enabled: Bool = AppEnvironment.current.isPinningEnabled,
-        certificateNames: [String] = AppEnvironment.current.pinnedCertificateNames,
-        subdirectory: String? = AppEnvironment.current.certificateSubdirectory
+        enabled: Bool = AppConfig.isSSLPinningEnabled,
+        certificateName: String = AppConfig.pinnedCertificateName
     ) {
         self.pinningEnabled = enabled
         let hashes = enabled
-        ? Self.loadPinnedKeyHashes(names: certificateNames, subdirectory: subdirectory)
+        ? Self.loadPinnedKeyHashes(name: certificateName)
         : []
         
         if enabled && hashes.isEmpty {
@@ -78,29 +77,29 @@ final class SecureSessionDelegate: NSObject, URLSessionDelegate {
     }
     
     // MARK: - Key extraction
-    private static func loadPinnedKeyHashes(names: [String], subdirectory: String?) -> Set<Data> {
-        let urls: [URL] = names.compactMap { name in
-            // Group layout (flattened to the bundle root) — the recommended setup.
-            if let url = Bundle.main.url(forResource: name, withExtension: "cer") {
-                return url
-            }
-            // Fallback: folder-reference layout under the environment's subdirectory.
-            if let subdirectory,
-               let url = Bundle.main.url(forResource: name, withExtension: "cer", subdirectory: subdirectory) {
-                return url
-            }
-            SecureLogger.error("Pinned certificate '\(name).cer' not found in the app bundle", category: .security)
-            return nil
+    private static func loadPinnedKeyHashes(name: String) -> Set<Data> {
+        guard !name.isEmpty else {
+            SecureLogger.error("No pinned certificate name configured for this environment", category: .security)
+            return []
         }
         
-        return Set(urls.compactMap { url -> Data? in
-            guard let data = try? Data(contentsOf: url),
-                  let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
-                SecureLogger.error("Failed to parse pinned certificate '\(url.lastPathComponent)'", category: .security)
-                return nil
-            }
-            return publicKeyHash(from: certificate)
-        })
+        guard let url = Bundle.main.url(forResource: name, withExtension: "cer") else {
+            SecureLogger.error("Pinned certificate '\(name).cer' not found in the app bundle", category: .security)
+            return []
+        }
+        
+        guard let data = try? Data(contentsOf: url),
+              let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
+            SecureLogger.error("Failed to parse pinned certificate '\(url.lastPathComponent)'", category: .security)
+            return []
+        }
+        
+        guard let hash = publicKeyHash(from: certificate) else {
+            SecureLogger.error("Failed to extract public key from pinned certificate '\(url.lastPathComponent)'", category: .security)
+            return []
+        }
+        
+        return [hash]
     }
     
     /// SHA-256 hash of a certificate's public key (external/DER representation).
