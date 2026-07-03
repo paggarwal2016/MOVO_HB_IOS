@@ -43,7 +43,30 @@ enum AppEnvironmentType {
         case .staging, .dev:    return "iWXqDFMh19wGaaloJs8SG7/aWNmJJx9JjkJ9Pgju8no="
         }
     }
+
+    // MARK: - SSL Pinning
+    var pinnedCertificateNames: String {
+        switch self {
+        case .dev:        return "dev-server"
+        case .staging:    return ""
+        case .production: return ""
+        }
+    }
+
+    var isPinningEnabled: Bool {
+        switch self {
+        case .dev:        return true
+        case .staging:    return false
+        case .production: return false
+        }
+    }
 }
+
+
+
+
+
+
 
 // MARK: - AppEnvironment
 struct AppEnvironment {
@@ -75,7 +98,12 @@ final class AppConfig {
     static let officeId: String  = AppEnvironment.current.officeId
     static let cryptoKey: String = AppEnvironment.current.cryptoKey
     
-    /// When `true`, protection is applied automatically:
-    /// When `false`, all of the above is disabled — screenshots and screen
+    /// App screen protection screenshot / record
     static let isScreenProtectionEnabled: Bool = false
+
+    /// SSL pinning enable
+    static let isSSLPinningEnabled: Bool = true
+
+    /// SSL pinning certificate name
+    static let pinnedCertificateName: String   = AppEnvironment.current.pinnedCertificateNames
 }

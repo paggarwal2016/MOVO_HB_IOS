@@ -10,23 +10,32 @@ import Security
 import CryptoKit
 
 final class SecureSessionDelegate: NSObject, URLSessionDelegate {
-
+    
     private let pinnedKeyHashes: Set<Data>
     private let pinningEnabled: Bool
-
-    init(enabled: Bool = true) {
+    
+    init(
+        enabled: Bool = AppConfig.isSSLPinningEnabled,
+        certificateName: String = AppConfig.pinnedCertificateName
+    ) {
         self.pinningEnabled = enabled
-        let hashes = enabled ? Self.loadPinnedKeyHashes() : []
-
+        let hashes = enabled
+        ? Self.loadPinnedKeyHashes(name: certificateName)
+        : []
+        
         if enabled && hashes.isEmpty {
             SecureLogger.error(
-                "SSL pinning enabled but no bundled certificate public key could be loaded — all connections will be rejected",
+                "SSL pinning enabled but no bundled certificate public key could be loaded — all connections will be rejected. Ensure the pinned .cer files are added to the app target.",
                 category: .security
             )
         }
         self.pinnedKeyHashes = hashes
+        SecureLogger.info(
+            "SSL pinning: enabled=\(enabled), pinned keys loaded=\(hashes.count)",
+            category: .security
+        )
     }
-
+    
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping
@@ -34,11 +43,11 @@ final class SecureSessionDelegate: NSObject, URLSessionDelegate {
         let (disposition, credential) = evaluate(challenge)
         completionHandler(disposition, credential)
     }
-
+    
     // MARK: - Challenge evaluation
     private func evaluate(_ challenge: URLAuthenticationChallenge)
-        -> (URLSession.AuthChallengeDisposition, URLCredential?) {
-
+    -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        
         guard pinningEnabled else {
             return (.performDefaultHandling, nil)
         }
@@ -56,33 +65,43 @@ final class SecureSessionDelegate: NSObject, URLSessionDelegate {
               chain.contains(where: { Self.publicKeyHash(from: $0).map(pinnedKeyHashes.contains) ?? false }) else {
             return reject("No certificate in the server chain matched a pinned key")
         }
+        SecureLogger.info("SSL pinning: chain matched a pinned key — connection allowed", category: .security)
         return (.useCredential, URLCredential(trust: serverTrust))
     }
-
+    
     /// Logs the rejection reason and returns the cancel disposition.
     private func reject(_ reason: String)
-        -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+    -> (URLSession.AuthChallengeDisposition, URLCredential?) {
         SecureLogger.error("\(reason) — rejecting connection", category: .security)
         return (.cancelAuthenticationChallenge, nil)
     }
-
+    
     // MARK: - Key extraction
-    private static func loadPinnedKeyHashes() -> Set<Data> {
-        var urls: [URL] = []
-        if let server = Bundle.main.url(forResource: "server", withExtension: "cer") {
-            urls.append(server)
+    private static func loadPinnedKeyHashes(name: String) -> Set<Data> {
+        guard !name.isEmpty else {
+            SecureLogger.error("No pinned certificate name configured for this environment", category: .security)
+            return []
         }
-        urls.append(contentsOf: Bundle.main.urls(forResourcesWithExtension: "cer", subdirectory: nil) ?? [])
-
-        return Set(urls.compactMap { url -> Data? in
-            guard let data = try? Data(contentsOf: url),
-                  let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
-                return nil
-            }
-            return publicKeyHash(from: certificate)
-        })
+        
+        guard let url = Bundle.main.url(forResource: name, withExtension: "cer") else {
+            SecureLogger.error("Pinned certificate '\(name).cer' not found in the app bundle", category: .security)
+            return []
+        }
+        
+        guard let data = try? Data(contentsOf: url),
+              let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
+            SecureLogger.error("Failed to parse pinned certificate '\(url.lastPathComponent)'", category: .security)
+            return []
+        }
+        
+        guard let hash = publicKeyHash(from: certificate) else {
+            SecureLogger.error("Failed to extract public key from pinned certificate '\(url.lastPathComponent)'", category: .security)
+            return []
+        }
+        
+        return [hash]
     }
-
+    
     /// SHA-256 hash of a certificate's public key (external/DER representation).
     private static func publicKeyHash(from certificate: SecCertificate) -> Data? {
         guard let publicKey = SecCertificateCopyKey(certificate),
