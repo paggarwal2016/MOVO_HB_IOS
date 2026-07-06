@@ -54,6 +54,7 @@ struct RootView: View {
 
                 case .choice:
                     ChoiceScreen()
+                        .trackScreen(AnalyticsScreen.choice)
 
                 case .waitlist:
                     WaitlistScreen(
@@ -68,12 +69,15 @@ struct RootView: View {
                             appState.flow = .choice
                         }
                     )
+                    .trackScreen(AnalyticsScreen.waitlist)
 
                 case .loginPhone:
                     PhoneNumberScreen(flowType: .login)
+                        .trackScreen(AnalyticsScreen.phoneLogin)
 
                 case .getStartedPhone:
                     PhoneNumberScreen(flowType: .getStarted)
+                        .trackScreen(AnalyticsScreen.phoneSignup)
 
                 case .otp:
                     OTPScreen(
@@ -106,12 +110,14 @@ struct RootView: View {
                             appState.flow = appState.context == .login ? .loginPhone : .getStartedPhone
                         }
                     )
+                    .trackScreen(AnalyticsScreen.otp)
 
                 case .signupDetails:
                     SignUpScreen(
                         onBack: { appState.flow = .choice },
                         onContinue: { email in
                             authVM.email = email
+                            container.analytics.log(AnalyticsEvent.signupEmailSubmitted)
                             Task {
                                 SpinnerView.showFullScreen()
                                 // Check the profile's email-verified status first.
@@ -145,6 +151,7 @@ struct RootView: View {
                         },
                         onSignIn: { appState.flow = .loginPhone }
                     )
+                    .trackScreen(AnalyticsScreen.emailEntry)
 
                 case .emailVerification:
                     EmailVerificationView(
@@ -197,6 +204,7 @@ struct RootView: View {
                         },
                         onBack: { appState.flow = .signupDetails }
                     )
+                    .trackScreen(AnalyticsScreen.emailVerification)
 
                 case .getStartedInfo:
                     GetStartedInfoScreen(
@@ -225,6 +233,7 @@ struct RootView: View {
                         container: container,
                         acceptedItems: $legalAcceptedItems
                     )
+                    .trackScreen(AnalyticsScreen.terms)
 
                     // ── Biometric opt-in ──────────────────────────────────────
                 case .enableBiometrics:
@@ -261,6 +270,7 @@ struct RootView: View {
                             appState.flow = .kyc
                         }
                     )
+                    .trackScreen(AnalyticsScreen.kycDocument)
 
                 case .appLock:
                     BiometricGateView(
@@ -308,14 +318,17 @@ struct RootView: View {
                     KYCSuccessView(
                         container: container,
                         onFinish: {
+                            container.analytics.log(AnalyticsEvent.signupCompleted)
                             UserDefaults.standard.set(true, forKey: "hasCompletedSignup")
                             appState.flow = .home
                         },
                         onSkip: {
+                            container.analytics.log(AnalyticsEvent.signupCompleted)
                             UserDefaults.standard.set(true, forKey: "hasCompletedSignup")
                             appState.flow = .home
                         }
                     )
+                    .trackScreen(AnalyticsScreen.kycSuccess)
 
                 case .home:
                     HomeTabBarView(container: container)

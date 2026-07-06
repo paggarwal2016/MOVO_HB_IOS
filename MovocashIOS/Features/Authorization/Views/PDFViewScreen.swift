@@ -51,6 +51,7 @@ struct PDFViewScreen: View {
             }
         }
         .background(Color.clear)
+        .trackScreen(AnalyticsScreen.document)
         .task { await viewModel.loadPDF(for: documentType) }
     }
 }

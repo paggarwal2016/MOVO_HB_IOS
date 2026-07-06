@@ -92,11 +92,17 @@ final class ACHViewModel: BaseViewModel {
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(AchAPI.initiateTransfer(request))
             }
+            analytics.log(AnalyticsEvent.achTransferInitiated, params: [
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(Double(request.amount))
+            ])
             return true
         } catch is CancellationError {
             return false
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+            analytics.log(AnalyticsEvent.achTransferFailed, params: [
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(Double(request.amount)),
+                AnalyticsParam.errorCode: error.localizedDescription
+            ])
             return false
         }
     }

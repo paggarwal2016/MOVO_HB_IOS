@@ -105,14 +105,14 @@ final class TransactionViewModel: BaseViewModel {
             }
             analytics.log(AnalyticsEvent.withdrawalInitiated, params: [
                 AnalyticsParam.accountId: request.accountId,
-                AnalyticsParam.amount: request.transactionAmount,
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(request.transactionAmount),
                 AnalyticsParam.savingsAccountId: request.savingsAccountId
             ])
             return response
         } catch {
             analytics.log(AnalyticsEvent.withdrawalFailed, params: [
                 AnalyticsParam.accountId: request.accountId,
-                AnalyticsParam.amount: request.transactionAmount
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(request.transactionAmount)
             ])
             throw error
         }
@@ -248,7 +248,7 @@ final class TransactionViewModel: BaseViewModel {
                 try await self.network.request(TransactionAPI.internals(request))
             }
             analytics.log(AnalyticsEvent.internalTransferInitiated, params: [
-                AnalyticsParam.amount: request.amount,
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(request.amount),
                 AnalyticsParam.fromAccountId: request.fromAccountId,
                 AnalyticsParam.toAccountId: request.toAccountId
             ])
@@ -257,7 +257,7 @@ final class TransactionViewModel: BaseViewModel {
             return false
         } catch {
             analytics.log(AnalyticsEvent.internalTransferFailed, params: [
-                AnalyticsParam.amount: request.amount,
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(request.amount),
                 AnalyticsParam.fromAccountId: request.fromAccountId,
                 AnalyticsParam.toAccountId: request.toAccountId
             ])

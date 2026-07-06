@@ -44,9 +44,16 @@ final class PDFViewModel: BaseViewModel {
             }
 
             self.pdfURL = url
+            analytics.log(AnalyticsEvent.documentViewed, params: [
+                AnalyticsParam.type: String(describing: documentType)
+            ])
 
         } catch {
-            // handled in BaseViewModel
+            // Error surfaced to the user in BaseViewModel; recorded here for analytics.
+            analytics.log(AnalyticsEvent.documentFetchFailed, params: [
+                AnalyticsParam.type: String(describing: documentType),
+                AnalyticsParam.errorCode: error.localizedDescription
+            ])
         }
     }
 }

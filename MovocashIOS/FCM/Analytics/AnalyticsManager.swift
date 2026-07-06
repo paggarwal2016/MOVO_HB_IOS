@@ -36,8 +36,9 @@ protocol AnalyticsTracking {
 }
 
 extension AnalyticsTracking {
-    func log(_ event: String, params: [String: Any]? = nil) {}
-    func setUserProperty(_ value: String, for key: String) {}
+    /// Convenience: forwards to the two-arg requirement so it dynamic-dispatches
+    /// to the real implementation instead of a no-op default.
+    func log(_ event: String) { log(event, params: nil) }
 }
 
 
@@ -72,7 +73,6 @@ private extension String {
 final class AnalyticsManager: AnalyticsTracking {
     static let shared = AnalyticsManager()
     private let keychain: KeychainManagerProtocol = KeychainManager.shared
-    private let analyticsIdKey = "analytics_stable_id"
     private let linkedSubKey   = "analytics_linked_sub"
     private init() {}
 
@@ -88,14 +88,15 @@ final class AnalyticsManager: AnalyticsTracking {
                 return
             }
 
+            // Previous PII-safe implementation (SHA-256 hashed, device-anchored stable ID).
+            /*
             let hashedSub = sub.sha256Hashed
 
             // If this sub is already linked, reuse the stored stable ID
             if let existingSub = try? await keychain.get(linkedSubKey, biometricPrompt: nil),
                existingSub == hashedSub,
                let stableId = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) {
-//                Analytics.setUserID(stableId)
-                _ = stableId
+                Analytics.setUserID(stableId)
                 return
             }
 
@@ -103,10 +104,11 @@ final class AnalyticsManager: AnalyticsTracking {
             let stableId = await DeviceManager.shared.deviceID().sha256Hashed
             try? await keychain.save(stableId, for: analyticsIdKey, protection: .backgroundSafe)
             try? await keychain.save(hashedSub, for: linkedSubKey, protection: .backgroundSafe)
-//            Analytics.setUserID(stableId)
-//            #if DEBUG
-//            print("📊 [Analytics] identifyUser → new stableId set")
-//            #endif
+            Analytics.setUserID(stableId)
+            */
+
+            // Set the raw user id as the Firebase UserID.
+            Analytics.setUserID(sub)
         }
     }
 
@@ -114,12 +116,25 @@ final class AnalyticsManager: AnalyticsTracking {
     /// Firebase identity is unchanged even though token rotated.
     func reapplyIdentity() {
         _ = Task {
+            // Read the raw user id directly from the stored access token so the
+            // Firebase UserID (which must be re-set each launch) stays consistent
+            // with identifyUser(from:).
+            guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
+                  let sub = JWTHelper.extractSub(from: token) else {
+                await setAnonymousIdentity()
+                return
+            }
+
+            // Previous PII-safe implementation (hashed, device-anchored stable ID).
+            /*
             guard let stableId = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) else {
                 await setAnonymousIdentity()
                 return
             }
-//            Analytics.setUserID(stableId)
-            _ = stableId
+            Analytics.setUserID(stableId)
+            */
+
+            Analytics.setUserID(sub)
             log(AnalyticsEvent.tokenRefreshed, params: [AnalyticsParam.reason: "silent_refresh"])
         }
     }
@@ -137,37 +152,30 @@ final class AnalyticsManager: AnalyticsTracking {
     // MARK: - Anonymous (pre-login)
 
     private func setAnonymousIdentity() async {
-        if let existing = try? await keychain.get(analyticsIdKey, biometricPrompt: nil) {
-//            Analytics.setUserID(existing)
-            _ = existing
-//            #if DEBUG
-//            print("📊 [Analytics] identifyUser → existing anonymousId reused")
-//            #endif
-            return
-        }
-        let anonId = "anon_\(UUID().uuidString)".sha256Hashed
-        try? await keychain.save(anonId, for: analyticsIdKey, protection: .backgroundSafe)
-//        Analytics.setUserID(anonId)
-//        #if DEBUG
-//        print("📊 [Analytics] identifyUser → new anonymousId set")
-//        #endif
+        // No authenticated user (pre-login / after logout): clear the Firebase
+        // UserID so events aren't attributed to any account. Firebase continues
+        // anonymous tracking via its own app-instance ID.
+        Analytics.setUserID(nil)
     }
 
     // MARK: - Core
 
-    func log(_ event: String, params: [String: Any]? = nil) {
-//        #if DEBUG
-//        let paramString = params?.map { "\($0.key): \($0.value)" }.joined(separator: ", ") ?? "none"
-//        print("📊 [Analytics] Event: \(event) | Params: \(paramString)")
-//        #endif
-//        Analytics.logEvent(event, parameters: params)
+    func log(_ event: String, params: [String: Any]?) {
+        Analytics.logEvent(event, parameters: params.map(Self.sanitize))
+    }
+
+    /// Firebase silently drops string parameter values longer than 100 characters.
+    /// Truncate them so long values (e.g. localized error text) survive as a usable
+    /// prefix instead of being discarded.
+    private static func sanitize(_ params: [String: Any]) -> [String: Any] {
+        params.mapValues { value in
+            guard let string = value as? String, string.count > 100 else { return value }
+            return String(string.prefix(100))
+        }
     }
 
     func setUserProperty(_ value: String, for key: String) {
-//        #if DEBUG
-//        print("📊 [Analytics] UserProperty: \(key) = \(value)")
-//        #endif
-//        Analytics.setUserProperty(value, forName: key)
+        Analytics.setUserProperty(value, forName: key)
     }
 
     // MARK: - Screen

@@ -382,10 +382,13 @@ private extension HomeTabBarView {
         switch tab {
         case .home:
             DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM, selectedTab: $selectedTab, screenTitle: title)
+                .trackScreen(AnalyticsScreen.dashboard)
         case .payAnyone:
             PayAnyoneView(container: container, selectedTab: $selectedTab, cards: dashboardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard, screenTitle: title)
+                .trackScreen(AnalyticsScreen.payAnyone)
         case .profile:
             ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM, screenTitle: title)
+                .trackScreen(AnalyticsScreen.profile)
         case .quickPay, .other:
             placeholderTab(title: title)
         }

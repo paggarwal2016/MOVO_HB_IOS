@@ -234,6 +234,7 @@ private final class KYCViewControllerWrapper: UIViewController {
         guard !hasLaunchedKyc else { return }
         hasLaunchedKyc = true
         MobileBankingSDK.startKyc(presentingViewController: self, useSdkSuccessUI: false) //true Get started UI is appear
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkOpened)
     }
 
     // deinit must be in the class body — Swift forbids deinit in extensions
@@ -246,11 +247,13 @@ private final class KYCViewControllerWrapper: UIViewController {
     @objc private func handleCompleted(_ notification: Notification) {
         guard let user = notification.object as? User else { return }
         SecureLogger.info("KYC verificationCompleted", category: .kyc)
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "completed"])
         dismissSDKThen { [weak self] in self?.onSuccess?(user) }
     }
 
     @objc private func handleCanceled(_ notification: Notification) {
         SecureLogger.info("KYC verificationCanceled", category: .kyc)
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "canceled"])
         dismissSDKThen { [weak self] in self?.onFailure?(KYCError.cancelled) }
     }
 
@@ -258,6 +261,7 @@ private final class KYCViewControllerWrapper: UIViewController {
         let message = (notification.object as? Error)?.localizedDescription
             ?? "Identity verification failed."
         SecureLogger.error("KYC verificationFailed: \(message)", category: .kyc)
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "failed"])
         dismissSDKThen { [weak self] in self?.onFailure?(KYCError.sdkError(message)) }
     }
 
@@ -265,6 +269,7 @@ private final class KYCViewControllerWrapper: UIViewController {
         let message = (notification.object as? NSError)?.localizedDescription
             ?? "Scanner error occurred."
         SecureLogger.error("KYC scannerError: \(message)", category: .kyc)
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "scanner_error"])
         dismissSDKThen { [weak self] in self?.onFailure?(KYCError.sdkError(message)) }
     }
 

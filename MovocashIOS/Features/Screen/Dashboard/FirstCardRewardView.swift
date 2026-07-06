@@ -35,6 +35,7 @@ struct FirstCardRewardView: View {
                 .padding(Spacing.xl)
         }
         .background(ClearCoverBackground())
+        .trackScreen(AnalyticsScreen.rewardUnlock)
         .onAppear {
             withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) { shown = true }
         }

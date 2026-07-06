@@ -17,6 +17,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     private let plaidLinkManager: PlaidLinkManagerProtocol
     let network: NetworkServiceProtocol
     let keychain: KeychainManagerProtocol
+    private let analytics: AnalyticsTracking = AnalyticsManager.shared
 
     // MARK: - Published State
 
@@ -282,7 +283,13 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
 
     func activateCard(pin: String, accountId: Int? = nil) async {
         await perform {
-            self.virtualCard = try await self.service.activateVirtualCard(pin: pin, accountId: accountId)
+            do {
+                self.virtualCard = try await self.service.activateVirtualCard(pin: pin, accountId: accountId)
+                self.analytics.log(AnalyticsEvent.cardActivated)
+            } catch {
+                self.analytics.log(AnalyticsEvent.cardActivationFailed, params: [AnalyticsParam.errorCode: error.localizedDescription])
+                throw error
+            }
         }
     }
 
@@ -328,11 +335,17 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             return
         }
         await perform {
-            self.provisionedPass = try await self.service.addVirtualCardToAppleWallet(
-                presentingViewController: presenter,
-                accountId: accountId,
-                localizedDescription: localizedDescription
-            )
+            do {
+                self.provisionedPass = try await self.service.addVirtualCardToAppleWallet(
+                    presentingViewController: presenter,
+                    accountId: accountId,
+                    localizedDescription: localizedDescription
+                )
+                self.analytics.log(AnalyticsEvent.walletAdd)
+            } catch {
+                self.analytics.log(AnalyticsEvent.walletAddFailed, params: [AnalyticsParam.errorCode: error.localizedDescription])
+                throw error
+            }
         }
     }
 

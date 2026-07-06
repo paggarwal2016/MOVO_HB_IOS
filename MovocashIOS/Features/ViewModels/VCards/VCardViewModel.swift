@@ -195,13 +195,11 @@ final class VCardViewModel: BaseViewModel {
             }
 #endif
             let card = try JSONDecoder().decode(VCardListResponse.self, from: plainData)
-            analytics.log(AnalyticsEvent.vcardCreated, params: [
-                AnalyticsParam.accountName: request.nickname
-            ])
+            analytics.log(AnalyticsEvent.vcardCreated)
             return card
         } catch {
             analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
-                AnalyticsParam.accountName: request.nickname
+                AnalyticsParam.errorCode: error.localizedDescription
             ])
             throw error
         }
