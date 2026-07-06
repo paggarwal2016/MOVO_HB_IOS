@@ -16,6 +16,7 @@ struct RootView: View {
     @EnvironmentObject private var userVM: UserViewModel
     @EnvironmentObject private var sessionManager: SessionManager
     @EnvironmentObject private var pushManager: PushManager
+    @EnvironmentObject private var idleTimer: IdleTimerManager
 
     @ObservedObject var kycVM: KYCViewModel
 
@@ -364,12 +365,27 @@ struct RootView: View {
                 })
             }
         }
+        // Reset the idle clock on any touch anywhere in the app.
+        // `simultaneousGesture` observes without consuming — existing gestures are unaffected.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in idleTimer.recordActivity() }
+        )
+        // Start the idle timer when the home dashboard is visible; stop it otherwise.
+        .onChangeCompat(of: appState.flow) { newFlow in
+            if newFlow == .home {
+                idleTimer.start()
+            } else {
+                idleTimer.stop()
+            }
+        }
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
             // Re-check integrity on foreground: instrumentation (Frida, a debugger)
             // can be attached after launch, so re-evaluate every time the app returns
             // to active. A positive result stays flagged for the session.
             if newPhase == .active {
+                idleTimer.recordActivity()
                 Task {
                     if await JailbreakDetector.shared.isJailbroken { deviceCompromised = true }
                     reportCompromiseIfNeeded(trigger: "foreground")
