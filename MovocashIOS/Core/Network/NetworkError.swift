@@ -45,14 +45,10 @@ enum NetworkError: LocalizedError, Sendable {
     case timeout
     case requestFailed(String)
     case securityViolation
+    case secureConnectionFailed
     case invalidURL
     case encodingError
     case noContent
-    /// The server's 15-minute X25519 device session (Redis) has expired and must
-    /// be re-established before the request can be decrypted. Triggers a one-shot
-    /// reactive re-fetch of `/device/config` + retry. Distinct from `.unauthorized`,
-    /// which tears down the user's auth session. Carries the server's exact error
-    /// message so it can be surfaced verbatim if the retry ultimately fails.
     case deviceSessionExpired(message: String?)
     case unknown
 
@@ -90,8 +86,10 @@ enum NetworkError: LocalizedError, Sendable {
             return "Request failed: \(reason)"
 
         case .securityViolation:
-            // Thrown only when JailbreakDetector flags the device (see NetworkService).
             return "For your security, this action is blocked on this device."
+
+        case .secureConnectionFailed:
+            return "We couldn't establish a secure connection. Please check your network and try again."
 
         case .invalidURL:
             return "Invalid URL"

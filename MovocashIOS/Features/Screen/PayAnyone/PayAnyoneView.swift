@@ -726,7 +726,7 @@ extension PayAnyoneView {
             Spacer()
             Button(action: { withAnimation { showCreateContactScreen = true } }) {
                 HStack(spacing: 6) {
-                    Text("Add Movo recipient")
+                    Text("Add MOVO Recipient")
                         .textStyle(Typography.button)
                 }
             }

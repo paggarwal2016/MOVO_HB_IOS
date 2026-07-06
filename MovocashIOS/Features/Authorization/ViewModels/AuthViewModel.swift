@@ -159,6 +159,10 @@ final class AuthViewModel: ObservableObject {
             let destination: AuthFlow = context == .login ? .home : .signupDetails
             reset()
             await onNavigate(destination)
+        } catch is CancellationError {
+            // Benign — the request was cancelled (e.g. the user navigated away).
+            // Nothing to surface. Pinning failures now throw `.secureConnectionFailed`.
+            return
         } catch {
             analytics.trackLoginFailed(method: .otp, errorCode: error.localizedDescription)
             alertManager.showError(error.localizedDescription)
@@ -239,6 +243,10 @@ final class AuthViewModel: ObservableObject {
                 )
                 appState.flow = .otp
             }
+        } catch is CancellationError {
+            // Benign — the request was cancelled (e.g. the user navigated away).
+            // Nothing to surface. Pinning failures now throw `.secureConnectionFailed`.
+            return
         } catch {
             if let message = waitlistMessage(from: error) {
                 AlertManager.shared.showCustom(

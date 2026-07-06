@@ -271,7 +271,12 @@ actor NetworkService: NetworkServiceProtocol {
         do {
             (data, response) = try await session.data(for: request)
         } catch let urlError as URLError where urlError.code == .cancelled {
-            throw CancellationError()
+            // A -999 with our Task still alive means the SSL-pinning delegate cancelled
+            // the TLS challenge (cert didn't match a pinned key) — a security failure,
+            // not a user/navigation cancel. Only a genuinely cancelled Task is a real
+            // CancellationError.
+            if Task.isCancelled { throw CancellationError() }
+            throw NetworkError.secureConnectionFailed
         } catch let urlError as URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
@@ -382,7 +387,12 @@ actor NetworkService: NetworkServiceProtocol {
         do {
             (data, response) = try await session.data(for: request)
         } catch let urlError as URLError where urlError.code == .cancelled {
-            throw CancellationError()
+            // A -999 with our Task still alive means the SSL-pinning delegate cancelled
+            // the TLS challenge (cert didn't match a pinned key) — a security failure,
+            // not a user/navigation cancel. Only a genuinely cancelled Task is a real
+            // CancellationError.
+            if Task.isCancelled { throw CancellationError() }
+            throw NetworkError.secureConnectionFailed
         } catch let urlError as URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
