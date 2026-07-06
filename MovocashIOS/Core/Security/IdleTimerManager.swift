@@ -6,6 +6,8 @@
 //
 
 import Foundation
+import SwiftUI
+import Combine
 
 /// Detects in-app inactivity and fires `.sessionExpired` after 15 minutes of no
 /// user interaction. Only active while the user is on the home dashboard.

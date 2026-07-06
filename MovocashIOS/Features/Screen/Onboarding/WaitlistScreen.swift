@@ -7,9 +7,6 @@
 
 import SwiftUI
 
-/// Join-the-Waitlist screen. Collects first name, last name + email for prospective
-/// users who don't have an invite, and submits via `AuthViewModel.joinTheWaitList`.
-/// The parent handles the success toast + navigation through `onSubmitted`.
 struct WaitlistScreen: View {
     @EnvironmentObject private var authVM: AuthViewModel
 
@@ -18,21 +15,24 @@ struct WaitlistScreen: View {
     @State private var email: String = ""
     @State private var phoneNumber: String = ""
     @State private var isSubmitting = false
-
-    /// Drives the full-screen success confirmation shown after a successful join.
     @State private var showSuccess = false
     @State private var successMessage = ""
 
-    /// The form fields, in tab order — used for focus tracking + scroll-into-view.
     private enum Field: Hashable { case firstName, lastName, phone, email }
     @State private var focusedField: Field?
+    @State private var touched: Set<Field> = []
+    @State private var didAttemptSubmit = false
+    @State private var scrollTarget: Field?
 
     private func focusBinding(_ field: Field) -> Binding<Bool> {
         Binding(
             get: { focusedField == field },
             set: { isOn in
                 if isOn { focusedField = field }
-                else if focusedField == field { focusedField = nil }
+                else if focusedField == field {
+                    focusedField = nil
+                    touched.insert(field) // blurred → eligible to show its error
+                }
             }
         )
     }
@@ -46,24 +46,40 @@ struct WaitlistScreen: View {
         self.onSubmitted = onSubmitted
     }
 
-    /// All fields are required: non-empty names, a valid email, and a valid US phone.
-    private var isValid: Bool {
-        !trimmed(firstName).isEmpty && !trimmed(lastName).isEmpty && isValidEmail && normalizedPhone != nil
+    private var firstInvalidField: Field? {
+        [.firstName, .lastName, .phone, .email].first { validationMessage(for: $0) != nil }
     }
 
-    /// Mirrors the rule used in `SignUpViewModel` so email validation stays consistent.
-    /// Trims first: iOS autofill/paste often appends a trailing space, which the
-    /// whitespace-rejecting regex would otherwise treat as invalid (button stuck disabled).
     private var isValidEmail: Bool {
         let pattern = #"^[^@\s]+@[^@\s]+\.[^@\s]+$"#
         return trimmed(email).range(of: pattern, options: .regularExpression) != nil
     }
 
-    /// Normalized E.164 phone (`+1XXXXXXXXXX`) when the entry is a valid US number,
-    /// else `nil`. `PhoneNormalizer` strips the display formatting before validating.
     private var normalizedPhone: String? {
         if case .success(let e164) = PhoneNormalizer.normalizePhone(phoneNumber) { return e164 }
         return nil
+    }
+
+    private func validationMessage(for field: Field) -> String? {
+        switch field {
+        case .firstName:
+            return trimmed(firstName).isEmpty ? "Enter your first name" : nil
+        case .lastName:
+            return trimmed(lastName).isEmpty ? "Enter your last name" : nil
+        case .email:
+            if trimmed(email).isEmpty { return "Enter your email address" }
+            return isValidEmail ? nil : "Enter a valid email address"
+        case .phone:
+            if case .failure(let error) = PhoneNormalizer.normalizePhone(phoneNumber) {
+                return error.errorDescription
+            }
+            return nil
+        }
+    }
+
+    private func displayedError(for field: Field) -> String? {
+        guard touched.contains(field) || didAttemptSubmit else { return nil }
+        return validationMessage(for: field)
     }
 
     var body: some View {
@@ -76,8 +92,6 @@ struct WaitlistScreen: View {
                     .padding(.top, DesignTokens.Spacing.sm)
                     .padding(.bottom, DesignTokens.Spacing.lg)
 
-                // Scrollable form — lets the focused field scroll clear of the
-                // keyboard while the submit button (below) floats above it.
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
                         VStack(alignment: .leading, spacing: 0) {
@@ -103,13 +117,18 @@ struct WaitlistScreen: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .scrollDismissesKeyboard(.interactively)
-                    // When focus changes, bring the active field fully into view
-                    // above the keyboard with a smooth animation.
                     .onChange(of: focusedField) { field in
                         guard let field else { return }
                         withAnimation(.easeInOut(duration: 0.3)) {
                             proxy.scrollTo(field, anchor: .center)
                         }
+                    }
+                    .onChange(of: scrollTarget) { field in
+                        guard let field else { return }
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(field, anchor: .center)
+                        }
+                        scrollTarget = nil
                     }
                 }
 
@@ -167,7 +186,8 @@ struct WaitlistScreen: View {
             CustomTextField(
                 text: $firstName,
                 placeholder: "Your first name",
-                isFocused: focusBinding(.firstName)
+                isFocused: focusBinding(.firstName),
+                errorMessage: displayedError(for: .firstName)
             )
         }
     }
@@ -178,7 +198,8 @@ struct WaitlistScreen: View {
             CustomTextField(
                 text: $lastName,
                 placeholder: "Your last name",
-                isFocused: focusBinding(.lastName)
+                isFocused: focusBinding(.lastName),
+                errorMessage: displayedError(for: .lastName)
             )
         }
     }
@@ -190,7 +211,8 @@ struct WaitlistScreen: View {
                 text: $email,
                 placeholder: "you@email.com",
                 keyboardType: .emailAddress,
-                isFocused: focusBinding(.email)
+                isFocused: focusBinding(.email),
+                errorMessage: displayedError(for: .email)
             )
         }
     }
@@ -198,7 +220,11 @@ struct WaitlistScreen: View {
     private var phoneField: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Eyebrow("Phone number")
-            CustomPhoneField(phoneNumber: $phoneNumber, isFocused: focusBinding(.phone))
+            CustomPhoneField(
+                phoneNumber: $phoneNumber,
+                isFocused: focusBinding(.phone),
+                errorMessage: displayedError(for: .phone)
+            )
         }
     }
 
@@ -211,14 +237,21 @@ struct WaitlistScreen: View {
             Text("Join Waitlist")
         }
         .buttonStyle(MovoPrimaryButtonStyle())
-        .disabled(!isValid || isSubmitting)
-        .opacity((isValid && !isSubmitting) ? 1.0 : 0.45)
-        .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: isValid)
+        .disabled(isSubmitting)
+        .opacity(isSubmitting ? 0.45 : 1.0)
+        .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: isSubmitting)
     }
 
     private func submit() {
+        guard !isSubmitting else { return }
+        didAttemptSubmit = true
+        if let firstInvalid = firstInvalidField {
+            scrollTarget = firstInvalid // scroll into view without popping the keyboard
+            return
+        }
+
         UIApplication.shared.dismissKeyboard()
-        guard isValid, !isSubmitting, let phone = normalizedPhone else { return }
+        guard let phone = normalizedPhone else { return }
         isSubmitting = true
         SpinnerView.showFullScreen()
         Task {
@@ -231,7 +264,6 @@ struct WaitlistScreen: View {
                 )
                 SpinnerView.hideFullScreen()
                 isSubmitting = false
-                // Show the full-screen success confirmation; returns to Choice on done.
                 successMessage = message ?? "We'll email you when MovoCash opens up."
                 showSuccess = true
             } catch {
