@@ -18,7 +18,6 @@
 		142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142864562F92251B006F8C39 /* TokenRefreshable.swift */; };
 		14413D152FD9662C00EBC972 /* CustomContactEnrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */; };
 		144459072FFB86E300150027 /* IdleTimerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 144459062FFB86E300150027 /* IdleTimerManager.swift */; };
-		144459112FFBCD8100150027 /* dev-server.cer in Resources */ = {isa = PBXBuildFile; fileRef = 1444590F2FFBCD8100150027 /* dev-server.cer */; };
 		1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */; };
 		1463E7A72FE4117800371ADC /* CustomBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1463E7A62FE4117800371ADC /* CustomBackButton.swift */; };
 		146819772F4DE6CF00BED014 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1468194F2F4DE6CF00BED014 /* Environment.swift */; };
@@ -130,7 +129,6 @@
 		142864562F92251B006F8C39 /* TokenRefreshable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefreshable.swift; sourceTree = "<group>"; };
 		14413D142FD9662C00EBC972 /* CustomContactEnrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomContactEnrollView.swift; sourceTree = "<group>"; };
 		144459062FFB86E300150027 /* IdleTimerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleTimerManager.swift; sourceTree = "<group>"; };
-		1444590F2FFBCD8100150027 /* dev-server.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = "dev-server.cer"; sourceTree = "<group>"; };
 		1445791C2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinInputAlertPresenter.swift; sourceTree = "<group>"; };
 		1463E7A62FE4117800371ADC /* CustomBackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomBackButton.swift; sourceTree = "<group>"; };
 		1468194F2F4DE6CF00BED014 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
@@ -220,6 +218,11 @@
 		142337CB2F584C010030B4E7 /* Home */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Home;
+			sourceTree = "<group>";
+		};
+		14445F522FFBEA5C00150027 /* Cert */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Cert;
 			sourceTree = "<group>";
 		};
 		145EB9F72F62A9560072DE68 /* API */ = {
@@ -347,14 +350,6 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
-		144459102FFBCD8100150027 /* Cert */ = {
-			isa = PBXGroup;
-			children = (
-				1444590F2FFBCD8100150027 /* dev-server.cer */,
-			);
-			path = Cert;
-			sourceTree = "<group>";
-		};
 		146819502F4DE6CF00BED014 /* Config */ = {
 			isa = PBXGroup;
 			children = (
@@ -366,7 +361,7 @@
 		146819572F4DE6CF00BED014 /* Network */ = {
 			isa = PBXGroup;
 			children = (
-				144459102FFBCD8100150027 /* Cert */,
+				14445F522FFBEA5C00150027 /* Cert */,
 				145EB9F72F62A9560072DE68 /* API */,
 				146819522F4DE6CF00BED014 /* Endpoint.swift */,
 				146819532F4DE6CF00BED014 /* HTTPMethod.swift */,
@@ -643,6 +638,7 @@
 				141CF0DD2FAE41E200D1D2E3 /* Confirmation */,
 				142337C92F5846870030B4E7 /* Launch */,
 				142337CB2F584C010030B4E7 /* Home */,
+				14445F522FFBEA5C00150027 /* Cert */,
 				145EB9F72F62A9560072DE68 /* API */,
 				145EB9FC2F62ABA80072DE68 /* Models */,
 				145EBA052F62B9620072DE68 /* ViewModels */,
@@ -770,7 +766,6 @@
 				146819902F4DE6CF00BED014 /* Assets.xcassets in Resources */,
 				14E44E742FF7C3E5001E358D /* PrivacyInfo.xcprivacy in Resources */,
 				140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */,
-				144459112FFBCD8100150027 /* dev-server.cer in Resources */,
 				14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */,
 				99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */,
 			);

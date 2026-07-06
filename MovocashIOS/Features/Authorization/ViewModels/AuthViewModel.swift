@@ -73,7 +73,7 @@ final class AuthViewModel: ObservableObject {
                     MessengerOTPRequest(
                         phoneNumber: phoneNumber,
                         context: context?.rawValue ?? "",
-                        userAction: "SEND-OTP",
+                        userAction: context == .login ? "SEND-LOGIN-OTP" : "SEND-REGISTRATION-OTP",
                         deviceInfo: .current
                     ))
             )
@@ -122,7 +122,7 @@ final class AuthViewModel: ObservableObject {
                 AuthAPI.tokenSMS(request: TokenSMSRequest(
                     phoneNumber: phoneNumber,
                     code: code,
-                    userAction: "VERIFY_OTP"
+                    userAction: context == .login ? "VERIFY-LOGIN-OTP" : "VERIFY-REGISTRATION-OTP"
                 ))
             )
             await MainActor.run { self.state = .verified }
@@ -324,7 +324,7 @@ final class AuthViewModel: ObservableObject {
     /// non-verified outcome keeps the user on the verification step.
     func checkEmailVerified() async -> EmailVerificationCheck {
         do {
-            let response: UserProfileAPIResponse = try await network.request(UserAPI.getProfile)
+            let response: UserProfileAPIResponse = try await network.request(UserAPI.verifyEmailStatus)
             if response.data.emailVerified {
                 analytics.log(AnalyticsEvent.signupEmailVerified)
                 return .verified
