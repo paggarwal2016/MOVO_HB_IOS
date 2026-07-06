@@ -490,6 +490,11 @@ extension AuthViewModel {
         return await task.value
     }
 
+    func cancelBiometricLogin() {
+        biometricLoginTask?.cancel()
+        biometricLoginTask = nil
+    }
+
     @discardableResult
     private func performBiometricLogin(appState: AppState, navigateOnSuccess: Bool) async -> Bool {
 
@@ -555,9 +560,7 @@ extension AuthViewModel {
             return true
 
         } catch is CancellationError {
-            // With Task.detached this should never fire. If you see this log, something
-            // inside the flow is explicitly cancelling the task — investigate immediately.
-            SecureLogger.warning("⚠️ Unexpected CancellationError in detached biometric task — investigate", category: .auth)
+            SecureLogger.info("Biometric login cancelled — discarding attempt", category: .auth)
             return false
         } catch let biometricError as BiometricLoginError {
             SecureLogger.error("biometric login failed: \(biometricError)", category: .auth)

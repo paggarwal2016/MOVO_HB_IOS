@@ -11,22 +11,20 @@ import Foundation
 
 @MainActor
 enum StartupRouter {
-
+    
+    private static let splashBiometricTimeout: TimeInterval = 8
+    
     // MARK: - Synchronous bootstrap (called from @main App.init)
-
+    
     static func bootstrap(
         appState: AppState,
         keychain: KeychainManagerProtocol,
         lockManager: AppLockManager
     ) {
         UserDefaults.standard.removeObject(forKey: "kycInProgress")
-
-        // AppLockManager.init() locks eagerly whenever a passcode exists in the
-        // keychain (which persists across app deletion on iOS). Reset here so the
-        // lock is only re-engaged for paths that genuinely need it. The only path
-        // that re-locks is section 5 (returning user) via evaluateOnLaunch().
+        
         lockManager.resetToUnlocked()
-
+        
         // ── 1. Token presence ─────────────────────────────────────────────
         let token: String
         switch keychain.getSync("access_token") {
@@ -49,19 +47,11 @@ enum StartupRouter {
             return
         }
         _ = token
-
-        // Note: returning from Settings after enabling a permission no longer resumes
-        // the previous onboarding screen. Such a relaunch falls through to the normal
-        // routing below (a fresh launch), per product decision.
-
+        
         // ── 2. Server idle-timeout gate (PIN-only users) ──────────────────
         let lastActivity = UserDefaults.standard.double(forKey: "lastActivityAt")
         let hasRSA = RSAKeyManager.shared.keysExist()
-
-        // If a token exists but no activity was ever recorded, this is leftover state
-        // from a previous install — iOS keychain persists across app deletion, but
-        // UserDefaults does not. Silently clear and route to choice. No toast, since
-        // the user has no expectation of being logged in.
+        
         // Exception: if RSA keys also persisted, fall through to optimistic routing
         // and proceed to home — biometric login is available for sensitive actions.
         if lastActivity == 0 && !hasRSA {
@@ -71,12 +61,12 @@ enum StartupRouter {
             appState.pendingDestination = .choice
             return
         }
-
+        
         // Apply the idle-timeout gate only when we have real activity history.
         if lastActivity > 0 {
             let elapsedSinceActivity = Date().timeIntervalSince1970 - lastActivity
             let serverSessionLikelyDead = elapsedSinceActivity >= AppState.apiIdleTimeout
-
+            
             if serverSessionLikelyDead && !hasRSA {
                 SecureLogger.info(
                     "Boot route → .choice (idle \(Int(elapsedSinceActivity))s, no RSA)",
@@ -96,20 +86,20 @@ enum StartupRouter {
                 return
             }
         }
-
+        
         // ── 3. Optimistic auth ────────────────────────────────────────────
         appState.isAuthenticated = true
-
+        
         let kycCompleted = UserDefaults.standard.bool(forKey: "kycCompleted")
-
+        
         // ── 4. Mid-onboarding restoration ─────────────────────────────────
         guard kycCompleted else {
             let bgAt = UserDefaults.standard.double(forKey: "onboardingBackgroundedAt")
             let elapsed: TimeInterval = bgAt > 0
-                ? Date().timeIntervalSince1970 - bgAt
-                : 0
+            ? Date().timeIntervalSince1970 - bgAt
+            : 0
             UserDefaults.standard.removeObject(forKey: "onboardingBackgroundedAt")
-
+            
             if elapsed >= AppState.onboardingInactivityTimeout {
                 SecureLogger.info("Boot route → .choice (onboarding idle \(Int(elapsed))s)", category: .auth)
                 keychain.clearAuthTokens()
@@ -117,11 +107,7 @@ enum StartupRouter {
                 appState.pendingDestination = .choice
                 return
             }
-
-            // Returning from Settings after granting the camera permission no longer
-            // resumes Pick Document — like every other mid-onboarding cold launch it
-            // falls through to the secure default below and starts fresh at Choice.
-
+            
             // Secure default for every other mid-onboarding cold launch (manual kill,
             // memory termination, etc.): start fresh at Choice with tokens cleared.
             SecureLogger.info("Boot route → .choice (mid-onboarding, restart)", category: .auth)
@@ -130,7 +116,7 @@ enum StartupRouter {
             appState.pendingDestination = .choice
             return
         }
-
+        
         // ── 5. Post-dashboard returning user ──────────────────────────────
         UserDefaults.standard.set(true, forKey: "kycCompleted")
         if hasRSA {
@@ -146,9 +132,9 @@ enum StartupRouter {
             appState.pendingDestination = .choice
         }
     }
-
+    
     // MARK: - Async post-bootstrap warmup (called from WindowGroup .task)
-
+    
     static func postBootstrap(
         appState: AppState,
         keychain: KeychainManagerProtocol,
@@ -159,9 +145,9 @@ enum StartupRouter {
     ) async {
         guard !appState.hasCompletedBootstrap else { return }
         appState.hasCompletedBootstrap = true
-
+        
         let start = Date()
-
+        
         // MoVO session config — fetches the movo-info signing key. This must complete
         // before any other API call (login, biometric, KYC), so it runs first while the
         // splash is still showing. Bounded retries cover transient failures; if it still
@@ -183,12 +169,12 @@ enum StartupRouter {
                 }
             }
         }
-
+        
         if appState.isAuthenticated {
             if case .found(let token) = keychain.getSync("access_token") {
                 analytics.identifyUser(from: token)
             }
-
+            
             let kycCompleted = UserDefaults.standard.bool(forKey: "kycCompleted")
             if !kycCompleted {
                 do {
@@ -204,14 +190,14 @@ enum StartupRouter {
                 SecureLogger.info("Skipping KYC SDK warmup — kycCompleted=true", category: .auth)
             }
         }
-
+        
         // Enforce minimum splash duration for visual stability
         let elapsed = Date().timeIntervalSince(start)
         let remaining = AppState.splashMinDuration - elapsed
         if remaining > 0 {
             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
         }
-
+        
         // If biometric gate is pending, attempt Face ID now while still on the
         // splash screen. On success the user skips BiometricGateView entirely
         // and lands directly on home. On failure, transition to .appLock for
@@ -219,18 +205,24 @@ enum StartupRouter {
         // via BiometricGateView.task), not this path.
         var resolvedDestination = appState.pendingDestination
         if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
-            let success = await authenticate()
+            let success = await raceAgainstTimeout(
+                seconds: splashBiometricTimeout,
+                operation: authenticate
+            )
             if success {
                 SecureLogger.info(
                     "Biometric auth succeeded on splash — routing to .home",
                     category: .auth
                 )
                 resolvedDestination = .home
+            } else {
+                SecureLogger.info(
+                    "Biometric auth unresolved or failed within \(Int(splashBiometricTimeout))s — routing to .appLock for manual retry",
+                    category: .auth
+                )
             }
-            // Failure: resolvedDestination stays .appLock → BiometricGateView
-            // shown with manual retry (autoTriggerBiometric=false).
         }
-
+        
         // Transition splash → destination
         if let destination = resolvedDestination {
             appState.context = appState.pendingContext
@@ -240,9 +232,37 @@ enum StartupRouter {
             SecureLogger.info("Splash transition → \(destination.rawValue)", category: .auth)
         }
     }
-
+    
     // MARK: - Private helpers
-
+    
+    private static func raceAgainstTimeout(
+        seconds: TimeInterval,
+        operation: @escaping () async -> Bool
+    ) async -> Bool {
+        let stream = AsyncStream<Bool> { continuation in
+            // Producer 1 — the real work. Intentionally not retained: on timeout it
+            // keeps running detached and its late yield is dropped.
+            Task {
+                let result = await operation()
+                continuation.yield(result)
+                continuation.finish()
+            }
+            // Producer 2 — the timeout.
+            let timeout = Task {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                continuation.yield(false)
+                continuation.finish()
+            }
+            // Stop only the timer when the stream ends; never cancel the work task.
+            continuation.onTermination = { _ in timeout.cancel() }
+        }
+        
+        for await first in stream {
+            return first
+        }
+        return false
+    }
+    
     private static func deferToast(after delay: TimeInterval, _ block: @escaping @MainActor () -> Void) {
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))

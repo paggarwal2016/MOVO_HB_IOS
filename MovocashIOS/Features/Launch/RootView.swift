@@ -284,6 +284,10 @@ struct RootView: View {
                             appState.flow = .home
                         },
                         onUsePhoneNumber: {
+                            // Cancel any in-flight (e.g. timed-out splash) biometric
+                            // attempt first, so a late success can't resurrect the
+                            // session the user is about to discard.
+                            authVM.cancelBiometricLogin()
                             Task {
                                 await sessionManager.logout(appState: appState)
                                 lockManager.logout()
@@ -303,6 +307,10 @@ struct RootView: View {
                             appState.flow = .home
                         },
                         onUsePhoneNumber: {
+                            // Cancel any in-flight biometric attempt first, so a late
+                            // success can't resurrect the session the user is about to
+                            // discard.
+                            authVM.cancelBiometricLogin()
                             Task {
                                 await sessionManager.logout(appState: appState)
                                 lockManager.logout()
