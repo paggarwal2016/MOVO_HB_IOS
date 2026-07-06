@@ -7,13 +7,24 @@
 
 import Foundation
 
-/// Detects in-app foreground inactivity and fires `.sessionExpired` after 15 minutes
-/// of no user interaction. Only active while the user is on the home dashboard
-/// (kycCompleted == true). The timer is started/stopped by RootView as the flow
-/// enters and leaves `.home`.
+/// Detects in-app inactivity and fires `.sessionExpired` after 15 minutes of no
+/// user interaction. Only active while the user is on the home dashboard.
 ///
-/// Activity is reported by RootView's root-level `simultaneousGesture`, which catches
-/// all touch events without cancelling existing gesture recognizers.
+/// **Lifecycle:** `start()` / `stop()` are the authoritative on/off switch; RootView
+/// calls them via `onChangeCompat(of: appState.flow)`. `checkIdle()` also guards on
+/// `kycCompleted` as a defence-in-depth safety net — if that guard fires when the
+/// timer should already be stopped, it logs a warning so the divergence is visible.
+///
+/// **Activity detection:** RootView's root-level `simultaneousGesture` calls
+/// `recordActivity()` on every touch without consuming other gestures. It also calls
+/// `recordActivity()` on scene-phase `.active`, so time spent in the background is
+/// excluded from the idle clock. Background-period expiry is handled separately by
+/// `AppLockManager.handleScenePhase`.
+///
+/// **Clock note:** idle time is measured with `Date()` (wall clock). NTP skew is
+/// sub-second and negligible for a 15-minute window. No monotonic-clock pattern
+/// exists elsewhere in the codebase; using `Date()` is consistent with the rest of
+/// the app (`AppLockManager.SystemClock`, `SessionManager` JWT expiry).
 @MainActor
 final class IdleTimerManager: ObservableObject {
 
@@ -34,12 +45,17 @@ final class IdleTimerManager: ObservableObject {
     func start() {
         guard timer == nil else { return }
         lastActivityDate = Date()
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+        // Timer(timeInterval:) does NOT auto-schedule, so we control the run-loop
+        // mode explicitly. scheduledTimer would auto-add in .default and then
+        // RunLoop.main.add(forMode: .common) would register a second time — causing
+        // the timer to fire from both modes (double 60s ticks).
+        let t = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.checkIdle()
             }
         }
-        RunLoop.main.add(timer!, forMode: .common)
+        timer = t
+        RunLoop.main.add(t, forMode: .common)
     }
 
     /// Stop idle monitoring. Called when leaving the home dashboard.
@@ -51,7 +67,18 @@ final class IdleTimerManager: ObservableObject {
     // MARK: - Private
 
     private func checkIdle() {
-        guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
+        // start()/stop() is the authoritative lifecycle. This guard is a
+        // defence-in-depth safety net: if the timer is somehow still running after
+        // the user left .home (e.g. a missed stop() call), suppress the expiry and
+        // log a warning so the divergence is visible rather than silent.
+        guard UserDefaults.standard.bool(forKey: "kycCompleted") else {
+            SecureLogger.warning(
+                "IdleTimerManager.checkIdle() fired with kycCompleted=false — timer should have been stopped. Suppressing.",
+                category: .auth
+            )
+            stop()
+            return
+        }
         let elapsed = Date().timeIntervalSince(lastActivityDate)
         guard elapsed >= timeout else { return }
         SecureLogger.info(
