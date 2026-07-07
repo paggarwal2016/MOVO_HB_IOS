@@ -331,6 +331,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
 
     func addVirtualCardToAppleWallet(accountId: Int? = nil, localizedDescription: String? = nil) async {
         guard let presenter = await waitForPresentableViewController() else {
+            SecureLogger.error("[Wallet] no presentable view controller for add-to-wallet", category: .payment)
             AlertManager.shared.showError("Unable to present wallet flow.")
             return
         }
@@ -342,9 +343,13 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                     localizedDescription: localizedDescription
                 )
                 self.analytics.log(AnalyticsEvent.walletAdd)
+                SecureLogger.info("[Wallet] virtual card added to Apple Wallet", category: .payment)
             } catch {
-                self.analytics.log(AnalyticsEvent.walletAddFailed, params: [AnalyticsParam.errorCode: error.localizedDescription])
-                throw error
+                self.analytics.log(
+                    AnalyticsEvent.walletAddFailed,
+                    params: [AnalyticsParam.errorCode: error.localizedDescription]
+                )
+                SecureLogger.error("[Wallet] add-to-wallet did not complete: \(error.localizedDescription)", category: .payment)
             }
         }
     }
@@ -364,7 +369,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         }
     }
 
-    // MARK: - Transaction Intent
+    // MARK: -   Intent
 
     @Published var transactionIntent: TransactionIntent?
     @Published var peerTransferSuccess: SuccessConfirmation?

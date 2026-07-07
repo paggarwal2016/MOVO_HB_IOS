@@ -73,7 +73,7 @@ final class AuthViewModel: ObservableObject {
                     MessengerOTPRequest(
                         phoneNumber: phoneNumber,
                         context: context?.rawValue ?? "",
-                        userAction: "SEND-OTP",
+                        userAction: context == .login ? "SEND-LOGIN-OTP" : "SEND-REGISTRATION-OTP",
                         deviceInfo: .current
                     ))
             )
@@ -122,7 +122,7 @@ final class AuthViewModel: ObservableObject {
                 AuthAPI.tokenSMS(request: TokenSMSRequest(
                     phoneNumber: phoneNumber,
                     code: code,
-                    userAction: "VERIFY_OTP"
+                    userAction: context == .login ? "VERIFY-LOGIN-OTP" : "VERIFY-REGISTRATION-OTP"
                 ))
             )
             await MainActor.run { self.state = .verified }
@@ -159,6 +159,10 @@ final class AuthViewModel: ObservableObject {
             let destination: AuthFlow = context == .login ? .home : .signupDetails
             reset()
             await onNavigate(destination)
+        } catch is CancellationError {
+            // Benign — the request was cancelled (e.g. the user navigated away).
+            // Nothing to surface. Pinning failures now throw `.secureConnectionFailed`.
+            return
         } catch {
             analytics.trackLoginFailed(method: .otp, errorCode: error.localizedDescription)
             alertManager.showError(error.localizedDescription)
@@ -239,6 +243,10 @@ final class AuthViewModel: ObservableObject {
                 )
                 appState.flow = .otp
             }
+        } catch is CancellationError {
+            // Benign — the request was cancelled (e.g. the user navigated away).
+            // Nothing to surface. Pinning failures now throw `.secureConnectionFailed`.
+            return
         } catch {
             if let message = waitlistMessage(from: error) {
                 AlertManager.shared.showCustom(
@@ -316,7 +324,7 @@ final class AuthViewModel: ObservableObject {
     /// non-verified outcome keeps the user on the verification step.
     func checkEmailVerified() async -> EmailVerificationCheck {
         do {
-            let response: UserProfileAPIResponse = try await network.request(UserAPI.getProfile)
+            let response: UserProfileAPIResponse = try await network.request(UserAPI.verifyEmailStatus)
             if response.data.emailVerified {
                 analytics.log(AnalyticsEvent.signupEmailVerified)
                 return .verified
@@ -482,6 +490,11 @@ extension AuthViewModel {
         return await task.value
     }
 
+    func cancelBiometricLogin() {
+        biometricLoginTask?.cancel()
+        biometricLoginTask = nil
+    }
+
     @discardableResult
     private func performBiometricLogin(appState: AppState, navigateOnSuccess: Bool) async -> Bool {
 
@@ -547,9 +560,7 @@ extension AuthViewModel {
             return true
 
         } catch is CancellationError {
-            // With Task.detached this should never fire. If you see this log, something
-            // inside the flow is explicitly cancelling the task — investigate immediately.
-            SecureLogger.warning("⚠️ Unexpected CancellationError in detached biometric task — investigate", category: .auth)
+            SecureLogger.info("Biometric login cancelled — discarding attempt", category: .auth)
             return false
         } catch let biometricError as BiometricLoginError {
             SecureLogger.error("biometric login failed: \(biometricError)", category: .auth)

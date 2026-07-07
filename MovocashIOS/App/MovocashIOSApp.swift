@@ -18,6 +18,7 @@ struct MovocashIOSApp: App {
     @StateObject private var lockVM: AppLockViewModel
     @StateObject private var kycVM: KYCViewModel
     @StateObject private var pushManager: PushManager
+    @StateObject private var idleTimer: IdleTimerManager = IdleTimerManager()
     init() {
         let c = AppContainer()
         let state = AppState()
@@ -56,6 +57,7 @@ struct MovocashIOSApp: App {
                 .environmentObject(lockVM)
                 .environmentObject(container.sessionManager)
                 .environmentObject(pushManager)
+                .environmentObject(idleTimer)
                 .networkMonitor(state: appState)
                 .globalToast()
                 .globalAlert()

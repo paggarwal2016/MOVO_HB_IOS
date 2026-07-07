@@ -205,7 +205,7 @@ struct QuickTransferView: View {
 
             Spacer()
 
-            Text("Pay")
+            Text("MOVO Pay")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
 

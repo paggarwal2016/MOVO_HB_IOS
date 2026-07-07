@@ -156,46 +156,64 @@ struct CustomTextField: View {
     /// Called when the keyboard's submit/return key is pressed (e.g. advance focus).
     var onSubmit: (() -> Void)? = nil
 
+    /// Optional validation error. When non-nil, the border turns `danger` and the
+    /// message renders below the field. Default `nil` leaves existing callers
+    /// entirely unaffected (no border change, no added height).
+    var errorMessage: String? = nil
+
     /// Internal focus state — drives the accent border highlight while editing.
     @FocusState private var fieldFocused: Bool
 
-    /// Accent while focused, neutral border otherwise.
+    /// Danger when an error is present (overrides focus), else accent while focused,
+    /// neutral border otherwise.
     private var borderColor: Color {
-        fieldFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
+        if errorMessage != nil { return Color.movo.danger }
+        return fieldFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
     }
 
     private var borderWidth: CGFloat {
-        fieldFocused ? Stroke.medium : Stroke.thin
+        (fieldFocused || errorMessage != nil) ? Stroke.medium : Stroke.thin
     }
 
     var body: some View {
 
-        TextField(placeholder, text: $text)
-            .keyboardType(keyboardType)
-            .textInputAutocapitalization(autocapitalization)
-            .autocorrectionDisabled()
-            .submitLabel(submitLabel)
-            .textStyle(Typography.body)
-            .foregroundColor(Color.movo.textPrimary)
-            .tint(Color.movo.accent)
-            .focused($fieldFocused)
-            .onSubmit { onSubmit?() }
-            .padding(.horizontal, Spacing.lg)
-            .frame(height: height)
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.movo.cardSurface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .strokeBorder(borderColor, lineWidth: borderWidth)
-                    )
-            )
-            .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: fieldFocused)
-            // Two-way sync between the internal FocusState and the optional binding.
-            .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
-            .onChange(of: isFocused?.wrappedValue) { newValue in
-                if let newValue, newValue != fieldFocused { fieldFocused = newValue }
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+
+            TextField(placeholder, text: $text)
+                .keyboardType(keyboardType)
+                .textInputAutocapitalization(autocapitalization)
+                .autocorrectionDisabled()
+                .submitLabel(submitLabel)
+                .textStyle(Typography.body)
+                .foregroundColor(Color.movo.textPrimary)
+                .tint(Color.movo.accent)
+                .focused($fieldFocused)
+                .onSubmit { onSubmit?() }
+                .padding(.horizontal, Spacing.lg)
+                .frame(height: height)
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Color.movo.cardSurface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .strokeBorder(borderColor, lineWidth: borderWidth)
+                        )
+                )
+                .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: fieldFocused)
+                // Two-way sync between the internal FocusState and the optional binding.
+                .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
+                .onChange(of: isFocused?.wrappedValue) { newValue in
+                    if let newValue, newValue != fieldFocused { fieldFocused = newValue }
+                }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .textStyle(Typography.captionSmall)
+                    .foregroundColor(Color.movo.danger)
+                    .padding(.horizontal, Spacing.xs)
             }
+        }
+        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: errorMessage)
     }
 }
 
@@ -217,55 +235,73 @@ struct CustomPhoneField: View {
     /// `nil` leaves existing callers (e.g. Quick Pay) entirely unaffected.
     var isFocused: Binding<Bool>? = nil
 
+    /// Optional validation error. When non-nil, the border turns `danger` and the
+    /// message renders below the field. Default `nil` leaves existing callers
+    /// entirely unaffected (no border change, no added height).
+    var errorMessage: String? = nil
+
     @FocusState private var fieldFocused: Bool
 
-    /// Accent while focused, neutral border otherwise (matches CustomTextField).
+    /// Danger when an error is present (overrides focus), else accent while focused,
+    /// neutral border otherwise (matches CustomTextField).
     private var borderColor: Color {
-        fieldFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
+        if errorMessage != nil { return Color.movo.danger }
+        return fieldFocused ? Color.movo.accent.opacity(0.55) : Color.movo.border
     }
 
     private var borderWidth: CGFloat {
-        fieldFocused ? Stroke.medium : Stroke.thin
+        (fieldFocused || errorMessage != nil) ? Stroke.medium : Stroke.thin
     }
 
     var body: some View {
 
-        HStack(spacing: Spacing.md) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
 
-            Text(countryCode)
-                .textStyle(Typography.body)
-                .foregroundColor(Color.movo.textPrimary)
+            HStack(spacing: Spacing.md) {
 
-            Rectangle()
-                .fill(Color.movo.border)
-                .frame(width: Stroke.thin, height: 24)
+                Text(countryCode)
+                    .textStyle(Typography.body)
+                    .foregroundColor(Color.movo.textPrimary)
 
-            TextField(placeholder, text: $phoneNumber)
-                .keyboardType(.numberPad)
-                .textStyle(Typography.body)
-                .foregroundColor(Color.movo.textPrimary)
-                .tint(Color.movo.accent)
-                .focused($fieldFocused)
-                .onChange(of: phoneNumber) { value in
-                    phoneNumber = formatUSPhone(value)
-                }
+                Rectangle()
+                    .fill(Color.movo.border)
+                    .frame(width: Stroke.thin, height: 24)
+
+                TextField(placeholder, text: $phoneNumber)
+                    .keyboardType(.numberPad)
+                    .textStyle(Typography.body)
+                    .foregroundColor(Color.movo.textPrimary)
+                    .tint(Color.movo.accent)
+                    .focused($fieldFocused)
+                    .onChange(of: phoneNumber) { value in
+                        phoneNumber = formatUSPhone(value)
+                    }
+            }
+            .padding(.horizontal, Spacing.lg)
+            .frame(height: height)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(Color.movo.cardSurface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .strokeBorder(borderColor, lineWidth: borderWidth)
+                    )
+            )
+            .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: fieldFocused)
+            // Two-way sync between the internal FocusState and the optional binding.
+            .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
+            .onChange(of: isFocused?.wrappedValue) { newValue in
+                if let newValue, newValue != fieldFocused { fieldFocused = newValue }
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .textStyle(Typography.captionSmall)
+                    .foregroundColor(Color.movo.danger)
+                    .padding(.horizontal, Spacing.xs)
+            }
         }
-        .padding(.horizontal, Spacing.lg)
-        .frame(height: height)
-        .background(
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .fill(Color.movo.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(borderColor, lineWidth: borderWidth)
-                )
-        )
-        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: fieldFocused)
-        // Two-way sync between the internal FocusState and the optional binding.
-        .onChange(of: fieldFocused) { isFocused?.wrappedValue = $0 }
-        .onChange(of: isFocused?.wrappedValue) { newValue in
-            if let newValue, newValue != fieldFocused { fieldFocused = newValue }
-        }
+        .animation(.easeInOut(duration: DesignTokens.Motion.fast), value: errorMessage)
     }
     
     // MARK: - USA Format

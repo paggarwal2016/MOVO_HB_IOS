@@ -10,6 +10,7 @@ import Foundation
 enum UserAPI: Endpoint {
     
     case getProfile
+    case verifyEmailStatus
     case deleteProfile
     case profileTOS
     case profileVirtualCardTOS
@@ -22,6 +23,7 @@ enum UserAPI: Endpoint {
     var path: String {
         switch self {
         case .getProfile: return "/users/profile"
+        case .verifyEmailStatus: return "/users/profile"
         case .deleteProfile: return "/users"
         case .profileTOS: return "/users/profile/tos"
         case .profileVirtualCardTOS: return "/users/profile/virtual-card-tos"
@@ -32,7 +34,7 @@ enum UserAPI: Endpoint {
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .getProfile:
+        case .getProfile, .verifyEmailStatus:
             return .PUT
         case .deleteProfile:
             return .DELETE
@@ -46,7 +48,7 @@ enum UserAPI: Endpoint {
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .getProfile, .profileTOS, .profileVirtualCardTOS, .saveUser, .deleteProfile:
+        case .getProfile, .verifyEmailStatus, .profileTOS, .profileVirtualCardTOS, .saveUser, .deleteProfile:
             return [.session, .secureDeviceInfo, .officeId]
         }
     }
@@ -65,6 +67,8 @@ enum UserAPI: Endpoint {
         switch self {
         case .getProfile:
             return try JSONEncoder().encode(UserActionRequest(userAction: "GET-USER-DATA"))
+        case .verifyEmailStatus:
+            return try JSONEncoder().encode(UserActionRequest(userAction: "VERIFY-EMAIL-STATUS"))
         case .deleteProfile:
             return try JSONEncoder().encode(UserActionRequest(userAction: "DELETE-USER"))
         case .profileTOS, .profileVirtualCardTOS:
