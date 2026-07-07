@@ -46,7 +46,7 @@ enum AchAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .initiateTransfer:
-            return [.session, .secureDeviceInfo, .Idempotency, .officeId]
+            return [.session, .secureDeviceInfo, .Idempotency, .officeId, .deviceAssertion]
         case .getAccounts, .deleteAccount, .updateAccount, .achPlaidAccount:
             return [.session, .secureDeviceInfo, .officeId]
         }

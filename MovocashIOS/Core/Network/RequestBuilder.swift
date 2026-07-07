@@ -11,7 +11,7 @@ final class RequestBuilder: Sendable {
 
     init() {}
 
-    func build(from endpoint: Endpoint, idempotencyKey: String? = nil) async throws -> URLRequest {
+    func build(from endpoint: Endpoint, idempotencyKey: String? = nil, extraHeaders: [String: String] = [:]) async throws -> URLRequest {
 
         // 1. Build URL
         guard var components = URLComponents(
@@ -37,6 +37,10 @@ final class RequestBuilder: Sendable {
         // 3. Attach Headers — token read from Keychain inside HeaderProvider
         let headers = await HeaderProvider.headers(for: endpoint.headerType, idempotencyKey: idempotencyKey)
         headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+
+        // 4. App Attest assertion headers, if any (computed by NetworkService — the
+        //    assertion binds to this request's body, so it can't be built here).
+        extraHeaders.forEach { request.setValue($1, forHTTPHeaderField: $0) }
 
         return request
     }

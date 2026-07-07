@@ -18,6 +18,10 @@ actor NetworkService: NetworkServiceProtocol {
 
     // Actor-protected state
     private var isRefreshing = false
+    /// Single-flight guard for App Attest registration — concurrent first-use requests
+    /// share one attest+register round-trip instead of each generating/attesting a key
+    /// (which would burn Apple's key-generation rate limit and race server-side).
+    private var attestRegistrationTask: Task<Void, Error>?
     /// Callers that arrived while a refresh was already in-flight are parked here.
     /// When the refresh completes (or fails) every waiter is resumed exactly once.
     private var refreshWaiters: [CheckedContinuation<Void, Error>] = []
@@ -89,8 +93,13 @@ actor NetworkService: NetworkServiceProtocol {
             ? UUID().uuidString
             : nil
 
+        // App Attest — for high-risk endpoints, attach a device assertion. Computed
+        // once and reused across retries (a one-time challenge; fail-open server-side
+        // if a retry sends a stale one). Empty for endpoints without `.deviceAssertion`.
+        let assertionHeaders = await deviceAssertionHeaders(for: endpoint)
+
         // Build the request
-        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
+        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey, extraHeaders: assertionHeaders)
 
         guard let url = request.url else {
             throw NetworkError.invalidURL
@@ -110,7 +119,7 @@ actor NetworkService: NetworkServiceProtocol {
                 if attempt == 0 {
                     return try await performRequest(request, usesDeviceSession: usesDeviceSession)
                 } else {
-                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
+                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey, extraHeaders: assertionHeaders)
                     return try await performRequest(retryRequest, usesDeviceSession: usesDeviceSession)
                 }
             } catch let error as NetworkError {
@@ -163,7 +172,9 @@ actor NetworkService: NetworkServiceProtocol {
             ? UUID().uuidString
             : nil
 
-        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
+        let assertionHeaders = await deviceAssertionHeaders(for: endpoint)
+
+        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey, extraHeaders: assertionHeaders)
 
         guard let url = request.url else {
             throw NetworkError.invalidURL
@@ -180,7 +191,7 @@ actor NetworkService: NetworkServiceProtocol {
                 if attempt == 0 {
                     return try await performRawRequest(request, usesDeviceSession: usesDeviceSession)
                 } else {
-                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
+                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey, extraHeaders: assertionHeaders)
                     return try await performRawRequest(retryRequest, usesDeviceSession: usesDeviceSession)
                 }
             } catch let error as NetworkError {
@@ -244,6 +255,80 @@ actor NetworkService: NetworkServiceProtocol {
                 waiter.resume()
             }
         }
+    }
+
+    // MARK: - App Attest (device assertion for high-risk endpoints)
+
+    /// Produces the `x-attest-*` header trio for endpoints marked `.deviceAssertion`.
+    /// FAIL-OPEN: any failure (unsupported device, Apple rate-limit, transient error)
+    /// returns no headers, and the server applies its own risk decisioning. The
+    /// challenge/register calls used here are `isAuth` and lack `.deviceAssertion`, so
+    /// this never recurses.
+    private func deviceAssertionHeaders(for endpoint: Endpoint) async -> [String: String] {
+        guard await endpoint.headerType.has(.deviceAssertion) else { return [:] }
+        guard AppAttestManager.shared.isSupported else { return [:] }
+
+        do {
+            return try await makeAssertionHeaders(for: endpoint)
+        } catch AppAttestError.notAttested {
+            // First protected call on this install — attest & register once, then assert.
+            do {
+                try await registerDeviceKeyOnce()
+                return try await makeAssertionHeaders(for: endpoint)
+            } catch {
+                SecureLogger.warning("AppAttest: register/assert unavailable — proceeding without assertion: \(error.localizedDescription)", category: .security)
+                return [:]
+            }
+        } catch {
+            SecureLogger.warning("AppAttest: assertion unavailable — proceeding without assertion: \(error.localizedDescription)", category: .security)
+            return [:]
+        }
+    }
+
+    /// Fetches a one-time challenge and signs `SHA256(challenge ‖ requestBody)`.
+    private func makeAssertionHeaders(for endpoint: Endpoint) async throws -> [String: String] {
+        let challenge: AttestChallengeResponse = try await request(AttestAPI.challenge)
+        let body = (try? await endpoint.body) ?? Data()
+        let assertion = try await AppAttestManager.shared.generateAssertion(
+            requestBody: body, challengeBase64: challenge.challenge
+        )
+        return [
+            "x-attest-key-id": assertion.keyId,
+            "x-attest-assertion": assertion.assertionBase64,
+            "x-attest-challenge": assertion.challengeBase64
+        ]
+    }
+
+    /// Single-flight wrapper around `performRegisterDeviceKey` — concurrent first-use
+    /// callers await the same in-flight registration instead of each starting their own.
+    private func registerDeviceKeyOnce() async throws {
+        if let existing = attestRegistrationTask {
+            try await existing.value
+            return
+        }
+        let task = Task<Void, Error> { [self] in
+            try await performRegisterDeviceKey()
+        }
+        attestRegistrationTask = task
+        defer { attestRegistrationTask = nil }
+        try await task.value
+    }
+
+    /// One-time attestation: generates + attests the Secure Enclave key, registers it
+    /// with the server, and only then confirms it locally (so a failure before this
+    /// point leaves the device in `.notAttested`, not stuck with an unregistered key).
+    private func performRegisterDeviceKey() async throws {
+        let challenge: AttestChallengeResponse = try await request(AttestAPI.challenge)
+        let attestation = try await AppAttestManager.shared.prepareAttestation(
+            challengeBase64: challenge.challenge
+        )
+        let payload = AttestRegisterRequest(
+            keyId: attestation.keyId,
+            attestation: attestation.attestationBase64,
+            challenge: attestation.challengeBase64
+        )
+        let _: AttestRegisterResponse = try await request(AttestAPI.register(request: payload))
+        await AppAttestManager.shared.confirmRegistration(keyId: attestation.keyId)
     }
     
     // MARK: - Perform Request (Nonisolated for Swift 6 concurrency)

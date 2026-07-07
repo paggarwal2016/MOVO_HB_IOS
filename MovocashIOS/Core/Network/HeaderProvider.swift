@@ -38,6 +38,14 @@ struct HeaderType: OptionSet, Sendable {
     /// ECDH → HKDF-SHA256 → AES-256-GCM scheme, formatted as `<sessionId>.<base64Blob>`.
     static let secureDeviceInfo = HeaderType(rawValue: 1 << 6)
 
+    /// Marks an endpoint as requiring an App Attest assertion (high-risk actions).
+    /// The `x-attest-*` header trio is NOT produced by `HeaderProvider` — it is
+    /// attached in `NetworkService`, which has the request body (needed to bind the
+    /// assertion via `SHA256(challenge ‖ body)`) and can fetch a one-time challenge.
+    /// This flag is purely the opt-in marker. Fail-open: if no valid assertion can be
+    /// produced, the request proceeds without the headers and the server decides.
+    static let deviceAssertion = HeaderType(rawValue: 1 << 7)
+
     // MARK: - Named Combinations
 
     /// Base headers only (Content-Type, Accept).
