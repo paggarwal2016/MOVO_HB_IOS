@@ -49,15 +49,7 @@ enum AppEnvironmentType {
         switch self {
         case .dev:        return "dev-server"
         case .staging:    return ""
-        case .production: return ""
-        }
-    }
-
-    var isPinningEnabled: Bool {
-        switch self {
-        case .dev:        return true
-        case .staging:    return false
-        case .production: return false
+        case .production: return "prod-server"
         }
     }
 }

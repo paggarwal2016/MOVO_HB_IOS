@@ -275,11 +275,12 @@ struct LinkedAccountRowView: View {
     @ViewBuilder
     private var avatarView: some View {
         let initial = account.institutionName.first.map(String.init) ?? "?"
+        let logo = account.logoImage
         ZStack {
             RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                .fill(account.logoImage != nil ? Color.movo.elevatedHigh : Color.movo.elevatedHigh)
+                .fill(Color.movo.elevatedHigh)
                 .frame(width: 46, height: 46)
-            if let logo = account.logoImage {
+            if let logo {
                 Image(uiImage: logo)
                     .resizable()
                     .scaledToFit()
@@ -293,7 +294,7 @@ struct LinkedAccountRowView: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                .strokeBorder(Color.movo.border, lineWidth: account.logoImage != nil ? Stroke.hairline : Stroke.hairline)
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
         )
     }
 }

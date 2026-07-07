@@ -55,8 +55,7 @@ final class AppState: ObservableObject {
     /// AppLock for PIN-only users when the server session is certainly dead.
     static let apiIdleTimeout: TimeInterval = 15 * 60
 
-    // NEW — minimum splash duration for visual stability
-    static let splashMinDuration: TimeInterval = 0.8
+    static let splashMinDuration: TimeInterval = 0.25
 
     /// One-shot guard so post-bootstrap warmup cannot re-run if RootView's .task re-fires.
     var hasCompletedBootstrap = false
