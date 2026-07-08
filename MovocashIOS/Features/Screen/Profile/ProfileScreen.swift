@@ -481,6 +481,7 @@ private extension ProfileScreen {
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
