@@ -30,6 +30,7 @@ struct ProfileScreen: View {
     @State private var showSecuritySettings      = false
     @State private var showManageAccounts        = false
     @State private var showDeletedCards          = false
+    @State private var showChangePassword        = false
     @State private var isLoggingOut              = false
     @State private var showSignOutAlert          = false
     @State private var showDeleteAlert           = false
@@ -123,6 +124,7 @@ private extension ProfileScreen {
                 
                 securityCard
                 linkedBankCard
+                changePasswordCard
 //                if !dashboardVM.deletedCards.isEmpty {
 //                    Cards
 //                }
@@ -187,6 +189,34 @@ private extension ProfileScreen {
             DeletedCardsView(cards: dashboardVM.deletedCards)
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationBarBackButtonHidden(true)
+        }
+        .navigationDestination(isPresented: $showChangePassword) {
+//            ChangePasswordView(authVM: authVM)
+//                .toolbar(.hidden, for: .navigationBar)
+//                .navigationBarBackButtonHidden(true)
+            
+            SetPasswordScreen(onSubmit: { password in
+                do {
+                    try await authVM.setInitialPassword(password)
+                    ToastManager.shared.show("Password updated.", style: .success, position: .bottom)
+                    // Settings context — pop back to Profile; do NOT enter onboarding.
+                    showChangePassword = false
+                    return true
+                } catch {
+                    ToastManager.shared.show(
+                        error.localizedDescription,
+                        style: .error,
+                        position: .bottom
+                    )
+                    return false
+                }
+            }, onBack: {
+                showChangePassword = false
+            })
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarBackButtonHidden(true)
+            
+            
         }
         .alert("Sign Out?", isPresented: $showSignOutAlert) {
             Button("Sign Out", role: .destructive) {
@@ -404,18 +434,53 @@ private extension ProfileScreen {
         }
     }
     
-    // MARK: Linked Bank Accounts Card
-    
-    var linkedBankCard: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            eyebrowLabel("LINKED BANK ACCOUNTS")
-            VStack(spacing: 0) {
-                manageExternalAccount
+    // MARK: Reusable Action Row
+
+    /// A tappable settings row — leading icon chip, title, trailing chevron, with the
+    /// whole row hit-testable. Wrap it in `infoCard(title:)` for the titled surface
+    /// card. Shared by the Linked Bank and Change Password cards.
+    func actionRow(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Radius.sm)
+                        .fill(Color.movo.elevated)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.movo.accent)
+                }
+                Text(title)
+                    .font(Typography.body.font)
+                    .foregroundStyle(Color.movo.textPrimary)
+                Spacer()
+                MovoChevron(.disclosure)
             }
-            .background(Color.movo.surface)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card))
-            .overlay(RoundedRectangle(cornerRadius: Radius.card)
-                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+            .padding(.vertical, Spacing.rowPaddingVertical)
+            .padding(.horizontal, Spacing.lg)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Linked Bank Accounts Card
+
+    var linkedBankCard: some View {
+        infoCard(title: "LINKED BANK ACCOUNTS") {
+            actionRow(icon: "building.columns", title: "Manage external account") {
+                achVM.seed(accounts: effectiveAccounts)
+                showManageAccounts = true
+            }
+        }
+    }
+
+    // MARK: Change Password Card
+
+    var changePasswordCard: some View {
+        infoCard(title: "PASSWORD") {
+            actionRow(icon: "lock.rotation", title: "Change password") {
+                showChangePassword = true
+            }
         }
     }
     
@@ -453,35 +518,6 @@ private extension ProfileScreen {
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)
-        }
-        .buttonStyle(.plain)
-    }
-    
-    
-    
-    var manageExternalAccount: some View {
-        Button {
-            achVM.seed(accounts: effectiveAccounts)
-            showManageAccounts = true
-        } label: {
-            HStack(spacing: Spacing.md) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: Radius.sm)
-                        .fill(Color.movo.elevated)
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "building.columns")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.movo.accent)
-                }
-                Text("Manage external account")
-                    .font(Typography.body.font)
-                    .foregroundStyle(Color.movo.textPrimary)
-                Spacer()
-                MovoChevron(.disclosure)
-            }
-            .padding(.vertical, Spacing.rowPaddingVertical)
-            .padding(.horizontal, Spacing.lg)
-            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

@@ -27,8 +27,10 @@ enum AnalyticsEvent {
     static let signupPhoneSubmitted  = "signup_phone_submitted"
     static let signupEmailSubmitted  = "signup_email_submitted"
     static let signupEmailVerified   = "signup_email_verified"
+    static let signupPasswordSet     = "signup_password_set"
     static let signupTermsAccepted   = "signup_terms_accepted"
     static let signupCompleted       = "signup_completed"
+    static let passwordChanged       = "password_changed"
 
     // MARK: - Security
     static let biometricAuth         = "biometric_auth"
@@ -167,6 +169,7 @@ enum AnalyticsScreen {
     static let otp               = "onboarding_otp"
     static let emailEntry        = "onboarding_email"
     static let emailVerification = "onboarding_email_verification"
+    static let setPassword       = "onboarding_set_password"
     static let terms             = "onboarding_terms"
     static let kycDocument       = "kyc_document_pick"
     static let kycSuccess        = "kyc_success"
@@ -185,6 +188,7 @@ enum AnalyticsScreen {
     static let savingsDetail     = "savings_detail"
     static let addContact        = "add_contact"
     static let securitySettings  = "security_settings"
+    static let changePassword    = "change_password"
     static let rewardUnlock      = "reward_unlock"
 }
 

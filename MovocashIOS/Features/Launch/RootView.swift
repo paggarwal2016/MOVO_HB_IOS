@@ -128,9 +128,10 @@ struct RootView: View {
                                 //    show the verification waiting screen.
                                 switch await authVM.checkEmailVerified() {
                                 case .verified:
-                                    let passkeyDone = await authVM.isPasskeyRegistered()
+                                    // Email verified → collect the account password
+                                    // before continuing the existing flow.
                                     SpinnerView.hideFullScreen()
-                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                    appState.flow = .setPassword
                                 case .notVerified:
                                     do {
                                         try await authVM.sendEmailOTP()
@@ -165,9 +166,10 @@ struct RootView: View {
                             let result = await authVM.checkEmailVerified()
                             switch result {
                             case .verified:
-                                let passkeyDone = await authVM.isPasskeyRegistered()
+                                // Email verified → collect the account password
+                                // before continuing the existing flow.
                                 if isExplicit { SpinnerView.hideFullScreen() }
-                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                appState.flow = .setPassword
                             case .notVerified:
                                 if isExplicit {
                                     SpinnerView.hideFullScreen()
@@ -206,6 +208,26 @@ struct RootView: View {
                         onBack: { appState.flow = .signupDetails }
                     )
                     .trackScreen(AnalyticsScreen.emailVerification)
+
+                case .setPassword:
+                    SetPasswordScreen(onSubmit: { password in
+                        do {
+                            try await authVM.setInitialPassword(password)
+                            let passkeyDone = await authVM.isPasskeyRegistered()
+                            appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                            return true
+                        } catch {
+                            ToastManager.shared.show(
+                                error.localizedDescription,
+                                style: .error,
+                                position: .bottom
+                            )
+                            return false
+                        }
+                    }, onBack: {
+                        appState.flow = .emailVerification
+                    })
+                    .trackScreen(AnalyticsScreen.setPassword)
 
                 case .getStartedInfo:
                     GetStartedInfoScreen(

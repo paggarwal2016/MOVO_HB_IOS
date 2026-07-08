@@ -122,6 +122,36 @@ enum SealedCryptoService {
         return Data(plaintext)
     }
 
+    // MARK: - Encrypt (anonymous sealed box — inverse of `decrypt`)
+
+    /// Seals `plaintext` into a libsodium anonymous sealed box (`crypto_box_seal`)
+    /// addressed to the public key derived from the configured secret key
+    /// (`AppConfig.cryptoKey`). The result is openable by `decrypt` (or the backend
+    /// holding the same key). Output is standard base64.
+    ///
+    /// NOTE: `crypto_box_seal` uses a fresh random ephemeral key per call, so the same
+    /// plaintext yields a different ciphertext every time — each one opens back to the
+    /// same plaintext. Do not assert on a fixed ciphertext in tests.
+    static func encrypt(_ plaintext: Data) throws -> String {
+        var sk = try loadSecretKey()
+        defer { sodium.utils.zero(&sk) }
+
+        let pk = try derivePublicKey(from: sk)
+
+        guard let sealed = sodium.box.seal(
+            message: [UInt8](plaintext),
+            recipientPublicKey: pk
+        ) else {
+            throw SealedCryptoError.encryptionFailed
+        }
+        return Data(sealed).base64EncodedString()
+    }
+
+    /// Convenience for UTF-8 string plaintext (e.g. a password).
+    static func encrypt(_ string: String) throws -> String {
+        try encrypt(Data(string.utf8))
+    }
+
     // MARK: - X25519 + HKDF + AES-256-GCM (secure movo-info)
 
     /// Builds the binary blob for the X25519 variant of the `movo-info` header.

@@ -105,3 +105,12 @@ enum AgreementActionType: String, Codable {
     case accepted = "T"
     case rejected = "F"
 }
+
+struct SetPasswordRequest: Encodable, Sendable {
+    let password: String
+}
+
+struct ChangePasswordRequest: Encodable, Sendable {
+    let currentPassword: String
+    let newPassword: String
+}

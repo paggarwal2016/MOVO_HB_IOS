@@ -21,6 +21,8 @@ enum AuthAPI: Endpoint {
     case deviceConfig
     case logout
     case waitList(request: WaitListRequest)
+    case initialPassword(request: SetPasswordRequest)
+    case changePassword(request: ChangePasswordRequest)
     
     var isAuth: Bool { true }
 
@@ -42,14 +44,27 @@ enum AuthAPI: Endpoint {
         case .deviceConfig:      return "/get/config"//"/device/config"
         case .logout:            return "/auth/logout"
         case .waitList:          return "/waitlist/join"
+        case .initialPassword:   return "/auth/initial-password"
+        case .changePassword:    return "/auth/password"
         }
     }
 
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .messengerOTP, .tokenSMS, .tokenAccess,
-                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements, .waitList:
+        case .messengerOTP,
+             .tokenSMS,
+             .tokenAccess,
+             .enrollRSA,
+             .tokenRSA,
+             .nonceRSA,
+             .logout,
+             .emailOTP,
+             .emailVerify,
+             .acceptAgreements,
+             .waitList,
+             .initialPassword,
+             .changePassword:
             return .POST
         case .deviceConfig:
             return .GET
@@ -72,7 +87,9 @@ enum AuthAPI: Endpoint {
              .tokenAccess,
              .acceptAgreements,
              .enrollRSA,
-             .logout:
+             .logout,
+             .initialPassword,
+             .changePassword:
             return [.session, .secureDeviceInfo, .officeId]
         }
     }
@@ -117,6 +134,10 @@ enum AuthAPI: Endpoint {
                 userAction: "LOGOUT")
             return try JSONEncoder().encode(request)
         case .waitList(let request):
+            return try JSONEncoder().encode(request)
+        case .initialPassword(let request):
+            return try JSONEncoder().encode(request)
+        case .changePassword(let request):
             return try JSONEncoder().encode(request)
         }
     }

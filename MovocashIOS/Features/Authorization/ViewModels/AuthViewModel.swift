@@ -350,6 +350,55 @@ final class AuthViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Set Initial Password
+
+    /// Sets the account's password during registration (POST /auth/initial-password),
+    /// called from the Set Password step after email verification. Rethrows so the
+    /// caller can surface the error and keep the user on the screen for a retry.
+    func setInitialPassword(_ password: String) async throws {
+        guard state != .loading else { throw ModelError.alreadyLoading }
+        state = .loading
+        do {
+            // Password is sealed (libsodium crypto_box_seal) before transit — the
+            // server opens it with the shared key. Never send the plaintext.
+            let sealedPassword = try SealedCryptoService.encrypt(password)
+            let _: SuccessResponse = try await network.request(
+                AuthAPI.initialPassword(request: SetPasswordRequest(password: sealedPassword))
+            )
+            analytics.log(AnalyticsEvent.signupPasswordSet)
+            state = .idle
+        } catch {
+            state = .idle
+            throw error
+        }
+    }
+
+    // MARK: - Change Password
+
+    /// Changes the account password (POST /auth/password) from the Profile screen.
+    /// Both the current and new passwords are sealed (libsodium crypto_box_seal)
+    /// before transit, matching the initial-password scheme. Rethrows so the caller
+    /// can surface the error and keep the user on the screen.
+    func changePassword(current: String, new: String) async throws {
+        guard state != .loading else { throw ModelError.alreadyLoading }
+        state = .loading
+        do {
+            let sealedCurrent = try SealedCryptoService.encrypt(current)
+            let sealedNew = try SealedCryptoService.encrypt(new)
+            let _: SuccessResponse = try await network.request(
+                AuthAPI.changePassword(request: ChangePasswordRequest(
+                    currentPassword: sealedCurrent,
+                    newPassword: sealedNew
+                ))
+            )
+            analytics.log(AnalyticsEvent.passwordChanged)
+            state = .idle
+        } catch {
+            state = .idle
+            throw error
+        }
+    }
+
     // MARK: - Configure
 
     /// Fetches the X25519 device-session config from `/v1/device/config` and persists
