@@ -17,7 +17,30 @@ struct BiometricEnrollView: View {
     /// The onboarding flow uses this to persist a cold-launch resume marker; other
     /// call sites (post-login settings) leave it nil.
     var onOpenSettings: (() -> Void)? = nil
-    
+    /// Called when the user acknowledges a technical enrollment failure, or a
+    /// "can't enroll" situation (biometrics not set up / permission denied), by
+    /// tapping the alert's OK/Cancel. Login & onboarding use this to redirect the
+    /// user (e.g. log out → Choice screen). Left nil in Settings/Profile, where a
+    /// failure simply stays on screen.
+    var onEnrollmentFailedExit: (() -> Void)? = nil
+    /// Authenticate-mode only. Called when biometric auth cannot structurally succeed
+    /// (the local RSA key is missing/stale, e.g. after a reinstall). The caller clears
+    /// the stale enrollment state and routes to enrollment so the user re-enrolls
+    /// (new key + passkey) instead of looping on an impossible authentication.
+    var onNeedsReenrollment: (() -> Void)? = nil
+    /// Screen mode. `.enroll` sets up biometrics (first login / onboarding);
+    /// `.authenticate` verifies an already-enrolled user (repeat login) via the RSA
+    /// biometric login — reusing this same screen so the flow stays visually consistent.
+    var mode: Mode = .enroll
+    /// Authenticate-mode only — performs the biometric scan (RSA login) and returns
+    /// the outcome so this view can apply the retry limit. Ignored in enroll mode.
+    var authenticate: (() async -> AuthViewModel.BiometricAuthOutcome)? = nil
+    /// Max real authentication failures before giving up (authenticate mode).
+    /// User-cancels do not count.
+    var maxAuthAttempts: Int = 3
+
+    enum Mode { case enroll, authenticate }
+
     @EnvironmentObject var authVM: AuthViewModel
     
     @State private var isEnrolling = false
@@ -25,12 +48,51 @@ struct BiometricEnrollView: View {
     @State private var errorMessage: String? = nil
     @State private var showSettingsAlert = false
     @State private var wentToSettings = false
-    
+    @State private var authAttempts = 0
+
     // Use hardware type so the icon/name is correct even when not yet OS-enrolled
     private var displayBiometricType: BiometricType {
         lockManager.isBiometricAvailable
         ? lockManager.biometricType
         : lockManager.hardwareBiometricType
+    }
+
+    // MARK: - Mode-aware copy
+
+    private var titleText: String {
+        switch mode {
+        case .enroll:
+            return enrollmentSucceeded
+                ? "\(displayBiometricType.displayName) Enabled"
+                : "Enable \(displayBiometricType.displayName)"
+        case .authenticate:
+            return enrollmentSucceeded
+                ? "\(displayBiometricType.displayName) Verified"
+                : "Confirm \(displayBiometricType.displayName)"
+        }
+    }
+
+    private var descriptionText: String {
+        switch mode {
+        case .enroll:
+            return enrollmentSucceeded
+                ? "\(displayBiometricType.displayName) is now set up. You can use it to unlock MovoCash quickly and securely."
+                : "Use \(displayBiometricType.displayName) to unlock MovoCash quickly and securely. Your biometric data never leaves this device."
+        case .authenticate:
+            return enrollmentSucceeded
+                ? "You're verified. Taking you to your account…"
+                : "Confirm your identity with \(displayBiometricType.displayName) to continue."
+        }
+    }
+
+    private var primaryButtonTitle: String {
+        mode == .enroll
+        ? "Enable \(displayBiometricType.displayName)"
+        : "Unlock with \(displayBiometricType.displayName)"
+    }
+
+    private var primaryButtonSuccessLabel: String {
+        mode == .enroll ? "Enrolled" : "Verified"
     }
     
     var body: some View {
@@ -50,16 +112,12 @@ struct BiometricEnrollView: View {
                 // Title + Description
                 VStack(spacing: 12) {
                     
-                    Text(enrollmentSucceeded
-                         ? "\(displayBiometricType.displayName) Enabled"
-                         : "Enable \(displayBiometricType.displayName)")
+                    Text(titleText)
                     .textStyle(Typography.balance)
                     .foregroundColor(Color.movo.textPrimary)
                     .multilineTextAlignment(.center)
-                    
-                    Text(enrollmentSucceeded
-                         ? "\(displayBiometricType.displayName) is now set up. You can use it to unlock MovoCash quickly and securely."
-                         : "Use \(displayBiometricType.displayName) to unlock MovoCash quickly and securely. Your biometric data never leaves this device.")
+
+                    Text(descriptionText)
                     .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
                     .multilineTextAlignment(.center)
@@ -80,15 +138,15 @@ struct BiometricEnrollView: View {
                 
                 VStack(spacing: Spacing.md) {
                     Button(action: {
-                        Task { await enroll() }
+                        Task { await primaryAction() }
                     }) {
                         Group {
                             if enrollmentSucceeded {
-                                Label("Enrolled", systemImage: "checkmark")
+                                Label(primaryButtonSuccessLabel, systemImage: "checkmark")
                             } else if isEnrolling {
                                 ProgressView()
                             } else {
-                                Text("Enable \(displayBiometricType.displayName)")
+                                Text(primaryButtonTitle)
                             }
                         }
                     }
@@ -96,14 +154,15 @@ struct BiometricEnrollView: View {
                     .disabled(isEnrolling || enrollmentSucceeded)
                     .padding(.horizontal, Spacing.xxl)
 
-                    // Skip — hidden once enrolled
-                    if !enrollmentSucceeded {
-                        Button(action: { onSkip() }) {
-                            Text("Skip")
-                        }
-                        .buttonStyle(OutlineButtonStyle())
-                        .padding(.horizontal, Spacing.xxl)
-                    }
+                    // Skip — hidden (kept for reference). Biometric enrollment is
+                    // required, so the Skip button is not shown to the user.
+//                    if !enrollmentSucceeded {
+//                        Button(action: { onSkip() }) {
+//                            Text("Skip")
+//                        }
+//                        .buttonStyle(OutlineButtonStyle())
+//                        .padding(.horizontal, Spacing.xxl)
+//                    }
                 }
                 
                 Spacer().frame(height: 24)
@@ -130,7 +189,14 @@ struct BiometricEnrollView: View {
                     UIApplication.shared.open(settingsURL)
                 }
             }
-            Button("Skip", role: .cancel) { }
+            // In login/onboarding (exit callback provided) the user can't proceed
+            // without enrolling, so acknowledging routes them out (e.g. log out → Choice).
+            // In Settings/Profile it simply dismisses.
+            if onEnrollmentFailedExit != nil {
+                Button("Cancel", role: .cancel) { onEnrollmentFailedExit?() }
+            } else {
+                Button("Skip", role: .cancel) { }
+            }
         } message: {
             if lockManager.isBiometricPermissionDenied {
                 Text("MovoCash doesn't have permission to use \(displayBiometricType.displayName).\n\nTo enable it:\n1. Tap 'Open Settings'\n2. Enable \(displayBiometricType.displayName)\n3. Return to MovoCash")
@@ -144,12 +210,85 @@ struct BiometricEnrollView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             guard !enrollmentSucceeded, wentToSettings else { return }
             wentToSettings = false
-            Task { await enroll() }
+            // Mode-aware: retry enrollment or authentication depending on the screen mode.
+            Task { await primaryAction() }
         }
     }
     
     // MARK: - Enroll
-    
+
+    /// Present a failure. Settings/Profile (no exit callback) keep the inline error
+    /// only. Login / onboarding surface the app's custom error alert (AlertManager);
+    /// tapping OK hands off to `onEnrollmentFailedExit` (log out → Choice screen).
+    private func failEnrollment(_ message: String) {
+        errorMessage = message
+
+        // Settings/Profile (no exit callback) keep the inline error only — no alert.
+        guard let exit = onEnrollmentFailedExit else { return }
+
+        // Login / onboarding: custom error alert; OK → redirect (log out → Choice).
+        AlertManager.shared.showError(message, onDismiss: exit)
+    }
+
+    /// Runs the primary action for the current mode (button tap / alert "Try Again").
+    private func primaryAction() async {
+        switch mode {
+        case .enroll:       await enroll()
+        case .authenticate: await runAuthenticate()
+        }
+    }
+
+    // MARK: - Authenticate (repeat login)
+
+    /// Authenticate-mode flow: run the biometric scan (RSA login) and apply the
+    /// retry limit. Success → `onEnable()` (passkey check + navigate to dashboard).
+    /// Each incomplete attempt (failed scan OR backing out of the system Face ID
+    /// sheet) counts toward `maxAuthAttempts`. Intermediate failures show NO app alert
+    /// (iOS already presented its own Face ID sheet) — just an inline hint; the user
+    /// retries via the button. The single app alert is the final "too many attempts"
+    /// one, whose OK hands off to `onEnrollmentFailedExit` (log out → Choice).
+    private func runAuthenticate() async {
+        guard !enrollmentSucceeded, !isEnrolling, let authenticate else { return }
+        isEnrolling = true
+        defer { isEnrolling = false }
+
+        // Guard: biometrics must be usable before attempting the scan. If the app's
+        // permission was revoked, or the hardware is unavailable / not set up in iOS
+        // Settings, show the Settings alert instead of a doomed scan (same as enroll).
+        if lockManager.isBiometricPermissionDenied {
+            showSettingsAlert = true
+            return
+        }
+        if !lockManager.isBiometricAvailable {
+            showSettingsAlert = true
+            return
+        }
+
+        errorMessage = nil
+
+        switch await authenticate() {
+        case .success:
+            authAttempts = 0
+            enrollmentSucceeded = true
+            _ = await onEnable()
+        case .needsEnrollment:
+            // Structural failure (missing/stale key) — re-enroll instead of retrying,
+            // otherwise auth would fail forever.
+            onNeedsReenrollment?()
+        case .failed, .cancelled:
+            // Count every incomplete attempt. iOS owns the in-sheet "Try Again" retries
+            // for a failed scan, so the app regains control once per app-level attempt
+            // (a failed scan → .failed; backing out of the system sheet → .cancelled).
+            authAttempts += 1
+            if authAttempts >= maxAuthAttempts {
+                failEnrollment("It looks like something is incorrect. Please confirm your credentials and contact with our support team 855-439-6686")
+            } else {
+                let remaining = maxAuthAttempts - authAttempts
+                errorMessage = "\(displayBiometricType.displayName) not verified. \(remaining) attempt\(remaining == 1 ? "" : "s") left."
+            }
+        }
+    }
+
     private func enroll() async {
         guard !enrollmentSucceeded, !isEnrolling else { return }
         isEnrolling = true
@@ -224,7 +363,7 @@ struct BiometricEnrollView: View {
         do {
             try lockManager.enrollBiometrics()
         } catch {
-            errorMessage = error.localizedDescription
+            failEnrollment(error.localizedDescription)
             return
         }
         
@@ -234,11 +373,11 @@ struct BiometricEnrollView: View {
             do {
                 try lockManager.revokeBiometrics()
             } catch {
-                errorMessage = "Enrollment failed and could not be fully rolled back. Please log out and try again."
+                failEnrollment("Enrollment failed and could not be fully rolled back. Please log out and try again.")
                 return
             }
             if enrollError.shouldShowUserFacingToast {
-                errorMessage = "Enrollment incomplete. \(enrollError.localizedDescription)"
+                failEnrollment("Enrollment incomplete. \(enrollError.localizedDescription)")
             }
             return
         }
