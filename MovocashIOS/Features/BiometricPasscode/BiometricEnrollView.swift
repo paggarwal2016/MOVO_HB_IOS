@@ -270,6 +270,7 @@ struct BiometricEnrollView: View {
         case .success:
             authAttempts = 0
             enrollmentSucceeded = true
+            try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 s
             _ = await onEnable()
         case .needsEnrollment:
             // Structural failure (missing/stale key) — re-enroll instead of retrying,
