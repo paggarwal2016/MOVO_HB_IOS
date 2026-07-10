@@ -74,6 +74,7 @@
 		14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE28A2F5AD88E008A8DC4 /* AppLockManager.swift */; };
 		14DCE2CF2F5AE4D4008A8DC4 /* HeaderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */; };
 		14DCE2D12F5AE569008A8DC4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */; };
+		14E1CC10300114D8002314BA /* AppAttestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14E1CC0F300114D8002314BA /* AppAttestManager.swift */; };
 		14E44E742FF7C3E5001E358D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 14E44E732FF7C3E5001E358D /* PrivacyInfo.xcprivacy */; };
 		14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */; };
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
@@ -183,6 +184,7 @@
 		14DCE28A2F5AD88E008A8DC4 /* AppLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockManager.swift; sourceTree = "<group>"; };
 		14DCE2CE2F5AE4D4008A8DC4 /* HeaderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderProvider.swift; sourceTree = "<group>"; };
 		14DCE2D02F5AE569008A8DC4 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
+		14E1CC0F300114D8002314BA /* AppAttestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAttestManager.swift; sourceTree = "<group>"; };
 		14E42FF32FAA2D0C00B2025C /* MovocashIOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOS.entitlements; sourceTree = "<group>"; };
 		14E44E732FF7C3E5001E358D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewScreen.swift; sourceTree = "<group>"; };
@@ -378,6 +380,7 @@
 		1468195D2F4DE6CF00BED014 /* Security */ = {
 			isa = PBXGroup;
 			children = (
+				14E1CC0F300114D8002314BA /* AppAttestManager.swift */,
 				144459062FFB86E300150027 /* IdleTimerManager.swift */,
 				14D2069B2FD69479001726E7 /* DeviceSessionManager.swift */,
 				148622D62F61546D00792DB2 /* RSA */,
@@ -835,6 +838,7 @@
 				14C383882FBB0C0D002C2215 /* StartupRouter.swift in Sources */,
 				14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */,
 				14413D152FD9662C00EBC972 /* CustomContactEnrollView.swift in Sources */,
+				14E1CC10300114D8002314BA /* AppAttestManager.swift in Sources */,
 				14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */,
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
 				1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */,

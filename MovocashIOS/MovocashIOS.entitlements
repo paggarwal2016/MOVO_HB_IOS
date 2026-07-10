@@ -11,6 +11,8 @@
 		<string>webcredentials:api.mobile-banking-prod.herringbank.com</string>
 		<string>applinks:api.mobile-banking-prod.herringbank.com</string>
 	</array>
+	<key>com.apple.developer.devicecheck.appattest-environment</key>
+	<string>production</string>
 	<key>com.apple.developer.payment-pass-provisioning</key>
 	<true/>
 </dict>
