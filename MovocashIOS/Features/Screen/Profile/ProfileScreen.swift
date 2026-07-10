@@ -381,6 +381,7 @@ private extension ProfileScreen {
                         .labelsHidden()
                         .tint(Color.movo.accent)
                         .fixedSize()
+                        .allowsHitTesting(false)
                         .onChange(of: isBiometricOn) { newValue in
                             guard newValue != lockManager.isBiometricEnabled else { return }
                             if newValue {
@@ -481,6 +482,7 @@ private extension ProfileScreen {
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
