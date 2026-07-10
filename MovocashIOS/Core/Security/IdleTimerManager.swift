@@ -91,7 +91,10 @@ final class IdleTimerManager: ObservableObject {
         NotificationCenter.default.post(
             name: .sessionExpired,
             object: nil,
-            userInfo: ["message": "Your session has expired due to inactivity. Please sign in again."]
+            userInfo: [
+                "message": "Your session has expired due to inactivity. Please sign in again.",
+                "invalidateServer": true
+            ]
         )
     }
 }

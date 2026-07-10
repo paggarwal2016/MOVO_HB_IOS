@@ -572,13 +572,16 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
             guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
             let message = notification.userInfo?["message"] as? String
+            // Client-side idle expiry sets this so the server session is invalidated;
+            // a server-reported 401 omits it (token already dead — no redundant call).
+            let invalidateServer = notification.userInfo?["invalidateServer"] as? Bool ?? false
             Task { @MainActor in
                 UIApplication.shared.dismissKeyboard()
                 AlertManager.shared.dismiss()
                 lockManager.logout()
                 authVM.reset()
                 userVM.cancelAllTasks()
-                await sessionManager.handleSessionExpired(appState: appState, message: message)
+                await sessionManager.handleSessionExpired(appState: appState, message: message, invalidateServerSession: invalidateServer)
             }
         }
     }

@@ -260,10 +260,14 @@ final class SessionManager: ObservableObject {
     /// Server reported session loss (401 / session-timeout message). Wipes credentials,
     /// blocks further API calls, invalidates all protected navigation, and lands on Choice.
     @MainActor
-    func handleSessionExpired(appState: AppState, message: String? = nil) async {
+    func handleSessionExpired(appState: AppState, message: String? = nil, invalidateServerSession: Bool = false) async {
         guard !isLoggingOut, !isSessionExpired else { return }
         isSessionExpired = true
         await SessionGate.shared.markExpired()
+
+        if invalidateServerSession {
+            _ = try? await network.request(AuthAPI.logout) as SuccessResponse
+        }
 
         analytics.trackSessionExpired()
         analytics.clearIdentity()
