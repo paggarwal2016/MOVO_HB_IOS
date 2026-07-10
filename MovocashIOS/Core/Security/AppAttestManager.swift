@@ -2,8 +2,6 @@
 //  AttestAPI.swift
 //  MovocashIOS
 //
-//  Created by Movo Developer on 07/07/26.
-//
 //  Apple App Attest (DCAppAttestService) client.
 //
 //  IMPORTANT: App Attest provides NO security on its own. The private key lives in
@@ -16,11 +14,6 @@
 //    POST /attest/challenge  → { challenge }               (one-time, short TTL)
 //    POST /attest/register   → { keyId, attestation, challenge }
 //    per-request headers      → x-attest-key-id / x-attest-assertion / x-attest-challenge
-//
-//  Policy is FAIL-OPEN: callers that cannot produce an assertion (unsupported device,
-//  Apple rate-limit/outage, transient error) proceed WITHOUT the headers, and the
-//  server applies risk decisioning. This manager therefore only throws; the fail-open
-//  decision is made at the call site (HeaderProvider).
 //
 
 import Foundation
@@ -154,8 +147,16 @@ actor AppAttestManager {
         }
     }
 
+    /// True once a server-confirmed key exists on this install (i.e. registration
+    /// has completed). Used by the registration coordinator to stay idempotent and
+    /// never re-run attestation for an already-registered device.
+    func isRegistered() async -> Bool {
+        let keyId = try? await storedKeyId()
+        return (keyId ?? nil) != nil
+    }
+
     // MARK: - Key Lifecycle
-    
+
     func reset() async {
         cachedKeyId = nil
         pendingKeyId = nil
