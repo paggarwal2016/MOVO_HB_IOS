@@ -14,6 +14,7 @@ enum TransactionAPI: Endpoint {
     case withdrawals(TransactionRequest.Withdrawal)
     case internals(TransactionRequest.Internal)
     case checkType(TransactionRequest.CheckMode)
+    case complete(TransactionRequest.Complete)
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -21,23 +22,25 @@ enum TransactionAPI: Endpoint {
     // MARK: - URL Path
     var path: String {
         switch self {
-        case .lists, .filtered: return "/transactions"
-        case .withdrawals:      return "/transactions/withdrawal"
-        case .internals:        return "/transactions/internal"
-        case .checkType:        return "/transactions/check-intent"
+        case .lists, .filtered:   return "/transactions"
+        case .withdrawals:        return "/transactions/withdrawal"
+        case .internals:          return "/transactions/internal"
+        case .checkType:          return "/transactions/check-intent"
+        case .complete:           return "/transactions/intent-complete"
         }
     }
 
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .lists, .filtered:       return .GET
-        case .withdrawals, .internals, .checkType: return .POST
+        case .lists:       return .PUT
+        case .filtered:    return .PUT
+        case .withdrawals, .internals, .checkType, .complete: return .POST
         }
     }
     
     // MARK: - Header Configure
-    var headerType: HeaderType { .movoAuthorizedWithIdempotency }
+    var headerType: HeaderType { [.session, .secureDeviceInfo, .Idempotency, .officeId] }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? {
@@ -49,7 +52,7 @@ enum TransactionAPI: Endpoint {
             ]
         case .filtered(let filter):
             return filter.queryItems
-        case .withdrawals, .internals, .checkType:
+        case .withdrawals, .internals, .checkType, .complete:
             return nil
         }
     }
@@ -63,13 +66,18 @@ enum TransactionAPI: Endpoint {
     
     private func encodeBody() throws -> Data? {
         switch self {
-        case .lists, .filtered:
+        case .lists:
             return nil
+        case .filtered:
+            let request = UserActionRequest(userAction: "GET-TRANSACATIONS-DETAILS")
+            return try JSONEncoder().encode(request)
         case .withdrawals(let request):
             return try JSONEncoder().encode(request)
         case .internals(let request):
             return try JSONEncoder().encode(request)
         case .checkType(let request):
+            return try JSONEncoder().encode(request)
+        case .complete(let request):
             return try JSONEncoder().encode(request)
         }
     }

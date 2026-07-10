@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UIKit
 
 // MARK: - Session Gate
 
@@ -57,6 +58,14 @@ final class SessionManager: ObservableObject {
     private let analytics: AnalyticsTracking
     private let network: NetworkServiceProtocol
 
+    /// Called once, synchronously, inside `resetAppState` before the flow
+    /// transitions away from `.home`. Use this to reset app-level shared state
+    /// (e.g. DashboardViewModel) that must not survive across user sessions.
+    /// Set by `AppContainer` at startup.
+    /// @MainActor so the closure body can call @MainActor methods (DashboardViewModel.reset,
+    /// PushManager.clearAll) synchronously — safe because resetAppState is itself @MainActor.
+    var onSessionEnd: (@MainActor () -> Void)?
+
     init(
         keychain: KeychainManagerProtocol,
         kycManager: KYCManagerProtocol,
@@ -91,8 +100,9 @@ final class SessionManager: ObservableObject {
             accessToken: accessToken
         )
 
-        // Configure KYC SDK with the authenticated session
-        try await kycManager.configureSDK(officeId: AppConfig.officeId)
+        // Configure KYC SDK with the access token we just received — avoids a second
+        // /auth/token-access call right after login (the token is already fresh).
+        try await kycManager.configureSDK(officeId: AppConfig.officeId, authToken: accessToken)
 
         // Update UI state
         appState.isAuthenticated = true
@@ -214,17 +224,17 @@ final class SessionManager: ObservableObject {
         _ = try? await network.request(AuthAPI.logout) as SuccessResponse
         analytics.trackLogout()
         analytics.clearIdentity()
-        await PushManager.shared.deleteTokenOnLogout()
 
-        do {
-            try await keychain.delete("access_token")
-        } catch {
-            SecureLogger.error("Failed to delete tokens on logout: \(error.localizedDescription)", category: .auth)
-        }
-
+        await clearSessionKeychain()
         kycManager.clearSession()
 
         resetAppState(appState)
+
+        // FCM deregistration is best-effort and non-blocking — local teardown must
+        // not wait on it. deleteTokenOnLogout() calls Messaging.messaging().deleteToken()
+        // (Firebase SDK → Google's FCM servers) — no MOVO JWT required, so running
+        // after the credential delete is safe. Mirrors the same pattern in handleSessionExpired.
+        Task { await PushManager.shared.deleteTokenOnLogout() }
     }
 
     // MARK: - Soft Session Expiry (biometric re-auth — overlay, no navigation)
@@ -243,10 +253,7 @@ final class SessionManager: ObservableObject {
             style: .warning,
             position: .bottom
         )
-        Task {
-            try? await keychain.delete("access_token")
-            try? await keychain.delete("auth_session_id")
-        }
+        Task { await clearSessionKeychain() }
     }
 
     // MARK: - Session Expiry (token invalid — zero API calls)
@@ -262,17 +269,29 @@ final class SessionManager: ObservableObject {
         analytics.clearIdentity()
         kycManager.clearSession()
 
-        try? await keychain.delete("access_token")
-        try? await keychain.delete("auth_session_id")
+        await clearSessionKeychain()
 
         UserDefaults.standard.removeObject(forKey: "kycInProgress")
         appState.isNewRegistration = false
 
+        // Local teardown is synchronous and happens before this line.
+        // resetAppState fires onSessionEnd, which synchronously clears
+        // DashboardViewModel and PushManager.messages/unreadCount/latestMessage
+        // via AppContainer (see AppContainer.init — onSessionEnd subscriber).
         resetAppState(appState)
 
-        let toastMessage = message?.isEmpty == false
-            ? message!
-            : "Your session has expired. Please sign in again."
+        // FCM token deregistration is best-effort, non-blocking — session
+        // destruction must not wait on a network call. Fired after local teardown
+        // so the user is already on the login screen if this takes time.
+        // NOTE: push-state cleanup is intentionally split across two sites:
+        //   • PushManager.messages/unreadCount/latestMessage — sync, via onSessionEnd
+        //   • PushManager.fcmToken — async (Firebase round-trip), fired here
+        // Both target PushManager.shared (the one singleton). Firebase is currently
+        // stubbed so deleteTokenOnLogout() is a no-op; this is a pre-wire.
+        Task { await PushManager.shared.deleteTokenOnLogout() }
+
+        let toastMessage = message.flatMap { $0.isEmpty ? nil : $0 }
+            ?? "Your session has expired. Please sign in again."
         ToastManager.shared.show(toastMessage, style: .error, position: .bottom)
     }
 
@@ -287,21 +306,58 @@ final class SessionManager: ObservableObject {
         await handleSessionExpired(appState: appState)
     }
 
+    // MARK: - Keychain Teardown
+    /// Single source of truth for which session credentials are wiped on any
+    /// session-end path. Centralised here so logout(), handleSessionExpired(),
+    /// and softExpiry() can't drift apart in what they clear.
+    private func clearSessionKeychain() async {
+        for key in ["access_token", "auth_session_id", "device_session_pubkey", "device_session_id"] {
+            do { try await keychain.delete(key) }
+            catch { SecureLogger.error("Failed to delete \(key) from keychain: \(error.localizedDescription)", category: .auth) }
+        }
+    }
+
     // MARK: - Reset App State
     private func resetAppState(_ appState: AppState) {
-        appState.context = nil
-        appState.otpVerified = false
-        appState.isAuthenticated = false
-        appState.flow = .choice
-        appState.invalidateProtectedShell()
+        // Notify AppContainer (and transitively DashboardViewModel) before the
+        // flow transitions. This is the single authoritative teardown point for
+        // all session-end paths (logout, 401, force logout, expiry).
+        onSessionEnd?()
+
+        // Backstop: silently drop any presented modal stack (sheets / full-screen
+        // covers) so nothing lingers over the login screen, regardless of which
+        // screen the session expired on. Non-animated → no visible transition.
+        // No-op if SwiftUI already tore the modal down with the shell.
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?
+            .rootViewController?
+            .dismiss(animated: false)
+
+        // Single, non-animated transition to login. Swapping `flow` to `.choice`
+        // and regenerating the protected-shell id tears down the entire protected
+        // tree — and any sheets/covers it presents — in one step, so the app lands
+        // directly on the login screen with no per-screen dismiss animations.
+        var transaction = SwiftUI.Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            appState.context = nil
+            appState.otpVerified = false
+            appState.isAuthenticated = false
+            appState.flow = .choice
+            appState.invalidateProtectedShell()
+        }
         // RSA keys are intentionally kept across logout so the biometric login
         // button re-appears on ChoiceScreen. Keys are only cleared when the user
         // explicitly disables biometrics in Settings or the server rejects the key.
         UserDefaults.standard.removeObject(forKey: "kycCompleted")
-        // Clear onboarding persistence so a fresh session never restores stale state.
-        UserDefaults.standard.removeObject(forKey: "onboardingLastScreen")
-        UserDefaults.standard.removeObject(forKey: "onboardingContext")
+        // Clear the onboarding inactivity timer and KYC-resume markers so a fresh
+        // session starts clean.
         UserDefaults.standard.removeObject(forKey: "onboardingBackgroundedAt")
+        UserDefaults.standard.removeObject(forKey: "onboardingKycStep")
+        UserDefaults.standard.removeObject(forKey: "onboardingKycCameraAuth")
+        UserDefaults.standard.removeObject(forKey: "onboardingBiometricContext")
+        UserDefaults.standard.removeObject(forKey: "onboardingBiometricAwaitingSettings")
     }
 }
 

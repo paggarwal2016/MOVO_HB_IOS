@@ -16,8 +16,11 @@ import SwiftUI
 protocol KYCManagerProtocol {
     /// True once configureSDK has completed successfully since launch (or last clearSession).
     /// Allows callers to skip redundant SDK initialization.
-    var isConfigured: Bool { get }
     func configureSDK(officeId: String) async throws
+    /// Configures the SDK with an already-fetched access token, skipping the internal
+    /// `/auth/token-access` call. Used right after login (which just fetched a token) so
+    /// the token endpoint isn't hit twice.
+    func configureSDK(officeId: String, authToken: String) async throws
     func start() async throws -> User
     func clearSession()
     func updateToken(_ token: String)
@@ -26,7 +29,7 @@ protocol KYCManagerProtocol {
 // MARK: - KYCManager
 
 @MainActor
-final class KYCManager: KYCManagerProtocol {
+final class KYCManager: KYCManagerProtocol, TokenRefreshable {
 
     // MARK: Shared
     static let shared = KYCManager(
@@ -43,8 +46,6 @@ final class KYCManager: KYCManagerProtocol {
     /// internal alerts never conflict with the main app window hierarchy.
     private var kycWindow: UIWindow?
 
-    private(set) var isConfigured: Bool = false
-
     // MARK: Init
     init(network: NetworkServiceProtocol, keychain: KeychainManagerProtocol, analytics: AnalyticsTracking? = nil) {
         self.network   = network
@@ -58,25 +59,30 @@ final class KYCManager: KYCManagerProtocol {
 extension KYCManager {
 
     func configureSDK(officeId: String) async throws {
-        SecureLogger.info("Configuring KYC SDK", category: .kyc)
-
+        // Fetch a fresh access token from /auth/token-access and pass the API
+        // response straight into the SDK so it never runs on a stale token.
         let token: String
         do {
-            token = try await keychain.get("access_token", biometricPrompt: nil)
+            token = try await freshAccessToken()
         } catch {
-            SecureLogger.error("Missing access token — aborting KYC configure", category: .kyc)
-            analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "missing_token"])
+            SecureLogger.error("Token refresh failed — aborting KYC configure", category: .kyc)
+            analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "token_refresh_failed"])
             throw KYCError.notConfigured
         }
+        try await configureSDK(officeId: officeId, authToken: token)
+    }
+
+    func configureSDK(officeId: String, authToken: String) async throws {
+        SecureLogger.info("Configuring KYC SDK", category: .kyc)
 
         #if DEBUG
         let verboseLogs = true
 #else
         let verboseLogs = false
 #endif
-        
+
         MobileBankingSDK.configure(
-            authToken: token,
+            authToken: authToken,
             baseUrl: AppConfig.sdkURL,
             officeId: officeId,
             theme: makeKYCTheme(),
@@ -84,7 +90,6 @@ extension KYCManager {
         )
 
         SecureLogger.info("KYC SDK configured successfully", category: .kyc)
-        isConfigured = true
     }
 
     func updateToken(_ token: String) {
@@ -94,7 +99,6 @@ extension KYCManager {
 
     func clearSession() {
         MobileBankingSDK.clearSession()
-        isConfigured = false
         SecureLogger.info("KYC session cleared", category: .kyc)
     }
 }
@@ -126,6 +130,11 @@ extension KYCManager {
             // Dedicated window — the SDK and all its internal alert presentations
             // are completely isolated from the SwiftUI UIHostingController window,
             // preventing "already presenting" conflicts on cancel/error paths.
+            // Suspend the global screen shield: the SDK's camera permission
+            // alerts fire willResignActive, which would otherwise draw the
+            // background shield on top of this trusted full-screen flow.
+            ScreenSecurityManager.shared.beginProtectionSuspension()
+
             let window = UIWindow(windowScene: scene)
             window.windowLevel = .normal + 1
             window.backgroundColor = .clear
@@ -151,6 +160,8 @@ extension KYCManager {
     private func tearDownKYCWindow() {
         kycWindow?.isHidden = true
         kycWindow = nil
+        // Re-enable screen protection now that the KYC flow has ended.
+        ScreenSecurityManager.shared.endProtectionSuspension()
     }
 }
 
@@ -223,6 +234,7 @@ private final class KYCViewControllerWrapper: UIViewController {
         guard !hasLaunchedKyc else { return }
         hasLaunchedKyc = true
         MobileBankingSDK.startKyc(presentingViewController: self, useSdkSuccessUI: false) //true Get started UI is appear
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkOpened)
     }
 
     // deinit must be in the class body — Swift forbids deinit in extensions
@@ -235,11 +247,13 @@ private final class KYCViewControllerWrapper: UIViewController {
     @objc private func handleCompleted(_ notification: Notification) {
         guard let user = notification.object as? User else { return }
         SecureLogger.info("KYC verificationCompleted", category: .kyc)
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "completed"])
         dismissSDKThen { [weak self] in self?.onSuccess?(user) }
     }
 
     @objc private func handleCanceled(_ notification: Notification) {
         SecureLogger.info("KYC verificationCanceled", category: .kyc)
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "canceled"])
         dismissSDKThen { [weak self] in self?.onFailure?(KYCError.cancelled) }
     }
 
@@ -247,6 +261,7 @@ private final class KYCViewControllerWrapper: UIViewController {
         let message = (notification.object as? Error)?.localizedDescription
             ?? "Identity verification failed."
         SecureLogger.error("KYC verificationFailed: \(message)", category: .kyc)
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "failed"])
         dismissSDKThen { [weak self] in self?.onFailure?(KYCError.sdkError(message)) }
     }
 
@@ -254,6 +269,7 @@ private final class KYCViewControllerWrapper: UIViewController {
         let message = (notification.object as? NSError)?.localizedDescription
             ?? "Scanner error occurred."
         SecureLogger.error("KYC scannerError: \(message)", category: .kyc)
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "scanner_error"])
         dismissSDKThen { [weak self] in self?.onFailure?(KYCError.sdkError(message)) }
     }
 

@@ -82,11 +82,20 @@ nonisolated struct ACHAccount: Codable, Sendable, Equatable {
         Self.currencyFormatter.string(from: NSDecimalNumber(decimal: plaidAccountBalance)) ?? "$0.00"
     }
 
+    nonisolated(unsafe) private static let logoCache = NSCache<NSString, UIImage>()
+
     var logoImage: UIImage? {
-        guard !institutionLogo.isEmpty,
-              let data = Data(base64Encoded: institutionLogo, options: .ignoreUnknownCharacters) else {
+        guard !institutionLogo.isEmpty else { return nil }
+
+        let key = String(achAccountId) as NSString
+        if let cached = Self.logoCache.object(forKey: key) { return cached }
+
+        guard let data = Data(base64Encoded: institutionLogo, options: .ignoreUnknownCharacters),
+              let decoded = UIImage(data: data) else {
             return nil
         }
-        return UIImage(data: data)
+        let ready = decoded.preparingForDisplay() ?? decoded
+        Self.logoCache.setObject(ready, forKey: key)
+        return ready
     }
 }

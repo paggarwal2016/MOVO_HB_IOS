@@ -21,7 +21,8 @@ extension Color {
         public static var accent:        Color { MovoTheme.color.accent.color }
         public static var accentTint:    Color { MovoTheme.color.accentTint.color }
         public static var accentBorder:  Color { MovoTheme.color.accentBorder.color }
-        public static var accentSoft:    Color { MovoTheme.color.accentSoft.color }
+        public static var accentSoft:       Color { MovoTheme.color.accentSoft.color }
+        public static var heritageGreenLine: Color { MovoTheme.color.heritageGreenLine.color }
 
         public static var textPrimary:   Color { MovoTheme.color.textPrimary.color }
         public static var textSecondary: Color { MovoTheme.color.textSecondary.color }
@@ -40,11 +41,21 @@ extension Color {
         public static var cardSurface:   Color { MovoTheme.color.cardSurface.color }
         public static var cardBorder:    Color { MovoTheme.color.cardBorder.color }
 
+        public static var silverTint:        Color { MovoTheme.color.silverTint.color }
+
+        // Card tile face — locked near-black. Use only in CardItemView.
+        public static var cardVoid:          Color { MovoTheme.color.cardVoid.color }
+
         // Card artwork — brand-locked. Use only in the physical card artwork view.
         public static var cardArtwork:       Color { MovoTheme.color.cardArtwork.color }
         public static var onCardArtwork:     Color { MovoTheme.color.onCardArtwork.color }
         public static var cardArtworkMuted:  Color { MovoTheme.color.cardArtworkMuted.color }
         public static var cardArtworkBorder: Color { MovoTheme.color.cardArtworkBorder.color }
+
+        // Balloon illustration pigments — locked, non-adaptive.
+        // Use only in RegistrationCelebrationHero. Not for text or interactive elements.
+        public static var balloonHighlight:  Color { MovoTheme.color.balloonHighlight.color }
+        public static var balloonShade:      Color { MovoTheme.color.balloonShade.color }
     }
 }
 
@@ -250,7 +261,7 @@ public struct MovoTextButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .textStyle(Typography.bodyCompact)
-            .foregroundColor(Color.movo.accent)
+            .foregroundColor(Color.movo.textPrimary)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
             .opacity(configuration.isPressed ? 0.6 : 1.0)
@@ -269,10 +280,13 @@ public struct StatusPill: View {
     public let variant: Variant
     public let icon: String?
 
-    public init(_ label: String, variant: Variant = .accent, icon: String? = nil) {
+    public let style: TextStyle
+
+    public init(_ label: String, variant: Variant = .accent, icon: String? = nil, style: TextStyle = Typography.eyebrow) {
         self.label = label
         self.variant = variant
         self.icon = icon
+        self.style = style
     }
 
     public var body: some View {
@@ -282,7 +296,7 @@ public struct StatusPill: View {
                     .font(.system(size: 9, weight: .bold))
             }
             Text(label)
-                .textStyle(Typography.eyebrow)
+                .textStyle(style)
         }
         .foregroundColor(textColor)
         .padding(.horizontal, 9)
@@ -403,5 +417,24 @@ extension View {
     /// Applies the brand-locked two-layer drop shadow used by the MOVO card visualization.
     public func cardArtworkShadow() -> some View {
         modifier(CardArtworkShadow())
+    }
+}
+
+// MARK: - Card "void" gradient
+
+extension LinearGradient {
+    /// The shared "void" surface gradient used by card-like surfaces
+    /// (card visual, action cards, linked-accounts rows, invite button).
+    /// Three locked stops, top-leading → bottom-trailing.
+    static var cardVoid: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: DesignTokens.Palette.cardVoidTop.color,    location: 0.00),
+                .init(color: DesignTokens.Palette.cardVoidMid.color,    location: 0.55),
+                .init(color: DesignTokens.Palette.cardVoidBottom.color, location: 1.00)
+            ],
+            startPoint: .topLeading,
+            endPoint:   .bottomTrailing
+        )
     }
 }

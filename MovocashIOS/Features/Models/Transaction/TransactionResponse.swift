@@ -13,18 +13,35 @@ nonisolated struct TransactionResponse: Decodable {
     let transactions: [Transaction]
     let settledBalance: Decimal
     let balance: Decimal
+    let metadata: Metadata?
+
+    /// Server pagination metadata. `totalRecords` is the authoritative way to know
+    /// whether more pages remain.
+    nonisolated struct Metadata: Decodable {
+        let offset: Int?
+        let limit: Int?
+        let totalRecords: Int?
+    }
 
     init(from decoder: Decoder) throws {
-        let container       = try decoder.container(keyedBy: CodingKeys.self)
-        transactions        = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
-        let settledBalStr   = try container.decodeIfPresent(String.self, forKey: .settledBalance) ?? "0"
-        let balanceStr      = try container.decodeIfPresent(String.self, forKey: .balance) ?? "0"
-        settledBalance      = Decimal(string: settledBalStr) ?? 0
-        balance             = Decimal(string: balanceStr) ?? 0
+        let container  = try decoder.container(keyedBy: CodingKeys.self)
+        transactions   = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
+        settledBalance = Self.decodeDecimal(from: container, key: .settledBalance)
+        balance        = Self.decodeDecimal(from: container, key: .balance)
+        metadata       = try container.decodeIfPresent(Metadata.self, forKey: .metadata)
+    }
+
+    private static func decodeDecimal(
+        from container: KeyedDecodingContainer<CodingKeys>,
+        key: CodingKeys
+    ) -> Decimal {
+        if let d = try? container.decodeIfPresent(Double.self, forKey: key) { return Decimal(d) }
+        if let s = try? container.decodeIfPresent(String.self, forKey: key) { return Decimal(string: s) ?? 0 }
+        return 0
     }
 
     private enum CodingKeys: String, CodingKey {
-        case transactions, settledBalance, balance
+        case transactions, settledBalance, balance, metadata
     }
 }
 
@@ -45,16 +62,24 @@ struct Transaction: Decodable, Identifiable, Sendable {
         status          = try container.decodeIfPresent(String.self, forKey: .status)
         location        = try container.decodeIfPresent(String.self, forKey: .location)
         description     = try container.decodeIfPresent(String.self, forKey: .description)
-        let amountStr   = try container.decodeIfPresent(String.self, forKey: .amount) ?? "0"
-        amount          = Decimal(string: amountStr) ?? 0
+        if let d = try? container.decodeIfPresent(Double.self, forKey: .amount) {
+            amount = Decimal(string: String(d)) ?? Decimal(d)
+        } else if let s = try? container.decodeIfPresent(String.self, forKey: .amount) {
+            amount = Decimal(string: s) ?? 0
+        } else {
+            amount = 0
+        }
         to              = try container.decodeIfPresent(String.self, forKey: .to)
         from            = try container.decodeIfPresent(String.self, forKey: .from)
         type            = try container.decodeIfPresent(TransactionType.self, forKey: .type) ?? .unknown
-        date            = try container.decodeIfPresent(String.self, forKey: .date) ?? ""
+        // The API field is `createdAt`; keep `date` as a fallback for older payloads.
+        date            = try container.decodeIfPresent(String.self, forKey: .createdAt)
+            ?? container.decodeIfPresent(String.self, forKey: .date)
+            ?? ""
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, status, location, description, amount, to, from, type, date
+        case id, status, location, description, amount, to, from, type, date, createdAt
     }
 
     private static let dateFormatter: DateFormatter = {
@@ -157,11 +182,8 @@ nonisolated struct TransferInternalResponse: Codable {
 //   { "success": true, "message": "...", "exists": true|false }
 
 nonisolated struct CheckIntentResponse: Decodable {
-    /// Whether the API call itself succeeded.
     let success: Bool
-    /// Optional human-readable reason from the server.
     let message: String?
-    /// `true` → recipient exists and transfer is permitted.
-    /// `false` → recipient not found; Pay button should be blocked.
     let exists: Bool
+    let disclaimer: String?
 }

@@ -16,10 +16,25 @@ struct RootView: View {
     @EnvironmentObject private var userVM: UserViewModel
     @EnvironmentObject private var sessionManager: SessionManager
     @EnvironmentObject private var pushManager: PushManager
+    @EnvironmentObject private var idleTimer: IdleTimerManager
 
     @ObservedObject var kycVM: KYCViewModel
 
     @State private var legalAcceptedItems: Set<String> = []
+
+    /// Client-side jailbreak/integrity gate. When true, CompromisedDeviceView
+    /// covers the whole app and blocks all interaction. Seeded from a synchronous,
+    /// cache-free snapshot so the block wins the very first frame (no pre-render
+    /// flash of the real UI on a compromised device); the launch check, the
+    /// foreground re-check, and the network layer's `.deviceCompromised` broadcast
+    /// then re-confirm and catch instrumentation attached after launch.
+    /// Bypassable on a rooted device — defense in depth, not a guarantee.
+    @State private var deviceCompromised = JailbreakDetector.shared.isCompromisedSnapshot()
+
+    /// Ensures the compromise telemetry event is emitted exactly once per session,
+    /// regardless of whether the flag was raised at frame 1, on foreground, or by
+    /// the network layer.
+    @State private var compromiseReported = false
 
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
@@ -40,12 +55,30 @@ struct RootView: View {
 
                 case .choice:
                     ChoiceScreen()
+                        .trackScreen(AnalyticsScreen.choice)
+
+                case .waitlist:
+                    WaitlistScreen(
+                        initialPhone: authVM.waitlistPrefillPhone,
+                        onBack: {
+                            UIApplication.shared.dismissKeyboard()
+                            appState.flow = .choice
+                        },
+                        onSubmitted: {
+                            // The success alert is shown by WaitlistScreen; this just
+                            // returns to Choice once the user acknowledges it.
+                            appState.flow = .choice
+                        }
+                    )
+                    .trackScreen(AnalyticsScreen.waitlist)
 
                 case .loginPhone:
                     PhoneNumberScreen(flowType: .login)
+                        .trackScreen(AnalyticsScreen.phoneLogin)
 
                 case .getStartedPhone:
                     PhoneNumberScreen(flowType: .getStarted)
+                        .trackScreen(AnalyticsScreen.phoneSignup)
 
                 case .otp:
                     OTPScreen(
@@ -57,6 +90,7 @@ struct RootView: View {
                             await authVM.completeOTPVerification(code: code, appState: appState) { destination in
                                 switch destination {
                                 case .signupDetails:
+                                    legalAcceptedItems = []
                                     appState.flow = .signupDetails
                                 default:
                                     // Returning user — KYC already complete.
@@ -77,36 +111,101 @@ struct RootView: View {
                             appState.flow = appState.context == .login ? .loginPhone : .getStartedPhone
                         }
                     )
+                    .trackScreen(AnalyticsScreen.otp)
 
                 case .signupDetails:
                     SignUpScreen(
                         onBack: { appState.flow = .choice },
                         onContinue: { email in
                             authVM.email = email
+                            container.analytics.log(AnalyticsEvent.signupEmailSubmitted)
                             Task {
                                 SpinnerView.showFullScreen()
-                                do {
-                                    try await authVM.sendEmailOTP()
+                                // Check the profile's email-verified status first.
+                                //  • already verified → skip verification, go straight to
+                                //    the next onboarding step (biometric / passcode).
+                                //  • not verified    → send the verification email and
+                                //    show the verification waiting screen.
+                                switch await authVM.checkEmailVerified() {
+                                case .verified:
+                                    let passkeyDone = await authVM.isPasskeyRegistered()
                                     SpinnerView.hideFullScreen()
-                                    AlertManager.shared.showCustom(
-                                        title: "Check your email",
-                                        message: "We sent a verification link to \(email).",
-                                        primary: "Continue",
-                                        onPrimary: {
-                                            Task {
-                                                let passkeyDone = await authVM.isPasskeyRegistered()
-                                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
-                                            }
-                                        }
+                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                case .notVerified:
+                                    do {
+                                        try await authVM.sendEmailOTP()
+                                        SpinnerView.hideFullScreen()
+                                        appState.flow = .emailVerification
+                                    } catch {
+                                        SpinnerView.hideFullScreen()
+                                        AlertManager.shared.showError(error.localizedDescription)
+                                    }
+                                case .failed:
+                                    SpinnerView.hideFullScreen()
+                                    ToastManager.shared.show(
+                                        "Couldn't check your verification status. Please try again.",
+                                        style: .error,
+                                        position: .bottom
                                     )
-                                } catch {
-                                    SpinnerView.hideFullScreen()
-                                    AlertManager.shared.showError(error.localizedDescription)
                                 }
                             }
                         },
                         onSignIn: { appState.flow = .loginPhone }
                     )
+                    .trackScreen(AnalyticsScreen.emailEntry)
+
+                case .emailVerification:
+                    EmailVerificationView(
+                        email: authVM.email,
+                        onCheck: { isExplicit in
+                            // Full-screen loader for explicit taps only; the silent
+                            // foreground re-check stays invisible so returning to the
+                            // app after opening the link feels seamless.
+                            if isExplicit { SpinnerView.showFullScreen() }
+                            let result = await authVM.checkEmailVerified()
+                            switch result {
+                            case .verified:
+                                let passkeyDone = await authVM.isPasskeyRegistered()
+                                if isExplicit { SpinnerView.hideFullScreen() }
+                                appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                            case .notVerified:
+                                if isExplicit {
+                                    SpinnerView.hideFullScreen()
+                                    showEmailNotVerifiedToast()
+                                }
+                            case .failed:
+                                if isExplicit {
+                                    SpinnerView.hideFullScreen()
+                                    ToastManager.shared.show(
+                                        "Couldn't check your verification status. Please try again.",
+                                        style: .error,
+                                        position: .bottom
+                                    )
+                                }
+                            }
+                        },
+                        onResend: {
+                            SpinnerView.showFullScreen()
+                            do {
+                                try await authVM.sendEmailOTP()
+                                SpinnerView.hideFullScreen()
+                                ToastManager.shared.show(
+                                    "Verification email sent to \(authVM.email)",
+                                    style: .success,
+                                    position: .bottom
+                                )
+                            } catch {
+                                SpinnerView.hideFullScreen()
+                                ToastManager.shared.show(
+                                    error.localizedDescription,
+                                    style: .error,
+                                    position: .bottom
+                                )
+                            }
+                        },
+                        onBack: { appState.flow = .signupDetails }
+                    )
+                    .trackScreen(AnalyticsScreen.emailVerification)
 
                 case .getStartedInfo:
                     GetStartedInfoScreen(
@@ -114,17 +213,13 @@ struct RootView: View {
                             Task {
                                 do {
                                     try await authVM.acceptAgreements()
+                                    // Normal forward entry — Get Started Info is behind
+                                    // Pick Document, so Back returns there (not a resume).
+                                    appState.kycStepResumed = false
                                     appState.flow = .pickDocument
                                 } catch {
                                     AlertManager.shared.showError(error.localizedDescription)
                                 }
-                            }
-                        },
-                        onNotNow: {
-                            Task {
-                                await sessionManager.logout(appState: appState)
-                                appState.flow = .choice
-                                legalAcceptedItems = []
                             }
                         },
                         onBack: {
@@ -137,39 +232,62 @@ struct RootView: View {
                             }
                         },
                         container: container,
-                        isLoading: authVM.state == .loading,
                         acceptedItems: $legalAcceptedItems
                     )
+                    .trackScreen(AnalyticsScreen.terms)
 
                     // ── Biometric opt-in ──────────────────────────────────────
                 case .enableBiometrics:
                     BiometricEnrollView(
                         lockManager: lockManager,
                         onEnable: { return await advanceAfterSecurity() },
-                        onSkip:   { Task { await advanceAfterSecurity() } }
+                        onSkip:   { Task { await advanceAfterSecurity() } },
+                        onOpenSettings: {
+                            // User is leaving for Settings to enable a denied/disabled
+                            // biometric. iOS force-relaunches the app (cold launch) once
+                            // the permission changes; this flag lets StartupRouter resume
+                            // here instead of starting over at Choice.
+                            UserDefaults.standard.set(true, forKey: "onboardingBiometricAwaitingSettings")
+                        }
                     )
 
                 case .pickDocument:
                     PickDocumentView(
                         onBack: {
-                            appState.flow = .getStartedInfo
+                            if appState.kycStepResumed {
+                                // Resumed straight into KYC after a camera-permission
+                                // grant relaunch — no Get Started Info behind this screen,
+                                // so Back exits to Choice. Clear the resume markers so a
+                                // later manual kill won't re-resume here.
+                                appState.kycStepResumed = false
+                                UserDefaults.standard.removeObject(forKey: "onboardingKycStep")
+                                UserDefaults.standard.removeObject(forKey: "onboardingKycCameraAuth")
+                                appState.flow = .choice
+                            } else {
+                                appState.flow = .getStartedInfo
+                            }
                         },
                         onContinue: {
                             appState.flow = .kyc
                         }
                     )
+                    .trackScreen(AnalyticsScreen.kycDocument)
 
                 case .appLock:
                     BiometricGateView(
                         biometricIcon: lockManager.biometricType.systemImageName,
                         biometricLabel: lockManager.biometricType.displayName,
                         authenticate: {
-                            await authVM.loginWithBiometric(appState: appState)
+                            await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
                         },
                         onAuthenticated: {
                             appState.flow = .home
                         },
                         onUsePhoneNumber: {
+                            // Cancel any in-flight (e.g. timed-out splash) biometric
+                            // attempt first, so a late success can't resurrect the
+                            // session the user is about to discard.
+                            authVM.cancelBiometricLogin()
                             Task {
                                 await sessionManager.logout(appState: appState)
                                 lockManager.logout()
@@ -183,12 +301,16 @@ struct RootView: View {
                         biometricIcon: lockManager.biometricType.systemImageName,
                         biometricLabel: lockManager.biometricType.displayName,
                         authenticate: {
-                            await authVM.loginWithBiometric(appState: appState)
+                            await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
                         },
                         onAuthenticated: {
                             appState.flow = .home
                         },
                         onUsePhoneNumber: {
+                            // Cancel any in-flight biometric attempt first, so a late
+                            // success can't resurrect the session the user is about to
+                            // discard.
+                            authVM.cancelBiometricLogin()
                             Task {
                                 await sessionManager.logout(appState: appState)
                                 lockManager.logout()
@@ -202,9 +324,20 @@ struct RootView: View {
                     EmptyView()
 
                 case .kycSuccess:
-                    KYCSuccessView {
-                        appState.flow = .home
-                    }
+                    KYCSuccessView(
+                        container: container,
+                        onFinish: {
+                            container.analytics.log(AnalyticsEvent.signupCompleted)
+                            UserDefaults.standard.set(true, forKey: "hasCompletedSignup")
+                            appState.flow = .home
+                        },
+                        onSkip: {
+                            container.analytics.log(AnalyticsEvent.signupCompleted)
+                            UserDefaults.standard.set(true, forKey: "hasCompletedSignup")
+                            appState.flow = .home
+                        }
+                    )
+                    .trackScreen(AnalyticsScreen.kycSuccess)
 
                 case .home:
                     HomeTabBarView(container: container)
@@ -223,9 +356,49 @@ struct RootView: View {
             .environmentObject(lockManager)
             .environmentObject(sessionManager)
 
+            // ── Compromised-device gate ────────────────────────────────────
+            // Renders above the entire flow and blocks all interaction with it.
+            // Also enforced at the network layer (NetworkError.jailbreakDetected).
+            if deviceCompromised {
+                Color.movo.background
+                    .ignoresSafeArea()
+                CompromisedDeviceView(onRetry: {
+                    // Re-evaluate. A device cannot un-jailbreak within a session, so a
+                    // confirmed positive stays flagged (the detector caches it). The
+                    // gate only clears if a relaunch cleared the cache. No programmatic
+                    // exit — the block simply stays up (Apple HIG: never quit an app).
+                    let stillCompromised = await JailbreakDetector.shared.recheck()
+                    deviceCompromised = stillCompromised
+                    return stillCompromised
+                })
+            }
+        }
+        // Reset the idle clock on any touch anywhere in the app.
+        // `simultaneousGesture` observes without consuming — existing gestures are unaffected.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in idleTimer.recordActivity() }
+        )
+        // Start the idle timer when the home dashboard is visible; stop it otherwise.
+        .onChangeCompat(of: appState.flow) { newFlow in
+            if newFlow == .home {
+                idleTimer.start()
+            } else {
+                idleTimer.stop()
+            }
         }
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
+            // Re-check integrity on foreground: instrumentation (Frida, a debugger)
+            // can be attached after launch, so re-evaluate every time the app returns
+            // to active. A positive result stays flagged for the session.
+            if newPhase == .active {
+                idleTimer.recordActivity()
+                Task {
+                    if await JailbreakDetector.shared.isJailbroken { deviceCompromised = true }
+                    reportCompromiseIfNeeded(trigger: "foreground")
+                }
+            }
             // Onboarding inactivity tracking — only active before the dashboard is reached.
             // Post-dashboard users are governed by AppLockManager's background timeout.
             guard !UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
@@ -248,22 +421,27 @@ struct RootView: View {
                 break
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Onboarding flows live on a non-home branch; swap the root to home so
+            // the whole onboarding stack tears down in one transition.
+            if appState.flow != .home {
+                appState.flow = .home
+            }
+        }
         .task(id: appState.flow) {
             guard appState.flow == .kyc else { return }
 
             // Safety net — if postBootstrap warmup failed (transient network, etc.),
             // retry SDK configuration here before the scanner starts. No-op if
             // configureSDK already succeeded at boot.
-            if !container.kycManager.isConfigured {
-                do {
-                    try await container.kycManager.configureSDK(officeId: AppConfig.officeId)
-                } catch {
-                    AlertManager.shared.showError(
-                        "Failed to initialize KYC: \(error.localizedDescription)"
-                    )
-                    appState.flow = .pickDocument
-                    return
-                }
+            do {
+                try await container.kycManager.configureSDK(officeId: AppConfig.officeId)
+            } catch {
+                AlertManager.shared.showError(
+                    "Failed to initialize KYC: \(error.localizedDescription)"
+                )
+                appState.flow = .pickDocument
+                return
             }
 
             UserDefaults.standard.set(true, forKey: "kycInProgress")
@@ -308,22 +486,6 @@ struct RootView: View {
                 }
             }
         }
-        .onChangeCompat(of: appState.flow) { newFlow in
-            if UserDefaults.standard.bool(forKey: "kycCompleted") {
-                // Post-dashboard — clear any stale onboarding persistence keys.
-                UserDefaults.standard.removeObject(forKey: "onboardingLastScreen")
-                UserDefaults.standard.removeObject(forKey: "onboardingContext")
-                return
-            }
-            // Mid-onboarding — persist the safe restoration target so that a
-            // kill→relaunch within the 10-minute window resumes the correct screen.
-            if let target = newFlow.restorationTarget {
-                UserDefaults.standard.set(target.rawValue, forKey: "onboardingLastScreen")
-                if let ctx = appState.context?.rawValue {
-                    UserDefaults.standard.set(ctx, forKey: "onboardingContext")
-                }
-            }
-        }
         .onChangeCompat(of: lockManager.state) { newState in
             // Warm transition: route to .warmRelock so BiometricGateView
             // auto-triggers Face ID. Cold launch uses .appLock (handled by
@@ -339,7 +501,23 @@ struct RootView: View {
                   appState.flow != .warmRelock
             else { return }
 
+            // Clear any transient alert so it can't sit above the biometric gate.
+            AlertManager.shared.dismiss()
             appState.flow = .warmRelock
+        }
+        .task {
+            // Proactive integrity check at launch — shows the gate before any
+            // flow renders on a compromised device (no network call required).
+            // The synchronous snapshot may already have flagged it at frame 1;
+            // this confirms via the authoritative caching path.
+            if await JailbreakDetector.shared.isJailbroken { deviceCompromised = true }
+            reportCompromiseIfNeeded(trigger: "launch")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceCompromised)) { _ in
+            // Raised by the network layer (NetworkService) when it rejects a call
+            // on a flagged device — see DeviceIntegrityNotifier.
+            deviceCompromised = true
+            reportCompromiseIfNeeded(trigger: "network")
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
             guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
@@ -355,6 +533,23 @@ struct RootView: View {
         }
     }
 
+    // MARK: - Device Integrity
+
+    /// Reports the compromise telemetry event exactly once per session so the
+    /// backend/fraud team has visibility into flagged devices. Fires only on the
+    /// first detection, never on repeated foreground/network re-checks. No PII or
+    /// path details are logged — only that a jailbreak was detected and what
+    /// triggered the check.
+    @MainActor
+    private func reportCompromiseIfNeeded(trigger: String) {
+        guard deviceCompromised, !compromiseReported else { return }
+        compromiseReported = true
+        container.analytics.log(AnalyticsEvent.suspiciousActivity, params: [
+            AnalyticsParam.reason: "jailbreak_detected",
+            AnalyticsParam.type: trigger
+        ])
+    }
+
     // MARK: -
 
     /// Called after the user enables or skips biometrics.
@@ -362,7 +557,39 @@ struct RootView: View {
     /// then routes: registration → KYC onboarding  |  login → Home.
     /// Returns true if passkey succeeded and navigation was triggered; false otherwise.
     /// BiometricEnrollView uses the return value to reset its enroll state on failure.
-    @discardableResult
+    /// Shown when the explicit "Continue" check finds the email still unverified
+    /// (link not yet opened, or token expired). Offers to resend the link.
+    private func showEmailNotVerifiedToast() {
+        ToastManager.shared.show(ToastConfig(
+            message: "We haven't received your confirmation yet. Open the link we emailed you, or resend it.",
+            style: .warning,
+            position: .center,
+            duration: nil,
+            title: "Email not verified",
+            imageSystemName: "envelope.badge",
+            primaryAction: ToastAction(label: "Resend email") {
+                Task {
+                    do {
+                        try await authVM.sendEmailOTP()
+                        ToastManager.shared.show(
+                            "Verification email sent to \(authVM.email)",
+                            style: .success,
+                            position: .bottom
+                        )
+                    } catch {
+                        ToastManager.shared.show(
+                            error.localizedDescription,
+                            style: .error,
+                            position: .bottom
+                        )
+                    }
+                }
+            },
+            secondaryAction: ToastAction(label: "Dismiss") { },
+            dimsBackground: true
+        ))
+    }
+
     private func advanceAfterSecurity() async -> Bool {
         lockManager.resetToUnlocked()
 
@@ -383,6 +610,7 @@ struct RootView: View {
             appState.flow = .getStartedInfo
         default:
             UserDefaults.standard.set(true, forKey: "kycCompleted")
+            UserDefaults.standard.set(true, forKey: "hasCompletedSignup")
             appState.flow = .home
         }
         return true

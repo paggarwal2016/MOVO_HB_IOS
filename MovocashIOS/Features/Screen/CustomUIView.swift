@@ -2,7 +2,7 @@
 //  CustomUIView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 06/05/26.
+//  Created by Movo Developer on 06/05/26.
 //
 
 import Foundation
@@ -229,9 +229,7 @@ struct AddContactActionCard: View {
 
                     Spacer()
 
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.movo.accent)
+                    MovoChevron(.disclosure)
                 }
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.md + 2)
@@ -357,7 +355,7 @@ struct AddContactCardView: View {
                                 .tint(Color.movo.background)
                                 .scaleEffect(0.8)
                         } else {
-                            Text("Add Contact")
+                            Text("Quick Pay")
                                 .font(Typography.button.font)
                                 .foregroundColor(Color.movo.background)
                         }

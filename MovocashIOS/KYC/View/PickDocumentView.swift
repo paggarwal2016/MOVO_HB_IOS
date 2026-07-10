@@ -75,13 +75,9 @@ struct PickDocumentView: View {
     
     private var topBar: some View {
         HStack {
-            Button(action: { onBack() }) {
-                BackChevronIcon(tint: Color.movo.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
+            CustomBackButton() {
+                onBack()
             }
-            .buttonStyle(.plain)
-            
             Spacer()
         }
     }

@@ -7,15 +7,18 @@
 
 import Foundation
 import Combine
+import Contacts
 
 @MainActor
 final class ContactViewModel: BaseViewModel {
-    
+
     // MARK: - Device Contacts
-    
+
     @Published var contacts: [ContactRecord] = []
     @Published var search = ""
     @Published private(set) var loadError: String? = nil
+    /// Current device-contacts permission, kept in sync via `refreshAuthorization()`.
+    @Published var authorizationStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     
     // MARK: - API Contacts
     
@@ -40,10 +43,9 @@ final class ContactViewModel: BaseViewModel {
         phoneInput.filter(\.isNumber)
     }
 
-    /// Validates that nickname is present and phone has 10 digits.
+    /// Validates the phone number (10 digits). Nickname is optional.
     var canSubmit: Bool {
-        !nickname.trimmingCharacters(in: .whitespaces).isEmpty
-            && digits.count == 10
+        digits.count == 10
     }
 
     var helperMessage: String {
@@ -61,7 +63,8 @@ final class ContactViewModel: BaseViewModel {
     
     func buildResult(countryCode: String) -> AddContactSheet.Result? {
         let trimmedNickname = nickname.trimmingCharacters(in: .whitespaces)
-        guard !trimmedNickname.isEmpty, digits.count == 10 else { return nil }
+        // Nickname is optional; only the phone number is required.
+        guard digits.count == 10 else { return nil }
         let e164 = "\(countryCode)\(digits)"
         return .init(
             nickname: trimmedNickname,
@@ -99,14 +102,81 @@ final class ContactViewModel: BaseViewModel {
         self.network = network
         self.analytics = analytics ?? AnalyticsManager.shared
         super.init(alertManager: alertManager)
+        setupContactPipelines()
     }
     
-    // MARK: - Computed
-    
-    var mergedContacts: [ContactRecord] {
+    // MARK: - Cached Lists
+    //
+    // Cached (not computed) so dedup + phone-normalization runs only when the source
+    // arrays change — off the main thread — and search is debounced. Typing no longer
+    // re-runs the whole pipeline on every keystroke / re-render.
+
+    /// API + device contacts, de-duped by phone, favourites removed.
+    @Published private(set) var mergedContacts: [ContactRecord] = []
+    /// `mergedContacts` filtered by the debounced `search`.
+    @Published private(set) var filteredContacts: [ContactRecord] = []
+    /// Favourites filtered by the debounced `search`.
+    @Published private(set) var filteredFavourites: [ContactRecord] = []
+
+    /// Device contacts available to import (Add Contact sheet), excluding numbers
+    /// already added in the app. Appends newly-granted contacts as `contacts` reloads.
+    @Published private(set) var importableContacts: [ContactRecord] = []
+    /// `importableContacts` filtered by the debounced `importSearch`.
+    @Published private(set) var filteredImportable: [ContactRecord] = []
+    /// Search text for the Add Contact sheet's import list.
+    @Published var importSearch = ""
+
+    var favoriteContacts: [ContactRecord] { favourites }
+
+    /// Set of favourite IDs kept in sync with `favourites` so per-row favourite
+    /// checks are O(1) instead of scanning the array for every contact row.
+    @Published private(set) var favouriteIDs: Set<String> = []
+
+    func isFavorite(_ contact: ContactRecord) -> Bool {
+        favouriteIDs.contains(contact.id)
+    }
+
+    var isPermissionError: Bool {
+        loadError == ContactsError.permissionDenied.localizedDescription
+    }
+
+    // MARK: - Device Contact Import (Add Contact sheet)
+
+    /// Permission tiers the Add Contact sheet branches on.
+    enum ContactAccess { case undetermined, denied, limited, full }
+
+    var contactAccess: ContactAccess {
+        switch authorizationStatus {
+        case .notDetermined:        return .undetermined
+        case .authorized:           return .full
+        case .restricted, .denied:  return .denied
+        default:
+            if #available(iOS 18.0, *), authorizationStatus == .limited { return .limited }
+            return .denied
+        }
+    }
+
+    /// Populates the sheet's nickname + phone fields from a tapped device contact.
+    func fill(from contact: ContactRecord) {
+        nickname = contact.nickname ?? ""
+        phoneInput = Self.formatPhone(PhoneNumberValidator.sanitize(contact.phoneNumber ?? ""))
+        helperIsError = false
+    }
+
+    // MARK: - List computation (pure, runs off the main thread)
+
+    /// Normalized phone key ("+1XXXXXXXXXX") used for duplicate matching.
+    nonisolated private static func normalizedKey(_ phone: String?) -> String? {
+        guard let phone, !phone.isEmpty else { return nil }
+        let sanitized = PhoneNumberValidator.sanitize(phone)
+        guard !sanitized.isEmpty else { return nil }
+        return PhoneNumberValidator.normalize(sanitized)
+    }
+
+    nonisolated private static func computeMerged(api: [ContactRecord], device: [ContactRecord], favourites: [ContactRecord]) -> [ContactRecord] {
         let favIds = Set(favourites.map(\.id))
         var seen = Set<String>()
-        return (apiContacts + contacts)
+        return (api + device)
             .filter { !favIds.contains($0.id) }
             .filter { contact in
                 guard let phone = contact.phoneNumber, !phone.isEmpty else { return true }
@@ -114,34 +184,102 @@ final class ContactViewModel: BaseViewModel {
             }
             .sorted { $0.isAdded && !$1.isAdded }
     }
-    
-    var filteredContacts: [ContactRecord] {
-        guard !search.isEmpty else { return mergedContacts }
-        return mergedContacts.filter {
-            ($0.nickname ?? "").localizedCaseInsensitiveContains(search) ||
-            ($0.phoneNumber ?? "").contains(search)
-        }
-    }
-    
-    var filteredFavourites: [ContactRecord] {
-        let sorted = favourites.sorted { $0.isAdded && !$1.isAdded }
-        guard !search.isEmpty else { return sorted }
-        return sorted.filter {
-            ($0.nickname ?? "").localizedCaseInsensitiveContains(search) ||
-            ($0.phoneNumber ?? "").contains(search)
+
+    nonisolated private static func computeImportable(device: [ContactRecord], api: [ContactRecord]) -> [ContactRecord] {
+        let existing = Set(api.compactMap { normalizedKey($0.phoneNumber) })
+        var seen = Set<String>()
+        return device.filter { contact in
+            guard let key = normalizedKey(contact.phoneNumber) else { return false }
+            guard !existing.contains(key) else { return false }
+            return seen.insert(key).inserted
         }
     }
 
-    var favoriteContacts: [ContactRecord] { favourites }
-    
-    func isFavorite(_ contact: ContactRecord) -> Bool {
-        favourites.contains { $0.id == contact.id }
+    nonisolated private static func applySearch(_ list: [ContactRecord], query: String) -> [ContactRecord] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return list }
+        return list.filter {
+            ($0.nickname ?? "").localizedCaseInsensitiveContains(q) ||
+            ($0.phoneNumber ?? "").contains(q)
+        }
     }
-    
-    var isPermissionError: Bool {
-        loadError == ContactsError.permissionDenied.localizedDescription
+
+    // MARK: - Reactive pipelines (cache + debounce + off-main filtering)
+
+    private func setupContactPipelines() {
+        let work = DispatchQueue.global(qos: .userInitiated)
+
+        // Keep the O(1) favourite-ID lookup set in sync with the favourites array.
+        $favourites
+            .map { Set($0.map(\.id)) }
+            .assign(to: &$favouriteIDs)
+
+        // Heavy lists recompute only when their source arrays change.
+        Publishers.CombineLatest3($apiContacts, $contacts, $favourites)
+            .receive(on: work)
+            .map { Self.computeMerged(api: $0, device: $1, favourites: $2) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$mergedContacts)
+
+        Publishers.CombineLatest($contacts, $apiContacts)
+            .receive(on: work)
+            .map { Self.computeImportable(device: $0, api: $1) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$importableContacts)
+
+        // Debounced search queries (prepend the current value so the list shows
+        // immediately rather than after the first 300ms).
+        let mainQuery = $search
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .prepend(search)
+            .removeDuplicates()
+
+        let importQuery = $importSearch
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .prepend(importSearch)
+            .removeDuplicates()
+
+        Publishers.CombineLatest($mergedContacts, mainQuery)
+            .receive(on: work)
+            .map { Self.applySearch($0, query: $1) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$filteredContacts)
+
+        Publishers.CombineLatest($favourites, mainQuery)
+            .receive(on: work)
+            .map { favs, query -> [ContactRecord] in
+                // Drop favourites whose number isn't a valid US (NANP) number.
+                let valid = favs.filter { $0.hasValidPhone }
+                let sorted = valid.sorted { $0.isAdded && !$1.isAdded }
+                return Self.applySearch(sorted, query: query)
+            }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$filteredFavourites)
+
+        Publishers.CombineLatest($importableContacts, importQuery)
+            .receive(on: work)
+            .map { Self.applySearch($0, query: $1) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$filteredImportable)
     }
-    
+
+    /// Re-reads the live authorization status (call on appear / scene-active).
+    func refreshAuthorization() {
+        authorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
+    }
+
+    /// First-time request: shows the system prompt when undetermined, then loads
+    /// contacts if access (full or limited) was granted.
+    func requestContactAccess() async {
+        if CNContactStore.authorizationStatus(for: .contacts) == .notDetermined {
+            _ = try? await CNContactStore().requestAccess(for: .contacts)
+        }
+        refreshAuthorization()
+        if contactAccess == .full || contactAccess == .limited {
+            await load()
+        }
+    }
+
     // MARK: - Load Device Contacts
     
     func load() async {
@@ -164,7 +302,7 @@ final class ContactViewModel: BaseViewModel {
     // MARK: - Load API Contacts
     
     func loadApiContacts() async {
-        let request = ContactRequest.GetLists(responseFlag: "getnewContact", userAction: "GET_CONTACTS")
+        let request = ContactRequest.GetLists(responseFlag: "getnewContact", userAction: "GET-CONTACTS")
         do {
             let response: ContactListResponse = try await perform {
                 try await self.network.request(ContactAPI.getContacts(request: request))
@@ -186,7 +324,7 @@ final class ContactViewModel: BaseViewModel {
     
     func loadFavourites() async {
         let request = ContactRequest.GetLists(responseFlag: "getFavContact",
-                                              userAction: "GET_FAVOURITES")
+                                              userAction: "GET-FAVOURITES")
         do {
             let response: ContactListResponse = try await perform {
                 try await self.network.request(ContactAPI.getFavourites(request: request))
@@ -206,20 +344,29 @@ final class ContactViewModel: BaseViewModel {
     
     // MARK: - Load Frequent
     
-    func loadFrequent() async {
+    /// Loads recent (frequent) contacts. Returns `true` on success (or cancellation,
+    /// which is not a user-facing failure) and `false` when the request errors, so
+    /// callers can present an error state. `@discardableResult` keeps existing callers
+    /// that ignore the outcome unaffected.
+    @discardableResult
+    func loadFrequent() async -> Bool {
         do {
             let response: RecentTransferResponse = try await perform {
                 try await self.network.request(ContactAPI.getRecent)
             }
-            frequents = response.contacts
+            // Drop frequents whose number isn't a valid US (NANP) number.
+            frequents = response.contacts.filter { $0.hasValidPhone }
             analytics.log(AnalyticsEvent.contactFrequent, params: [
-                AnalyticsParam.count: response.contacts.count
+                AnalyticsParam.count: frequents.count
             ])
+            return true
         } catch is CancellationError {
+            return true
         } catch {
             analytics.log(AnalyticsEvent.contactFrequentFailed, params: [
                 AnalyticsParam.errorCode: error.localizedDescription
             ])
+            return false
         }
     }
     
@@ -240,7 +387,6 @@ final class ContactViewModel: BaseViewModel {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.create(request: request))
             }
-            await loadApiContacts()
             return true
         } catch is CancellationError { return false }
         catch { return false }
@@ -267,7 +413,7 @@ final class ContactViewModel: BaseViewModel {
     // MARK: - Mark Favourite (PATCH by id)
     
     func markFavourite(id: String, isFav: Bool) async {
-        let request = ContactRequest.MarkFavourite(is_fav: isFav, userAction: "ADD_FAVOURITE")
+        let request = ContactRequest.MarkFavourite(is_fav: isFav, userAction: "ADD-FAVOURITE")
         do {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.makeFavourite(id: id, request: request))
@@ -284,7 +430,7 @@ final class ContactViewModel: BaseViewModel {
     }
     
     
-    // MARK: - Private
+    // MARK: - Add Favourite
     
     private func addFavourite(contactId: String, nickname: String, phoneNumber: String) async {
         let request = ContactRequest.AddFavourite(
@@ -312,12 +458,11 @@ final class ContactViewModel: BaseViewModel {
         }
     }
     
+    //MARK: - Remove Favourite
     
     private func removeFavourite(contactId: String) async {
-        let request = ContactRequest.DeleteFavourite(
-            contact_id: contactId,
-            userAction: "DELETE-CONTACT"
-        )
+        let request = ContactRequest.DeleteFavourite(contact_id: contactId,
+                                                     userAction: "DELETE-CONTACT")
         do {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.deleteFavourite(request: request))
@@ -331,6 +476,51 @@ final class ContactViewModel: BaseViewModel {
             analytics.log(AnalyticsEvent.contactRemoveFavoriteFailed, params: [
                 AnalyticsParam.errorCode: error.localizedDescription
             ])
+        }
+    }
+    
+    //MARK: - Referral Invite
+
+    /// People the user has already invited, fetched via GET-REFERRAL-LIST.
+    @Published var referralInvitees: [ReferralInvitee] = []
+
+    /// Loads the referral invite list (`ContactAPI.referrelInviteList`) into
+    /// `referralInvitees`. Used by ShareInviteSheet to show the already-invited list.
+    func loadReferralInvitees() async {
+        do {
+            let response: ReferralInviteListResponse = try await perform {
+                try await self.network.request(ContactAPI.referrelInviteList)
+            }
+            referralInvitees = response.data
+        } catch is CancellationError {
+        } catch {
+            SecureLogger.error("Referral list load failed: \(error.localizedDescription)", category: .network)
+        }
+    }
+
+    /// Notifies the skinny processor that an invite was sent.
+    /// - Returns: the server's success message (`nil` when empty or on failure) so
+    ///   the caller can surface it instead of a hardcoded string.
+    @discardableResult
+    func inviteUser(phone: String, nickname: String? = nil) async -> String? {
+        let request = ContactRequest.Referral(invitee_phone: phone,
+                                              invitee_nickname: nickname,
+                                              userAction: "REFERRAL-INVITE",
+                                              relation: "FRI")
+        do {
+            let response: ContactActionResponse = try await perform {
+                try await self.network.request(ContactAPI.referralInvite(request: request))
+            }
+            // No PII: the invitee's phone number is deliberately NOT logged.
+            analytics.log(AnalyticsEvent.contactReferralInvite)
+            return response.message.isEmpty ? nil : response.message
+        } catch is CancellationError {
+            return nil
+        } catch {
+            analytics.log(AnalyticsEvent.contactReferralInviteFailed, params: [
+                AnalyticsParam.errorCode: error.localizedDescription
+            ])
+            return nil
         }
     }
 }

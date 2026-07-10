@@ -2,7 +2,7 @@
 //  MoveMoneyMenuView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 09/04/26.
+//  Created by Movo Developer on 09/04/26.
 //
 
 import SwiftUI
@@ -17,11 +17,11 @@ private struct ContentHeightKey: PreferenceKey {
 struct MoveMoneyMenuView: View {
 
     let onFundAccount: () -> Void
-    let onTransferMoney: () -> Void
     let onInternalTransfer: () -> Void
 
     @State private var detentHeight: CGFloat = 160
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,17 +37,6 @@ struct MoveMoneyMenuView: View {
                 .padding(.horizontal, Spacing.xxl)
 
             optionRow(
-                icon: "person.2",
-                title: "Pay Anyone",
-                subtitle: "Send to spend",
-                action: onTransferMoney
-            )
-
-            Divider()
-                .background(Color.movo.border)
-                .padding(.horizontal, Spacing.xxl)
-
-            optionRow(
                 icon: "arrow.left.arrow.right",
                 title: "Transfer Money",
                 subtitle: "Move money between your accounts",
@@ -55,7 +44,7 @@ struct MoveMoneyMenuView: View {
                 isLast: true
             )
             
-            Button(action: { dismiss() }) {
+            Button(action: { (securedDismiss ?? dismiss)() }) {
                 Text("Cancel")
             }
             .buttonStyle(OutlineButtonStyle())
@@ -63,7 +52,7 @@ struct MoveMoneyMenuView: View {
             .padding(.bottom, Spacing.sm)
         }
         .padding(.top, Spacing.xxl)
-        .background(Color.movo.background.ignoresSafeArea())
+        .background(Color.movo.cardSurface.ignoresSafeArea())
         .background(
             GeometryReader { geo in
                 Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
@@ -74,7 +63,7 @@ struct MoveMoneyMenuView: View {
         }
         .presentationDetents([.height(detentHeight)])
         .presentationDragIndicator(.visible)
-        .presentationBackground(Color.movo.background)
+        .presentationBackground(Color.movo.cardSurface)
     }
 
     private func optionRow(
@@ -107,9 +96,7 @@ struct MoveMoneyMenuView: View {
                         .foregroundStyle(Color.movo.textSecondary)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
             .padding(.horizontal, Spacing.xxl)
             .padding(.vertical, Spacing.lg)

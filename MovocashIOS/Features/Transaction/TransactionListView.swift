@@ -2,7 +2,7 @@
 //  TransactionListView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 04/05/26.
+//  Created by Movo Developer on 04/05/26.
 //
 
 import SwiftUI
@@ -14,12 +14,60 @@ enum TransactionMode {
     case common
 }
 
+// MARK: - Transaction Sort
+
+/// User-selectable sort options mapped to the server `sortBy` / `sortOrder` params.
+enum TransactionSort: String, CaseIterable, Identifiable {
+    case newest
+    case oldest
+    case amountHigh
+    case amountLow
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .newest:     return "Newest first"
+        case .oldest:     return "Oldest first"
+        case .amountHigh: return "Amount: High to Low"
+        case .amountLow:  return "Amount: Low to High"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .newest:     return "arrow.down"
+        case .oldest:     return "arrow.up"
+        case .amountHigh: return "dollarsign.arrow.circlepath"
+        case .amountLow:  return "dollarsign.circle"
+        }
+    }
+
+    var sortBy: TransactionFilter.SortBy {
+        switch self {
+        case .newest, .oldest:        return .createdAt
+        case .amountHigh, .amountLow: return .amount
+        }
+    }
+
+    var sortOrder: TransactionFilter.SortOrder {
+        switch self {
+        case .newest, .amountHigh: return .desc
+        case .oldest, .amountLow:  return .asc
+        }
+    }
+
+    /// Amount sorts render as a flat list; date sorts keep the day-grouped sections.
+    var isAmountSort: Bool { self == .amountHigh || self == .amountLow }
+}
+
 // MARK: - TransactionListView
 
 struct TransactionListView: View {
     
     @StateObject private var transactionVM: TransactionViewModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @FocusState private var searchFocused: Bool
     
     private let accountId: Int
@@ -28,13 +76,17 @@ struct TransactionListView: View {
     @State private var pendingFilter:   TransactionFilter
     @State private var showFilterSheet  = false
     @State private var activeChipFilter: TransactionChipFilter = .all
-    
+    @State private var activeSort: TransactionSort = .newest
+    @State private var showSortMenu = false
+
     init(container: AppContainer, accountId: Int, mode: TransactionMode = .common, initialMax: Int = 100) {
         self.accountId = accountId
         self.mode = mode
         _transactionVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         var base = TransactionFilter(accountId: accountId)
         base.max = initialMax
+        base.sortBy = TransactionSort.newest.sortBy
+        base.sortOrder = TransactionSort.newest.sortOrder
         _activeFilter  = State(initialValue: base)
         _pendingFilter = State(initialValue: base)
     }
@@ -46,21 +98,28 @@ struct TransactionListView: View {
         return transactionVM.filteredTransactions.filter { activeChipFilter.matches($0) }
     }
     
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMMM d, yyyy"
+        return f
+    }()
+
     private var displayGroups: [(label: String, date: Date, items: [TransactionItem])] {
         let calendar  = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d, yyyy"
+        let formatter = Self.dayFormatter
         let grouped = Dictionary(grouping: chipFilteredTransactions) {
             calendar.startOfDay(for: $0.date)
         }
+        let ascending = activeSort == .oldest
         return grouped.map { date, items in
             let label: String
             if calendar.isDateInToday(date)          { label = "Today" }
             else if calendar.isDateInYesterday(date) { label = "Yesterday" }
             else                                     { label = formatter.string(from: date) }
-            return (label: label, date: date, items: items.sorted { $0.date > $1.date })
+            let sortedItems = items.sorted { ascending ? $0.date < $1.date : $0.date > $1.date }
+            return (label: label, date: date, items: sortedItems)
         }
-        .sorted { $0.date > $1.date }
+        .sorted { ascending ? $0.date < $1.date : $0.date > $1.date }
     }
     
     private var totalMoneyIn: Decimal {
@@ -89,32 +148,40 @@ struct TransactionListView: View {
     var body: some View {
         ZStack {
             MovoBackground()
-            
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     navBar
-                    monthSummary
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.bottom, Spacing.lg - 2)
+//                    monthSummary
+//                        .padding(.horizontal, Spacing.lg)
+//                        .padding(.bottom, Spacing.lg - 2)
                     searchAndFilterRow
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.md)
+                    appliedFiltersSummaryBar
                     filterChipsRow
                         .padding(.bottom, Spacing.md - 2)
-                    
+
                     transactionContent
                 }
             }
+
+            StatusBarScrim()
         }
         .background(Color.movo.background)
+        .trackScreen(AnalyticsScreen.transactionHistory)
         .sheet(isPresented: $showFilterSheet) {
             TransactionFilterView(filter: $pendingFilter, showLast4: mode == .common) {
                 activeFilter = pendingFilter
+                // Move the chip row to the tab that matches the applied status
+                // filter (All / Pending / Settled).
+                activeChipFilter = chipFilter(for: activeFilter.transactionStatus)
                 Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
             } onReset: {
-                pendingFilter = TransactionFilter(accountId: accountId)
+                pendingFilter = freshFilter()
                 activeFilter  = pendingFilter
+                activeChipFilter = .all
                 Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
                 showFilterSheet = false
             } onCancel: {
@@ -124,10 +191,6 @@ struct TransactionListView: View {
             .presentationDragIndicator(.visible)
         }
         .task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-            showFilterSheet = false
-            dismiss()
-        }
     }
     
     // MARK: - Content
@@ -136,11 +199,62 @@ struct TransactionListView: View {
     private var transactionContent: some View {
         if transactionVM.state == .loading && transactionVM.transactions.isEmpty {
             loadingSkeleton
-        } else if displayGroups.isEmpty {
+        } else if chipFilteredTransactions.isEmpty {
             emptyState
+        } else if activeSort.isAmountSort {
+            flatList
         } else {
             transactionList
         }
+    }
+
+    /// Bottom sentinel that drives infinite scroll. Placed as the last element of a
+    /// LazyVStack so its `onAppear` fires only when scrolled near the end. Shows a
+    /// spinner while the next page loads.
+    @ViewBuilder
+    private var paginationFooter: some View {
+        if transactionVM.isLoadingMore {
+            ProgressView()
+                .tint(Color.movo.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.md)
+        }
+        Color.clear
+            .frame(height: 1)
+            .onAppear { Task { await transactionVM.loadNextPage() } }
+    }
+
+    // MARK: - Flat List (amount sort)
+
+    private var flatList: some View {
+        let items = chipFilteredTransactions
+        return LazyVStack(spacing: 0) {
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    TransactionRow(item: item, action: {})
+
+                    if index < items.count - 1 {
+                        Rectangle()
+                            .fill(Color.movo.border)
+                            .frame(height: Stroke.hairline)
+                            .padding(.leading, Spacing.md + 2 + 38 + Spacing.md)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .fill(Color.movo.surface.opacity(0.85))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Radius.heroCard))
+            .padding(.horizontal, Spacing.lg)
+
+            paginationFooter
+        }
+        .padding(.bottom, Spacing.md)
     }
     
     // MARK: - Transaction List
@@ -188,7 +302,7 @@ struct TransactionListView: View {
                             .textStyle(Typography.eyebrow)
                             .foregroundColor(Color.movo.textTertiary)
                         Spacer()
-                        dayTotalsLabel(for: group.items)
+                        //dayTotalsLabel(for: group.items)
                     }
                     .padding(.horizontal, Spacing.lg)
                     
@@ -217,10 +331,12 @@ struct TransactionListView: View {
                     .padding(.horizontal, Spacing.lg)
                 }
             }
+
+            paginationFooter
         }
         .padding(.bottom, Spacing.md)
     }
-    
+
     // MARK: - Transaction Row
     
     private struct TransactionRow: View {
@@ -340,10 +456,14 @@ struct TransactionListView: View {
         
         // MARK: Subtitle
         
-        private var combinedSubtitle: String {
+        private static let timeFormatter: DateFormatter = {
             let f = DateFormatter()
             f.dateFormat = "h:mm a"
-            let time = f.string(from: item.date)
+            return f
+        }()
+
+        private var combinedSubtitle: String {
+            let time = Self.timeFormatter.string(from: item.date)
             return item.subtitle.isEmpty ? time : "\(item.subtitle) · \(time)"
         }
         
@@ -377,11 +497,11 @@ struct TransactionListView: View {
                 .foregroundColor(Color.movo.textTertiary)
             
             VStack(spacing: Spacing.sm) {
-                Text(noFilters ? "No transactions yet" : "No results found")
+                Text(noFilters ? "No activity yet" : "No results found")
                     .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
                 Text(noFilters
-                     ? "Your transactions will appear here once activity begins."
+                     ? "Your activity will appear here once it begins."
                      : "Try adjusting your search or clearing the filters.")
                 .textStyle(Typography.caption)
                 .foregroundColor(Color.movo.textTertiary)
@@ -391,7 +511,7 @@ struct TransactionListView: View {
             
             if activeFilter.hasActiveFilters || activeChipFilter != .all {
                 Button {
-                    activeFilter      = TransactionFilter(accountId: accountId)
+                    activeFilter      = freshFilter()
                     pendingFilter     = activeFilter
                     activeChipFilter  = .all
                     Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
@@ -447,9 +567,9 @@ extension TransactionListView {
     
     private var navBar: some View {
         HStack {
-            CircularNavButton(systemName: "chevron.left") { dismiss() }
+            CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
             Spacer()
-            Text("Transactions")
+            Text("Activity")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
@@ -492,7 +612,7 @@ extension TransactionListView {
                 
                 TextField("",
                           text: $transactionVM.searchText,
-                          prompt: Text("Search transactions, merchants…")
+                          prompt: Text("Search activity, merchants…")
                     .foregroundColor(Color.movo.textDisabled))
                 .textStyle(Typography.bodyCompact)
                 .foregroundColor(Color.movo.textPrimary)
@@ -510,11 +630,261 @@ extension TransactionListView {
                     )
             )
             
+            sortMenu
+
             FilterIconButton(activeCount: activeFilterCount) {
                 pendingFilter   = activeFilter
                 showFilterSheet = true
             }
         }
+    }
+
+    // MARK: - Applied Filters
+
+    /// Scrollable row of removable chips, one per active Filter-sheet selection,
+    /// shown below the search bar. Tapping a chip's ✕ clears that filter from the
+    /// active (and pending) filter state and reloads the list from the API.
+    /// Hidden when no filters are applied.
+    @ViewBuilder
+    private var appliedFiltersSummaryBar: some View {
+        let chips = appliedFilterChips
+        if !chips.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(chips) { chip in
+                        AppliedFilterChipView(label: chip.label) {
+                            removeFilter(chip)
+                        }
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+            }
+            .padding(.bottom, Spacing.sm)
+        }
+    }
+
+    /// Clears one filter dimension from both the active and pending filters, then
+    /// reloads transactions so the list reflects the change immediately.
+    private func removeFilter(_ chip: AppliedFilterChip) {
+        chip.clear(&activeFilter)
+        chip.clear(&pendingFilter)
+        // Clearing the status filter returns the chip row to the All tab so a
+        // lingering tab selection doesn't keep filtering the results.
+        if chip.id == "status" { activeChipFilter = .all }
+        Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
+    }
+
+    /// Maps an applied `transactionStatus` to the matching chip-row tab. Statuses
+    /// without a dedicated chip (e.g. "Failed") fall back to All so the client-side
+    /// chip filter doesn't hide the server's results.
+    private func chipFilter(for status: String) -> TransactionChipFilter {
+        switch status.lowercased() {
+        case "pending": return .pending
+        case "settled": return .settled
+        default:        return .all
+        }
+    }
+
+    private static let summaryDateParser: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f
+    }()
+
+    private static let summaryDateDisplay: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMM d"; return f
+    }()
+
+    /// Turns an "yyyy-MM-dd" filter date into a friendly label, falling back to
+    /// the raw string if it can't be parsed.
+    private func friendlyFilterDate(_ raw: String) -> String {
+        guard let date = Self.summaryDateParser.date(from: raw) else { return raw }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date)     { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        return Self.summaryDateDisplay.string(from: date)
+    }
+
+    /// Display value for the Date chip (single day, range, or open-ended).
+    private var dateChipValue: String {
+        if !activeFilter.onDate.isEmpty { return friendlyFilterDate(activeFilter.onDate) }
+        let from = activeFilter.fromDate
+        let to   = activeFilter.toDate
+        if !from.isEmpty, !to.isEmpty {
+            return from == to
+                ? friendlyFilterDate(from)
+                : "\(friendlyFilterDate(from)) – \(friendlyFilterDate(to))"
+        } else if !from.isEmpty {
+            return "From \(friendlyFilterDate(from))"
+        } else {
+            return "Until \(friendlyFilterDate(to))"
+        }
+    }
+
+    /// Display value for the Amount chip (exact, range, or open-ended).
+    private var amountChipValue: String {
+        if let amount = activeFilter.amount { return "$\(Int(amount))" }
+        let lo = activeFilter.minAmount.map { "$\(Int($0))" }
+        let hi = activeFilter.maxAmount.map { "$\(Int($0))" }
+        switch (lo, hi) {
+        case let (l?, h?):  return "\(l) – \(h)"
+        case let (l?, nil): return "≥ \(l)"
+        case let (nil, h?): return "≤ \(h)"
+        default:            return ""
+        }
+    }
+
+    /// One chip per active filter dimension, each carrying the closure that
+    /// clears it from a `TransactionFilter`.
+    private var appliedFilterChips: [AppliedFilterChip] {
+        var chips: [AppliedFilterChip] = []
+
+        if !activeFilter.onDate.isEmpty || !activeFilter.fromDate.isEmpty || !activeFilter.toDate.isEmpty {
+            chips.append(AppliedFilterChip(id: "date", label: "Date: \(dateChipValue)") {
+                $0.onDate = ""; $0.fromDate = ""; $0.toDate = ""
+            })
+        }
+        if !activeFilter.transactionStatus.isEmpty {
+            chips.append(AppliedFilterChip(id: "status", label: "Status: \(activeFilter.transactionStatus)") {
+                $0.transactionStatus = ""
+            })
+        }
+        if activeFilter.amount != nil || activeFilter.minAmount != nil || activeFilter.maxAmount != nil {
+            chips.append(AppliedFilterChip(id: "amount", label: "Amount: \(amountChipValue)") {
+                $0.amount = nil; $0.minAmount = nil; $0.maxAmount = nil
+            })
+        }
+        if !activeFilter.merchantName.isEmpty {
+            chips.append(AppliedFilterChip(id: "search", label: "Search: \(activeFilter.merchantName)") {
+                $0.merchantName = ""
+            })
+        }
+        if !activeFilter.last4.isEmpty {
+            chips.append(AppliedFilterChip(id: "card", label: "Card: ••\(activeFilter.last4)") {
+                $0.last4 = ""
+            })
+        }
+        return chips
+    }
+
+    /// A single removable applied-filter chip descriptor.
+    private struct AppliedFilterChip: Identifiable {
+        let id: String
+        let label: String
+        let clear: (inout TransactionFilter) -> Void
+    }
+
+    private struct AppliedFilterChipView: View {
+        let label: String
+        let onRemove: () -> Void
+
+        var body: some View {
+            HStack(spacing: 5) {
+                Text(label)
+                    .textStyle(Typography.captionSmall)
+                    .foregroundColor(Color.movo.accent)
+                    .lineLimit(1)
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(Color.movo.textSecondary)
+                        // Padding + contentShape widen the tap target beyond the
+                        // 9pt glyph without enlarging the visible chip.
+                        .padding(.vertical, 4)
+                        .padding(.trailing, 2)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.leading, Spacing.md)
+            .padding(.trailing, Spacing.sm + 2)
+            .padding(.vertical, 7)
+            .background(
+                Capsule()
+                    .fill(Color.movo.accentTint)
+                    .overlay(
+                        Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
+                    )
+            )
+        }
+    }
+
+    private var sortMenu: some View {
+        Button {
+            showSortMenu = true
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.movo.textSecondary)
+                .frame(width: 38, height: 38)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.button)
+                        .fill(Color.movo.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        // Custom popover instead of a native `Menu` so the option text can be
+        // styled with the app typography — a native menu is system-rendered and
+        // ignores custom fonts/colors. `.presentationCompactAdaptation(.popover)`
+        // keeps it as an anchored dropdown on iPhone rather than a sheet.
+        .popover(isPresented: $showSortMenu) {
+            sortMenuContent
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private var sortMenuContent: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(TransactionSort.allCases.enumerated()), id: \.offset) { index, option in
+                Button {
+                    applySort(option)
+                    showSortMenu = false
+                } label: {
+                    HStack(spacing: Spacing.md) {
+                        Image(systemName: option == activeSort ? "checkmark" : option.systemImage)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(option == activeSort ? Color.movo.accent : Color.movo.textSecondary)
+                            .frame(width: 20)
+                        Text(option.label)
+                            .textStyle(Typography.subtitle)
+                            .foregroundColor(option == activeSort ? Color.movo.textPrimary : Color.movo.textSecondary)
+                        Spacer(minLength: Spacing.xl)
+                    }
+                    .padding(.vertical, Spacing.sm + 2)
+                    .padding(.horizontal, Spacing.md)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if index < TransactionSort.allCases.count - 1 {
+                    Divider().overlay(Color.movo.border)
+                }
+            }
+        }
+        .frame(minWidth: 240)
+        .background(Color.movo.surface)
+        .presentationBackground(Color.movo.surface)
+    }
+
+    /// A cleared filter that preserves the current sort selection.
+    private func freshFilter() -> TransactionFilter {
+        var f = TransactionFilter(accountId: accountId)
+        f.sortBy    = activeSort.sortBy
+        f.sortOrder = activeSort.sortOrder
+        return f
+    }
+
+    /// Applies a new sort: updates the active/pending filters and reloads from page 0.
+    private func applySort(_ option: TransactionSort) {
+        guard option != activeSort else { return }
+        activeSort = option
+        activeFilter.sortBy     = option.sortBy
+        activeFilter.sortOrder  = option.sortOrder
+        pendingFilter.sortBy    = option.sortBy
+        pendingFilter.sortOrder = option.sortOrder
+        Task { await transactionVM.loadTransactionsFiltered(filter: activeFilter) }
     }
     
     private var filterChipsRow: some View {
@@ -524,7 +894,7 @@ extension TransactionListView {
                     FilterChip(
                         filter:   chip,
                         isActive: activeChipFilter == chip,
-                        count:    chip == .all ? transactionVM.totalCount : nil,
+                        count:    chip == .all ? (transactionVM.totalRecords ?? transactionVM.totalCount) : nil,
                         action:   { activeChipFilter = chip }
                     )
                 }

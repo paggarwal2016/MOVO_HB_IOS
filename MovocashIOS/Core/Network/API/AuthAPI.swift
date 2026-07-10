@@ -12,13 +12,15 @@ enum AuthAPI: Endpoint {
     case messengerOTP(request: MessengerOTPRequest)
     case tokenSMS(request: TokenSMSRequest)
     case emailOTP(request: EmailVerifyRequest)
-    case emailVerify(request: EmailOTPRequest)
+    case emailVerify(request: EmailVerifyRequest)
     case tokenAccess
     case acceptAgreements
     case enrollRSA(request: RSAEnrollRequest)
     case tokenRSA(request: RSATokenRequest)
     case nonceRSA(request: RSANonceRequest)
+    case deviceConfig
     case logout
+    case waitList(request: WaitListRequest)
     
     var isAuth: Bool { true }
 
@@ -37,7 +39,9 @@ enum AuthAPI: Endpoint {
         case .enrollRSA:         return "/rsa"
         case .tokenRSA:          return "/auth/token-rsa"
         case .nonceRSA:          return "/rsa/nonce"
+        case .deviceConfig:      return "/get/config"//"/device/config"
         case .logout:            return "/auth/logout"
+        case .waitList:          return "/waitlist/join"
         }
     }
 
@@ -45,34 +49,31 @@ enum AuthAPI: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .messengerOTP, .tokenSMS, .tokenAccess,
-                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements:
+                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements, .waitList:
             return .POST
+        case .deviceConfig:
+            return .GET
         }
     }
 
     // MARK: - Header Configure
     var headerType: HeaderType {
         switch self {
-        case .messengerOTP:
-            return .default
-        case .tokenSMS:
-            return .movoInfos
-        case .emailOTP:
-            return .movoAuthorized
-        case .emailVerify:
-            return .movoAuthorized
-        case .tokenAccess:
-            return .movoAuthorized
-        case .acceptAgreements:
-            return .movoAuthorized
-        case .enrollRSA:
-            return .movoAuthorized
-        case .nonceRSA:
-            return .movoInfos
-        case .tokenRSA:
-            return .movoInfos
-        case .logout:
-            return .movoAuthorized
+        case .messengerOTP,
+             .nonceRSA,
+             .deviceConfig:
+            return [.officeId]
+        case .tokenSMS,
+             .tokenRSA,
+             .waitList:
+            return [.officeId, .secureDeviceInfo]
+        case .emailOTP,
+             .emailVerify,
+             .tokenAccess,
+             .acceptAgreements,
+             .enrollRSA,
+             .logout:
+            return [.session, .secureDeviceInfo, .officeId]
         }
     }
     
@@ -86,7 +87,7 @@ enum AuthAPI: Endpoint {
         }
     }
     
-    private func encodeBody() throws -> Data {
+    private func encodeBody() throws -> Data? {
         switch self {
         case .messengerOTP(let request):
             return try JSONEncoder().encode(request)
@@ -98,10 +99,10 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .tokenAccess:
             let request = UserActionRequest(
-                userAction: "GET_ACCESS_TOKEN")
+                userAction: "GET-ACCESS-TOKEN")
             return try JSONEncoder().encode(request)
         case .acceptAgreements:
-            let request = AgreementRequest(accepted: true, Agreement: [Agreement(AgreementType: .ecc, action: .accepted), Agreement(AgreementType: .tos, action: .accepted), Agreement(AgreementType: .virtualCardTos, action: .accepted)], userAction: "AGREEMENT")
+            let request = AgreementRequest(accepted: true, Agreement: [Agreement(AgreementType: .tos, action: .accepted)], userAction: "AGREEMENT")
             return try JSONEncoder().encode(request)
         case .enrollRSA(let request):
             return try JSONEncoder().encode(request)
@@ -109,9 +110,13 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .nonceRSA(let request):
             return try JSONEncoder().encode(request)
+        case .deviceConfig:
+            return nil
         case .logout:
             let request = UserActionRequest(
                 userAction: "LOGOUT")
+            return try JSONEncoder().encode(request)
+        case .waitList(let request):
             return try JSONEncoder().encode(request)
         }
     }

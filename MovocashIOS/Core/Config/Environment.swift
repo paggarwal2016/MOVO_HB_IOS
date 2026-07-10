@@ -7,13 +7,66 @@
 
 import Foundation
 
+// MARK: - Environment Type
+enum AppEnvironmentType {
+    case production
+    case staging
+    case dev
+
+    var baseURLString: String {
+        switch self {
+        case .production: return "https://api.movo.money"
+        case .staging:    return "https://api-staging.movocash.com"
+        case .dev:        return "https://api.dev.movo.money"
+        }
+    }
+
+    var sdkURLString: String {
+        switch self {
+        case .production:
+            return "https://api.mobile-banking-prod.herringbank.com"
+        case .staging, .dev:
+            return "https://api.qa.herringbank.com"
+        }
+    }
+
+    var officeId: String {
+        switch self {
+        case .production:       return "5"
+        case .staging, .dev:    return "3"
+        }
+    }
+    
+    var cryptoKey: String {
+        switch self {
+        case .production:       return "kmFXWgS7Y3Hn2fnwG6EemF8gtkmLLySmrh4PloQH4gM="
+        case .staging, .dev:    return "iWXqDFMh19wGaaloJs8SG7/aWNmJJx9JjkJ9Pgju8no="
+        }
+    }
+
+    // MARK: - SSL Pinning
+    var pinnedCertificateNames: String {
+        switch self {
+        case .dev:        return "dev-server"
+        case .staging:    return ""
+        case .production: return "prod-server"
+        }
+    }
+}
+
+
+
+
+
+
+
 // MARK: - AppEnvironment
 struct AppEnvironment {
     private init() {}
-    
-    static let baseURL: URL = makeURL("https://api-staging.movocash.com") // SP URL
-    static let sdkURL: String = "https://api.qa.herringbank.com"          // SDK URL
-    
+    static let current: AppEnvironmentType = .dev // 🔁 Switch the Environment
+    static let baseURL: URL   = makeURL(current.baseURLString)
+    static let sdkURL: String = current.sdkURLString
+
     private static func makeURL(_ string: String) -> URL {
         guard let url = URL(string: string) else {
             assertionFailure("Invalid URL configuration: \(string)")
@@ -24,20 +77,25 @@ struct AppEnvironment {
 }
 
 // MARK: - API Version
-
 enum APIVersion: String {
     case v1 = "v1"
 }
-
-
 
 // MARK: - AppConfig
 final class AppConfig {
     private init() {}
     
-    static let baseURL: URL    = AppEnvironment.baseURL
-    static let sdkURL: String  = AppEnvironment.sdkURL
-    static let officeId: String = "3"
+    static let baseURL: URL      = AppEnvironment.baseURL
+    static let sdkURL: String    = AppEnvironment.sdkURL
+    static let officeId: String  = AppEnvironment.current.officeId
+    static let cryptoKey: String = AppEnvironment.current.cryptoKey
+    
+    /// App screen protection screenshot / record
+    static let isScreenProtectionEnabled: Bool = false
+
+    /// SSL pinning enable
+    static let isSSLPinningEnabled: Bool = true
+
+    /// SSL pinning certificate name
+    static let pinnedCertificateName: String   = AppEnvironment.current.pinnedCertificateNames
 }
-
-

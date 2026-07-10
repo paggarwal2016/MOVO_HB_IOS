@@ -18,6 +18,7 @@ struct MovocashIOSApp: App {
     @StateObject private var lockVM: AppLockViewModel
     @StateObject private var kycVM: KYCViewModel
     @StateObject private var pushManager: PushManager
+    @StateObject private var idleTimer: IdleTimerManager = IdleTimerManager()
     init() {
         let c = AppContainer()
         let state = AppState()
@@ -49,26 +50,32 @@ struct MovocashIOSApp: App {
             RootView(kycVM: kycVM)
                 .environmentObject(appState)
                 .environmentObject(container)
+                .environmentObject(container.primaryCardStore)
                 .environmentObject(lockManager)
                 .environmentObject(authVM)
                 .environmentObject(userVM)
                 .environmentObject(lockVM)
                 .environmentObject(container.sessionManager)
                 .environmentObject(pushManager)
+                .environmentObject(idleTimer)
                 .networkMonitor(state: appState)
                 .globalToast()
                 .globalAlert()
+                .sensitiveScreen() // Layer 2: shield during recording + app-switcher (whole app)
+                .secured(forwardDismiss: false) // Layer 1: blank screenshots & recordings of the main hierarchy
                 .task {
                     await StartupRouter.postBootstrap(
                         appState: appState,
                         keychain: KeychainManager.shared,
                         kycManager: container.kycManager,
                         analytics: container.analytics,
+                        // Device-session config is fetched only during login (after OTP),
+                        // so it is intentionally not warmed up at bootstrap anymore.
                         biometricAuthenticate: {
                             #if targetEnvironment(simulator)
                             return false
                             #else
-                            return await authVM.loginWithBiometric(appState: appState)
+                            return await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
                             #endif
                         }
                     )

@@ -13,14 +13,17 @@ final class VCardViewModel: BaseViewModel {
     
     private let network: NetworkServiceProtocol
     private let analytics: AnalyticsTracking
+    private let primaryCardStore: PrimaryCardStore?
 
     init(
         network: NetworkServiceProtocol,
         alertManager: AlertManagerProtocol,
-        analytics: AnalyticsTracking? = nil
+        analytics: AnalyticsTracking? = nil,
+        primaryCardStore: PrimaryCardStore? = nil
     ) {
         self.network = network
         self.analytics = analytics ?? AnalyticsManager.shared
+        self.primaryCardStore = primaryCardStore
         super.init(alertManager: alertManager)
     }
 
@@ -32,7 +35,8 @@ final class VCardViewModel: BaseViewModel {
 
     func loadCards(primaryAccountId: Int? = nil) async {
         do {
-            let all = try await getVCardsAll()
+            // Only enabled (active) cards are shown and used.
+            let all = try await getVCardsAll().filter { $0.enabled == true }
             if let accountId = primaryAccountId {
                 primaryLinkedCard = all.first { $0.savingsAccountId == accountId }
                 apiCards = all.filter { $0.savingsAccountId != accountId }
@@ -40,6 +44,7 @@ final class VCardViewModel: BaseViewModel {
                 primaryLinkedCard = nil
                 apiCards = all
             }
+            if let primaryLinkedCard { primaryCardStore?.update(primaryLinkedCard) }
         } catch {
             // Error already surfaced by perform(_:) in getVCardsAll
         }
@@ -87,7 +92,9 @@ final class VCardViewModel: BaseViewModel {
                 print("[VCard decrypt]", json)
             }
 #endif
-            return try JSONDecoder().decode(VCardListResponse.self, from: plainData)
+            let card = try JSONDecoder().decode(VCardListResponse.self, from: plainData)
+            primaryCardStore?.update(card)
+            return card
         } catch NetworkError.noContent {
             return nil
         } catch {
@@ -173,7 +180,7 @@ final class VCardViewModel: BaseViewModel {
         }
     }
     
-    func createVCard(request: CreateVCardRequest) async throws -> VCardsList {
+    func createVCard(request: CreateVCardRequest) async throws -> VCardListResponse {
         do {
             let envelope: CreateVCardEncryptedResponse = try await perform {
                 try await self.network.request(VCardAPI.createVCard(request: request))
@@ -187,14 +194,12 @@ final class VCardViewModel: BaseViewModel {
                 print("[VCard decrypt]", json)
             }
 #endif
-            let card = try JSONDecoder().decode(VCardsList.self, from: plainData)
-            analytics.log(AnalyticsEvent.vcardCreated, params: [
-                AnalyticsParam.accountName: request.nickname
-            ])
+            let card = try JSONDecoder().decode(VCardListResponse.self, from: plainData)
+            analytics.log(AnalyticsEvent.vcardCreated)
             return card
         } catch {
             analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
-                AnalyticsParam.accountName: request.nickname
+                AnalyticsParam.errorCode: error.localizedDescription
             ])
             throw error
         }

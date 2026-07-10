@@ -46,7 +46,7 @@ enum BiometricError: LocalizedError {
         switch self {
         case .notAvailable:  return "Biometric authentication is not available"
         case .notEnrolled:   return "No biometric data is enrolled on this device"
-        case .lockout:       return "Biometrics are locked. Please use your passcode."
+        case .lockout:       return "Biometrics are locked. Unlock your phone with your passcode, then try again."
         case .userCancel:    return "Authentication was cancelled"
         case .userFallback:  return "Use passcode instead"
         case .systemCancel:  return "Authentication was cancelled by the system"
@@ -165,7 +165,7 @@ final class BiometricManager: BiometricManaging, Sendable {
     /// Throws `BiometricError` on failure. Returns normally on success.
     func evaluate(reason: String) async throws {
         let ctx = LAContext()
-        ctx.localizedFallbackTitle = "Use Passcode"   // shown below biometric prompt
+        ctx.localizedFallbackTitle = ""
         ctx.localizedCancelTitle   = "Cancel"
 
         do {

@@ -13,6 +13,7 @@ enum AchAPI: Endpoint {
     case getAccounts
     case deleteAccount(id: Int)
     case updateAccount(id: Int)
+    case achPlaidAccount(request: PlaidAccountRequest)
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -25,6 +26,7 @@ enum AchAPI: Endpoint {
         case .getAccounts:              return "/ach/account"
         case .deleteAccount(let id):    return "/ach/account/\(id)"
         case .updateAccount(let id):    return "/ach/account/\(id)"
+        case .achPlaidAccount:          return "/ach/plaid/accounts"
         }
     }
     
@@ -32,7 +34,7 @@ enum AchAPI: Endpoint {
     
     var method: HTTPMethod {
         switch self {
-        case .initiateTransfer:  return .POST
+        case .initiateTransfer, .achPlaidAccount:  return .POST
         case .getAccounts:       return .PUT
         case .deleteAccount:     return .DELETE
         case .updateAccount:     return .PATCH
@@ -44,11 +46,9 @@ enum AchAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .initiateTransfer:
-            return [.session, .movoInfo, .Idempotency, .officeId]
-        case .getAccounts:
-            return .movoAuthorized
-        case .deleteAccount, .updateAccount:
-            return .movoAuthorized
+            return [.session, .secureDeviceInfo, .Idempotency, .officeId]
+        case .getAccounts, .deleteAccount, .updateAccount, .achPlaidAccount:
+            return [.session, .secureDeviceInfo, .officeId]
         }
     }
     
@@ -69,6 +69,8 @@ enum AchAPI: Endpoint {
                 return try JSONEncoder().encode(UserActionRequest(userAction: "DELETE-ACH-ACCOUNTS"))
             case .updateAccount:
                 return try JSONEncoder().encode(UserActionRequest(userAction: "SET-DEFAULT-ACCOUNT"))
+            case .achPlaidAccount(let request):
+                return try JSONEncoder().encode(request)
             }
         }
     }

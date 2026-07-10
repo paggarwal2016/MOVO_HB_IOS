@@ -54,9 +54,7 @@ struct StatusRow: View {
                 .clipShape(Capsule())
                 
                 if action != nil {
-                    Image(systemName: "chevron.right")
-                        .font(.caption2)
-                        .foregroundStyle(Color.movo.textDisabled)
+                    MovoChevron(.disclosure, color: Color.movo.textDisabled)
                 }
             }
         }

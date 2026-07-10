@@ -109,9 +109,7 @@ struct CustomCardView: View {
             revealedCard = try await vm.getVCardPrimary()?.data
             showCardDetail = true
         } catch {
-            if error.shouldShowUserFacingToast {
-                ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
-            }
+            // error surfaced via BaseViewModel toast
         }
     }
 }

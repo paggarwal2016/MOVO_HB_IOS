@@ -2,7 +2,7 @@
 //  CardVcard.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 30/04/26.
+//  Created by Movo Developer on 30/04/26.
 //
 
 import Foundation
@@ -11,52 +11,173 @@ import SwiftUI
 // MARK: - Card Item
 
 struct CardItemView: View {
-    
+
     let card: VCardListResponse
     let isSelected: Bool
-    
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                .fill(Color.movo.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
-                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
-                )
+    /// Wired to the pre-existing card-detail handler in CardSelectorView / DashboardView.
+    /// Nil-safe — nothing breaks if no handler is provided.
+    var onDetail: (() -> Void)? = nil
 
-            VStack(alignment: .leading, spacing: 0) {
-                
-                // Icon + card name
-                HStack(spacing: 6) {
-                    Image(systemName: "creditcard")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(Color.movo.textTertiary)
-                    Text((card.savingsAccountNickname ?? card.name ?? card.displayName).uppercased())
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(0.9)
-                        .foregroundColor(Color.movo.textTertiary)
-                    Spacer()
-                }
-                
-                Spacer().frame(height: Spacing.md)
-                
-                // Balance amount
-                Text(card.displayBalance)
-                    .font(.system(size: 28, weight: .bold).monospacedDigit())
-                    .tracking(-0.6)
-                    .foregroundColor(Color.movo.textPrimary)
-                
-                Spacer()
-                
-                // Type · masked number
-                Text("VIRTUAL  ·  \(card.maskedNumber)")
-                    .font(.system(size: 11, weight: .medium))
-                    .tracking(0.5)
-                    .foregroundColor(Color.movo.textTertiary)
+    private var cardName: String {
+        (card.savingsAccountNickname ?? card.name ?? card.displayName).uppercased()
+    }
+
+    var body: some View {
+        ZStack {
+            // ── Layer 1: surface gradient (topLeading → bottomTrailing) ──
+            cardSurface
+
+            // ── Layer 2: silver sheen — top-leading light sweep ──────────
+            silverSheen
+
+            // ── Layer 3: hairline top edge ────────────────────────────────
+            hairlineEdge
+
+            // ── Layer 5: content ──────────────────────────────────────────
+            VStack(spacing: 0) {
+                faceContent
+                    .frame(maxHeight: .infinity)
+                linkRow
             }
-            .padding(Spacing.lg)
         }
-        .frame(height: 145)
+        .frame(height: 165)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
+                .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: Stroke.hairline)
+        )
+    }
+
+    // MARK: - Face content (data only — no background)
+
+    private var faceContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+
+            // Top row: small M mark + card name + Virtual pill
+            HStack(spacing: Spacing.xs) {
+            MovoMVSymbol()
+                    .frame(width: 19, height: 19)
+                Text(cardName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .tracking(0.9)
+                    .foregroundColor(Color.movo.textPrimary)
+                    .lineLimit(1)
+                Spacer()
+                virtualPill
+            }
+
+            Spacer()
+
+            // Balance — tight, cents de-emphasised
+            styledBalance
+
+            Spacer().frame(height: Spacing.sm)
+
+            // Footer: masked number — silver neutral
+            Text(card.maskedNumber)
+                .font(.system(size: 15, weight: .medium))
+                .tracking(0.7)
+                .foregroundColor(DesignTokens.Palette.silverTint.color)
+        }
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .drawingGroup()
+    }
+
+    // MARK: - Surface layers
+
+    /// LinearGradient: topLeading → bottomTrailing, three locked-dark stops.
+    private var cardSurface: some View {
+        LinearGradient.cardVoid
+    }
+
+    /// Faint silver light sweep anchored to top-leading corner.
+    private var silverSheen: some View {
+        RadialGradient(
+            colors: [
+                DesignTokens.Palette.silverTint.color.opacity(0.06),
+                .clear
+            ],
+            center:      UnitPoint(x: 0.08, y: 0.08),
+            startRadius: 0,
+            endRadius:   120
+        )
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Hairline top edge
+
+    /// 1pt silver gradient rule near the top: clear → silver 22% → clear.
+    /// Inset 24pt each side. Purely decorative.
+    private var hairlineEdge: some View {
+        LinearGradient(
+            colors: [
+                .clear,
+                DesignTokens.Palette.silverTint.color.opacity(0.22),
+                .clear
+            ],
+            startPoint: .leading,
+            endPoint:   .trailing
+        )
+        .frame(height: 1)
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Styled balance
+
+    /// Tight balance display: full-weight dollars + de-emphasised cents.
+    /// Falls back to a single Text if the value has no decimal point.
+    @ViewBuilder
+    private var styledBalance: some View {
+        let raw = card.displayBalance
+            .trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: " ", with: "")
+        if let dotIdx = raw.lastIndex(of: ".") {
+            let dollars = String(raw[raw.startIndex...dotIdx])
+            let cents   = String(raw[raw.index(after: dotIdx)...])
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text(dollars)
+                    .font(.system(size: 38, weight: .bold).monospacedDigit())
+                    .tracking(-0.5)
+                    .foregroundColor(Color.movo.textPrimary)
+                Text(cents)
+                    .font(.system(size: 30, weight: .semibold).monospacedDigit())
+                    .foregroundColor(Color.movo.textPrimary)
+            }
+        } else {
+            Text(raw)
+                .font(.system(size: 38, weight: .bold).monospacedDigit())
+                .tracking(-0.5)
+                .foregroundColor(Color.movo.textPrimary)
+        }
+    }
+
+    // MARK: - Virtual pill
+
+    private var virtualPill: some View {
+        MovoTypeBadge("VIRTUAL")
+    }
+
+    // MARK: - Link row
+
+    /// Full-width tappable row. Fires the pre-existing card-detail handler.
+    private var linkRow: some View {
+        HStack(spacing: Spacing.xs) {
+            Text("LET'S MOVO")
+                .textStyle(Typography.eyebrow)
+                .foregroundColor(Color.movo.accent)
+            Spacer()
+            MovoChevron(.cta)
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
+        .padding(.bottom, 5)
+        .frame(maxWidth: .infinity)
+        .drawingGroup()
+        .contentShape(Rectangle())
+        .onTapGesture { onDetail?() }
     }
 }
 
@@ -79,7 +200,7 @@ struct CardSelectorView: View {
     var body: some View {
         GeometryReader { geo in
 
-            let cardWidth = geo.size.width - 56
+            let cardWidth = cards.count == 1 ? geo.size.width : geo.size.width - 56
             let cardStride = cardWidth + 8
             let visibleCards = Array(cards.prefix(CardSelectorView.maxVisible))
             let hasMore = cards.count > CardSelectorView.maxVisible
@@ -89,8 +210,7 @@ struct CardSelectorView: View {
                 // Header
                 HStack {
                     Text(sectionTitle.uppercased())
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(1.2)
+                        .textStyle(Typography.eyebrow)
                         .foregroundColor(Color.movo.textTertiary)
 
                     Button(action: onTap) {
@@ -100,9 +220,7 @@ struct CardSelectorView: View {
                     Spacer()
                     if hasMore {
                         Button(action: { onShowMore?() }) {
-                            Text("See all (\(cards.count))")
-                                .textStyle(Typography.button)
-                                .foregroundStyle(Color.movo.accent)
+                            Eyebrow("SEE ALL")
                         }
                         .buttonStyle(.plain)
                     }
@@ -113,7 +231,8 @@ struct CardSelectorView: View {
                     ForEach(visibleCards.indices, id: \.self) { index in
                         CardItemView(
                             card: visibleCards[index],
-                            isSelected: selectedIndex == index
+                            isSelected: selectedIndex == index,
+                            onDetail: { onEyeTap?(visibleCards[index]) }
                         )
                         .frame(width: cardWidth)
                         .onTapGesture {
@@ -122,7 +241,7 @@ struct CardSelectorView: View {
                             } else {
                                 let peek: CGFloat = index == 0 ? 0 : 28
                                 selectedIndex = index
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 1.0)) {
                                     targetOffset = CGFloat(-index) * cardStride + peek
                                 }
                             }
@@ -132,7 +251,7 @@ struct CardSelectorView: View {
 
                 }
                 .offset(x: targetOffset + dragOffset)
-                .frame(height: 145, alignment: .leading)
+                .frame(height: 165, alignment: .leading)
                 .clipped()
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 10)
@@ -187,7 +306,7 @@ struct CardSelectorView: View {
                                 .onTapGesture {
                                     let peek: CGFloat = index == 0 ? 0 : 28
                                     selectedIndex = index
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 1.0)) {
                                         targetOffset = CGFloat(-index) * cardStride + peek
                                     }
                                 }
@@ -199,7 +318,7 @@ struct CardSelectorView: View {
                 }
             }
         }
-        .frame(height: cards.count > 1 ? 205 : 190)
+        .frame(height: cards.count > 1 ? 225 : 205)
         .clipped()
         .contentShape(Rectangle())
     }

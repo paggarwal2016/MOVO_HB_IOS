@@ -158,10 +158,16 @@ public enum Typography {
         usage: "Avatar names, labels"
     )
 
-    /// 10pt — eyebrow labels (ALL CAPS, tracked) — e.g., "RECOMMENDED", "WELCOME"
+    /// 14pt — eyebrow labels (ALL CAPS, tracked) — e.g., "RECOMMENDED", "WELCOME"
     public static let eyebrow = TextStyle(
-        size: 10, weight: .medium, tracking: 0.8,
+        size: 14, weight: .semibold, tracking: 0.8,
         usage: "Eyebrow labels (uppercase + tracked)"
+    )
+
+    /// 11pt — status/type pill labels (PRIMARY, VIRTUAL, Movo member, etc.)
+    public static let pill = TextStyle(
+        size: 11, weight: .semibold, tracking: 0.8,
+        usage: "Pill badges — StatusPill, MovoTypeBadge"
     )
 
     /// 9pt — section labels, smallest readable

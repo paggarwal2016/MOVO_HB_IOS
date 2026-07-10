@@ -39,6 +39,17 @@ final class ACHViewModel: BaseViewModel {
         accounts = initialAccounts
     }
 
+    // MARK: - Bind Linked Account (local — no network)
+
+    /// Inserts a newly linked account into the in-memory store without a fetch.
+    /// Deduplicates by `plaidAccountId` so re-linking the same account is a no-op.
+    /// The full account record (real balance / achAccountId) is filled in by a
+    /// later explicit `fetchAccounts()` / `refresh()`.
+    func addLinkedAccount(_ account: ACHAccount) {
+        guard !accounts.contains(where: { $0.plaidAccountId == account.plaidAccountId }) else { return }
+        accounts.insert(account, at: 0)
+    }
+
     // MARK: - Fetch ACH Accounts
 
     func fetchAccounts() async {
@@ -81,11 +92,17 @@ final class ACHViewModel: BaseViewModel {
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(AchAPI.initiateTransfer(request))
             }
+            analytics.log(AnalyticsEvent.achTransferInitiated, params: [
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(Double(request.amount))
+            ])
             return true
         } catch is CancellationError {
             return false
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+            analytics.log(AnalyticsEvent.achTransferFailed, params: [
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(Double(request.amount)),
+                AnalyticsParam.errorCode: error.localizedDescription
+            ])
             return false
         }
     }

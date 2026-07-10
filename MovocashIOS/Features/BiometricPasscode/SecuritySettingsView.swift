@@ -36,6 +36,7 @@ struct SecuritySettingsView: View {
         }
         .navigationTitle("Security")
         .navigationBarTitleDisplayMode(.inline)
+        .trackScreen(AnalyticsScreen.securitySettings)
         // Error banner
         .safeAreaInset(edge: .top) {
             if let msg = lockManager.revocationError {
@@ -267,9 +268,7 @@ struct SecuritySettingsView: View {
                     .foregroundStyle(Color.movo.textSecondary)
                     .font(.subheadline)
             } else {
-                Image(systemName: "chevron.right")
-                    .font(.caption.bold())
-                    .foregroundStyle(.tertiary)
+                MovoChevron(.disclosure, color: Color.movo.textDisabled)
             }
         }
     }
@@ -281,7 +280,7 @@ struct SecuritySettingsView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
-            .background(Color.red.gradient)
+            .background(Color.movo.danger)
             .transition(.move(edge: .top).combined(with: .opacity))
             .animation(.spring(), value: lockManager.revocationError)
     }
@@ -305,7 +304,7 @@ struct RemovePasscodeConfirmView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(uiColor: .systemBackground).ignoresSafeArea()
+                Color.movo.background.ignoresSafeArea()
                 VStack(spacing: 0) {
                     Spacer()
                     VStack(spacing: 8) {

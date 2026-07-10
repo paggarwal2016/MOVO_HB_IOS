@@ -2,60 +2,63 @@
 //  PayAnyoneView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 05/05/26.
+//  Created by Movo Developer on 05/05/26.
 //
 
 import Foundation
 import SwiftUI
 import Combine
-import Contacts
 
 struct PayAnyoneView: View {
     
     @StateObject private var contactVM: ContactViewModel
     @StateObject private var cardVM: VCardViewModel
+    @StateObject private var payeeFlow: PayeeTransferModel
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
-    @SwiftUI.Environment(\.scenePhase) private var scenePhase
     @SwiftUI.Environment(\.openURL) private var openURL
-
+    
     let cards: [VCardListResponse]
     let primaryLinkedCard: VCardListResponse?
-
-    @State private var localPrimaryCard: VCardListResponse?
+    /// Title shown in the nav bar — passed from the tab's MENU label.
+    let screenTitle: String
+    @ObservedObject private var primaryCardStore: PrimaryCardStore
     @Binding var selectedTab: Tab
 
+    private var effectivePrimary: VCardListResponse? { primaryCardStore.card ?? primaryLinkedCard }
+    
     @State private var nickname: String = ""
     @State private var phoneNumber: String = ""
-    @State private var authStatus: CNAuthorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     @State private var showCreateContactScreen = false
-    @State private var selectedFrequent: ContactRecord? = nil
     @State private var showAllFrequents = false
     @State private var isInitialLoading = true
-
-    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil) {
+    /// Drives the native `CNContactPickerViewController` (limited-access "Use Phone Contacts").
+    @State private var showSystemPicker = false
+    /// True between tapping "Use Phone Contacts" and the picker finishing presenting —
+    /// shows a loader during the picker's launch delay.
+    @State private var isOpeningPicker = false
+    
+    /// True while the create-contact API call is in flight — shows the spinner.
+    @State private var isCreatingContact = false
+    
+    /// Collapsible-section state for the contacts list. Default expanded.
+    @State private var favouritesExpanded = true
+    @State private var allContactsExpanded = true
+    
+    init(container: AppContainer, selectedTab: Binding<Tab>, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, screenTitle: String = "Pay Anyone") {
         _contactVM = StateObject(wrappedValue: container.makeContactViewModel())
         _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
+        _payeeFlow = StateObject(wrappedValue: PayeeTransferModel(container: container))
         _selectedTab = selectedTab
         self.cards = cards
         self.primaryLinkedCard = primaryLinkedCard
-        _localPrimaryCard = State(initialValue: primaryLinkedCard)
+        self.screenTitle = screenTitle
+        _primaryCardStore = ObservedObject(wrappedValue: container.primaryCardStore)
     }
     
     private var isFormValid: Bool {
         !nickname.trimmingCharacters(in: .whitespaces).isEmpty &&
         phoneNumber.filter(\.isNumber).count >= 10
-    }
-    
-    private var isAuthorized: Bool {
-        if #available(iOS 18.0, *) {
-            return authStatus == .authorized || authStatus == .limited
-        }
-        return authStatus == .authorized
-    }
-    
-    private var isDenied: Bool {
-        authStatus == .denied || authStatus == .restricted
     }
     
     private var hasAnyData: Bool {
@@ -74,6 +77,7 @@ struct PayAnyoneView: View {
                         navBar
                             .padding(.bottom, Spacing.lg)
                         if hasAnyData {
+                            
                             balanceCard
                                 .padding(.horizontal, Spacing.lg)
                                 .padding(.bottom, Spacing.lg)
@@ -86,16 +90,6 @@ struct PayAnyoneView: View {
                             contactsListCard
                                 .padding(.bottom, Spacing.lg)
                             
-                            if !isAuthorized {
-                                orDivider
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 18)
-                                
-                                permissionCompactCard
-                                    .padding(.horizontal, 14)
-                                    .padding(.bottom, 18)
-                            }
-                            
                         } else {
                             heroIllustration
                                 .padding(.top, 18)
@@ -106,12 +100,6 @@ struct PayAnyoneView: View {
                             addContactView
                                 .padding(.horizontal, 14)
                                 .padding(.bottom, 14)
-                            orDivider
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 18)
-                            contactsSection
-                                .padding(.horizontal, 14)
-                                .padding(.bottom, 18)
                         }
                     }
                     
@@ -119,78 +107,60 @@ struct PayAnyoneView: View {
                 }
             }
             
-            if isInitialLoading {
+            StatusBarScrim()
+            
+            if isInitialLoading || isCreatingContact || isOpeningPicker {
                 SpinnerView()
             }
         }
         .blur(radius: showCreateContactScreen ? 3 : 0)
         .animation(.easeInOut(duration: 0.25), value: showCreateContactScreen)
         .background(Color.movo.background)
-        .navigationDestination(for: ContactRecord.self) { contact in
-            QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
-        }
-        .navigationDestination(isPresented: Binding(
-            get: { selectedFrequent != nil },
-            set: { if !$0 { selectedFrequent = nil } }
-        )) {
-            if let contact = selectedFrequent {
-                QuickTransferView(contact: contact, container: container, cards: cards, primaryLinkedCard: localPrimaryCard, onSuccess: { refreshPrimaryCard() })
+        // Hosts the native contact picker; presents when `showSystemPicker` flips true.
+        .background {
+            PhoneContactPicker(
+                isPresented: $showSystemPicker,
+                onPresented: { isOpeningPicker = false }
+            ) { name, phone in
+                handlePickedContact(name: name, phone: phone)
             }
         }
-        .sheet(isPresented: $showAllFrequents) {
-            AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: localPrimaryCard)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .onChange(of: primaryLinkedCard?.id) { _ in
-            localPrimaryCard = primaryLinkedCard
+        .payeeTransferFlow(payeeFlow, container: container, cards: cards, primaryLinkedCard: effectivePrimary, onSuccess: { handleTransferSuccess() }, onCancel: { reloadContacts() })
+        .fullScreenCover(isPresented: $showAllFrequents) {
+            AllFrequentsView(contactVM: contactVM, container: container, cards: cards, primaryLinkedCard: effectivePrimary)
         }
         .onAppear {
-            // Resolve permission status synchronously before async work begins
-            authStatus = CNContactStore.authorizationStatus(for: .contacts)
             Task {
                 await contactVM.loadApiContacts()
                 await contactVM.loadFavourites()
                 await contactVM.loadFrequent()
-                if isAuthorized {
-                    await contactVM.load()
-                }
                 isInitialLoading = false
-                // Silently refresh primary card balance only when there is
-                // contact data to display (balance card is visible).
-                if hasAnyData {
-                    refreshPrimaryCard()
-                }
             }
         }
-        .onChange(of: scenePhase) { newPhase in
-            guard newPhase == .active else { return }
-            authStatus = CNContactStore.authorizationStatus(for: .contacts)
-            if isAuthorized && contactVM.contacts.isEmpty {
-                Task { await contactVM.load() }
-            }
-        }
-        .sheet(isPresented: $showCreateContactScreen) {
-            AddContactSheet(container: contactVM, countryCode: "+1", onSave: { data in
+        .fullScreenCover(isPresented: $showCreateContactScreen, onDismiss: { payeeFlow.popupDidDismiss(); reloadContacts() }) {
+            AddContactSheet(container: contactVM, payeeFlow: payeeFlow, isSubmitting: $isCreatingContact, countryCode: "+1", onSave: { data in
                 Task {
-                    let success = await contactVM.createContact(
+                    isCreatingContact = true
+                    let created = await contactVM.createContact(
                         nickname: data.nickname,
                         phoneNumber: data.phoneE164
                     )
-                    contactVM.clear()
-                    showCreateContactScreen = false
-                    if success {
-                        ToastManager.shared.show(
-                            "\(data.nickname) added to contacts",
-                            style: .success,
-                            position: .bottom
-                        )
-                    }
+                    guard created else { isCreatingContact = false; return }
+                    await payeeFlow.prepareConfirmation(for: ContactRecord(
+                        id: data.phoneE164,
+                        isFav: false,
+                        nickname: data.nickname,
+                        createdAt: Date(),
+                        phoneNumber: data.phoneE164,
+                        isAdded: true,
+                        updatedAt: Date()
+                    ))
+                    isCreatingContact = false
                 }
-            }, onCancel: { showCreateContactScreen = false })
-            .presentationDetents([.height(320)])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.movo.cardSurface)
+            }, onContinue: {
+                contactVM.clear()
+                showCreateContactScreen = false
+            }, onOpenSettings: openSettings)
         }
     }
     
@@ -205,8 +175,8 @@ struct PayAnyoneView: View {
     private var heroIllustration: some View {
         HStack {
             Spacer()
-            PayAnyoneHeroIllustration()
-                .frame(width: 130, height: 90)
+            QuickPayHeroIllustration()
+                .frame(width: 200, height: 140)
             Spacer()
         }
     }
@@ -226,84 +196,6 @@ struct PayAnyoneView: View {
         .padding(.horizontal, Spacing.xxl)
     }
     
-    
-    private var orDivider: some View {
-        HStack(spacing: Spacing.md) {
-            Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
-            Text("OR PICK FROM")
-                .textStyle(Typography.micro)
-                .foregroundColor(Color.movo.textTertiary)
-            Rectangle().fill(Color.movo.border).frame(height: Stroke.hairline)
-        }
-    }
-    
-    @ViewBuilder
-    private var contactsSection: some View {
-        if hasAnyData {
-            contactsListCard
-        } else {
-            permissionCompactCard
-        }
-    }
-    
-    // MARK: - Permission Card
-    
-    private var permissionCompactCard: some View {
-        
-        HStack(alignment: .top, spacing: Spacing.md + 2) {
-            
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(Color.movo.accentTint)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.lg)
-                            .strokeBorder(Color.movo.accentBorder,
-                                          lineWidth: Stroke.hairline)
-                    )
-                Image(systemName: "person.2.badge.plus")
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundColor(Color.movo.accent)
-            }
-            .frame(width: 44, height: 44)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Movo is better with friends")
-                    .textStyle(Typography.cardTitle)
-                    .foregroundColor(Color.movo.textPrimary)
-                
-                Text("Find people you know already on Movo and send instantly.")
-                    .textStyle(Typography.captionSmall)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .lineSpacing(1.5)
-                    .padding(.bottom, Spacing.sm + 2)
-                
-                Button(action: isDenied ? openSettings : enableContacts) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "person.badge.plus")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Enable Contacts")
-                            .textStyle(Typography.button)
-                    }
-                }
-                .buttonStyle(MovoCompactButtonStyle())
-            }
-        }
-        .padding(Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.surface.opacity(0.85))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                )
-        )
-    }
-    
-    
-    
-    
-    
     // MARK: - Contacts List
     
     private var contactsLoadingCard: some View {
@@ -319,51 +211,66 @@ struct PayAnyoneView: View {
         )
     }
     
+    /// The "Search contacts" field. Extracted so it can be reused both inside
+    /// `contactsListCard` and as a standalone field in the empty state.
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(Color.movo.textDisabled)
+            TextField("", text: $contactVM.search,
+                      prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
+            .textStyle(Typography.body)
+            .foregroundColor(Color.movo.textPrimary)
+            .autocorrectionDisabled()
+            if !contactVM.search.isEmpty {
+                Button { contactVM.search = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundColor(Color.movo.textDisabled)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.md)
+                .fill(Color.movo.elevated)
+                .overlay(RoundedRectangle(cornerRadius: Radius.md)
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+        )
+    }
+    
+    /// Standalone search bar shown in the empty state, so "Search contacts" is
+    /// visible as its own clean field rather than the top of an empty list card.
+    private var searchBar: some View {
+        searchField
+            .padding(.horizontal, Spacing.lg)
+    }
+    
     private var contactsListCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Search bar
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(Color.movo.textDisabled)
-                TextField("", text: $contactVM.search,
-                          prompt: Text("Search contacts").foregroundColor(Color.movo.textDisabled))
-                .textStyle(Typography.body)
-                .foregroundColor(Color.movo.textPrimary)
-                .autocorrectionDisabled()
-                if !contactVM.search.isEmpty {
-                    Button { contactVM.search = "" } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundColor(Color.movo.textDisabled)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, 11)
-            .background(
-                RoundedRectangle(cornerRadius: Radius.md)
-                    .fill(Color.movo.elevated)
-                    .overlay(RoundedRectangle(cornerRadius: Radius.md)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-            )
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.lg)
-            .padding(.bottom, Spacing.sm)
+            searchField
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.lg)
+                .padding(.bottom, Spacing.sm)
             
             // Favourites
             if !contactVM.filteredFavourites.isEmpty {
-                Text("FAVOURITES")
-                    .textStyle(Typography.eyebrow)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
-                    .padding(.bottom, Spacing.xs)
-                ForEach(contactVM.filteredFavourites) { contact in
-                    NavigationLink(value: contact) { contactRow(contact) }
-                        .buttonStyle(.plain)
-                    if contact.id != contactVM.filteredFavourites.last?.id {
-                        Rectangle().fill(Color.movo.border)
-                            .frame(height: Stroke.hairline)
-                            .padding(.horizontal, Spacing.lg)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { favouritesExpanded.toggle() }
+                } label: {
+                    sectionHeader(title: "FAVOURITES", isExpanded: favouritesExpanded)
+                }
+                .buttonStyle(.plain)
+                if favouritesExpanded {
+                    ForEach(contactVM.filteredFavourites) { contact in
+                        Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
+                            .buttonStyle(.plain)
+                        if contact.id != contactVM.filteredFavourites.last?.id {
+                            Rectangle().fill(Color.movo.border)
+                                .frame(height: Stroke.hairline)
+                                .padding(.horizontal, Spacing.lg)
+                        }
                     }
                 }
                 Rectangle().fill(Color.movo.border)
@@ -371,21 +278,24 @@ struct PayAnyoneView: View {
                     .padding(.horizontal, Spacing.lg)
             }
             
-            // All contacts
+            // All contacts — backend (API) contacts only. The device address book is
+            // not loaded; device contacts are pulled in one at a time via the picker.
             if !contactVM.filteredContacts.isEmpty {
-                Text("ALL CONTACTS")
-                    .textStyle(Typography.eyebrow)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
-                    .padding(.bottom, Spacing.xs)
-                ForEach(contactVM.filteredContacts) { contact in
-                    NavigationLink(value: contact) { contactRow(contact) }
-                        .buttonStyle(.plain)
-                    if contact.id != contactVM.filteredContacts.last?.id {
-                        Rectangle().fill(Color.movo.border)
-                            .frame(height: Stroke.hairline)
-                            .padding(.horizontal, Spacing.lg)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { allContactsExpanded.toggle() }
+                } label: {
+                    sectionHeader(title: "ALL CONTACTS", isExpanded: allContactsExpanded)
+                }
+                .buttonStyle(.plain)
+                if allContactsExpanded {
+                    ForEach(contactVM.filteredContacts) { contact in
+                        Button { payeeFlow.tap(contact) } label: { contactRow(contact) }
+                            .buttonStyle(.plain)
+                        if contact.id != contactVM.filteredContacts.last?.id {
+                            Rectangle().fill(Color.movo.border)
+                                .frame(height: Stroke.hairline)
+                                .padding(.horizontal, Spacing.lg)
+                        }
                     }
                 }
             }
@@ -399,7 +309,26 @@ struct PayAnyoneView: View {
         )
         .padding(.horizontal, Spacing.lg)
     }
-
+    
+    /// Collapsible-section header: eyebrow title with a chevron that rotates
+    /// to point right when the section is collapsed.
+    private func sectionHeader(title: String, isExpanded: Bool) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .textStyle(Typography.eyebrow)
+                .foregroundColor(Color.movo.textTertiary)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Color.movo.textTertiary)
+                .rotationEffect(.degrees(isExpanded ? 0 : -90))
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.md)
+        .padding(.bottom, Spacing.xs)
+    }
+    
     private func contactAvatar(initials: String, size: CGFloat) -> some View {
         Text(initials.isEmpty ? "?" : initials)
             .font(.system(size: size * 0.38, weight: .semibold))
@@ -411,24 +340,16 @@ struct PayAnyoneView: View {
     
     private func contactRow(_ contact: ContactRecord) -> some View {
         HStack(spacing: Spacing.md) {
-            contactAvatar(initials: contact.initials, size: 44)
+            contactAvatar(initials: contact.avatarInitial, size: 44)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(contact.nickname ?? "")
-                        .textStyle(Typography.bodyCompact)
-                        .foregroundColor(Color.movo.textPrimary)
-                    if contact.isAdded {
-                        Text("MOVO")
-                            .textStyle(Typography.micro)
-                            .foregroundColor(Color.movo.accent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.movo.accent.opacity(0.15)))
-                    }
+                Text(contact.displayName)
+                    .textStyle(Typography.bodyCompact)
+                    .foregroundColor(Color.movo.textPrimary)
+                if contact.hasNickname {
+                    Text(contact.phoneNumber ?? "")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textTertiary)
                 }
-                Text(contact.phoneNumber ?? "")
-                    .textStyle(Typography.caption)
-                    .foregroundColor(Color.movo.textTertiary)
             }
             Spacer()
             Button {
@@ -437,14 +358,15 @@ struct PayAnyoneView: View {
                 Image(systemName: contactVM.isFavorite(contact) ? "star.fill" : "star")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundColor(contactVM.isFavorite(contact) ? Color.movo.accent : Color.movo.textDisabled)
+                    .frame(width: 40, height: 40)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(Color.movo.textDisabled)
+            MovoChevron(.disclosure, color: Color.movo.textDisabled)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
+        .contentShape(Rectangle())
     }
     
     // MARK: - Actions
@@ -463,18 +385,64 @@ struct PayAnyoneView: View {
         }
     }
     
-    private func refreshPrimaryCard() {
+    /// Handles a contact picked from the native system picker: first saves it to the
+    /// backend via `createContact` (POST → `ContactAPI.create`), then — on success —
+    /// continues into the payee transfer flow, same as tapping a saved contact row.
+    /// Falls back to the phone number as the nickname when the device contact has no name.
+    private func handlePickedContact(name: String, phone: String) {
+        let national = PhoneNumberValidator.sanitize(phone)
+        let e164 = national.isEmpty ? phone : "+1\(national)"
+        let nickname = name.isEmpty ? e164 : name
         Task {
-            guard let updated = try? await cardVM.fetchPrimaryCard() else { return }
-            localPrimaryCard = updated
+            isCreatingContact = true
+            let created = await contactVM.createContact(nickname: nickname, phoneNumber: e164)
+            guard created else { isCreatingContact = false; return }
+            // Hand off to the transfer flow BEFORE clearing the create loader: `tap`
+            // sets `isChecking` synchronously, so its spinner is already showing when
+            // this one drops — a single continuous loader with no flicker between the
+            // create and check-intent calls.
+            payeeFlow.tap(ContactRecord(
+                id: e164,
+                isFav: false,
+                nickname: name.isEmpty ? nil : name,
+                createdAt: Date(),
+                phoneNumber: e164,
+                isAdded: true,
+                updatedAt: Date()
+            ))
+            isCreatingContact = false
         }
     }
-
-    private func enableContacts() {
+    
+    private func refreshPrimaryCard() {
+        Task { _ = try? await cardVM.fetchPrimaryCard() }
+    }
+    
+    /// Runs only after a successful Quick Transfer when the user lands back on this
+    /// screen (Success screen dismissed). Refreshes the Primary Card balance via the
+    /// API and reloads Frequents so the just-paid contact appears.
+    private func handleTransferSuccess() {
+        refreshPrimaryCard()
+        Task { await contactVM.loadFrequent()
+            await contactVM.loadApiContacts() }
+    }
+    
+    /// Reloads the backend contact lists. Called when the enroll confirmation popup is
+    /// cancelled so a contact just saved via `createContact` (POST → `ContactAPI.create`)
+    /// is reflected in the list even though the transfer wasn't completed.
+    private func reloadContacts() {
         Task {
-            await contactVM.load()
-            authStatus = CNContactStore.authorizationStatus(for: .contacts)
+            await contactVM.loadApiContacts()
+            await contactVM.loadFavourites()
         }
+    }
+    
+    /// Presents the native system contact picker. Works regardless of the app's
+    /// Contacts permission — the picker runs out-of-process and returns just the one
+    /// contact the user selects. `isOpeningPicker` shows a loader during the launch delay.
+    private func presentSystemPicker() {
+        isOpeningPicker = true
+        showSystemPicker = true
     }
     
     private func openSettings() {
@@ -487,7 +455,7 @@ struct PayAnyoneView: View {
     private var navBar: some View {
         HStack {
             Spacer()
-            Text("Pay Anyone")
+            Text(screenTitle)
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
@@ -500,162 +468,210 @@ struct PayAnyoneView: View {
 
 // MARK: - Hero Illustration (two figures + flying bill)
 
-private struct PayAnyoneHeroIllustration: View {
-    var body: some View {
-        Canvas { context, size in
-            let scaleX = size.width / 130.0
-            let scaleY = size.height / 90.0
-            
-            // Left figure (dim)
-            drawFigure(context: context,
-                       at: CGPoint(x: 20 * scaleX, y: 28 * scaleY),
-                       scale: scaleX,
-                       color: Color.movo.textTertiary,
-                       lineWidth: 1.0)
-            
-            // Right figure (bright)
-            drawFigure(context: context,
-                       at: CGPoint(x: 105 * scaleX, y: 32 * scaleY),
-                       scale: scaleX,
-                       color: Color.movo.textPrimary,
-                       lineWidth: 1.1)
-            
-            // Flying bill (rotated)
-            drawBill(context: context,
-                     at: CGPoint(x: 50 * scaleX, y: 8 * scaleY),
-                     scale: scaleX)
-            
-            // Motion arc
-            var arcPath = Path()
-            arcPath.move(to: CGPoint(x: 36 * scaleX, y: 28 * scaleY))
-            arcPath.addQuadCurve(
-                to: CGPoint(x: 92 * scaleX, y: 28 * scaleY),
-                control: CGPoint(x: 65 * scaleX, y: -2 * scaleY)
-            )
-            context.stroke(
-                arcPath,
-                with: .color(Color.movo.accent.opacity(0.55)),
-                style: StrokeStyle(lineWidth: 0.7, dash: [2, 2.5])
-            )
-        }
-    }
-    
-    private func drawFigure(context: GraphicsContext, at center: CGPoint, scale: CGFloat,
-                            color: Color, lineWidth: CGFloat) {
-        // Head (circle)
-        let head = Path(ellipseIn: CGRect(x: center.x - 9 * scale,
-                                          y: center.y - 9 * scale,
-                                          width: 18 * scale,
-                                          height: 18 * scale))
-        context.stroke(head, with: .color(color), lineWidth: lineWidth)
-        
-        // Body (rounded rect / U-shape)
-        var body = Path()
-        body.move(to: CGPoint(x: center.x - 14 * scale, y: center.y + 38 * scale))
-        body.addQuadCurve(
-            to: CGPoint(x: center.x, y: center.y + 16 * scale),
-            control: CGPoint(x: center.x - 14 * scale, y: center.y + 16 * scale)
-        )
-        body.addQuadCurve(
-            to: CGPoint(x: center.x + 14 * scale, y: center.y + 38 * scale),
-            control: CGPoint(x: center.x + 14 * scale, y: center.y + 16 * scale)
-        )
-        context.stroke(body, with: .color(color),
-                       style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
-    }
-    
-    private func drawBill(context: GraphicsContext, at origin: CGPoint, scale: CGFloat) {
-        var ctx = context
-        ctx.translateBy(x: origin.x, y: origin.y)
-        ctx.rotate(by: .degrees(-12))
-        
-        let billRect = CGRect(x: 0, y: 0, width: 32 * scale, height: 18 * scale)
-        let bill = Path(roundedRect: billRect, cornerRadius: 2 * scale)
-        ctx.fill(bill, with: .color(Color.movo.surface))
-        ctx.stroke(bill, with: .color(Color.movo.accent), lineWidth: 1.0)
-        
-        // $ circle
-        let dollarCircle = Path(ellipseIn: CGRect(x: 11.5 * scale, y: 4.5 * scale,
-                                                  width: 9 * scale, height: 9 * scale))
-        ctx.stroke(dollarCircle, with: .color(Color.movo.accent), lineWidth: 0.8)
-        
-        // $ text
-        let dollarText = Text("$")
-            .font(.system(size: 7 * scale, weight: .semibold))
-            .foregroundColor(Color.movo.accent)
-        ctx.draw(dollarText, at: CGPoint(x: 16 * scale, y: 9 * scale))
-    }
-}
+//private struct PayAnyoneHeroIllustration: View {
+//    var body: some View {
+//        Canvas { context, size in
+//            let scaleX = size.width / 130.0
+//            let scaleY = size.height / 90.0
+//            
+//            // Left figure (dim)
+//            drawFigure(context: context,
+//                       at: CGPoint(x: 20 * scaleX, y: 28 * scaleY),
+//                       scale: scaleX,
+//                       color: Color.movo.textTertiary,
+//                       lineWidth: 1.0)
+//            
+//            // Right figure (bright)
+//            drawFigure(context: context,
+//                       at: CGPoint(x: 105 * scaleX, y: 32 * scaleY),
+//                       scale: scaleX,
+//                       color: Color.movo.textPrimary,
+//                       lineWidth: 1.1)
+//            
+//            // Flying bill (rotated)
+//            drawBill(context: context,
+//                     at: CGPoint(x: 50 * scaleX, y: 8 * scaleY),
+//                     scale: scaleX)
+//            
+//            // Motion arc
+//            var arcPath = Path()
+//            arcPath.move(to: CGPoint(x: 36 * scaleX, y: 28 * scaleY))
+//            arcPath.addQuadCurve(
+//                to: CGPoint(x: 92 * scaleX, y: 28 * scaleY),
+//                control: CGPoint(x: 65 * scaleX, y: -2 * scaleY)
+//            )
+//            context.stroke(
+//                arcPath,
+//                with: .color(Color.movo.accent.opacity(0.55)),
+//                style: StrokeStyle(lineWidth: 0.7, dash: [2, 2.5])
+//            )
+//        }
+//    }
+//    
+//    private func drawFigure(context: GraphicsContext, at center: CGPoint, scale: CGFloat,
+//                            color: Color, lineWidth: CGFloat) {
+//        // Head (circle)
+//        let head = Path(ellipseIn: CGRect(x: center.x - 9 * scale,
+//                                          y: center.y - 9 * scale,
+//                                          width: 18 * scale,
+//                                          height: 18 * scale))
+//        context.stroke(head, with: .color(color), lineWidth: lineWidth)
+//        
+//        // Body (rounded rect / U-shape)
+//        var body = Path()
+//        body.move(to: CGPoint(x: center.x - 14 * scale, y: center.y + 38 * scale))
+//        body.addQuadCurve(
+//            to: CGPoint(x: center.x, y: center.y + 16 * scale),
+//            control: CGPoint(x: center.x - 14 * scale, y: center.y + 16 * scale)
+//        )
+//        body.addQuadCurve(
+//            to: CGPoint(x: center.x + 14 * scale, y: center.y + 38 * scale),
+//            control: CGPoint(x: center.x + 14 * scale, y: center.y + 16 * scale)
+//        )
+//        context.stroke(body, with: .color(color),
+//                       style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+//    }
+//    
+//    private func drawBill(context: GraphicsContext, at origin: CGPoint, scale: CGFloat) {
+//        var ctx = context
+//        ctx.translateBy(x: origin.x, y: origin.y)
+//        ctx.rotate(by: .degrees(-12))
+//        
+//        let billRect = CGRect(x: 0, y: 0, width: 32 * scale, height: 18 * scale)
+//        let bill = Path(roundedRect: billRect, cornerRadius: 2 * scale)
+//        ctx.fill(bill, with: .color(Color.movo.surface))
+//        ctx.stroke(bill, with: .color(Color.movo.accent), lineWidth: 1.0)
+//        
+//        // $ circle
+//        let dollarCircle = Path(ellipseIn: CGRect(x: 11.5 * scale, y: 4.5 * scale,
+//                                                  width: 9 * scale, height: 9 * scale))
+//        ctx.stroke(dollarCircle, with: .color(Color.movo.accent), lineWidth: 0.8)
+//        
+//        // $ text
+//        let dollarText = Text("$")
+//            .font(.system(size: 7 * scale, weight: .semibold))
+//            .foregroundColor(Color.movo.accent)
+//        ctx.draw(dollarText, at: CGPoint(x: 16 * scale, y: 9 * scale))
+//    }
+//}
 
-// MARK: - Contacts Permission Illustration
+// MARK: - Quick Pay / Send Money Illustration (line-art)
 
-private struct ContactsPermissionIllustration: View {
+struct QuickPayHeroIllustration: View {
+
+    /// Virtual design canvas (pts). All coordinates below are in this space;
+    /// GeometryReader scales them uniformly into whatever frame the parent sets.
+    private let design = CGSize(width: 140, height: 100)
+
     var body: some View {
-        ZStack {
-            // Halo background
-            Circle()
-                .stroke(Color.movo.accentBorder.opacity(0.4),
-                        style: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
-                .background(Circle().fill(Color.movo.accent.opacity(0.04)))
-                .frame(width: 88, height: 88)
-            
-            // Phone body in center
+        GeometryReader { geo in
+            let scale = min(geo.size.width / design.width,
+                            geo.size.height / design.height)
+            let ox = (geo.size.width  - design.width  * scale) / 2
+            let oy = (geo.size.height - design.height * scale) / 2
+
             ZStack {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.movo.surface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(Color.movo.textPrimary, lineWidth: 1)
-                    )
-                    .frame(width: 40, height: 62)
-                
-                // Inner screen with contact list
-                VStack(spacing: 5) {
-                    contactRow(highlighted: false)
-                    contactRow(highlighted: true)
-                    contactRow(highlighted: false)
+                // Canvas: glow, arcs, figure strokes, card stroke + magstripe
+                Canvas { context, size in
+                    var ctx = context
+                    ctx.translateBy(x: ox, y: oy)
+                    ctx.scaleBy(x: scale, y: scale)
+
+                    drawGlow(ctx)
+                    drawArc(ctx, from: CGPoint(x: 70, y: 28), to: CGPoint(x: 28, y: 56),
+                            control: CGPoint(x: 36, y: 8))
+                    drawArc(ctx, from: CGPoint(x: 70, y: 28), to: CGPoint(x: 112, y: 56),
+                            control: CGPoint(x: 104, y: 8))
+                    drawFigure(ctx, center: CGPoint(x: 26, y: 76), dim: true)
+                    drawFigure(ctx, center: CGPoint(x: 114, y: 76), dim: false)
+                    drawCard(ctx, center: CGPoint(x: 70, y: 26))
                 }
-                .padding(.horizontal, 4)
-                .frame(width: 34, height: 56)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(LinearGradient(
-                            colors: [Color.movo.elevated, Color.movo.background],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ))
+
+                // MV symbol overlaid at card centre, scaled + rotated with the card
+                let mvSize: CGFloat = 18 * scale
+                MovoMVSymbol(
+                    bodyStyle: Color.movo.heritageGreenLine,
+                    accent: Color.movo.heritageGreenLine.opacity(0.55)
                 )
+                .frame(width: mvSize, height: mvSize)
+                .rotationEffect(.degrees(-8))
+                .position(x: ox + 70 * scale, y: oy + 26 * scale)
             }
-            
-            // Floating avatars positioned around
-            FloatingAvatar(size: 20, accent: false)
-                .offset(x: -62, y: -26)
-            FloatingAvatar(size: 20, accent: true, withMovoDot: true)
-                .offset(x: 60, y: -20)
-            FloatingAvatar(size: 18, accent: true)
-                .offset(x: -54, y: 28)
-            FloatingAvatar(size: 18, accent: false)
-                .offset(x: 55, y: 30)
         }
     }
-    
-    private func contactRow(highlighted: Bool) -> some View {
-        HStack(spacing: 2) {
-            Circle()
-                .fill(highlighted ? Color.movo.accent : Color.movo.textTertiary.opacity(0.7))
-                .frame(width: 6, height: 6)
-            VStack(alignment: .leading, spacing: 1) {
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(highlighted ? Color.movo.textPrimary : Color.movo.textTertiary.opacity(0.7))
-                    .frame(width: 16, height: 2)
-                RoundedRectangle(cornerRadius: 0.7)
-                    .fill(Color.movo.textTertiary)
-                    .frame(width: 10, height: 1.5)
-            }
-            Spacer(minLength: 0)
-        }
+
+    // MARK: - Background glow
+
+    private func drawGlow(_ ctx: GraphicsContext) {
+        let glow = Path(ellipseIn: CGRect(x: 22, y: 10, width: 96, height: 68))
+        ctx.fill(glow, with: .color(Color.movo.accent.opacity(0.06)))
+    }
+
+    // MARK: - Money-flow arc (card → figure)
+
+    private func drawArc(_ ctx: GraphicsContext,
+                         from: CGPoint, to: CGPoint, control: CGPoint) {
+        var path = Path()
+        path.move(to: from)
+        path.addQuadCurve(to: to, control: control)
+        ctx.stroke(
+            path,
+            with: .color(Color.movo.heritageGreenLine.opacity(0.42)),
+            style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: [2, 4])
+        )
+    }
+
+    // MARK: - Line-art figure (round head + two-curve shoulder bust)
+
+    private func drawFigure(_ ctx: GraphicsContext,
+                             center: CGPoint, dim: Bool) {
+        let cx   = center.x
+        let cy   = center.y          // base of figure (bottom of shoulders)
+        let r: CGFloat = 7
+        let headY = cy - 32          // head centre Y
+        let silver = Color.movo.silverTint
+        let opacity: Double = dim ? 0.42 : 0.88
+
+        // Head — stroke-only circle
+        let head = Path(ellipseIn: CGRect(x: cx - r, y: headY - r,
+                                          width: r * 2, height: r * 2))
+        ctx.stroke(head, with: .color(silver.opacity(opacity)),
+                   style: StrokeStyle(lineWidth: 2, lineCap: .round))
+
+        // Shoulders — two-curve open arch (stroke only, no fill)
+        var shoulders = Path()
+        shoulders.move(to: CGPoint(x: cx - 13, y: cy))
+        shoulders.addQuadCurve(
+            to:      CGPoint(x: cx,       y: cy - 18),
+            control: CGPoint(x: cx - 13,  y: cy - 18)
+        )
+        shoulders.addQuadCurve(
+            to:      CGPoint(x: cx + 13, y: cy),
+            control: CGPoint(x: cx + 13, y: cy - 18)
+        )
+        ctx.stroke(shoulders, with: .color(silver.opacity(opacity)),
+                   style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+    }
+
+    // MARK: - Payment card (stroke-only, no fill)
+
+    private func drawCard(_ ctx: GraphicsContext, center: CGPoint) {
+        var c = ctx
+        c.translateBy(x: center.x, y: center.y)
+        c.rotate(by: .degrees(-8))
+
+        let w: CGFloat = 44
+        let h: CGFloat = 28
+        let rect = CGRect(x: -w / 2, y: -h / 2, width: w, height: h)
+
+        // Card outline — stroke only, no fill
+        let outline = Path(roundedRect: rect, cornerRadius: 5)
+        c.stroke(outline,
+                 with: .color(Color.movo.heritageGreenLine),
+                 style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
     }
 }
+
 
 private struct FloatingAvatar: View {
     let size: CGFloat
@@ -704,21 +720,17 @@ extension PayAnyoneView {
         HStack {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Eyebrow("Available to send")
-                Text(localPrimaryCard?.displayBalance ?? "$ 0.00")
-                    .textStyle(Typography.sectionTitle)
-                    .monospacedDigit()
-                    .foregroundColor(Color.movo.textPrimary)
+                let bal = Decimal(effectivePrimary?.savingsAccountAvailableBalance ?? effectivePrimary?.savingsAccountBalance ?? 0)
+                BalanceText(amount: bal, dollarSize: 33, centsSize: 23, centsOpacity: 1.0)
             }
             Spacer()
             Button(action: { withAnimation { showCreateContactScreen = true } }) {
                 HStack(spacing: 6) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .heavy))
-                    Text("Add Contact")
+                    Text("Add MOVO Recipient")
                         .textStyle(Typography.button)
                 }
             }
-            .frame(width: 120)
+            .frame(width: 150)
             .buttonStyle(MovoCompactButtonStyle())
         }
         .padding(Spacing.lg)
@@ -739,24 +751,22 @@ extension PayAnyoneView {
     private var frequentContactsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Eyebrow("RECENT PAY")
+                Eyebrow("SEND AGAIN WITH MOVO")
                 Spacer()
-                //        if contactVM.frequents.count >= 10 {
-                Button(action: { showAllFrequents = true }) {
-                    Text("See all")
-                        .textStyle(Typography.caption)
-                        .foregroundColor(Color.movo.textSecondary)
+                if contactVM.frequents.count >= 5 {
+                    Button(action: { showAllFrequents = true }) {
+                        Eyebrow("SEE ALL")
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-                //       }
             }
             .padding(.horizontal, Spacing.lg)
             
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.sm + 2) {
+                LazyHStack(spacing: Spacing.sm + 2) {
                     ForEach(contactVM.frequents) { contact in
                         QuickContactCell(contact: contact) {
-                            selectedFrequent = ContactRecord(
+                            payeeFlow.tap(ContactRecord(
                                 id: contact.id,
                                 isFav: false,
                                 nickname: contact.nickname,
@@ -764,7 +774,7 @@ extension PayAnyoneView {
                                 phoneNumber: contact.phoneNumber,
                                 isAdded: false,
                                 updatedAt: Date()
-                            )
+                            ))
                         }
                     }
                 }
@@ -792,13 +802,13 @@ extension PayAnyoneView {
                             .strokeBorder( Color.movo.border,
                                            lineWidth: Stroke.hairline
                             )
-                        Text("\(contact.nickname?.prefix(1) ?? "")")
+                        Text(contact.avatarInitial)
                             .textStyle(Typography.cardTitle)
                             .foregroundColor(Color.movo.textPrimary)
                     }
                     .frame(width: 56, height: 56)
                     
-                    Text((contact.nickname?.split(separator: " ").first.map(String.init) ?? contact.nickname) ?? "")
+                    Text(contact.compactLabel)
                         .textStyle(Typography.captionSmall)
                         .foregroundColor(Color.movo.textSecondary)
                         .lineLimit(1)

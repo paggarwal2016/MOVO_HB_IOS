@@ -2,7 +2,7 @@
 //  DocumentAPI.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 02/05/26.
+//  Created by Movo Developer on 02/05/26.
 //
 
 import Foundation
@@ -31,7 +31,7 @@ enum DocumentAPI: Endpoint {
     var method: HTTPMethod { .PUT }
     
     // MARK: - Header Configure
-    var headerType: HeaderType { [.session, .movoInfo] }
+    var headerType: HeaderType { [.session, .secureDeviceInfo, .officeId] }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { nil }

@@ -40,6 +40,7 @@ public struct MovoColorScheme: Sendable {
     public let accentTint:      ColorToken   // Accent backgrounds (badges, hover)
     public let accentBorder:    ColorToken   // Accent strokes / focus rings
     public let accentSoft:      ColorToken   // Accent halos / glow shadows
+    public let heritageGreenLine: ColorToken  // Illustration stroke green — adaptive brightness
 
     // Text
     public let textPrimary:     ColorToken   // Headlines, primary numbers
@@ -68,12 +69,23 @@ public struct MovoColorScheme: Sendable {
     // Ghost surface — surface at 85% opacity, subtle near-flush card feel
    // public let ghostSurface:    ColorToken
 
+    // Silver sheen / watermark — adaptive.
+    public let silverTint:         ColorToken
+
+    // Card tile face — locked near-black for the Void Silver card cell in the dashboard carousel.
+    public let cardVoid:           ColorToken
+
     // Card artwork — brand-locked (heritage black card; same hex in both modes)
     // Scoped to the physical card artwork view only.
     public let cardArtwork:        ColorToken
     public let onCardArtwork:      ColorToken
     public let cardArtworkMuted:   ColorToken
     public let cardArtworkBorder:  ColorToken
+
+    // Balloon illustration pigments — locked, non-adaptive.
+    // Scoped to RegistrationCelebrationHero only. Not for text or interactive use.
+    public let balloonHighlight:   ColorToken
+    public let balloonShade:       ColorToken
 
     // MARK: - Built-in scheme: Void Silver (adaptive)
 
@@ -87,6 +99,7 @@ public struct MovoColorScheme: Sendable {
         accentTint:    DesignTokens.Palette.accent.opacity(0.12),
         accentBorder:  DesignTokens.Palette.accent.opacity(0.40),
         accentSoft:    DesignTokens.Palette.accent.opacity(0.06),
+        heritageGreenLine: DesignTokens.Palette.heritageGreenLine,
 
         textPrimary:   DesignTokens.Palette.textPrimary,
         textSecondary: DesignTokens.Palette.textSecondary,
@@ -112,11 +125,19 @@ public struct MovoColorScheme: Sendable {
         cardSurface:   DesignTokens.Palette.cardSurface,
         cardBorder:    DesignTokens.Palette.cardBorder,
 
+        silverTint:        DesignTokens.Palette.silverTint,
+
+        cardVoid:          DesignTokens.Palette.cardVoid,
+
         // Heritage black card — locked, never adapts.
         cardArtwork:       DesignTokens.Palette.cardArtwork,
         onCardArtwork:     DesignTokens.Palette.onCardArtwork,
         cardArtworkMuted:  DesignTokens.Palette.cardArtworkMuted,
-        cardArtworkBorder: DesignTokens.Palette.cardArtworkBorder
+        cardArtworkBorder: DesignTokens.Palette.cardArtworkBorder,
+
+        // Balloon illustration pigments — locked.
+        balloonHighlight:  DesignTokens.Palette.balloonHighlight,
+        balloonShade:      DesignTokens.Palette.balloonShade
     )
 }
 

@@ -14,9 +14,10 @@ struct ChoiceScreen: View {
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject private var lockManager: AppLockManager
     
+    @AppStorage("hasCompletedSignup") private var hasCompletedSignup = false
+
     @State private var isBiometricLoading = false
-    @State private var showBiometricError = false
-    
+
     private var biometricType: LABiometryType {
         let ctx = LAContext()
         _ = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
@@ -64,25 +65,36 @@ struct ChoiceScreen: View {
             }
         }
         .background(Color.movo.background)
-        .alert("Sign-In Failed", isPresented: $showBiometricError) {
-            Button("Use Phone Number") { appState.flow = .loginPhone }
-            Button("Try Again") {
-                guard !isBiometricLoading else { return }
-                isBiometricLoading = true
-                Task {
-                    let success = await authVM.loginWithBiometric(appState: appState)
-                    isBiometricLoading = false
-                    if !success {
-                        showBiometricError = true
-                    }
-                }
+    }
+
+    // MARK: - Biometric login
+    private func runBiometricLogin() {
+        guard !isBiometricLoading else { return }
+        isBiometricLoading = true
+        Task {
+            let success = await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
+            isBiometricLoading = false
+            if success {
+                appState.flow = .home
+            } else {
+                presentBiometricError()
             }
-        } message: {
-            Text("Biometric sign-in was unsuccessful. You can try again or log in with your phone number.")
         }
     }
-    
-    
+
+    private func presentBiometricError() {
+        AlertManager.shared.showCustom(
+            title: "Sign-In Failed",
+            message: "Biometric sign-in was unsuccessful. You can try again or log in with your phone number.",
+            primary: "Try Again",
+            secondary: "Use Phone Number",
+            icon: .error,
+            onPrimary: { runBiometricLogin() },
+            onSecondary: { appState.flow = .loginPhone }
+        )
+    }
+
+
     private var hero: some View {
         VStack(spacing: 0) {
             
@@ -106,7 +118,7 @@ struct ChoiceScreen: View {
                     .foregroundColor(Color.movo.textPrimary)
                     .multilineTextAlignment(.center)
                 
-                Text("Send. Spend. Move money your way.")
+                Text("Send to Spend.")
                     .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
                     .multilineTextAlignment(.center)
@@ -119,28 +131,29 @@ struct ChoiceScreen: View {
     private var actionStack: some View {
         VStack(spacing: Spacing.md) {
             
-            Button(action: { appState.flow = .getStartedPhone } ) {
-                Text("Get Started")
+            if hasCompletedSignup {
+                Button("Accept an Invite") { appState.flow = .getStartedPhone }.buttonStyle(OutlineButtonStyle())
+                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
+            } else {
+                Button("Accept an Invite") { appState.flow = .getStartedPhone }.buttonStyle(MovoPrimaryButtonStyle())
+                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
             }
-            .buttonStyle(MovoPrimaryButtonStyle())
-            
-            Button(action: { appState.flow = .loginPhone }) {
-                Text("Log In")
+        
+            Button {
+                authVM.waitlistPrefillPhone = ""
+                appState.flow = .waitlist
+            } label: {
+                Text("Join the Waitlist")
+                    .textStyle(Typography.buttonLarge)
+                    .foregroundColor(Color.movo.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
             }
-            .buttonStyle(OutlineButtonStyle())
-            
+            .buttonStyle(.plain)
             
             if RSAKeyManager.shared.keysExist() {
                 Button {
-                    guard !isBiometricLoading else { return }
-                    isBiometricLoading = true
-                    Task {
-                        let success = await authVM.loginWithBiometric(appState: appState)
-                        isBiometricLoading = false
-                        if !success {
-                            showBiometricError = true
-                        }
-                    }
+                    runBiometricLogin()
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         if isBiometricLoading {
@@ -184,35 +197,37 @@ struct ChoiceScreen: View {
     
     
     private func disclaimerText() -> some View {
-        (
-            Text("MovoCash, ")
-                .foregroundColor(Color.movo.textSecondary)
-            + Text("Inc. is a financial technology company, ")
-                .foregroundColor(Color.movo.textTertiary)
-            + Text("Fin-Tech")
-                .foregroundColor(Color.movo.textSecondary)
-                .fontWeight(.semibold)
-            + Text(", not a bank. Depository Banking Services provided by Herring Bank, Member ")
-                .foregroundColor(Color.movo.textTertiary)
-            + Text("FDIC")
-                .foregroundColor(Color.movo.textSecondary)
-                .fontWeight(.semibold)
-            + Text(". Learn more by visiting ")
-                .foregroundColor(Color.movo.textTertiary)
-            + Text("Herring Bank")
-                .foregroundColor(Color.movo.textSecondary)
-                .underline(true, color: Color.movo.borderStrong)
-            + Text(". The MOVO Debit Mastercard®️ is issued by Herring Bank, pursuant to licensing by Mastercard International.")
-                .foregroundColor(Color.movo.textTertiary)
-        )
-        .font(.system(size: 9.5, weight: .regular))
-        .multilineTextAlignment(.center)
-        .lineSpacing(2)
-        .onTapGesture {
-            if let url = URL(string: "https://www.herringbank.com") {
-                UIApplication.shared.open(url)
+        let intro = Text("MovoCash, ")
+            .foregroundColor(Color.movo.textSecondary)
+        + Text("Inc. is a financial technology company, ")
+            .foregroundColor(Color.movo.textTertiary)
+        + Text("Fintech")
+            .foregroundColor(Color.movo.textSecondary)
+            .fontWeight(.semibold)
+        + Text(", not a bank. Depository Banking Services provided by Herring Bank, Member ")
+            .foregroundColor(Color.movo.textTertiary)
+
+        let fdic = Text("FDIC")
+            .foregroundColor(Color.movo.textSecondary)
+            .fontWeight(.semibold)
+        + Text(". Learn more by visiting ")
+            .foregroundColor(Color.movo.textTertiary)
+
+        let outro = Text("Herring Bank")
+            .foregroundColor(Color.movo.textSecondary)
+            .underline(true, color: Color.movo.borderStrong)
+        + Text(". The MOVO Debit Mastercard®️ is issued by Herring Bank, pursuant to licensing by Mastercard International.")
+            .foregroundColor(Color.movo.textTertiary)
+
+        return (intro + fdic + outro)
+            .font(.system(size: 9.5, weight: .regular))
+            .multilineTextAlignment(.center)
+            .lineSpacing(2)
+            .onTapGesture {
+                if let url = URL(string: "https://www.herringbank.com") {
+                    UIApplication.shared.open(url)
+                }
             }
-        }
     }
     
     

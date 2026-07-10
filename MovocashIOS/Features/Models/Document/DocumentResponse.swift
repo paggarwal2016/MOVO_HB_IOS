@@ -2,7 +2,7 @@
 //  DocumentResponse.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 02/05/26.
+//  Created by Movo Developer on 02/05/26.
 //
 
 import SwiftUI
@@ -27,7 +27,7 @@ enum DocumentType: Sendable, Hashable, Identifiable {
 
     var title: String {
         switch self {
-        case .tos:                 return "Terms of Service"
+        case .tos:                 return "Account Disclosures"
         case .privacy:             return "Privacy Policy"
         case .herringPrivacy:      return "Herring Privacy Policy"
         case .cardholderAgreement: return "Cardholder Agreement"

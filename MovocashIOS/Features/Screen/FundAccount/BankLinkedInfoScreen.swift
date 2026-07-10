@@ -2,81 +2,64 @@
 //  BankLinkedInfoScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 27/05/26.
+//  Created by Movo Developer on 27/05/26.
 //
 
 import SwiftUI
 
+/// Informational sheet shown before bank linking. It does NOT run Plaid itself —
+/// tapping "Continue" signals the parent (via `onContinue`) and dismisses, so the
+/// parent can present Plaid on a clean stack and own the success screen.
 struct BankLinkedInfoScreen: View {
 
     @Environment(\.dismiss) private var dismiss
-    let container: AppContainer
-    @ObservedObject var plaidVM: PlaidAchViewModel
-    var primaryAccount: SavingsAccountInfo? = nil
-    var allowFunding: Bool = true
-    var onSuccess: () -> Void = {}
-
-    @State private var isConnecting = false
-    @State private var fetchedAchAccounts: [ACHAccount] = []
-    @State private var showSuccessScreen = false
+    @Environment(\.securedDismiss) private var securedDismiss
+    /// Called when the user taps "Continue". The parent starts the Plaid flow
+    /// after this sheet has dismissed (typically from the sheet's `onDismiss`).
+    var onContinue: () -> Void = {}
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xxl) {
-            
-            HStack {
-                Spacer()
-                CircularNavButton(systemName: "xmark") { dismiss() }
-                    .accessibilityLabel("Close")
-                    .padding(.leading, Spacing.md)
-            }
-            .padding(.top, Spacing.lg)
+        VStack(alignment: .leading, spacing: Spacing.xl) {
 
-            // Header — logos + close on one balanced row
-            HStack(alignment: .center, spacing: 0) {
-
-                // MOVO tile
-                RoundedRectangle(cornerRadius: Radius.xl)
-                    .fill(Color.movo.accent)
-                    .frame(width: 48, height: 48)
+            // Header — co-brand overlapping circles (Chime style); close pinned top-right.
+            ZStack {
+                // Back circle: Plaid — elevatedHigh, sits behind
+                Circle()
+                    .fill(Color.movo.elevatedHigh)
+                    .frame(width: 64, height: 64)
                     .overlay(
-                        MovoMVSymbol(color: Color.movo.onAccent)
-                            .frame(width: 28, height: 28)
-                    )
-                
-                Spacer()
-
-                // Dot connector — fills space between the two tiles
-                HStack(spacing: 5) {
-                    ForEach(0..<5, id: \.self) { i in
-                        Circle()
-                            .fill(Color.movo.border)
-                            .frame(width: i == 2 ? 4 : 3, height: i == 2 ? 4 : 3)
-                            .opacity(i == 2 ? 0.6 : 1)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                
-                Spacer()
-
-                // Plaid tile
-                RoundedRectangle(cornerRadius: Radius.xl)
-                    .fill(Color.movo.elevated)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.xl)
-                            .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                    )
-                    .frame(width: 48, height: 48)
-                    .overlay(
-                        Text("plaid")
-                            .textStyle(Typography.cardTitle)
+                        Image("plaid")
+                            .resizable()
+                            .renderingMode(.template)
+                            .scaledToFit()
                             .foregroundColor(Color.movo.textPrimary)
+                            .frame(width: 34, height: 34)
                     )
-               
+                    .offset(x: 22)
+
+                // Front circle: Movo — dark elevated + accent tint + separator ring
+                Circle()
+                    .fill(Color.movo.elevated)
+                    .overlay(Circle().fill(Color.movo.accent.opacity(0.12)))
+                    .overlay(Circle().strokeBorder(Color.movo.surface, lineWidth: 1))
+                    .frame(width: 64, height: 64)
+                    .overlay(
+                        MovoMVSymbol()
+                            .frame(width: 34, height: 34)
+                    )
+                    .offset(x: -22)
+            }
+            .frame(width: 108, height: 64)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, Spacing.huge)
+            .overlay(alignment: .topTrailing) {
+                CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
+                    .accessibilityLabel("Close")
             }
 
             // Title
             Text("MOVO partners with Plaid to connect your accounts")
-                .textStyle(Typography.heroTitle)
+                .textStyle(Typography.sectionTitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -94,102 +77,31 @@ struct BankLinkedInfoScreen: View {
                 )
             }
 
+            //Spacer().frame(height: Spacing.md)
+
             // Footer
-            disclaimerText()
+          //qw  disclaimerText()
 
-            // Continue CTA
-            Button(isConnecting || plaidVM.state == .loading ? "Connecting..." : "Continue") {
-                Task {
-                    isConnecting = true
-                    defer { isConnecting = false }
-
-                    // Step 1 — Show spinner; yield one run-loop cycle so UIKit
-                    //          actually renders it before the next sync work runs.
-                    SpinnerView.showFullScreen()
-                    await Task.yield()
-
-                    do {
-                        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                    } catch {
-                        SpinnerView.hideFullScreen()
-                        AlertManager.shared.showError("Unable to initialize. Please try again.")
-                        return
-                    }
-
-                    // Step 2 — Hide spinner BEFORE Plaid SDK presents its own UI
-                    SpinnerView.hideFullScreen()
-
-                    // Step 3 — Plaid Link flow (SDK owns the screen from here)
-                    await plaidVM.startPlaidLink()
-
-                    // Step 4 — Account linked: show spinner, fetch fresh ACH list,
-                    //          then open FundAccountView directly.
-                    if plaidVM.linkedAccount != nil {
-                        SpinnerView.showFullScreen()
-                        await Task.yield()
-                        let response = try? await container.network.request(AchAPI.getAccounts) as ACHResponse
-                        SpinnerView.hideFullScreen()
-                        fetchedAchAccounts = response?.achAccounts ?? []
-                        // Always show the success screen so the user sees the
-                        // linked-account confirmation. BankLinkedSuccessScreen
-                        // handles the "Add funds" → FundAccountView step itself
-                        // when container + primaryAccount are provided.
-                        showSuccessScreen = true
-                    }
-                }
+            // Continue CTA — dismiss this sheet first, then let the parent start
+            // Plaid (see PlaidLinkFlowModifier wired on the parent).
+            Button("Continue") {
+                onContinue()
+                (securedDismiss ?? dismiss)()
             }
             .buttonStyle(MovoPrimaryButtonStyle())
-            .disabled(isConnecting || plaidVM.state == .loading)
         }
-        .padding(.horizontal, Spacing.xxl)
-        .padding(.top, Spacing.lg)
-        .padding(.bottom, Spacing.xxl)
-        .onDisappear {
-            // Safety cleanup — ensures the spinner is never stranded if the
-            // sheet is dismissed mid-flow (e.g. force-swipe while connecting).
-            SpinnerView.hideFullScreen()
-        }
-        // MARK: - BankLinkedSuccessScreen
-        // allowFunding=true  → "Add funds" CTA → FundAccountView (fund flow)
-        // allowFunding=false → "Done" CTA → dismisses back to dashboard (link-only flow)
-        .fullScreenCover(isPresented: $showSuccessScreen) {
-            BankLinkedSuccessScreen(
-                account: fetchedAchAccounts.first,
-                onDone: {
-                    showSuccessScreen = false
-                    onSuccess()
-                    dismiss()
-                },
-                container: allowFunding ? container : nil,
-                primaryAccount: allowFunding ? primaryAccount : nil,
-                linkedAccounts: fetchedAchAccounts
-            )
-        }
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.movo.surface)
+        // Opaque sheet backing so the screen behind never shows through during
+        // the present / dismiss slide (avoids the background appearing to animate).
+        .presentationBackground(Color.movo.surface)
     }
 
     // MARK: - Disclaimer
 
-    private func disclaimerText() -> some View {
-        (
-            Text("By selecting Continue, you agree to the ")
-                .foregroundColor(Color.movo.textSecondary)
-            + Text("Plaid End User Privacy Policy")
-                .foregroundColor(Color.movo.textSecondary)
-                .underline(true, color: Color.movo.borderStrong)
-            + Text(".")
-                .foregroundColor(Color.movo.textTertiary)
-        )
-        .font(.system(size: 11, weight: .regular))
-        .multilineTextAlignment(.center)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .frame(maxWidth: .infinity)
-        .onTapGesture {
-            if let url = URL(string: "https://www.herringbank.com") {
-                UIApplication.shared.open(url)
-            }
-        }
-    }
+    
 
     // MARK: - Feature Row
 

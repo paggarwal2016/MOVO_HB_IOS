@@ -2,7 +2,7 @@
 //  DashboardAPI.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 14/04/26.
+//  Created by Movo Developer on 14/04/26.
 //
 
 import Foundation
@@ -28,7 +28,7 @@ enum DashboardAPI: Endpoint {
     var headerType: HeaderType {
         switch self {
         case .dashboard:
-            return .movoAuthorizedAllWithIdempotency //.movoAuthorized
+            return [.session, .secureDeviceInfo, .officeId, .encrypted, .Idempotency]
         }
     }
     

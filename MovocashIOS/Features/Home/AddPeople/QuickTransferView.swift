@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 import MobileBankingSDK
 
 struct QuickTransferView: View {
@@ -13,24 +14,32 @@ struct QuickTransferView: View {
     let contact: ContactRecord
     let cards: [VCardListResponse]
     let primaryLinkedCard: VCardListResponse?
+    /// Recipient enrollment result from a check-intent already run by the caller
+    /// (the Pay Anyone confirmation popup). Drives the transfer route. `nil` when the
+    /// caller didn't pre-resolve it.
+    let recipientExists: Bool?
+
+    private var effectivePrimary: VCardListResponse? { primaryCardStore.card ?? primaryLinkedCard }
 
     private var accountBalance: Decimal {
-        Decimal(primaryLinkedCard?.savingsAccountAvailableBalance ?? 0)
+        Decimal(effectivePrimary?.savingsAccountAvailableBalance ?? 0)
     }
 
     private var primaryAccountNickname: String? {
-        primaryLinkedCard?.savingsAccountNickname ?? primaryLinkedCard?.name
+        effectivePrimary?.savingsAccountNickname ?? effectivePrimary?.name
     }
 
     // Primary card prepended so it is the first option in the selection sheet.
     private var displayCards: [VCardListResponse] {
-        guard let primary = primaryLinkedCard else { return cards }
+        guard let primary = effectivePrimary else { return cards }
         return [primary] + cards
     }
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var achVM: PlaidAchViewModel
+    @ObservedObject private var primaryCardStore: PrimaryCardStore
     @FocusState private var amountFocused: Bool
 
     @State private var amountText = "0"
@@ -40,16 +49,21 @@ struct QuickTransferView: View {
     @State private var showAccountSheet = false
     @State private var sendTask: Task<Void, Never>?
 
-    var onSuccess: () -> Void = {}
+    /// Called when the user finishes on the success screen ("Let's MOVO"), so the
+    /// presenter can refresh on return. The success confirmation is shown as a layer
+    /// inside this screen; this screen dismisses itself once the user is done.
+    var onComplete: (SuccessConfirmation) -> Void = { _ in }
 
-    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, onSuccess: @escaping () -> Void = {}) {
+    init(contact: ContactRecord, container: AppContainer, cards: [VCardListResponse], primaryLinkedCard: VCardListResponse? = nil, recipientExists: Bool? = nil, onComplete: @escaping (SuccessConfirmation) -> Void = { _ in }) {
         self.contact = contact
         self.cards = cards
         self.primaryLinkedCard = primaryLinkedCard
-        self.onSuccess = onSuccess
+        self.recipientExists = recipientExists
+        self.onComplete = onComplete
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
-        _selectedCard = State(wrappedValue: primaryLinkedCard ?? cards.first)
+        _primaryCardStore = ObservedObject(wrappedValue: container.primaryCardStore)
+        _selectedCard = State(wrappedValue: container.primaryCardStore.card ?? primaryLinkedCard ?? cards.first)
     }
 
     private var amount: Double { Double(amountText) ?? 0 }
@@ -80,12 +94,17 @@ struct QuickTransferView: View {
                     VStack(spacing: Spacing.xl) {
                         navBar
                         recipientSection
-                        amountSection
-                        noteCard
+                        AmountEntrySection(
+                            amountText: $amountText,
+                            amountFocused: $amountFocused,
+                            availableText: "\(availableBalanceDisplay) available",
+                            maxValue: availableBalanceDouble
+                        )
+                        NoteCard(text: $descriptionText)
                         accountCard
                     }
                     .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
+                    .padding(.top, Spacing.lg)
                     .padding(.bottom, Spacing.lg)
                 }
                 .onTapGesture { amountFocused = false }
@@ -103,29 +122,39 @@ struct QuickTransferView: View {
                     .ignoresSafeArea()
                 SpinnerView()
             }
+
+            // On transfer success the confirmation screen slides up as a full-screen
+            // layer over this view — presented FIRST, with the transfer form hidden
+            // behind it. "Let's MOVO" dismisses this whole screen in one transition,
+            // revealing the presenting screen with no flicker.
+            if let success = achVM.peerTransferSuccess {
+                SuccessConfirmationView(
+                    viewModel: SuccessConfirmationViewModel(success: success) {
+                        onComplete(success)
+                        (securedDismiss ?? dismiss)()
+                    }
+                )
+                .transition(.move(edge: .bottom))
+                .zIndex(1)
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: achVM.peerTransferSuccess?.id)
         .background(Color.movo.background)
         .navigationBarHidden(true)
-        // Call check-intent as soon as the view appears so the Pay button is
-        // gated before the user finishes entering an amount.
-        .task {
-            let rawPhone    = contact.phoneNumber ?? ""
-            let withCountry = rawPhone.hasPrefix("+1") ? rawPhone : "+1\(rawPhone.filter(\.isNumber))"
-            let sanitized   = PhoneNumberValidator.sanitize(withCountry)
-            let normalized  = PhoneNumberValidator.normalize(sanitized)
-            await transVM.checkIntent(phoneNumber: normalized)
-        }
         .onChange(of: amountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
         }
+        .onChange(of: primaryCardStore.card) { newPrimary in
+            if let newPrimary, selectedCard?.id == newPrimary.id {
+                selectedCard = newPrimary
+            }
+        }
         .globalAlert()
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+        .onSessionExpired {
+            // Cancel the in-flight send only; RootView navigates to login.
             sendTask?.cancel()
             sendTask = nil
-            showConfirmSheet = false
-            showAccountSheet = false
-            dismiss()
         }
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(
@@ -156,15 +185,6 @@ struct QuickTransferView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
         }
-        .fullScreenCover(item: $achVM.peerTransferSuccess) { data in
-            SuccessConfirmationView(
-                viewModel: SuccessConfirmationViewModel(success: data) {
-                    achVM.peerTransferSuccess = nil
-                    onSuccess()
-                    dismiss()
-                }
-            )
-        }
         .sheet(isPresented: $showAccountSheet) {
             accountSelectionSheet
         }
@@ -174,7 +194,7 @@ struct QuickTransferView: View {
 
     private var navBar: some View {
         HStack {
-            Button(action: { dismiss() }) {
+            Button(action: { (securedDismiss ?? dismiss)() }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Color.movo.textPrimary)
@@ -185,7 +205,7 @@ struct QuickTransferView: View {
 
             Spacer()
 
-            Text("Pay")
+            Text("MOVO Pay")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
 
@@ -193,9 +213,6 @@ struct QuickTransferView: View {
 
             Color.clear.frame(width: 36, height: 36)
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.top, Spacing.lg)
-        .padding(.bottom, Spacing.md)
     }
 
     // MARK: - Recipient
@@ -231,130 +248,13 @@ struct QuickTransferView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Amount Section
-
-    private var amountSection: some View {
-        VStack(spacing: Spacing.md) {
-            amountDisplay
-
-            Text("\(availableBalanceDisplay) available")
-                .textStyle(Typography.caption)
-                .foregroundColor(Color.movo.textTertiary)
-
-            quickChips
-        }
-    }
-
-    private var amountDisplay: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("$")
-                .textStyle(Typography.amountPrefix)
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
-
-            let parts = amountText.split(separator: ".")
-            Text(parts.first.map(String.init) ?? "0")
-                .textStyle(Typography.amountInput)
-                .monospacedDigit()
-                .foregroundColor(Color.movo.textPrimary)
-
-            Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                .textStyle(Typography.amountPrefix)
-                .monospacedDigit()
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { amountFocused = true }
-        .overlay(
-            TextField("", text: $amountText)
-                .keyboardType(.decimalPad)
-                .focused($amountFocused)
-                .opacity(0)
-        )
-    }
-
-    private let presets: [(String, Double?)] = [
-        ("$10", 10), ("$25", 25), ("$50", 50), ("$100", 100)
-    ]
-
-    private var quickChips: some View {
-        HStack(spacing: Spacing.sm) {
-            ForEach(presets, id: \.0) { label, value in
-                let selected = isPresetSelected(value)
-                Button { applyPreset(value) } label: {
-                    Text(label)
-                        .textStyle(Typography.body)
-                        .foregroundColor(selected ? Color.movo.accent : Color.movo.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Spacing.md)
-                        .background(
-                            Capsule()
-                                .fill(selected ? Color.movo.accentTint : Color.movo.elevated)
-                                .overlay(
-                                    Capsule().strokeBorder(
-                                        selected ? Color.movo.accentBorder : Color.clear,
-                                        lineWidth: Stroke.hairline
-                                    )
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private func isPresetSelected(_ value: Double?) -> Bool {
-        guard amount > 0 else { return false }
-        if let v = value { return amount == v }
-        return amount == availableBalanceDouble && !amountText.isEmpty
-    }
-
-    private func applyPreset(_ value: Double?) {
-        amountFocused = false
-        if let v = value {
-            amountText = v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : "\(v)"
-        } else {
-            guard let card = selectedCard else { return }
-            let raw = NSDecimalNumber(decimal: card.balance).stringValue
-            amountText = raw
-        }
-    }
-
-    // MARK: - Note Card
-
-    private var noteCard: some View {
-        HStack(spacing: Spacing.md) {
-            Image(systemName: "bubble.left")
-                .font(.system(size: 15, weight: .regular))
-                .foregroundColor(Color.movo.textDisabled)
-
-            TextField("", text: $descriptionText,
-                      prompt: Text("What's it for? (optional)")
-                          .foregroundColor(Color.movo.textDisabled))
-                .textStyle(Typography.subtitle)
-                .foregroundColor(Color.movo.textPrimary)
-                .autocorrectionDisabled()
-        }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.lg)
-                .fill(Color.movo.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.lg)
-                        .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
-                )
-        )
-    }
-
     // MARK: - Account Card
 
     private var accountCard: some View {
         Group {
             if displayCards.isEmpty {
                 HStack {
-                    Text("No cards available")
+                    Text("No funding source linked yet")
                         .textStyle(Typography.caption)
                         .foregroundColor(Color.movo.textTertiary)
                     Spacer()
@@ -396,7 +296,7 @@ struct QuickTransferView: View {
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(Color.movo.textPrimary)
                         if isPrimary {
-                            StatusPill("PRIMARY", variant: .accent)
+                            StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                         }
                     }
                     Text(card.maskedNumber)
@@ -529,29 +429,14 @@ struct QuickTransferView: View {
     // MARK: - Send Button
 
     private var sendButton: some View {
-        Button {
+        PayActionButton(amount: amount, isEnabled: isValid) {
             UIApplication.shared.dismissKeyboard()
             amountFocused = false
             Task {
                 await sendMoney()
             }
             //showReview()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "arrow.up.forward")
-                    .font(.system(size: 13, weight: .semibold))
-                Text(amount > 0 ? "Pay $\(String(format: "%.2f", amount))" : "Pay")
-                    .textStyle(Typography.buttonLarge)
-            }
-            .foregroundColor(isValid ? Color.movo.onAccent : Color.movo.textDisabled)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(
-                Capsule().fill(isValid ? Color.movo.accent : Color.movo.elevated)
-            )
         }
-        .disabled(!isValid)
-        .buttonStyle(.plain)
     }
 
     // MARK: - Actions
@@ -576,10 +461,9 @@ struct QuickTransferView: View {
         let sanitized   = PhoneNumberValidator.sanitize(withCountry)
         let normalizedPhone = PhoneNumberValidator.normalize(sanitized)
 
-        // checkIntent result drives the transfer route:
-        //   exists == true  → recipient is a MOVO user → .internalTransfer
-        //   exists == false / nil → external recipient → .externalTransfer
-        let isInternal = transVM.checkIntentResult?.exists ?? false
+        //   true  → recipient is a MOVO user → .internalTransfer
+        //   false / nil → external recipient → .externalTransfer
+        let isInternal = recipientExists ?? false
 
         await achVM.sendMoneyToContact(
             fromCard: fromCard,

@@ -13,6 +13,10 @@ struct BiometricEnrollView: View {
     let lockManager: AppLockManager
     var onEnable: () async -> Bool  // user tapped "Enable"; returns false if passkey was cancelled/failed
     var onSkip: () -> Void          // user tapped "Skip"
+    /// Called when the user taps "Open Settings" to fix a denied/disabled biometric.
+    /// The onboarding flow uses this to persist a cold-launch resume marker; other
+    /// call sites (post-login settings) leave it nil.
+    var onOpenSettings: (() -> Void)? = nil
     
     @EnvironmentObject var authVM: AuthViewModel
     
@@ -121,6 +125,7 @@ struct BiometricEnrollView: View {
         ) {
             Button("Open Settings") {
                 wentToSettings = true
+                onOpenSettings?()
                 if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(settingsURL)
                 }
@@ -146,10 +151,10 @@ struct BiometricEnrollView: View {
     // MARK: - Enroll
     
     private func enroll() async {
-        // Prevent double-execution during the 1.5 s success window or while a
-        // previous attempt is in progress.
         guard !enrollmentSucceeded, !isEnrolling else { return }
-        
+        isEnrolling = true
+        defer { isEnrolling = false }
+
         // Guard: app permission was revoked in iOS Settings → Privacy → Face ID
         if lockManager.isBiometricPermissionDenied {
             showSettingsAlert = true
@@ -170,9 +175,18 @@ struct BiometricEnrollView: View {
         //   (b) Login where biometrics were enrolled in a prior session but passkey
         //       never completed — jump straight to passkey without re-enrolling.
         let alreadyEnrolledForUser = await authVM.isBiometricEnrolledForCurrentUser()
-        if lockManager.isBiometricAvailable && alreadyEnrolledForUser {
-            isEnrolling = true
-            defer { isEnrolling = false }
+
+        // Guard: per-user flag says enrolled but the Secure Enclave key is missing.
+        // This happens after an app reinstall, a failed revoke, or any path that
+        // deleted the key without clearing the flag. Clear the stale flag so the
+        // full enrollment flow runs and creates a fresh key.
+        if alreadyEnrolledForUser && !lockManager.isBiometricEnabled {
+            await authVM.clearBiometricEnrollmentForCurrentUser()
+        }
+
+        // Fast path only when BOTH the per-user flag AND the Secure Enclave key exist.
+        // If the key is missing the condition above cleared the flag, so this is skipped.
+        if lockManager.isBiometricAvailable && alreadyEnrolledForUser && lockManager.isBiometricEnabled {
             let passkeySucceeded = await onEnable()
             if !passkeySucceeded {
                 errorMessage = "Device registration failed. Please try again."
@@ -180,7 +194,6 @@ struct BiometricEnrollView: View {
             return
         }
 
-        isEnrolling = true
         errorMessage = nil
         
         // 1. Verify biometric works right now (shows system prompt)
@@ -189,7 +202,6 @@ struct BiometricEnrollView: View {
                 reason: "Confirm biometric to enable quick unlock"
             )
         } catch let err as BiometricError {
-            isEnrolling = false
             switch err {
             case .userCancel, .systemCancel:
                 return  // user dismissed — no error shown
@@ -204,39 +216,30 @@ struct BiometricEnrollView: View {
                 return
             }
         } catch {
-            isEnrolling = false
             errorMessage = error.localizedDescription
             return
         }
-        
+
         // 2. Store Secure Enclave key
         do {
             try lockManager.enrollBiometrics()
         } catch {
             errorMessage = error.localizedDescription
-            isEnrolling = false
             return
         }
         
-        // 3. Register RSA key pair with server (POST /rsa)
-        await authVM.enrollRSA()
-
-        // enrollRSA() deletes the RSA key pair on any failure.
-        // If keys are absent, roll back the local Secure Enclave key so both
-        // sides stay in sync — the user will need to retry enrollment.
-        if !RSAKeyManager.shared.keysExist() {
+        do {
+            try await authVM.enrollRSA()
+        } catch let enrollError {
             do {
                 try lockManager.revokeBiometrics()
             } catch {
-                // Secure Enclave key deletion failed — local state is now
-                // inconsistent (biometric enrolled locally, no RSA key on server).
-                // Force the user to log out and re-enroll so both sides resync.
                 errorMessage = "Enrollment failed and could not be fully rolled back. Please log out and try again."
-                isEnrolling = false
                 return
             }
-            errorMessage = "Enrollment incomplete. Check your connection and try again."
-            isEnrolling = false
+            if enrollError.shouldShowUserFacingToast {
+                errorMessage = "Enrollment incomplete. \(enrollError.localizedDescription)"
+            }
             return
         }
 
@@ -245,10 +248,7 @@ struct BiometricEnrollView: View {
         //    not incorrectly treated as enrolled.
         await authVM.markBiometricEnrolled()
         
-        // Show success confirmation on this screen before navigating forward.
-        // Gives the user a clear signal that enrollment completed.
         enrollmentSucceeded = true
-        isEnrolling = false
         try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 s
 
         let passkeySucceeded = await onEnable()

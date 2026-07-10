@@ -2,7 +2,7 @@
 //  DashboardResponse.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 14/04/26.
+//  Created by Movo Developer on 14/04/26.
 //
 
 import Foundation
@@ -206,6 +206,7 @@ enum DashboardSection: Sendable {
     case linkedAccounts(DashboardLinkedAccounts)
     case myCards(DashboardMyCards)
     case menu([DashboardAction])
+    case inviteAFriend(DashboardInviteAFriend)
     case unknown
 }
 
@@ -248,8 +249,39 @@ extension DashboardSection {
         case "MENU":
             guard let v = decoded([DashboardAction].self) else { return .unknown }
             return .menu(v)
+        case "INVITE-A-FRIEND":
+            guard let v = decoded(DashboardInviteAFriend.self) else { return .unknown }
+            return .inviteAFriend(v)
         default:
             return .unknown
+        }
+    }
+}
+
+// MARK: - INVITE-A-FRIEND
+
+nonisolated struct DashboardInviteAFriend: Decodable, Sendable {
+    let title: String
+    let description: String?
+    let invitees: [Invitee]?
+    let totalInvites: Int?
+    let actions: [DashboardAction]?
+
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case description
+        case invitees
+        case totalInvites = "total_invites"
+        case actions
+    }
+
+    nonisolated struct Invitee: Decodable, Sendable {
+        let inviteePhone: String?
+        let nickname: String?
+
+        private enum CodingKeys: String, CodingKey {
+            case inviteePhone = "invitee_phone"
+            case nickname
         }
     }
 }
@@ -442,9 +474,12 @@ nonisolated struct DashboardMyCards: Decodable, Sendable {
     let title: String
     let description: String
     let actions: [DashboardAction]
+    /// Sealed-box ciphertext (base64) carrying the user's `[VCardListResponse]`.
+    /// Decrypted by DashboardViewModel via SealedCryptoService.
+    let encryptedData: String?
 
     private enum CodingKeys: String, CodingKey {
-        case title, description, actions
+        case title, description, actions, encryptedData
     }
 
     init(from decoder: Decoder) throws {
@@ -452,6 +487,7 @@ nonisolated struct DashboardMyCards: Decodable, Sendable {
         title = c.decodeLossyString(forKey: .title)
         description = c.decodeLossyString(forKey: .description)
         actions = try c.decodeLossyDashboardActionArray(forKey: .actions)
+        encryptedData = try? c.decodeIfPresent(String.self, forKey: .encryptedData)
     }
 }
 

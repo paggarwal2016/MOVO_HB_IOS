@@ -10,6 +10,26 @@ import Foundation
 extension Notification.Name {
     static let sessionExpired = Notification.Name("sessionExpired")
     static let dashboardShouldRefresh = Notification.Name("dashboardShouldRefresh")
+    /// Collapse the entire presented/navigation stack back to the dashboard in a
+    /// single transition. Observed by RootView (root swap), HomeTabBarView (tab),
+    /// DashboardView and ManageExternalAccountsView (reset their nav pushes).
+    static let returnToDashboard = Notification.Name("returnToDashboard")
+    /// Broadcast when the device is flagged as jailbroken/compromised (e.g. the
+    /// network layer rejecting a call). Observed by RootView to raise the app-wide
+    /// hard block. See `DeviceIntegrityNotifier`.
+    static let deviceCompromised = Notification.Name("deviceCompromised")
+}
+
+// MARK: - Device Integrity Broadcast
+
+/// Central, main-actor broadcaster for the compromised-device signal. Any layer
+/// that detects a jailbreak (e.g. `NetworkService` rejecting an outbound call)
+/// posts through here so the SwiftUI gate in `RootView` can raise on the main
+/// actor without cross-thread `@State` mutation.
+enum DeviceIntegrityNotifier {
+    @MainActor static func broadcastCompromised() {
+        NotificationCenter.default.post(name: .deviceCompromised, object: nil)
+    }
 }
 
 enum NetworkError: LocalizedError, Sendable {
@@ -25,9 +45,11 @@ enum NetworkError: LocalizedError, Sendable {
     case timeout
     case requestFailed(String)
     case securityViolation
+    case secureConnectionFailed
     case invalidURL
     case encodingError
     case noContent
+    case deviceSessionExpired(message: String?)
     case unknown
 
     var errorDescription: String? {
@@ -64,7 +86,10 @@ enum NetworkError: LocalizedError, Sendable {
             return "Request failed: \(reason)"
 
         case .securityViolation:
-            return "Secure connection failed. Please check your network."
+            return "For your security, this action is blocked on this device."
+
+        case .secureConnectionFailed:
+            return "We couldn't establish a secure connection. Please check your network and try again."
 
         case .invalidURL:
             return "Invalid URL"
@@ -74,6 +99,10 @@ enum NetworkError: LocalizedError, Sendable {
 
         case .noContent:
             return nil
+
+        case .deviceSessionExpired(let message):
+            // Surface only the server's exact message — no canned default.
+            return message
 
         case .unknown:
             return "Something went wrong"
@@ -149,5 +178,28 @@ enum SessionExpiryNotifier {
 
     nonisolated private static func apiMessage(from data: Data) -> String? {
         try? JSONDecoder().decode(APIErrorResponse.self, from: data).message
+    }
+}
+
+// MARK: - Device Session (X25519 movo-info) Expiry Detection
+
+/// Detects the backend signal that the 15-minute X25519 device session (the
+/// private key cached in Redis) has expired, so the secure `movo-info` blob can
+/// no longer be decrypted. Only consulted for requests that actually sent the
+/// X25519 header, so it never affects auth-session expiry.
+///
+/// Matches on the machine-readable error `code` only — never the status code or
+/// message text — so it can't collide with auth-session expiry (which logs the
+/// user out via `SessionExpiryNotifier`).
+enum DeviceSessionExpiry {
+
+    /// The error `code` the API returns when the device session is
+    /// expired/undecryptable. Single source of truth.
+    /// TODO(backend): confirm this value against the API contract.
+    nonisolated static let expiredCode = "DEVICE_SESSION_EXPIRED"
+
+    nonisolated static func isExpired(code: String?) -> Bool {
+        guard let code, !code.isEmpty else { return false }
+        return code.caseInsensitiveCompare(expiredCode) == .orderedSame
     }
 }

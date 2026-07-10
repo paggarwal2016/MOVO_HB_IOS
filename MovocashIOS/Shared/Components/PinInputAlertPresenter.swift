@@ -146,7 +146,7 @@ struct PinInputAlertPresenter<Content: View>: View {
                     Divider()
                     buttonsView
                 }
-                .background(Color(.systemBackground))
+                .background(Color.movo.surface)
                 .clipShape(RoundedRectangle(cornerRadius: config.cornerRadius))
                 .padding(.horizontal, 40)
                 .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
@@ -169,6 +169,8 @@ struct PinInputAlertPresenter<Content: View>: View {
                     Divider()
                     buttonsView
                 }
+                // Screenshot/recording protection for sensitive content
+                .secured()
                 .presentationDetents([.height(380)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(config.cornerRadius)
@@ -296,7 +298,7 @@ struct PinInputAlertPresenter<Content: View>: View {
             .buttonStyle(MovoCompactButtonStyle())
             .disabled(isDisabled)
         }
-        .background(Color(.systemBackground))
+        .background(Color.movo.surface)
     }
 
     // MARK: - Actions

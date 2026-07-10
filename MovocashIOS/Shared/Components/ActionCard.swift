@@ -17,49 +17,60 @@ struct ActionCard: View {
     private let theme = MovoTheme.color
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            PayAnyoneIllustration()
-                .frame(width: 80, height: 80)
-                .frame(maxWidth: .none, alignment: .leading)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Section eyebrow — the tile title (e.g. "QUICK SEND").
+            Text(title.uppercased())
+                .textStyle(Typography.eyebrow)
+                .foregroundColor(Color.movo.textTertiary)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .textStyle(Typography.cardHero)
-                    .foregroundStyle(theme.textPrimary.color)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(description)
-                    .textStyle(Typography.subtitle)
-                    .foregroundStyle(theme.textSecondary.color)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Button(action: onButtonTap) {
-                    HStack(spacing: 6) {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: Color.movo.onAccent))
-                                .scaleEffect(0.8)
-                        } else {
-                            Text(buttonLabel)
-                                .textStyle(Typography.button)
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
+            // Inner card — tappable empty state.
+            Button(action: onButtonTap) {
+                VStack(spacing: Spacing.sm) {
+                    // Circular tinted badge holding the add-person glyph.
+                    ZStack {
+                        Circle()
+                            .fill(Color.movo.accentTint)
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 20, weight: .regular))
+                            .foregroundColor(Color.movo.accent)
                     }
+                    .frame(width: 40, height: 40)
+                    .padding(.top, Spacing.md)
+
+                    // Message — the section's `description` (e.g. "No recent contacts yet").
+                    // +3pt over Typography.subtitle (13pt regular, tracking 0)
+                    if !description.isEmpty {
+                        Text(description)
+                            .font(.system(size: 16, weight: .regular))
+                            .tracking(0)
+                            .foregroundStyle(theme.textSecondary.color)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    // Accent action — the API action's `label` (e.g. "Add someone").
+                    // +3pt over Typography.button (12pt semibold, tracking 0.2)
+                    Text(buttonLabel)
+                        .font(.system(size: 15, weight: .semibold))
+                        .tracking(0.2)
+                        .foregroundStyle(Color.movo.accent)
+                        .padding(.bottom, Spacing.md)
                 }
-                .buttonStyle(SoftAccentButtonStyle())
-                .disabled(isLoading)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.sm)
+                .padding(.horizontal, Spacing.lg)
+                .background(LinearGradient.cardVoid)
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                        .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: DesignTokens.Stroke.hairline)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
             }
+            .buttonStyle(.plain)
+            .disabled(isLoading)
         }
-        .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.movo.surface)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .stroke(theme.border.color, lineWidth: DesignTokens.Stroke.hairline)
-        )
     }
 }
 
@@ -177,49 +188,48 @@ struct PayAnyoneAddContactView: View {
     var onContactTap: (RecordContact) -> Void
     var onSeeAllTap: (() -> Void)? = nil
 
-    private var showSeeAll: Bool { contacts.count >= 4 }
-    private var displayedContacts: [RecordContact] { Array(contacts.prefix(4)) }
+    /// Drop contacts whose number isn't a valid US (NANP) number.
+    private var validContacts: [RecordContact] { contacts.filter { $0.hasValidPhone } }
+    private var showSeeAll: Bool { validContacts.count >= 4 }
+    private var displayedContacts: [RecordContact] { Array(validContacts.prefix(4)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
 
-            // Header
+            // Header — sits OUTSIDE the card, like CardSelectorView's section title.
             HStack {
                 Eyebrow(title)
                 Spacer()
                 if showSeeAll {
                     Button(action: { onSeeAllTap?() }) {
-                        Text("See all")
-                            .textStyle(Typography.caption)
-                            .foregroundColor(Color.movo.accent)
+                        Eyebrow("SEE ALL")
                     }
                     .buttonStyle(.plain)
                 }
             }
 
-            // Bubbles — equal width when ≥4 contacts, fixed width otherwise
+            // Bubbles — equal width when ≥4 contacts, fixed width otherwise.
+            // Only this row carries the card surface now.
             HStack(spacing: 8) {
                 ForEach(displayedContacts) { contact in
-                    let initial = String(
-                        contact.nickname?.first ?? contact.phoneNumber?.first ?? "?"
-                    ).uppercased()
-                    let label = contact.nickname?.split(separator: " ").first.map(String.init)
-                                ?? contact.nickname ?? ""
-                    bubble(initial: initial, label: label, expand: showSeeAll) { onContactTap(contact) }
+                    // No nickname → first local digit avatar + phone number label.
+                    bubble(initial: contact.avatarInitial, label: contact.compactLabel, expand: showSeeAll) { onContactTap(contact) }
                 }
                 bubble(initial: "+", label: "Add", expand: showSeeAll, action: onAddTap)
             }
+            .padding(Spacing.cardPadding)
+            // Align left so a short list (fixed-width bubbles) starts from the leading
+            // edge instead of centering. With ≥4 contacts the bubbles expand to fill.
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid
+            // gradient with a silver hairline border.
+            .background(LinearGradient.cardVoid)
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
+                    .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: DesignTokens.Stroke.hairline)
+            )
         }
-        .padding(Spacing.cardPadding)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.heroCard)
-                .fill(Color.movo.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.heroCard)
-                        .strokeBorder(Color.movo.borderStrong, lineWidth: Stroke.hairline)
-                )
-        )
     }
 
     private func bubble(initial: String, label: String, expand: Bool, action: @escaping () -> Void) -> some View {
@@ -247,5 +257,128 @@ struct PayAnyoneAddContactView: View {
             .frame(maxWidth: expand ? .infinity : 56)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Invite a friend
+
+/// Renders the dashboard INVITE-A-FRIEND section.
+///
+/// - No invitees → just the green "Invite a friend" CTA.
+/// - One or more invitees → the CTA on top, plus a "See all invitees" row
+///   beneath it with an overlapping avatar stack (the last two phone digits
+///   stand in for each invitee, since the dashboard payload has no nickname).
+struct InviteAFriendCard: View {
+
+    let title: String
+    let invitees: [DashboardInviteAFriend.Invitee]
+    var totalInvites: Int? = nil
+    /// Single tap action for the whole card — opens the invite sheet (which also
+    /// shows the invited list and fetches it via loadInvitees()).
+    var onTap: () -> Void
+
+    private var hasInvitees: Bool { !invitees.isEmpty }
+    private let maxAvatars = 3
+    private let cornerRadius = Radius.xxl
+
+    var body: some View {
+        VStack(spacing: 0) {
+            inviteButton
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35),
+                              lineWidth: Stroke.hairline)
+        )
+    }
+
+    private var inviteButton: some View {
+        // The full card is tappable and opens the invite sheet's invited-list
+        // section, which fetches the list via loadInvitees().
+        Button(action: onTap) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "person.badge.plus")
+                    .foregroundColor(Color.movo.accent)
+                Text(title.uppercased())
+                    .foregroundColor(Color.movo.textPrimary)
+
+                Spacer(minLength: Spacing.sm)
+
+                if hasInvitees {
+                    avatarStack
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
+            }
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(Color.movo.background)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.lg)
+            .background(LinearGradient.cardVoid)
+            // Make the entire row area tappable, not just the text/icons.
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var avatarStack: some View {
+        let shown = Array(invitees.prefix(maxAvatars))
+        let total = totalInvites ?? invitees.count
+        let remaining = max(0, total - shown.count)
+        return HStack(spacing: -12) {
+            ForEach(Array(shown.enumerated()), id: \.offset) { _, invitee in
+                inviteeAvatar(invitee)
+            }
+            if remaining > 0 {
+                avatarCircle(fill: Color.movo.elevatedHigh) {
+                    Text("+\(remaining)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+            }
+        }
+    }
+
+    /// With a nickname: its first letter on the teal circle. Without one: the
+    /// Movo "MV" logomark in its brand colors on a dark circle (elevatedHigh)
+    /// so the colored mark reads clearly.
+    @ViewBuilder
+    private func inviteeAvatar(_ invitee: DashboardInviteAFriend.Invitee) -> some View {
+        if let initial = nicknameInitial(invitee) {
+            avatarCircle(fill: Color.movo.accent) {
+                Text(initial)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color.movo.background)
+            }
+        } else {
+            avatarCircle(fill: Color.movo.elevatedHigh) {
+                MovoMVSymbol()
+                    .frame(width: 15, height: 15)
+            }
+        }
+    }
+
+    private func avatarCircle<Content: View>(
+        fill: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .frame(width: 38, height: 38)
+            .background(Circle().fill(fill))
+            // Ring in the row's background color so overlapping circles read cleanly.
+            .overlay(Circle().strokeBorder(Color.movo.cardVoid, lineWidth: 2))
+    }
+
+    /// First letter of the invitee's nickname (uppercased), or `nil` when there
+    /// is no usable nickname — in which case the caller shows the Movo logo.
+    private func nicknameInitial(_ invitee: DashboardInviteAFriend.Invitee) -> String? {
+        guard let first = invitee.nickname?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .first
+        else { return nil }
+        return String(first).uppercased()
     }
 }

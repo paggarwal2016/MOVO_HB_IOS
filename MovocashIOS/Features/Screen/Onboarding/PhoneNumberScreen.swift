@@ -109,6 +109,25 @@ struct PhoneNumberScreen: View {
             )
             .onChangeCompat(of: authVM.phoneDisplayText) { newValue in
                 authVM.handlePhoneInput(newValue)
+                // Clear any existing error on every keystroke (resume-typing clears errors).
+                // Surface tooLong / invalidCountryCode immediately — they're unambiguous.
+                // tooShort is suppressed here; it appears only when the user taps Continue.
+                let digits = authVM.phoneNumber
+                if digits.isEmpty {
+                    externalError = nil
+                } else {
+                    switch PhoneNormalizer.normalizePhone(digits) {
+                    case .success:
+                        externalError = nil
+                    case .failure(let err):
+                        switch err {
+                        case .tooLong, .invalidCountryCode:
+                            externalError = err.localizedDescription
+                        case .tooShort:
+                            externalError = nil
+                        }
+                    }
+                }
             }
             .keyboardType(.numberPad)
             .textContentType(.telephoneNumber)
@@ -190,8 +209,12 @@ struct PhoneNumberScreen: View {
     private var continueButton: some View {
         return Button(action: {
             UIApplication.shared.dismissKeyboard()
-            Task {
-                await authVM.submitPhoneNumber(appState: appState)
+            switch PhoneNormalizer.normalizePhone(authVM.phoneNumber) {
+            case .success:
+                externalError = nil
+                Task { await authVM.submitPhoneNumber(appState: appState) }
+            case .failure(let err):
+                externalError = err.localizedDescription
             }
         } ) {
             Text("Continue")
@@ -204,15 +227,10 @@ struct PhoneNumberScreen: View {
     
     private var topBar: some View {
         HStack {
-            Button(action: {
+            CustomBackButton() {
                 UIApplication.shared.dismissKeyboard()
                 appState.flow = .choice
-            }) {
-                BackChevronIcon(tint: Color.movo.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             Spacer()
         }
     }

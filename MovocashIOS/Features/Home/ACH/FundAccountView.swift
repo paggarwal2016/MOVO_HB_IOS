@@ -2,7 +2,7 @@
 //  FundAccountView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 09/04/26.
+//  Created by Movo Developer on 09/04/26.
 //
 
 import SwiftUI
@@ -12,6 +12,10 @@ import SwiftUI
 enum FundAccountMode {
     case dashboard
     case profile
+    /// Post-KYC onboarding deposit. Behaves like `.dashboard` (external → MOVO) but
+    /// self-loads both the external accounts and the MOVO primary via API, and lands
+    /// on the dashboard when finished (success or back).
+    case onboardingDeposit
 }
 
 // MARK: - View
@@ -19,33 +23,47 @@ enum FundAccountMode {
 struct FundAccountView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var vm: ACHViewModel
     @StateObject private var plaidVM: PlaidAchViewModel
     @StateObject private var transactionVM: TransactionViewModel
+    @StateObject private var vcardVM: VCardViewModel
 
-    let primaryAccount: SavingsAccountInfo
     let onSuccess: () -> Void
     let onAccountLinked: () -> Void
     private let initialAccounts: [ACHAccount]
     private let mode: FundAccountMode
+    /// MOVO primary supplied by the caller. In `.onboardingDeposit` mode this is nil
+    /// and the screen self-loads it (see `loadedPrimaryAccount` / `loadOnboardingAccounts`).
+    private let injectedPrimaryAccount: SavingsAccountInfo?
 
-    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo, mode: FundAccountMode = .dashboard, onSuccess: @escaping () -> Void = {}, onAccountLinked: @escaping () -> Void = {}) {
+    init(container: AppContainer, initialAccounts: [ACHAccount] = [], primaryAccount: SavingsAccountInfo? = nil, mode: FundAccountMode = .dashboard, onSuccess: @escaping () -> Void = {}, onAccountLinked: @escaping () -> Void = {}) {
         self.initialAccounts = initialAccounts
         self.mode = mode
         _vm = StateObject(wrappedValue: container.makeACHViewModel())
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _transactionVM = StateObject(wrappedValue: container.makeTransactionViewModel())
-        self.primaryAccount = primaryAccount
+        _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
+        self.injectedPrimaryAccount = primaryAccount
         self.onSuccess = onSuccess
         self.onAccountLinked = onAccountLinked
     }
+
+    /// Resolved MOVO primary — injected by the caller, or self-loaded in onboarding mode.
+    private var primaryAccount: SavingsAccountInfo? { injectedPrimaryAccount ?? loadedPrimaryAccount }
 
     private var isProfileMode: Bool {
         if case .profile = mode { return true }
         return false
     }
 
+    private var isOnboarding: Bool {
+        if case .onboardingDeposit = mode { return true }
+        return false
+    }
+
     @State private var selectedAccount: ACHAccount?
+    @State private var loadedPrimaryAccount: SavingsAccountInfo?
     @State private var amount: String = "0"
     @State private var showConfirmSheet: Bool = false
     @State private var showAccountSheet: Bool = false
@@ -59,7 +77,7 @@ struct FundAccountView: View {
 
     private var amountExceedsBalance: Bool {
         if isProfileMode {
-            return enteredAmount > primaryAccount.availableBalance
+            return enteredAmount > (primaryAccount?.availableBalance ?? 0)
         }
         guard let account = selectedAccount else { return false }
         return enteredAmount > account.plaidAccountBalance
@@ -119,7 +137,11 @@ struct FundAccountView: View {
             }
         }
         .task {
-            await vm.fetchAccounts()
+            if isOnboarding {
+                await loadOnboardingAccounts()
+            } else {
+                await vm.fetchAccounts()
+            }
         }
         .onChange(of: vm.accounts) { accounts in
             guard selectedAccount == nil else { return }
@@ -129,19 +151,16 @@ struct FundAccountView: View {
             if focused && amount == "0" { amount = "" }
             if !focused && amount.isEmpty { amount = "0" }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+        .onSessionExpired {
+            // Cancel the in-flight transfer only; RootView navigates to login.
             transferTask?.cancel()
             transferTask = nil
-            isSubmitting = false
-            showConfirmSheet = false
-            showAccountSheet = false
-            dismiss()
         }
         .sheet(isPresented: $showConfirmSheet) {
-            let fromName = isProfileMode ? primaryAccount.displayName : (selectedAccount?.accountName ?? "—")
-            let fromMask = isProfileMode ? primaryAccount.maskedAccountNumber : selectedAccount.map { "••\($0.accountNumber.suffix(4))" }
-            let toName   = isProfileMode ? (selectedAccount?.accountName ?? "—") : primaryAccount.displayName
-            let toMask   = isProfileMode ? selectedAccount.map { "••\($0.accountNumber.suffix(4))" } : primaryAccount.maskedAccountNumber
+            let fromName = isProfileMode ? (primaryAccount?.displayName ?? "MOVO") : (selectedAccount?.accountName ?? "—")
+            let fromMask = isProfileMode ? primaryAccount?.maskedAccountNumber : selectedAccount.map { "••\($0.accountNumber.suffix(4))" }
+            let toName   = isProfileMode ? (selectedAccount?.accountName ?? "—") : (primaryAccount?.displayName ?? "MOVO")
+            let toMask   = isProfileMode ? selectedAccount.map { "••\($0.accountNumber.suffix(4))" } : primaryAccount?.maskedAccountNumber
             ConfirmationBottomSheet(
                 channel: .external,
                 amount: amount,
@@ -159,10 +178,11 @@ struct FundAccountView: View {
                         var success = false
                         var referenceCode = "MV-\(Date.now.formatted(.iso8601).prefix(10).replacingOccurrences(of: "-", with: ""))-\(String(UUID().uuidString.prefix(4)))"
                         if isProfileMode {
+                            guard let primary = primaryAccount else { isSubmitting = false; return }
                             let request = TransactionRequest.Withdrawal(
                                 accountId: account.achAccountId,
                                 transactionAmount: Double(amount) ?? 0,
-                                savingsAccountId: primaryAccount.id
+                                savingsAccountId: primary.id
                             )
                             if let response = try? await transactionVM.postWithdrawal(request: request) {
                                 success = true
@@ -170,6 +190,7 @@ struct FundAccountView: View {
                             }
                         } else {
                             let request = ACHRequest(
+                                source: "manual",
                                 amount: Int(amount) ?? 0,
                                 achAccountId: account.achAccountId,
                                 userAction: "SUBMITS-ACH-DEPOSIT"
@@ -208,15 +229,30 @@ struct FundAccountView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(Radius.sheet)
         }
-        .fullScreenCover(item: $successData, onDismiss: {
-            onSuccess()
-            dismiss()
-        }) { data in
+        .fullScreenCover(item: $successData) { data in
             SuccessConfirmationView(
                 viewModel: SuccessConfirmationViewModel(success: data) {
-                    successData = nil
+                    // Done → return straight to the dashboard, collapsing the whole
+                    // stack in a single transition. Observers (RootView /
+                    // HomeTabBarView / DashboardView / ManageExternalAccountsView)
+                    // tear down this screen and refresh — no cascading dismisses.
+                    NotificationCenter.default.post(name: .returnToDashboard, object: nil)
                 }
             )
+        }
+    }
+
+    // MARK: - Onboarding self-load
+
+    /// Onboarding-only: load both sides of the transfer from the network.
+    ///  • FROM — external linked accounts via `vm.fetchAccounts()` (ACH).
+    ///  • TO   — MOVO primary via `VCardAPI.getVCardsPrimary` (`fetchPrimaryCard()`),
+    ///    mapped to a display `SavingsAccountInfo`.
+    private func loadOnboardingAccounts() async {
+        await vm.fetchAccounts()
+        guard loadedPrimaryAccount == nil else { return }
+        if let card = try? await vcardVM.fetchPrimaryCard() {
+            loadedPrimaryAccount = SavingsAccountInfo(primaryCard: card)
         }
     }
 
@@ -224,13 +260,25 @@ struct FundAccountView: View {
 
     private var navBar: some View {
         HStack {
-            CircularNavButton(systemName: "chevron.left") { dismiss() }
+            Button {
+                NotificationCenter.default.post(name: .returnToDashboard, object: nil)
+            } label: {
+                MovoMVSymbol()
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
             Spacer()
             Text(isProfileMode ? "Withdraw Funds" : "Fund Account")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
-            Color.clear.frame(width: 32, height: 32)
+            CircularNavButton(systemName: "xmark") {
+                // Onboarding: leaving the fund step lands on the dashboard rather than
+                // popping back to the bank-link screen.
+                if isOnboarding { onSuccess() }
+                else { (securedDismiss ?? dismiss)() }
+            }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
@@ -240,32 +288,7 @@ struct FundAccountView: View {
     // MARK: - Amount Display
 
     private var amountDisplay: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("$")
-                .textStyle(Typography.amountPrefix)
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
-
-            let parts = amount.split(separator: ".")
-            Text(parts.first.map(String.init) ?? "0")
-                .textStyle(Typography.amountInput)
-                .monospacedDigit()
-                .foregroundColor(Color.movo.textPrimary)
-
-            Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                .textStyle(Typography.amountPrefix)
-                .monospacedDigit()
-                .foregroundColor(Color.movo.textSecondary)
-                .baselineOffset(25)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { showAmountPad() }
-        .overlay(
-            TextField("", text: $amount)
-                .keyboardType(.decimalPad)
-                .focused($isAmountFocused)
-                .opacity(0)
-        )
+        AmountInputDisplay(amountText: $amount, amountFocused: $isAmountFocused)
     }
 
     // MARK: - Transfer Panel (From / To rows)
@@ -283,9 +306,9 @@ struct FundAccountView: View {
                     // Withdraw: FROM = Movo primary (fixed)
                     accountRow(
                         avatar: movoAvatar,
-                        name: primaryAccount.displayName,
-                        number: primaryAccount.maskedAccountNumber,
-                        amount: primaryAccount.formattedBalance,
+                        name: primaryAccount?.displayName ?? "MOVO",
+                        number: primaryAccount?.maskedAccountNumber ?? "",
+                        amount: primaryAccount?.formattedBalance ?? "",
                         showChevron: false,
                         isPrimary: true
                     )
@@ -310,9 +333,9 @@ struct FundAccountView: View {
                                 AlertManager.shared.showError("Unable to initialize. Please try again.")
                                 return
                             }
-                            await plaidVM.startPlaidLink()
-                            if plaidVM.linkedAccount != nil {
-                                await vm.fetchAccounts()
+                            let linked = await plaidVM.startPlaidLink()
+                            if let linked {
+                                vm.addLinkedAccount(linked)
                                 onAccountLinked()
                             }
                         }
@@ -323,9 +346,7 @@ struct FundAccountView: View {
                                 .textStyle(Typography.body)
                                 .foregroundStyle(Color.movo.accent)
                             Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Color.movo.accent)
+                            MovoChevron(.disclosure)
                         }
                         .padding(.vertical, 14)
                         .padding(.horizontal, Spacing.lg)
@@ -349,12 +370,27 @@ struct FundAccountView: View {
                 }
             }
 
-            Rectangle()
-                .fill(Color.movo.cardBorder)
-                .frame(height: Stroke.hairline)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, 5)
-                .padding(.bottom, 10)
+            ZStack {
+                Rectangle()
+                    .fill(Color.movo.cardBorder)
+                    .frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+
+                Circle()
+                    .fill(Color.movo.background)
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Circle()
+                            .strokeBorder(Color.movo.cardBorder, lineWidth: Stroke.hairline)
+                    )
+                    .overlay(
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color.movo.textSecondary)
+                    )
+            }
+            .padding(.top, 5)
+            .padding(.bottom, 0)
 
             // TO
             VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -393,9 +429,9 @@ struct FundAccountView: View {
                 } else {
                     accountRow(
                         avatar: movoAvatar,
-                        name: primaryAccount.displayName,
-                        number: primaryAccount.maskedAccountNumber,
-                        amount: primaryAccount.formattedBalance,
+                        name: primaryAccount?.displayName ?? "MOVO",
+                        number: primaryAccount?.maskedAccountNumber ?? "",
+                        amount: primaryAccount?.formattedBalance ?? "",
                         showChevron: false,
                         isPrimary: true
                     )
@@ -434,7 +470,7 @@ struct FundAccountView: View {
                     .textStyle(Typography.cardTitle)
                     .foregroundColor(Color.movo.textPrimary)
                     if isPrimary {
-                        StatusPill("PRIMARY", variant: .accent)
+                        StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                     }
                 }
                 Text(number)
@@ -450,13 +486,12 @@ struct FundAccountView: View {
             Spacer()
 
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.sm)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Avatars
@@ -540,6 +575,7 @@ struct BankAccountPickerSheet: View {
     let accounts: [ACHAccount]
     @Binding var selected: ACHAccount?
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
 
     var body: some View {
         NavigationStack {
@@ -585,7 +621,7 @@ struct BankAccountPickerSheet: View {
                                     .animation(.spring(duration: 0.2), value: isSelected)
                             }
                             .padding(Spacing.md)
-                            .background(Color.movo.cardSurface)
+                            .background(Color.movo.surface)
                             .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
                             .overlay(
                                 RoundedRectangle(cornerRadius: Radius.lg)
@@ -601,18 +637,38 @@ struct BankAccountPickerSheet: View {
                 .padding(Spacing.lg)
             }
             .scrollContentBackground(.hidden)
-            .background(Color.movo.background.ignoresSafeArea())
+            .background(Color.movo.cardSurface.ignoresSafeArea())
             .navigationTitle("Select Account")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.movo.background, for: .navigationBar)
+            .toolbarBackground(Color.movo.cardSurface, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { (securedDismiss ?? dismiss)() }
                         .textStyle(Typography.buttonLarge)
                         .foregroundColor(Color.movo.accent)
                 }
             }
         }
+    }
+}
+
+// MARK: - SavingsAccountInfo from primary VCard
+
+private extension SavingsAccountInfo {
+    /// Builds a display-oriented MOVO primary from the primary VCard
+    /// (`VCardAPI.getVCardsPrimary`). Used only by FundAccountView's onboarding "to"
+    /// row, which needs the account name, masked number and available balance.
+    init(primaryCard card: VCardListResponse) {
+        id = card.savingsAccountId ?? 0
+        accountNumber = card.lastFour ?? ""
+        clientName = card.name ?? ""
+        status = .active
+        accountBalance = Decimal(card.savingsAccountBalance ?? 0)
+        availableBalance = Decimal(card.savingsAccountAvailableBalance ?? card.savingsAccountBalance ?? 0)
+        clientId = 0
+        nickname = card.savingsAccountNickname.flatMap { $0.isEmpty ? nil : $0 }
+        isPrimary = true
+        routingNumber = nil
     }
 }

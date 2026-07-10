@@ -12,12 +12,16 @@ import SwiftUI
 struct SavingAccountDetailView: View {
 
     let accountId: Int
+    private let container: AppContainer
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var transVM: TransactionViewModel
+    @State private var showAll = false
 
     init(accountId: Int, showAccountCard: Bool = true, container: AppContainer) {
         self.accountId = accountId
+        self.container = container
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
     }
 
@@ -29,25 +33,34 @@ struct SavingAccountDetailView: View {
                 } else if transVM.transactions.isEmpty {
                     EmptyStateView(
                         image: "list.bullet.rectangle.portrait",
-                        title: "No Transactions",
-                        description: "Transaction history is not available."
+                        title: "No Activity",
+                        description: "Activity history is not available."
                     )
-                    .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                    .background(Color.movo.background.ignoresSafeArea())
                 } else {
                     transactionList
                 }
             }
-            .navigationTitle("Transactions")
+            .navigationTitle("Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(Color.primary)
+                    Button("Done") { (securedDismiss ?? dismiss)() }
+                        .foregroundStyle(Color.movo.accent)
                         .fontWeight(.semibold)
                 }
             }
+            .sheet(isPresented: $showAll) {
+                TransactionListView(
+                    container: container,
+                    accountId: accountId,
+                    mode: .individual,
+                    initialMax: 50
+                )
+            }
         }
         .task { await loadDetail() }
+        .trackScreen(AnalyticsScreen.savingsDetail)
     }
 
     // MARK: - Skeleton
@@ -62,28 +75,41 @@ struct SavingAccountDetailView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 10)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.movo.background)
     }
 
     // MARK: - Transaction List
 
     private var transactionList: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 8) {
-                ForEach(transVM.transactions) { item in
-                    TransactionRow(item: item)
+            VStack(spacing: 0) {
+                if transVM.transactions.count >= 10 {
+                    HStack {
+                        Spacer()
+                        Button("See all") { showAll = true }
+                            .font(Typography.captionSmall.font)
+                            .foregroundColor(Color.movo.accent)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 8)
                 }
+
+                VStack(spacing: 8) {
+                    ForEach(transVM.transactions) { item in
+                        TransactionRow(item: item)
+                    }
+                }
+                .padding(.horizontal, 10)
             }
-            .padding(.horizontal, 10)
             .padding(.vertical, 10)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.movo.background)
     }
 
     // MARK: - Load
 
     private func loadDetail() async {
-        await transVM.loadTransactions(max: 500, accountId: accountId)
+        await transVM.loadTransactions(max: 10, accountId: accountId)
     }
 }
 
@@ -93,29 +119,38 @@ struct SavingAccountDetailView: View {
 struct TransactionRow: View {
     let item: TransactionItem
 
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, h:mm a"
+        return f
+    }()
+
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(item.isCredit ? Color.green.opacity(0.12) : Color.red.opacity(0.12))
+                    .fill(item.isCredit ? Color.movo.successTint : Color.movo.dangerTint)
                     .frame(width: 48, height: 48)
                 Image(systemName: item.isCredit ? "arrow.down.left" : "arrow.up.right")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(item.isCredit ? .green : .red)
+                    .foregroundStyle(item.isCredit ? Color.movo.success : Color.movo.danger)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.movo.textPrimary)
                     .lineLimit(1)
                 HStack(spacing: 4) {
                     Text(item.subtitle)
                         .font(.caption)
                         .foregroundStyle(Color.movo.textSecondary)
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.caption2)
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(Color.movo.textSecondary)
+                    Text(Self.dateFormatter.string(from: item.date))
+                        .font(.caption)
                         .foregroundStyle(Color.movo.textSecondary)
                 }
             }
@@ -125,11 +160,11 @@ struct TransactionRow: View {
             Text(item.amountFormatted)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundStyle(item.isCredit ? .green : .red)
+                .foregroundStyle(item.isCredit ? Color.movo.success : Color.movo.danger)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
-        .background(Color(.systemBackground))
+        .background(Color.movo.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

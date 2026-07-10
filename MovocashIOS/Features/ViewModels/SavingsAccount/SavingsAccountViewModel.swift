@@ -60,15 +60,14 @@ final class SavingsAccountViewModel: BaseViewModel {
                 )
             }
             analytics.log(AnalyticsEvent.savingsNicknameUpdated, params: [
-                AnalyticsParam.accountId: accountId,
-                AnalyticsParam.accountName: name
+                AnalyticsParam.accountId: accountId
             ])
             //await loadAccounts()
             ToastManager.shared.show("Nickname updated!", style: .success, position: .bottom)
         } catch is CancellationError {
             // cancelled — no action
         } catch {
-            ToastManager.shared.show("Failed to update nickname.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
     }
 
@@ -87,18 +86,16 @@ final class SavingsAccountViewModel: BaseViewModel {
                     SavingsAccountAPI.create(SavingsAccountRequest.CreateAccount(nickname: trimmed, userAction: ""))
                 )
             }
-            analytics.log(AnalyticsEvent.savingsAccountCreated, params: [
-                AnalyticsParam.accountName: trimmed
-            ])
+            analytics.log(AnalyticsEvent.savingsAccountCreated)
             await loadAccounts()
             ToastManager.shared.show("\"\(trimmed)\" account created!", style: .success, position: .bottom)
         } catch is CancellationError {
             // cancelled — no action
         } catch {
             analytics.log(AnalyticsEvent.savingsAccountCreateFailed, params: [
-                AnalyticsParam.accountName: trimmed
+                AnalyticsParam.errorCode: error.localizedDescription
             ])
-            ToastManager.shared.show("Failed to create account. Please try again.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
     }
 
@@ -169,7 +166,7 @@ final class SavingsAccountViewModel: BaseViewModel {
         } catch is CancellationError {
             // cancelled — no action
         } catch {
-            ToastManager.shared.show("Failed to load account details.", style: .error, position: .bottom)
+            // error surfaced via BaseViewModel toast
         }
     }
 }

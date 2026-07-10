@@ -35,7 +35,7 @@ enum RewardAPI: Endpoint {
     }
     
     // MARK: - Header Configure
-    var headerType: HeaderType { .authorized }
+    var headerType: HeaderType { [.session, .secureDeviceInfo, .officeId] }
     
     // MARK: - Query Items
     var queryItems: [URLQueryItem]? { nil }

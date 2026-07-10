@@ -21,8 +21,10 @@ enum TransferFlowMode {
 struct InternalTransferView: View {
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @StateObject private var transVM: TransactionViewModel
     @StateObject private var vcardVM: VCardViewModel
+    @StateObject private var achVM: PlaidAchViewModel
 
     private let mode: TransferFlowMode
     private let toClientId: Int
@@ -40,7 +42,6 @@ struct InternalTransferView: View {
     @State private var showCardSheet = false
     @State private var showFromCardSheet = false
     @State private var showConfirmSheet = false
-    @State private var submitTask: Task<Void, Never>?
 
     private var toCardAccount: SavingsAccountInfo? {
         guard let id = selectedToCard?.savingsAccountId else { return nil }
@@ -104,6 +105,7 @@ struct InternalTransferView: View {
         _selectedFromAccount = State(initialValue: fromAccount)
         _transVM = StateObject(wrappedValue: container.makeTransactionViewModel())
         _vcardVM = StateObject(wrappedValue: container.makeVCardViewModel())
+        _achVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         self.onDismiss = onDismiss
         let fixedToCard: VCardListResponse?
         if case .fixedBoth(let toCard) = mode { fixedToCard = toCard } else { fixedToCard = nil }
@@ -137,11 +139,28 @@ struct InternalTransferView: View {
                     .padding(.top, Spacing.xs)
                     .padding(.bottom, Spacing.xs)
             }
-            if transVM.state == .loading {
+            if transVM.state == .loading || achVM.state == .loading {
                 Color.black.opacity(0.5).ignoresSafeArea()
                 SpinnerView()
             }
+
+            // On transfer success the confirmation screen slides up as a full-screen
+            // layer over this view — presented FIRST, with the transfer form hidden
+            // behind it. "Let's MOVO" dismisses this whole screen in one transition,
+            // revealing the Dashboard with no flicker.
+            if let success = achVM.peerTransferSuccess {
+                SuccessConfirmationView(
+                    viewModel: SuccessConfirmationViewModel(success: success) {
+                        onDismiss()
+                        (securedDismiss ?? dismiss)()
+                    }
+                )
+                .transition(.move(edge: .bottom))
+                .zIndex(1)
+            }
         }
+        .trackScreen(AnalyticsScreen.internalTransfer)
+        .animation(.easeInOut(duration: 0.3), value: achVM.peerTransferSuccess?.id)
         .background(Color.movo.background.ignoresSafeArea())
         .navigationBarHidden(true)
         .onChange(of: isAmountFocused) { focused in
@@ -172,6 +191,9 @@ struct InternalTransferView: View {
             
             
         }
+        // Confirmation sheet disabled — the transfer button now submits directly.
+        // Kept for easy restore if the confirmation step is needed again.
+        /*
         .sheet(isPresented: $showConfirmSheet) {
             ConfirmationBottomSheet(
                 channel: .internalTransfer,
@@ -185,7 +207,7 @@ struct InternalTransferView: View {
                 onCancel: { showConfirmSheet = false },
                 onConfirm: {
                     showConfirmSheet = false
-                    submitTask = Task { await submitTransfer() }
+                    Task { await submitTransfer() }
                 }
             )
             .padding(.top, 30)
@@ -193,6 +215,7 @@ struct InternalTransferView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
         }
+        */
         .task {
             if case .fixedBoth = mode { return }
             if initialCards.isEmpty {
@@ -204,27 +227,29 @@ struct InternalTransferView: View {
             guard loaded else { return }
             resolveCardSelection()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-            submitTask?.cancel()
-            submitTask = nil
-            showConfirmSheet = false
-            showCardSheet = false
-            showFromCardSheet = false
-            dismiss()
-        }
     }
 
     // MARK: - Nav Bar
 
     private var navBar: some View {
         HStack {
-            Color.clear.frame(width: 32, height: 32)
+            Button {
+                // Collapse the whole navigation stack straight to the dashboard
+                // in a single transition. Observers (RootView / HomeTabBarView /
+                // DashboardView) tear down this screen — no cascading dismisses.
+                NotificationCenter.default.post(name: .returnToDashboard, object: nil)
+            } label: {
+                MovoMVSymbol()
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
             Spacer()
             Text("Transfer Money")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()
-            CircularNavButton(systemName: "xmark") { dismiss() }
+            CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.md)
@@ -234,32 +259,7 @@ struct InternalTransferView: View {
 
     private var amountCard: some View {
         VStack(spacing: Spacing.xs) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("$")
-                    .textStyle(Typography.amountPrefix)
-                    .foregroundColor(Color.movo.textSecondary)
-                    .baselineOffset(25)
-
-                let parts = amountText.split(separator: ".")
-                Text(parts.first.map(String.init) ?? "0")
-                    .textStyle(Typography.amountInput)
-                    .monospacedDigit()
-                    .foregroundColor(Color.movo.textPrimary)
-
-                Text(".\(parts.count > 1 ? String(parts[1]) : "00")")
-                    .textStyle(Typography.amountPrefix)
-                    .monospacedDigit()
-                    .foregroundColor(Color.movo.textSecondary)
-                    .baselineOffset(25)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { isAmountFocused = true }
-            .overlay(
-                TextField("", text: $amountText)
-                    .keyboardType(.decimalPad)
-                    .focused($isAmountFocused)
-                    .opacity(0)
-            )
+            AmountInputDisplay(amountText: $amountText, amountFocused: $isAmountFocused)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xxl)
@@ -352,11 +352,23 @@ struct InternalTransferView: View {
             }
             .padding(.vertical, Spacing.md)
         } else {
-            Rectangle()
-                .fill(Color.movo.cardBorder)
-                .frame(height: Stroke.hairline)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.md)
+            ZStack {
+                Rectangle()
+                    .fill(Color.movo.cardBorder)
+                    .frame(height: Stroke.hairline)
+                    .padding(.horizontal, Spacing.lg)
+                    .allowsHitTesting(false)
+                Circle()
+                    .fill(Color.movo.elevated)
+                    .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color.movo.textSecondary)
+                    )
+            }
+            .padding(.vertical, Spacing.md)
         }
     }
 
@@ -421,7 +433,7 @@ struct InternalTransferView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
                     if isPrimary {
-                        StatusPill("PRIMARY", variant: .accent)
+                        StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                     }
                 }
                 Text(card?.maskedNumber ?? "•••• •••• •••• ••••")
@@ -489,13 +501,14 @@ struct InternalTransferView: View {
             Spacer()
 
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.sm)
+        // Make the whole row hittable, not just the text/icons — so a tap anywhere
+        // on the card (including the empty spacer area) triggers the picker.
+        .contentShape(Rectangle())
     }
 
     private var cardLoadingRow: some View {
@@ -546,7 +559,7 @@ struct InternalTransferView: View {
         Button {
             UIApplication.shared.dismissKeyboard()
             isAmountFocused = false
-            showConfirmSheet = true
+            Task { await submitTransfer() }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.up.forward")
@@ -558,7 +571,8 @@ struct InternalTransferView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
             .background(
-                Capsule().fill(isValid ? Color.movo.accent : Color.movo.elevated)
+                RoundedRectangle(cornerRadius: Radius.largeButton)
+                    .fill(isValid ? Color.movo.accent : Color.movo.elevated)
             )
         }
         .disabled(!isValid)
@@ -582,38 +596,32 @@ struct InternalTransferView: View {
 
     private func swapAccounts() {
         guard let oldFrom = selectedFromCard, let oldTo = selectedToCard else { return }
-        selectedFromCard = oldTo
-        selectedToCard = oldFrom
-        selectedFromAccount = allAccounts.first { $0.id == oldTo.savingsAccountId }
-        isSwapped.toggle()
+        withAnimation(.easeInOut(duration: 0.25)) {
+            selectedFromCard = oldTo
+            selectedToCard = oldFrom
+            selectedFromAccount = allAccounts.first { $0.id == oldTo.savingsAccountId }
+            isSwapped.toggle()
+        }
     }
 
     // MARK: - Submit
 
     private func submitTransfer() async {
-        guard let fromAccountId = selectedFromCard?.savingsAccountId,
-              let toCard = selectedToCard,
-              let toAccountId = toCard.savingsAccountId else { return }
-        let request = TransactionRequest.Internal(
-            description: descriptionText,
-            amount: amount,
-            toAccountId: toAccountId,
-            toClientId: toClientId,
-            fromAccountId: fromAccountId,
-            phoneNumber: nil,
-            userAction: "Internal-Transfer",
-            nickname: ""
-        )
-        let success = await transVM.submitInternalTransfer(request: request)
-
-        // If the task was cancelled mid-flight (session expired), do nothing —
-        // the .onReceive handler already dismissed this view.
+        guard let fromCard = selectedFromCard else { return }
         guard !Task.isCancelled else { return }
-        guard success else { return }
 
-        ToastManager.shared.show("Money transfer successfully.", style: .success, position: .bottom)
-        dismiss()
-        onDismiss()
+        await achVM.sendMoneyToContact(
+            fromCard: fromCard,
+            toName: selectedToCard?.savingsAccountNickname ?? selectedToCard?.name ?? "",
+            normalizedPhone: "",
+            amount: amount,
+            amountText: amountText,
+            description: descriptionText.isEmpty ? nil : descriptionText,
+            isInternal: true,
+            toClientId: toClientId,
+            toAccountId: selectedToCard?.savingsAccountId,
+            toMask: selectedToCard?.maskedNumber
+        )
     }
 }
 
@@ -649,9 +657,7 @@ private struct CardChipRow: View {
                 StatusBadge(status: badge, size: .small)
             }
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.movo.textDisabled)
+                MovoChevron(.disclosure, color: Color.movo.textDisabled)
                     .padding(.leading, 2)
             }
         }
@@ -691,6 +697,7 @@ private struct CardPickerSheet: View {
     let cards: [VCardListResponse]
     @Binding var selected: VCardListResponse?
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
 
     var body: some View {
         NavigationStack {
@@ -749,7 +756,7 @@ private struct CardPickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { (securedDismiss ?? dismiss)() }
                         .textStyle(Typography.buttonLarge)
                         .foregroundColor(Color.movo.accent)
                 }

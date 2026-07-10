@@ -35,7 +35,7 @@ struct ViewCardScreen: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { isPresented = false }
-                                .foregroundStyle(Color.primary)
+                                .foregroundStyle(Color.movo.accent)
                                 .fontWeight(.semibold)
                         }
                     }
@@ -45,6 +45,7 @@ struct ViewCardScreen: View {
                 SpinnerView()
             }
         }
+        .trackScreen(AnalyticsScreen.cardDetail)
         .pinInputAlert(
             isPresented: $showAddCard,
             title: "Activate Card",
@@ -59,11 +60,6 @@ struct ViewCardScreen: View {
             }
         )
         .overlay { overlayContent }
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
-            showAddCard = false
-            showCardDetail = false
-            isPresented = false
-        }
         .task {
             await loadCard()
         }

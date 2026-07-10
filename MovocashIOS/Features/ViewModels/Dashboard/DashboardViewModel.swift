@@ -2,7 +2,7 @@
 //  DashboardViewModel.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 14/04/26.
+//  Created by Movo Developer on 14/04/26.
 //
 
 import Foundation
@@ -17,6 +17,20 @@ final class DashboardViewModel: BaseViewModel {
     @Published var primaryLinkedCard: VCardListResponse? = nil
     @Published var isRefreshing: Bool = false
 
+    // MARK: - VCard State (derived from the MYCARDS encryptedData payload)
+
+    /// Non-primary cards, used by the card carousel and downstream screens.
+    @Published var apiCards: [VCardListResponse] = []
+    /// Disabled (deleted) cards — `enabled == false`. Surfaced in Profile.
+    @Published var deletedCards: [VCardListResponse] = []
+    /// True once a dashboard load has resolved the cards payload (drives skeleton vs content).
+    @Published var hasLoadedCards: Bool = false
+    
+    @Published var quickPayTitle: String = ""
+
+    /// Alias kept for call sites that read `cards`.
+    var cards: [VCardListResponse] { apiCards }
+
     // MARK: - Refresh Staleness Tracking
 
     private(set) var lastRefreshedAt: Date = .distantPast
@@ -24,15 +38,32 @@ final class DashboardViewModel: BaseViewModel {
     // MARK: - Dependencies
 
     private let network: NetworkServiceProtocol
+    private let primaryCardStore: PrimaryCardStore?
 
     // MARK: - Init
 
     init(
         network: NetworkServiceProtocol,
-        alertManager: AlertManagerProtocol
+        alertManager: AlertManagerProtocol,
+        primaryCardStore: PrimaryCardStore? = nil
     ) {
         self.network = network
+        self.primaryCardStore = primaryCardStore
         super.init(alertManager: alertManager)
+    }
+
+    // MARK: - Reset (called on logout so the shared instance doesn't leak stale data)
+
+    func reset() {
+        cancelAllTasks()
+        dashboard = nil
+        apiCards = []
+        deletedCards = []
+        primaryLinkedCard = nil
+        hasLoadedCards = false
+        isRefreshing = false
+        lastRefreshedAt = .distantPast
+        primaryCardStore?.update(nil)
     }
 
     // MARK: - Fetch Dashboard (initial load — uses perform() for loading state)
@@ -41,6 +72,7 @@ final class DashboardViewModel: BaseViewModel {
         guard !Task.isCancelled else { return }
         do {
             dashboard = try await perform { try await network.request(DashboardAPI.dashboard) }
+            decryptAndSplitCards()
         } catch {
             // Error is already presented via ToastManager in perform(_:)
         }
@@ -58,6 +90,7 @@ final class DashboardViewModel: BaseViewModel {
         do {
             let result: DashboardResponse = try await network.request(DashboardAPI.dashboard)
             dashboard = result
+            decryptAndSplitCards()
             lastRefreshedAt = Date()
         } catch is CancellationError {
             // User dismissed the pull gesture — keep existing data silently
@@ -76,11 +109,58 @@ final class DashboardViewModel: BaseViewModel {
         await refresh()
     }
 
+    // MARK: - Cards (decrypt MYCARDS payload)
+
+    /// Decrypts the MYCARDS `encryptedData` into `[VCardListResponse]` and splits it the
+    /// same way `VCardViewModel.loadCards` did: the card linked to the primary account
+    /// becomes `primaryLinkedCard`; the remainder populate `apiCards`.
+    private func decryptAndSplitCards() {
+        defer { hasLoadedCards = true }
+
+        guard let encrypted = myCards?.encryptedData, !encrypted.isEmpty else {
+            primaryLinkedCard = nil
+            apiCards = []
+            deletedCards = []
+            primaryCardStore?.update(nil)
+            return
+        }
+
+        do {
+            let plainData = try SealedCryptoService.decrypt(encryptedBase64: encrypted)
+#if DEBUG
+            if let json = String(data: plainData, encoding: .utf8) {
+                print("[Dashboard cards decrypt]", json)
+            }
+#endif
+            let decoded = try JSONDecoder().decode([VCardListResponse].self, from: plainData)
+            deletedCards = decoded.filter { $0.enabled == false }
+            let all = decoded.filter { $0.enabled == true }
+            if let accountId = primaryAccount?.id,
+               let matched = all.first(where: { $0.savingsAccountId == accountId }) {
+                primaryLinkedCard = matched
+                apiCards = all.filter { $0.savingsAccountId != accountId }
+            } else {
+                primaryLinkedCard = all.first
+                apiCards = Array(all.dropFirst())
+            }
+            primaryCardStore?.update(primaryLinkedCard)
+        } catch {
+            // Leave previously loaded cards in place on a transient decrypt/decode failure.
+        }
+    }
+
     // MARK: - Section Accessors
 
     var userDetails: DashboardUserDetails? {
         dashboard?.data.compactMap { section -> DashboardUserDetails? in
             guard case .userDetails(let d) = section else { return nil }
+            return d
+        }.first
+    }
+
+    var inviteAFriend: DashboardInviteAFriend? {
+        dashboard?.data.compactMap { section -> DashboardInviteAFriend? in
+            guard case .inviteAFriend(let d) = section else { return nil }
             return d
         }.first
     }

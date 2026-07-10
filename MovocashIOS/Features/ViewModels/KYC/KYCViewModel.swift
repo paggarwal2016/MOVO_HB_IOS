@@ -36,7 +36,22 @@ final class KYCViewModel: ObservableObject {
         do {
             try await kycManager.configureSDK(officeId: AppConfig.officeId)
             let user = try await kycManager.start()
-            Task { await saveUser(user) }
+
+            // Persist the verified user and WAIT for the Save User API success
+            // acknowledgment before any further processing — only then do we mark
+            // KYC complete and hand off via onSuccess. A full-screen spinner covers
+            // the wait since the underlying `.kyc` flow renders nothing once the
+            // scanner dismisses.
+            SpinnerView.showFullScreen()
+            let saved = await saveUser(user)
+            SpinnerView.hideFullScreen()
+            guard saved else {
+                analytics.trackKYCAbandoned(step: .idVerified)
+                alertManager.showError("We couldn't save your verification details. Please try again.")
+                onFailure()
+                return
+            }
+
             analytics.trackKYCCompleted(step: .idVerified)
             onSuccess()
         } catch _ as KYCError {
@@ -52,38 +67,54 @@ final class KYCViewModel: ObservableObject {
 
     // MARK: - Save User
 
-    private func saveUser(_ user: User) async {
+    /// Saves the verified user. Returns `true` only when the request succeeds and the
+    /// API doesn't explicitly acknowledge failure (`success == false`).
+    @discardableResult
+    private func saveUser(_ user: User) async -> Bool {
         let fcmToken = UserDefaults.standard.string(forKey: "fcmToken") ?? ""
         let request = SaveUserRequest(
-            customerId:              user.customerId,
-            firstName:               user.firstName,
-            lastName:                user.lastName,
-            username:                user.username,
-            email:                   user.email,
-            phone:                   user.phone,
-            addressLine1:            user.addressLine1,
-            addressLine2:            user.addressLine2,
-            city:                    user.city,
-            state:                   user.state,
-            zip:                     user.zip,
-            profilePicture:          user.profilePicture,
-            isDeactivated:           user.isDeactivated,
-            smsVerified:             user.smsVerified,
-            smsVerifiedDate:         user.smsVerifiedDate,
-            emailVerified:           user.emailVerified,
-            cipAllowed:              user.cipAllowed,
-            cipRequired:             user.cipRequired,
-            isAdditionalKycRequired: user.isAdditionalKycRequired ?? false,
-            isPlaidAuthRequired:     user.isPlaidAuthRequired,
-            isTwoFactorEnabled:      user.isTwoFactorEnabled ?? false,
-            fcmToken:                fcmToken,
-            userAction:              "SAVE-USER-DATA"
+            customerId:                 user.customerId,
+            firstName:                  user.firstName,
+            lastName:                   user.lastName,
+            username:                   user.username,
+            email:                      user.email,
+            phone:                      user.phone,
+            addressLine1:               user.addressLine1,
+            addressLine2:               user.addressLine2,
+            city:                       user.city,
+            state:                      user.state,
+            zip:                        user.zip,
+            driversLicenseNumber:       user.driversLicenseNumber,
+            driversLicenseExpiration:   user.driversLicenseExpiration,
+            driversLicenseState:        user.driversLicenseState,
+            profilePicture:             user.profilePicture,
+            isDeactivated:              user.isDeactivated,
+            smsVerified:                user.smsVerified,
+            smsVerifiedDate:            user.smsVerifiedDate,
+            emailVerified:              user.emailVerified,
+            emailVerifiedDate:          user.emailVerifiedDate,
+            cipAllowed:                 user.cipAllowed,
+            cipRequired:                user.cipRequired,
+            isAdditionalKycRequired:    user.isAdditionalKycRequired ?? false,
+            isPlaidAuthRequired:        user.isPlaidAuthRequired,
+            isTwoFactorEnabled:         user.isTwoFactorEnabled ?? false,
+            tosAcceptedDate:            user.tosAcceptedDate,
+            virtualCardTosAcceptedDate: user.virtualCardTosAcceptedDate,
+            eDeliveryAcceptedDate:      user.eDeliveryAcceptedDate,
+            fcmToken:                   fcmToken,
+            userAction:                 "SAVE-USER-DATA"
         )
         do {
-            let _: SuccessResponse = try await network.request(UserAPI.saveUser(request: request))
+            let response: SuccessResponse = try await network.request(UserAPI.saveUser(request: request))
+            guard response.success != false else {
+                SecureLogger.error("saveUser returned success=false after KYC", category: .network)
+                return false
+            }
             SecureLogger.info("User data saved successfully after KYC", category: .network)
+            return true
         } catch {
             SecureLogger.error("saveUser failed: \(error.localizedDescription)", category: .network)
+            return false
         }
     }
 }

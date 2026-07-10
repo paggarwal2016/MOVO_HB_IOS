@@ -21,21 +21,25 @@ struct ProfileScreen: View {
     @ObservedObject var achVM: ACHViewModel
 
     private let container: AppContainer
+    /// Title shown in the nav bar — passed from the tab's MENU label.
+    private let screenTitle: String
 
     @State private var isBiometricOn             = false
     @State private var showDisableBiometricAlert = false
     @State private var showBiometricEnrollSheet  = false
     @State private var showSecuritySettings      = false
     @State private var showManageAccounts        = false
+    @State private var showDeletedCards          = false
     @State private var isLoggingOut              = false
     @State private var showSignOutAlert          = false
     @State private var showDeleteAlert           = false
     @State private var hasLoadedOnce             = false
 
-    init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel) {
+    init(container: AppContainer, dashboardVM: DashboardViewModel, achVM: ACHViewModel, screenTitle: String = "Settings") {
         self.container   = container
         self.dashboardVM = dashboardVM
         self.achVM = achVM
+        self.screenTitle = screenTitle
     }
     
     private var effectiveBiometricType: BiometricType {
@@ -58,15 +62,18 @@ struct ProfileScreen: View {
     var body: some View {
         ZStack {
             MovoBackground()
-            Group {
-                if let profile = effectiveProfile {
-                    profileContent(profile)
-                } else if userVM.state == .loading {
-                    profileSkeleton
-                } else {
-                    emptyState
+            VStack(spacing: 0) {
+                Group {
+                    if let profile = effectiveProfile {
+                        profileContent(profile)
+                    } else if userVM.state == .loading {
+                        profileSkeleton
+                    } else {
+                        emptyState
+                    }
                 }
             }
+            StatusBarScrim()
             if isLoggingOut {
                 Color.black.opacity(0.45).ignoresSafeArea()
                 SpinnerView()
@@ -88,7 +95,9 @@ struct ProfileScreen: View {
 // MARK: - Profile Content
 
 private extension ProfileScreen {
-    
+
+    // MARK: - Title Bar
+
     func profileContent(_ profile: UserProfileResponse) -> some View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
@@ -114,6 +123,9 @@ private extension ProfileScreen {
                 
                 securityCard
                 linkedBankCard
+//                if !dashboardVM.deletedCards.isEmpty {
+//                    Cards
+//                }
                 signOutButton
                 deleteAccountButton
                 footerText
@@ -136,8 +148,15 @@ private extension ProfileScreen {
         }) {
             BiometricEnrollView(
                 lockManager: lockManager,
-                onEnable: { showBiometricEnrollSheet = false; return true },
-                onSkip:   { isBiometricOn = false; showBiometricEnrollSheet = false }
+                onEnable: {
+                    // Explicitly hold the toggle ON before closing the sheet so the
+                    // onDismiss read of lockManager.isBiometricEnabled never races
+                    // against a timing window where the key write hasn't propagated.
+                    isBiometricOn = true
+                    showBiometricEnrollSheet = false
+                    return true
+                },
+                onSkip: { isBiometricOn = false; showBiometricEnrollSheet = false }
             )
         }
         .alert("Disable \(effectiveBiometricType.displayName)?",
@@ -163,6 +182,11 @@ private extension ProfileScreen {
             )
             .toolbar(.hidden, for: .navigationBar)
             .navigationBarBackButtonHidden(true)
+        }
+        .navigationDestination(isPresented: $showDeletedCards) {
+            DeletedCardsView(cards: dashboardVM.deletedCards)
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
         }
         .alert("Sign Out?", isPresented: $showSignOutAlert) {
             Button("Sign Out", role: .destructive) {
@@ -367,9 +391,7 @@ private extension ProfileScreen {
                         }
                 } else {
                     Button { showSecuritySettings = true } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.movo.textTertiary)
+                        MovoChevron(.disclosure, color: Color.movo.textTertiary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -397,6 +419,44 @@ private extension ProfileScreen {
         }
     }
     
+    var Cards: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            eyebrowLabel("CARDS")
+            VStack(spacing: 0) {
+                deletedCardsRow
+            }
+            .background(Color.movo.surface)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+        }
+    }
+
+    var deletedCardsRow: some View {
+        Button {
+            showDeletedCards = true
+        } label: {
+            HStack(spacing: Spacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Radius.sm)
+                        .fill(Color.movo.elevated)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "creditcard.trianglebadge.exclamationmark")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.movo.accent)
+                }
+                Text("Deleted cards")
+                    .font(Typography.body.font)
+                    .foregroundStyle(Color.movo.textPrimary)
+                Spacer()
+                MovoChevron(.disclosure)
+            }
+            .padding(.vertical, Spacing.rowPaddingVertical)
+            .padding(.horizontal, Spacing.lg)
+        }
+        .buttonStyle(.plain)
+    }
+    
     
     
     var manageExternalAccount: some View {
@@ -417,12 +477,11 @@ private extension ProfileScreen {
                     .font(Typography.body.font)
                     .foregroundStyle(Color.movo.textPrimary)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

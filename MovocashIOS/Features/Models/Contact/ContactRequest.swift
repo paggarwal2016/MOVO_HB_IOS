@@ -2,7 +2,7 @@
 //  ContactRequest.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 05/05/26.
+//  Created by Movo Developer on 05/05/26.
 //
 
 import Foundation
@@ -40,4 +40,10 @@ enum ContactRequest {
         let userAction: String
     }
     
+    struct Referral: Codable, Equatable, Sendable {
+        let invitee_phone: String
+        let invitee_nickname: String?
+        let userAction: String
+        let relation: String?
+    }
 }

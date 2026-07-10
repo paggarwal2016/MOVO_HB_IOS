@@ -2,7 +2,7 @@
 //  ViewCardsListScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 10/04/26.
+//  Created by Movo Developer on 10/04/26.
 //
 
 import SwiftUI
@@ -12,8 +12,13 @@ struct ViewCardsListScreen: View {
     let cards: [VCardListResponse]
     let primaryAccountId: Int?
     let primaryLinkedCard: VCardListResponse?
+    /// Primary account from the Dashboard — supplies the user-level `clientId`
+    /// the card detail transfer needs.
+    let primaryAccount: SavingsAccountInfo?
     let container: AppContainer
-    var onDeleted: (() -> Void)?
+    /// Invoked when the user navigates back after creating or deleting a card,
+    /// so the presenter (dashboard) can refresh to reflect the latest data.
+    var onChanged: (() -> Void)?
 
     @StateObject private var savingVM: SavingsAccountViewModel
     @StateObject private var cardVM: VCardViewModel
@@ -22,24 +27,33 @@ struct ViewCardsListScreen: View {
         cards: [VCardListResponse],
         primaryAccountId: Int?,
         primaryLinkedCard: VCardListResponse? = nil,
+        primaryAccount: SavingsAccountInfo? = nil,
         container: AppContainer,
-        onDeleted: (() -> Void)? = nil
+        onChanged: (() -> Void)? = nil
     ) {
         self.cards = cards
         self.primaryAccountId = primaryAccountId
         self.primaryLinkedCard = primaryLinkedCard
+        self.primaryAccount = primaryAccount
         self.container = container
-        self.onDeleted = onDeleted
+        self.onChanged = onChanged
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
         _cardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
-    
+
     @SwiftUI.Environment(\.dismiss) private var dismiss
 
     @State private var selectedCard: VCardListResponse?
     @State private var showCardDetail = false
     @State private var showCreateCard = false
+    /// The card just created. Held while the create sheet dismisses so the
+    /// success cover can present it next.
+    @State private var createdCard: VCardListResponse? = nil
+    /// Drives the post-create success cover.
+    @State private var showCreateSuccess = false
     @State private var deletedCardIds: Set<String> = []
+    /// Set when a card is created or deleted here; triggers a dashboard refresh on exit.
+    @State private var hasChanges = false
 
     // Use VM cards after first load, filtered by optimistic deletes.
     private var displayCards: [VCardListResponse] {
@@ -57,19 +71,55 @@ struct ViewCardsListScreen: View {
                     cardsList
                 }
             }
+            StatusBarScrim()
+            if cardVM.state == .loading {
+                // Scrim — black-on-alpha is intentional; works on both light and dark backgrounds.
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                SpinnerView()
+            }
         }
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showCreateCard) {
+        .sheet(isPresented: $showCreateCard, onDismiss: {
+            // Present the success cover only after the create sheet is fully gone.
+            if createdCard != nil { showCreateSuccess = true }
+        }) {
             CreateCashCardView(
-                onCancel: { showCreateCard = false },
-                onCreate: { nickname, pin in
-                    await createCard(nickname: nickname, pin: pin)
+                vm: cardVM,
+                onClose: { showCreateCard = false },
+                onCreated: { card in
+                    // Card created — hold it and dismiss the create sheet; the
+                    // success cover presents next via the sheet's onDismiss.
+                    createdCard = card
+                    showCreateCard = false
+                    hasChanges = true
+                    // Reload this list in the background so the new card appears.
+                    Task { await cardVM.loadCards(primaryAccountId: primaryAccountId) }
                 }
             )
-            .presentationDetents([.height(480)])
+            .secured()
+            .presentationDetents([.height(500)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(Radius.sheet)
             .presentationBackground(Color.movo.cardSurface)
+        }
+        .fullScreenCover(isPresented: $showCreateSuccess, onDismiss: {
+            createdCard = nil
+        }) {
+            if let card = createdCard {
+                ZStack {
+                    Color.black.opacity(0.55).ignoresSafeArea()
+                    CashCardCreateSuccess(card: card, onDone: {
+                        selectedCard = card
+                        showCardDetail = true
+                        var tx = SwiftUI.Transaction()
+                        tx.disablesAnimations = true
+                        withTransaction(tx) { showCreateSuccess = false }
+                    })
+                    .frame(width: 320)
+                }
+                .presentationBackground(.clear)
+            }
         }
         .navigationDestination(isPresented: $showCardDetail) {
             if let card = selectedCard {
@@ -77,18 +127,26 @@ struct ViewCardsListScreen: View {
                     card: card,
                     primaryAccountId: primaryAccountId,
                     primaryLinkedCard: primaryLinkedCard,
+                    primaryAccount: primaryAccount,
+                    cards: displayCards,
                     savingVM: savingVM,
                     container: container,
                     onDeleted: {
                         if let id = selectedCard?.id {
                             deletedCardIds.insert(id)
                         }
-                        onDeleted?()
-                    }
+                        hasChanges = true
+                        Task { await cardVM.loadCards(primaryAccountId: primaryAccountId) }
+                    },
+                    onChanged: { hasChanges = true }
                 )
             }
         }
         .globalAlert()
+        .onDisappear {
+            // Refresh the dashboard on the way back only if something changed here.
+            if hasChanges { onChanged?() }
+        }
     }
     
     // MARK: - Nav Bar
@@ -130,22 +188,6 @@ struct ViewCardsListScreen: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 32)
-        }
-    }
-    
-    // MARK: - Create Card
-    
-    private func createCard(nickname: String, pin: String) async {
-        do {
-            _ = try await cardVM.createVCard(
-                request: CreateVCardRequest(nickname: nickname, pin: pin, userAction: "VCARD-CREATION")
-            )
-            showCreateCard = false
-            ToastManager.shared.show("Card \"\(nickname)\" created!", style: .success, position: .bottom)
-            await cardVM.loadCards()
-            onDeleted?()
-        } catch {
-            ToastManager.shared.show("Failed to create card. Please try again.", style: .error, position: .bottom)
         }
     }
     

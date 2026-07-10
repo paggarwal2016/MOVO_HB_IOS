@@ -11,7 +11,7 @@ import UIKit
 enum AppInfo {
     
     nonisolated static var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "5.0.0"
     }
     
     nonisolated static var buildNumber: String {
@@ -28,6 +28,14 @@ enum AppInfo {
     
     static var osVersion: String {
         UIDevice.current.systemVersion
+    }
+    
+    static var deviceName: String {
+        UIDevice.current.name
+    }
+    
+    static var deviceModel: String {
+        UIDevice.current.model
     }
     
     static let applicationName: String = "movo-ios"

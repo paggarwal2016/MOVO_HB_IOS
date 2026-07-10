@@ -16,7 +16,8 @@ struct CreateCardView: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
 
-            Color.movo.surface
+            // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid gradient.
+            LinearGradient.cardVoid
 
             CardMockIllustration()
                 .frame(width: 140, height: 162)
@@ -56,7 +57,7 @@ struct CreateCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous)
-                .strokeBorder(Color.movo.border, lineWidth: DesignTokens.Stroke.hairline)
+                .strokeBorder(DesignTokens.Palette.silverTint.color.opacity(0.35), lineWidth: DesignTokens.Stroke.hairline)
         )
     }
 }

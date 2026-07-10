@@ -2,7 +2,7 @@
 //  ConfirmationScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 08/05/26.
+//  Created by Movo Developer on 08/05/26.
 //
 
 import SwiftUI
@@ -255,9 +255,11 @@ public struct SuccessConfirmationView: View {
     }
     
     private var bottomActions: some View {
-        PrimaryButton(title: "Done", backgroundColor: Color.movo.accent, textColor: Color.movo.onAccent) {
-            vm.done()
+        Button(action: vm.done) {
+            Text("LET'S MOVO!")
+                .tracking(1.5)
         }
+        .buttonStyle(MovoPrimaryButtonStyle())
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.xl + 8)
     }
@@ -299,7 +301,7 @@ private struct SuccessBackdrop: View {
 
 // MARK: - Checkmark Halo
 
-private struct CheckmarkHalo: View {
+struct CheckmarkHalo: View {
     var body: some View {
         ZStack {
             Circle()

@@ -2,7 +2,7 @@
 //  PDFViewScreen.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 02/05/26.
+//  Created by Movo Developer on 02/05/26.
 //
 
 import SwiftUI
@@ -17,6 +17,11 @@ struct PDFViewScreen: View {
     @StateObject private var viewModel: PDFViewModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var hasReachedEnd = false
+    @State private var isContentLoading = true
+
+    private var isLoading: Bool {
+        viewModel.state == .loading || (viewModel.pdfURL != nil && isContentLoading)
+    }
 
     init(documentType: DocumentType, container: AppContainer, onAccept: @escaping () -> Void) {
         self.documentType = documentType
@@ -35,17 +40,18 @@ struct PDFViewScreen: View {
                     .fill(Color.movo.textTertiary.opacity(0.10))
                     .frame(height: DesignTokens.Stroke.hairline)
                 contentArea
-                if viewModel.state != .loading {
+                if !isLoading {
                     bottomBar
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            if viewModel.state == .loading {
+            if isLoading {
                 SpinnerView()
             }
         }
         .background(Color.clear)
+        .trackScreen(AnalyticsScreen.document)
         .task { await viewModel.loadPDF(for: documentType) }
     }
 }
@@ -127,11 +133,11 @@ private extension PDFViewScreen {
         ZStack {
             if let url = viewModel.pdfURL {
                 if url.pathExtension.lowercased() == "html" {
-                    WebKitView(url: url) {
+                    WebKitView(url: url, onLoaded: { isContentLoading = false }) {
                         hasReachedEnd = true
                     }
                 } else {
-                    PDFKitView(pdfURL: url) {
+                    PDFKitView(pdfURL: url, onLoaded: { isContentLoading = false }) {
                         hasReachedEnd = true
                     }
                 }
@@ -231,11 +237,13 @@ private extension PDFViewScreen {
 private struct WebKitView: UIViewRepresentable {
 
     let url: URL
+    /// Called when the page finishes loading (or fails) so the host can hide the spinner.
+    let onLoaded: () -> Void
     let onReachEnd: () -> Void
     @Environment(\.colorScheme) private var colorScheme
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onReachEnd: onReachEnd)
+        Coordinator(onReachEnd: onReachEnd, onLoaded: onLoaded)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -251,6 +259,10 @@ private struct WebKitView: UIViewRepresentable {
         if let layoutScript = makeLayoutCSSScript() {
             controller.addUserScript(layoutScript)
         }
+
+        // Script C: collapse table rows whose leading cells are empty so the
+        // content cell spans the full row width instead of sitting in column 3.
+        controller.addUserScript(makeTableCollapseScript())
 
         let scrollScript = WKUserScript(
             source: """
@@ -316,10 +328,12 @@ private struct WebKitView: UIViewRepresentable {
           --accent-tint: \(rgba(c.accent.lightHex, alpha: 0.12));
           --danger: \(hex(c.danger.lightHex));
           --warning: \(hex(c.warning.lightHex));
+          --warn: \(hex(c.warning.lightHex));
           --border: \(hex(c.border.lightHex));
           --border-strong: \(hex(c.borderStrong.lightHex));
           --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
           --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+          --font-mono: 'Courier New', monospace;
           --size-h1: 26px; --size-h2: 22px; --size-h3: 18px; --size-h4: 16px;
           --size-body: 16px; /* intentionally overrides Typography.body (14pt) for long-form reading */
           --size-caption: 12px; --size-eyebrow: 10px;
@@ -344,6 +358,7 @@ private struct WebKitView: UIViewRepresentable {
           --accent-tint: \(rgba(c.accent.darkHex, alpha: 0.18));
           --danger: \(hex(c.danger.darkHex));
           --warning: \(hex(c.warning.darkHex));
+          --warn: \(hex(c.warning.darkHex));
           --border: \(hex(c.border.darkHex));
           --border-strong: \(hex(c.borderStrong.darkHex));
         }
@@ -394,12 +409,43 @@ private struct WebKitView: UIViewRepresentable {
         return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
     }
 
+    /// Builds Script C: runs after the DOM is ready and collapses table rows where
+    /// leading cells are empty. Removes those empty cells and spans the first content
+    /// cell across all vacated columns so it fills the full row width.
+    private func makeTableCollapseScript() -> WKUserScript {
+        let source = """
+        (function() {
+          document.querySelectorAll('tr').forEach(function(row) {
+            var cells = Array.prototype.slice.call(row.cells);
+            if (cells.length < 2) return;
+            var emptyCount = 0;
+            for (var i = 0; i < cells.length - 1; i++) {
+              if (cells[i].textContent.trim() === '') {
+                emptyCount++;
+              } else {
+                break;
+              }
+            }
+            if (emptyCount === 0) return;
+            for (var i = 0; i < emptyCount; i++) {
+              row.removeChild(cells[i]);
+            }
+            cells[emptyCount].colSpan = emptyCount + 1;
+          });
+        })();
+        """
+        return WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+    }
+
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         private let onReachEnd: () -> Void
+        private let onLoaded: () -> Void
         private var didFire = false
+        private var didLoad = false
 
-        init(onReachEnd: @escaping () -> Void) {
+        init(onReachEnd: @escaping () -> Void, onLoaded: @escaping () -> Void) {
             self.onReachEnd = onReachEnd
+            self.onLoaded = onLoaded
         }
 
         func signalEnd() {
@@ -408,17 +454,34 @@ private struct WebKitView: UIViewRepresentable {
             onReachEnd()
         }
 
+        /// Fires once when the page has loaded (or failed) so the spinner is dismissed.
+        func signalLoaded() {
+            guard !didLoad else { return }
+            didLoad = true
+            onLoaded()
+        }
+
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "scrollEnd" { signalEnd() }
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            signalLoaded()
             // Signal end immediately for pages short enough to fit without scrolling.
             webView.evaluateJavaScript("document.body.scrollHeight <= window.innerHeight") { result, _ in
                 if let fits = result as? Bool, fits {
                     DispatchQueue.main.async { self.signalEnd() }
                 }
             }
+        }
+
+        // Dismiss the spinner even if loading fails, so it never hangs.
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            signalLoaded()
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            signalLoaded()
         }
     }
 }
@@ -428,7 +491,9 @@ private struct WebKitView: UIViewRepresentable {
 private struct PDFKitView: UIViewRepresentable {
 
     let pdfURL: URL?
-        
+    /// Called when the document has been loaded into the PDF view so the host can
+    /// hide the spinner.
+    let onLoaded: () -> Void
     let onReachEnd: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -449,7 +514,7 @@ private struct PDFKitView: UIViewRepresentable {
             object: pdfView
         )
 
-        if let document = PDFDocument(url: pdfURL!) {
+        if let url = pdfURL, let document = PDFDocument(url: url) {
             pdfView.document = document
             // Single-page docs never trigger PDFViewPageChangedNotification on scroll,
             // so signal end after the current render pass completes.
@@ -457,6 +522,9 @@ private struct PDFKitView: UIViewRepresentable {
                 DispatchQueue.main.async { context.coordinator.signalEnd() }
             }
         }
+        // Document is loaded synchronously above; dismiss the spinner on the next
+        // runloop (deferred to avoid mutating SwiftUI state during view construction).
+        DispatchQueue.main.async { onLoaded() }
         return pdfView
     }
 

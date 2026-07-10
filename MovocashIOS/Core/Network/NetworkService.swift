@@ -49,7 +49,7 @@ actor NetworkService: NetworkServiceProtocol {
 
         self.session = URLSession(
             configuration: config,
-            delegate: SecureSessionDelegate(enabled: false), // TODO: - configure the cert and set true
+            delegate: SecureSessionDelegate(enabled: AppConfig.isSSLPinningEnabled),
             delegateQueue: nil
         )
         self.builder = RequestBuilder()
@@ -67,13 +67,30 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.unauthorized
         }
 
-        // Security check
+        // Security check — reject and raise the app-wide compromised-device gate.
         if await JailbreakDetector.shared.isJailbroken {
+            await DeviceIntegrityNotifier.broadcastCompromised()
             throw NetworkError.securityViolation
         }
 
+        // Independent integrity tripwire — a separately implemented check (see
+        // DeviceIntegrity) so a single hook on isJailbroken cannot disable both
+        // gates on the money-movement path.
+        if DeviceIntegrity.tripwire() {
+            await DeviceIntegrityNotifier.broadcastCompromised()
+            throw NetworkError.securityViolation
+        }
+
+        // Idempotency key — generated ONCE per logical request and reused on every
+        // retry below, so a slow-but-successful server can dedupe retries instead of
+        // treating them as new operations (critical for money movement). Only minted
+        // for endpoints that declare `.Idempotency`; otherwise nil.
+        let idempotencyKey: String? = await endpoint.headerType.has(.Idempotency)
+            ? UUID().uuidString
+            : nil
+
         // Build the request
-        let request = try await builder.build(from: endpoint)
+        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
 
         guard let url = request.url else {
             throw NetworkError.invalidURL
@@ -81,16 +98,20 @@ actor NetworkService: NetworkServiceProtocol {
 
         SecureLogger.debug("API URL: \(url)", category: .network)
 
+        // Whether this endpoint sends the X25519 secure movo-info header — gates
+        // the reactive device-session re-config below.
+        let usesDeviceSession = await endpoint.headerType.has(.secureDeviceInfo)
+
         // Attempt the initial request, then retry up to maxAttempts - 1 times.
         var lastError: NetworkError = .unknown
 
         for attempt in 0..<maxAttempts {
             do {
                 if attempt == 0 {
-                    return try await performRequest(request)
+                    return try await performRequest(request, usesDeviceSession: usesDeviceSession)
                 } else {
-                    let retryRequest = try await builder.build(from: endpoint)
-                    return try await performRequest(retryRequest)
+                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
+                    return try await performRequest(retryRequest, usesDeviceSession: usesDeviceSession)
                 }
             } catch let error as NetworkError {
                 lastError = error
@@ -127,10 +148,22 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         if await JailbreakDetector.shared.isJailbroken {
+            await DeviceIntegrityNotifier.broadcastCompromised()
             throw NetworkError.securityViolation
         }
 
-        let request = try await builder.build(from: endpoint)
+        // Independent integrity tripwire — see request() above.
+        if DeviceIntegrity.tripwire() {
+            await DeviceIntegrityNotifier.broadcastCompromised()
+            throw NetworkError.securityViolation
+        }
+
+        // Same idempotency contract as request(): one stable key reused on retries.
+        let idempotencyKey: String? = await endpoint.headerType.has(.Idempotency)
+            ? UUID().uuidString
+            : nil
+
+        let request = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
 
         guard let url = request.url else {
             throw NetworkError.invalidURL
@@ -138,15 +171,17 @@ actor NetworkService: NetworkServiceProtocol {
 
         SecureLogger.debug("API URL: \(url)", category: .network)
 
+        let usesDeviceSession = await endpoint.headerType.has(.secureDeviceInfo)
+
         var lastError: NetworkError = .unknown
 
         for attempt in 0..<maxAttempts {
             do {
                 if attempt == 0 {
-                    return try await performRawRequest(request)
+                    return try await performRawRequest(request, usesDeviceSession: usesDeviceSession)
                 } else {
-                    let retryRequest = try await builder.build(from: endpoint)
-                    return try await performRawRequest(retryRequest)
+                    let retryRequest = try await builder.build(from: endpoint, idempotencyKey: idempotencyKey)
+                    return try await performRawRequest(retryRequest, usesDeviceSession: usesDeviceSession)
                 }
             } catch let error as NetworkError {
                 lastError = error
@@ -212,7 +247,7 @@ actor NetworkService: NetworkServiceProtocol {
     }
     
     // MARK: - Perform Request (Nonisolated for Swift 6 concurrency)
-    private nonisolated func performRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
+    private nonisolated func performRequest<T: Decodable>(_ request: URLRequest, usesDeviceSession: Bool = false) async throws -> T {
         
 #if DEBUG
         debugPrintRequest(request)
@@ -236,7 +271,12 @@ actor NetworkService: NetworkServiceProtocol {
         do {
             (data, response) = try await session.data(for: request)
         } catch let urlError as URLError where urlError.code == .cancelled {
-            throw CancellationError()
+            // A -999 with our Task still alive means the SSL-pinning delegate cancelled
+            // the TLS challenge (cert didn't match a pinned key) — a security failure,
+            // not a user/navigation cancel. Only a genuinely cancelled Task is a real
+            // CancellationError.
+            if Task.isCancelled { throw CancellationError() }
+            throw NetworkError.secureConnectionFailed
         } catch let urlError as URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
@@ -275,7 +315,7 @@ actor NetworkService: NetworkServiceProtocol {
 #endif
                 
         SecureLogger.info("API Success.", category: .network)
-        
+
         if SessionExpiryNotifier.shouldTerminateSession(statusCode: http.statusCode, data: data) {
             let message = SessionExpiryNotifier.displayMessage(statusCode: http.statusCode, data: data)
             Task { @MainActor in
@@ -285,10 +325,16 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         if http.statusCode == 429 {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
             throw NetworkError.rateLimited
         }
-        
+
         if (500...599).contains(http.statusCode) {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
             throw NetworkError.serverError
         }
         
@@ -319,7 +365,7 @@ actor NetworkService: NetworkServiceProtocol {
     }
 
     // MARK: - Perform Raw Request
-    private nonisolated func performRawRequest(_ request: URLRequest) async throws -> Data {
+    private nonisolated func performRawRequest(_ request: URLRequest, usesDeviceSession: Bool = false) async throws -> Data {
 
 #if DEBUG
         debugPrintRequest(request)
@@ -341,7 +387,12 @@ actor NetworkService: NetworkServiceProtocol {
         do {
             (data, response) = try await session.data(for: request)
         } catch let urlError as URLError where urlError.code == .cancelled {
-            throw CancellationError()
+            // A -999 with our Task still alive means the SSL-pinning delegate cancelled
+            // the TLS challenge (cert didn't match a pinned key) — a security failure,
+            // not a user/navigation cancel. Only a genuinely cancelled Task is a real
+            // CancellationError.
+            if Task.isCancelled { throw CancellationError() }
+            throw NetworkError.secureConnectionFailed
         } catch let urlError as URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
@@ -373,8 +424,18 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.unauthorized
         }
 
-        if http.statusCode == 429 { throw NetworkError.rateLimited }
-        if (500...599).contains(http.statusCode) { throw NetworkError.serverError }
+        if http.statusCode == 429 {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
+            throw NetworkError.rateLimited
+        }
+        if (500...599).contains(http.statusCode) {
+            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                throw NetworkError.serverMessage(apiError.message)
+            }
+            throw NetworkError.serverError
+        }
         if !(200...299).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
                 throw NetworkError.serverMessage(apiError.message)

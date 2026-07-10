@@ -2,7 +2,7 @@
 //  DashboardAccountView.swift
 //  MovocashIOS
 //
-//  Created by Vinu on 15/05/26.
+//  Created by Movo Developer on 15/05/26.
 //
 
 import SwiftUI
@@ -13,7 +13,8 @@ struct AccountDetailsView: View {
     let account: SavingsAccountInfo
     var onNicknameUpdated: ((String) -> Void)?
 
-    @Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @State private var copiedField: String?
     @State private var showEditNickname = false
     @State private var displayNickname: String
@@ -32,6 +33,7 @@ struct AccountDetailsView: View {
             accountRows
         }
         .padding(.top, Spacing.xxxl)
+        .background(Color.movo.cardSurface.ignoresSafeArea())
         .sheet(isPresented: $showEditNickname) {
             EditNicknameView(currentNickname: displayNickname) { newValue in
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -51,21 +53,26 @@ struct AccountDetailsView: View {
     private var header: some View {
         HStack {
             HStack(spacing: Spacing.sm) {
-                Image(systemName: "banknote")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.movo.accent)
-                    .frame(width: 28, height: 28)
+                MovoMVSymbol()
+                    .frame(width: 18, height: 18)
+                    .padding(5)
                     .background(Color.movo.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm))
 
-                Text("\(account.isPrimary ? "PRIMARY" : "ACCOUNT") · ••\(account.accountNumber.suffix(4))")
-                    .font(.system(size: 11, weight: .medium))
-                    .tracking(0.5)
-                    .foregroundStyle(Color.movo.textSecondary)
+                Eyebrow("\(account.isPrimary ? "PRIMARY" : "ACCOUNT") · ••\(account.accountNumber.suffix(4))")
             }
             Spacer()
-            CircularNavButton(systemName: "pencil") { showEditNickname = true }
-                .accessibilityLabel("Edit nickname")
-            CircularNavButton(systemName: "xmark") { dismiss() }
+            Button(action: { showEditNickname = true }) {
+                MovoEditIcon(size: 13, tint: Color.movo.textSecondary)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        Circle()
+                            .fill(Color.movo.elevated)
+                            .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Edit nickname")
+            CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
                 .accessibilityLabel("Close")
         }
         .padding(.horizontal, Spacing.xl)
@@ -81,31 +88,35 @@ struct AccountDetailsView: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(Color.movo.textPrimary)
                 .padding(.top, Spacing.xs)
+                .padding(.bottom, Spacing.sm)
 
-            Text(account.formattedBalance)
-                .font(.system(size: 36, weight: .medium))
-                .foregroundStyle(Color.movo.textPrimary)
-                .monospacedDigit()
-                .tracking(-0.8)
-
-            HStack(spacing: Spacing.sm) {
-                Text("AVAILABLE BALANCE")
-                    .font(.system(size: 10))
-                    .tracking(0.6)
-                    .foregroundStyle(Color.movo.textSecondary)
-                if account.isActive { StatusPill("ACTIVE") }
+            if let bal = account.availableBalance {
+                BalanceText(amount: bal, dollarSize: 46, centsSize: 36, centsOpacity: 1.0)
+            } else {
+                Text("$ —")
+                    .font(.system(size: 46, weight: .bold).monospacedDigit())
+                    .foregroundColor(Color.movo.textTertiary)
             }
+
+            Eyebrow("MOVO AVAILABLE BALANCE")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.xl)
         .padding(.bottom, Spacing.md)
     }
 
+
     // MARK: - Account Rows
 
     private var accountRows: some View {
         VStack(spacing: 0) {
-            infoRow(label: "ACCOUNT BALANCE", value: account.formattedAccountBalance)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Eyebrow("MOVO ACCOUNT BALANCE")
+                BalanceText(amount: account.accountBalance, dollarSize: 27, centsSize: 21, centsOpacity: 1.0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.vertical, Spacing.lg)
             rowDivider
             copyableRow(label: "ACCOUNT NUMBER", value: account.accountNumber, field: "accountNumber")
             if let routing = account.routingNumber {
@@ -121,10 +132,7 @@ struct AccountDetailsView: View {
     @ViewBuilder
     private func infoRow(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .tracking(0.4)
-                .foregroundStyle(Color.movo.textSecondary)
+            Eyebrow(label)
             Text(value)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Color.movo.textPrimary)
@@ -139,10 +147,7 @@ struct AccountDetailsView: View {
     private func copyableRow(label: String, value: String, field: String) -> some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(label)
-                    .font(.system(size: 10, weight: .medium))
-                    .tracking(0.4)
-                    .foregroundStyle(Color.movo.textSecondary)
+                Eyebrow(label)
                 Text(value)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.movo.textPrimary)
@@ -247,9 +252,7 @@ struct EditNicknameView: View {
 
     private var iconHeader: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            Image(systemName: "pencil")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(Color.movo.accent)
+            MovoEditIcon(size: 22)
                 .frame(width: 44, height: 44)
                 .background(Color.movo.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.xl))
 
@@ -257,7 +260,7 @@ struct EditNicknameView: View {
                 Text("Edit nickname")
                     .textStyle(Typography.cardHero)
                     .foregroundStyle(Color.movo.textPrimary)
-                Text("Give your primary account a name that's easy to recognize.")
+                Text("Give your card a name that's easy to recognize.")
                     .textStyle(Typography.subtitle)
                     .foregroundColor(Color.movo.textTertiary)
                     .lineSpacing(2)

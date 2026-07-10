@@ -11,34 +11,43 @@ import UIKit
 
 // MARK: - Tab Definition
 
+/// Selection identity + local icon for a bottom tab bar slot.
+///
+/// The set, order, and labels of the tabs come entirely from the MENU section of
+/// the dashboard API. Each menu item's `action` decides which screen + icon it
+/// maps to (NOT its position) — so the API can rename a tab's `label` freely
+/// without changing where it goes, and reorder tabs without breaking routing.
+/// An unrecognized `action` becomes `.other(action)` so it still renders with a
+/// placeholder. The app owns only the icon — the label always comes from the API.
 enum Tab: Hashable {
     case home
-    case accounts
+    case payAnyone
+    case quickPay
     case profile
+    case other(String)
 
-    var label: String {
-        switch self {
-        case .home:     return "Home"
-        case .accounts: return "Pay Anyone"
-        case .profile:  return "Settings"
+    /// Maps an API menu `action` to a known tab. Action values are the stable
+    /// routing key (`label` is display-only), so unknown actions fall through to
+    /// `.other` and render a placeholder rather than guessing by position.
+    init(action: String) {
+        switch action {
+        case "Home":     self = .home
+        case "Movo-Pay": self = .payAnyone
+        case "Settings": self = .profile
+        default:         self = .other(action)
         }
     }
 
+    /// Local SF Symbol for the slot.
+    /// .home uses this only as a fallback if the UIImage rasteriser hasn't fired yet;
+    /// the real Home icon is MovoMVSymbol rendered via ImageRenderer.
     var icon: String {
         switch self {
-        case .home:     return "house"
-        case .accounts: return "person.2"
-        case .profile:  return "gearshape"
-        }
-    }
-
-    // Maps the action string from the MENU section of the dashboard API
-    init?(action: String) {
-        switch action {
-        case "Home":      self = .home
-        case "PayAnyone": self = .accounts
-        case "Settings":  self = .profile
-        default:          return nil
+        case .home:      return "house"                    // fallback — M rendered via UIImage
+        case .payAnyone: return "bolt.fill"
+        case .quickPay:  return "bolt.fill"
+        case .profile:   return "person.crop.circle.fill"
+        case .other:     return "square.dashed"
         }
     }
 }
@@ -55,16 +64,22 @@ struct HomeTabBarView: View {
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
 
-    @StateObject private var dashboardVM: DashboardViewModel
+    @ObservedObject private var dashboardVM: DashboardViewModel
     @StateObject private var linkAccountVM: ACHViewModel
     @StateObject private var vCardVM: VCardViewModel
+
+    @Environment(\.displayScale) private var displayScale
+    @Environment(\.colorScheme)  private var colorScheme
 
     @State private var selectedTab: Tab = .home
     @State private var isLoggingOut = false
     @State private var hasLoadedOnce = false
+    /// Rasterised MovoMVSymbol images — cached so ImageRenderer never runs during body.
+    @State private var homeIconSelected:   UIImage?
+    @State private var homeIconUnselected: UIImage?
 
     init(container: AppContainer) {
-        _dashboardVM = StateObject(wrappedValue: container.makeDashboardViewModel())
+        _dashboardVM = ObservedObject(wrappedValue: container.makeDashboardViewModel())
         _linkAccountVM = StateObject(wrappedValue: container.makeACHViewModel())
         _vCardVM = StateObject(wrappedValue: container.makeVCardViewModel())
     }
@@ -82,21 +97,38 @@ struct HomeTabBarView: View {
         .task {
             guard !hasLoadedOnce else { return }
             hasLoadedOnce = true
-            await dashboardVM.fetchDashboard()
-            await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
+            if dashboardVM.dashboard != nil {
+                // Shared VM already has data (e.g. biometric re-entry, onboarding → home).
+                // Silent stale check — no skeleton flash.
+                await dashboardVM.refreshIfStale(within: 30)
+            } else {
+                await dashboardVM.fetchDashboard()
+            }
         }
-        .onAppear(perform: handleOnAppear)
-        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+        .onAppear {
+            handleOnAppear()
+            refreshHomeIcons()
+        }
+        .onChange(of: displayScale)  { _ in refreshHomeIcons() }
+        .onChange(of: colorScheme)   { _ in refreshHomeIcons() }
+        .onSessionExpired {
+            // Cancel in-flight tasks owned by this view's VMs.
+            // DashboardViewModel.reset() is handled in AppContainer.onSessionEnd
+            // (called from SessionManager.resetAppState) — not here — because
+            // HomeTabBarView may already be tearing down when the session ends,
+            // making this modifier unreliable for shared-state cleanup.
             dashboardVM.cancelAllTasks()
             linkAccountVM.cancelAllTasks()
             vCardVM.cancelAllTasks()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Land on the dashboard tab (covers the profile-originated flows).
             selectedTab = .home
         }
         .onChange(of: selectedTab) { newTab in
             guard newTab == .home else { return }
             Task {
                 await dashboardVM.refreshIfStale(within: 15)
-                await vCardVM.loadCards(primaryAccountId: dashboardVM.primaryAccount?.id)
             }
         }
     }
@@ -116,7 +148,39 @@ private extension HomeTabBarView {
                 ScrollView(showsIndicators: false) {
                     skeletonBody
                 }
+                skeletonTabBar
             }
+        }
+    }
+
+    // MARK: Tab bar
+
+    /// Placeholder bottom tab bar shown while the dashboard loads, so the real
+    /// tab bar doesn't pop in once `realTabView` appears. The item count is a
+    /// best-guess placeholder; the live tab bar is API-driven.
+    var skeletonTabBar: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.movo.border)
+                .frame(height: Stroke.hairline)
+
+            HStack(spacing: 0) {
+                ForEach(0..<4, id: \.self) { _ in
+                    VStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.movo.elevated)
+                            .frame(width: 26, height: 26)
+                            .shimmer()
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.movo.elevated)
+                            .frame(width: 38, height: 7)
+                            .shimmer()
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.top, Spacing.sm)
+            .padding(.bottom, Spacing.xs)
         }
     }
 
@@ -266,19 +330,25 @@ private extension HomeTabBarView {
 
 private extension HomeTabBarView {
 
+    /// Tabs to render — one per API MENU item, in API order. Each item maps to a
+    /// tab by its `action` (icon + destination); an unrecognized action renders as
+    /// `.other` with a placeholder. Nothing is capped: the menu is exactly what the
+    /// API returns.
     var resolvedTabs: [Tab] {
-        let mapped = dashboardVM.menuItems.compactMap { Tab(action: $0.action) }
-        return mapped.isEmpty ? [.home, .accounts, .profile] : mapped
+        dashboardVM.menuItems.map { Tab(action: $0.action) }
     }
 
-    func tabLabel(for tab: Tab) -> String {
-        dashboardVM.menuItems.first { Tab(action: $0.action) == tab }?.label ?? tab.label
+    /// API-driven label for the tab at the given position. The name always comes
+    /// from the API — never hardcoded.
+    func tabLabel(at index: Int) -> String {
+        guard index >= 0, index < dashboardVM.menuItems.count else { return "" }
+        return dashboardVM.menuItems[index].label
     }
 
     var realTabView: some View {
         TabView(selection: $selectedTab) {
-            ForEach(resolvedTabs, id: \.self) { tab in
-                tabContent(for: tab)
+            ForEach(Array(resolvedTabs.enumerated()), id: \.offset) { index, tab in
+                tabContent(for: tab, at: index)
             }
         }
         .tint(Color.movo.accent)
@@ -287,23 +357,56 @@ private extension HomeTabBarView {
     }
 
     @ViewBuilder
-    func tabContent(for tab: Tab) -> some View {
+    func tabContent(for tab: Tab, at index: Int) -> some View {
         NavigationStack {
-            destination(for: tab)
+            destination(for: tab, title: tabLabel(at: index))
         }
         .tabItem {
-            Label(tabLabel(for: tab), systemImage: tab.icon)
-                .environment(\.symbolVariants, SymbolVariants.none)
+            let label = tabLabel(at: index)
+            if tab == .home,
+               let img = selectedTab == .home ? homeIconSelected : homeIconUnselected {
+                // MovoMVSymbol rasterised to UIImage — .alwaysOriginal preserves two-tone colors.
+                Label { Text(label) } icon: { Image(uiImage: img) }
+            } else {
+                Label(label, systemImage: tab.icon)
+                    .environment(\.symbolVariants, SymbolVariants.none)
+            }
         }
         .tag(tab)
     }
 
+    /// Destination for a tab. Slots without a dedicated screen (Quick Pay and any
+    /// unmapped/extra menu item) render a placeholder until wired to a real screen.
     @ViewBuilder
-    func destination(for tab: Tab) -> some View {
+    func destination(for tab: Tab, title: String) -> some View {
         switch tab {
-        case .home:     DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM)
-        case .accounts: PayAnyoneView(container: container, selectedTab: $selectedTab, cards: vCardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard)
-        case .profile:  ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM)
+        case .home:
+            DashboardView(container: container, dashboardVM: dashboardVM, vm: vCardVM, selectedTab: $selectedTab, screenTitle: title)
+                .trackScreen(AnalyticsScreen.dashboard)
+        case .payAnyone:
+            PayAnyoneView(container: container, selectedTab: $selectedTab, cards: dashboardVM.apiCards, primaryLinkedCard: dashboardVM.primaryLinkedCard, screenTitle: title)
+                .trackScreen(AnalyticsScreen.payAnyone)
+        case .profile:
+            ProfileScreen(container: container, dashboardVM: dashboardVM, achVM: linkAccountVM, screenTitle: title)
+                .trackScreen(AnalyticsScreen.profile)
+        case .quickPay, .other:
+            placeholderTab(title: title)
+        }
+    }
+
+    /// Placeholder shown for a menu slot that has no dedicated screen yet.
+    @ViewBuilder
+    func placeholderTab(title: String) -> some View {
+        ZStack {
+            MovoBackground()
+            VStack(spacing: Spacing.md) {
+                Image(systemName: "square.dashed")
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundColor(Color.movo.textSecondary)
+                Text(title)
+                    .textStyle(Typography.subtitle)
+                    .foregroundColor(Color.movo.textSecondary)
+            }
         }
     }
 }
@@ -316,7 +419,40 @@ private extension HomeTabBarView {
     func handleOnAppear() {
         guard appState.isNewRegistration else { return }
         lockManager.resetToUnlocked()
+        // Dashboard can show the one-time first-card reward. `isNewRegistration`
+        UserDefaults.standard.set(true, forKey: "pendingFirstCardReward")
         appState.isNewRegistration = false
+    }
+
+    // MARK: Home tab icon rasteriser
+
+    /// Renders MovoMVSymbol at the current display scale into a UIImage.
+    /// Must be called from the main actor (ImageRenderer requires it).
+    /// Returns nil only if ImageRenderer produces no output (should not happen in practice).
+    func makeHomeIcon(selected: Bool, scale: CGFloat, scheme: ColorScheme) -> UIImage? {
+        let unselected: Color = scheme == .dark ? .white : .black
+        let body    = selected ? Color.movo.accent : unselected
+        let chevron = selected ? Color.movo.accent : unselected
+        // .environment(\.colorScheme) forces ImageRenderer (which defaults to light)
+        // to resolve dynamic colors (secondaryLabel, movo tokens) in the correct scheme.
+        let view = MovoMVSymbol(bodyStyle: body, accent: chevron)
+            .frame(width: 24, height: 24)
+            .environment(\.colorScheme, scheme)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = scale
+        // .alwaysOriginal — never let UIKit recolor the image (preserves two-tone M).
+        return renderer.uiImage?.withRenderingMode(.alwaysOriginal)
+    }
+
+    /// Re-renders both states and caches them. Call on appear and on
+    /// displayScale / colorScheme change so the raster stays correct.
+    func refreshHomeIcons() {
+        // Use UITraitCollection.current instead of @Environment(\.colorScheme) —
+        // .toolbarColorScheme(.dark, for: .tabBar) forces the SwiftUI env to .dark
+        // even on a light-mode device, which would make the unselected M render white in light mode.
+        let deviceScheme: ColorScheme = UITraitCollection.current.userInterfaceStyle == .dark ? .dark : .light
+        homeIconSelected   = makeHomeIcon(selected: true,  scale: displayScale, scheme: deviceScheme)
+        homeIconUnselected = makeHomeIcon(selected: false, scale: displayScale, scheme: deviceScheme)
     }
 }
 

@@ -22,6 +22,10 @@ struct ManageExternalAccountsView: View {
     @State private var showBankLinkedSuccess = false
     @State private var newlyLinkedAccount: ACHAccount? = nil
     @State private var showBankLinkedInfo = false
+    // Set when the user taps "Continue" on the info sheet; consumed in onDismiss
+    // to start the Plaid flow once the sheet is gone.
+    @State private var continueToPlaid = false
+    @State private var startPlaidFlow = false
 
     init(achVM: ACHViewModel, primaryAccount: SavingsAccountInfo?, container: AppContainer) {
         self.achVM = achVM
@@ -54,6 +58,8 @@ struct ManageExternalAccountsView: View {
                     .padding(.bottom, 160)
                 }
             }
+
+            StatusBarScrim()
 
             if !achVM.accounts.isEmpty {
                 withdrawButton
@@ -104,24 +110,45 @@ struct ManageExternalAccountsView: View {
                 }
             )
         }
-        .sheet(isPresented: $showBankLinkedInfo) {
-            BankLinkedInfoScreen(
-                container: container,
-                plaidVM: plaidVM,
-                primaryAccount: primaryAccount,
-                allowFunding: false,
-                onSuccess: {
-                    Task {
-                        isLinkedAccountLoading = true
-                        await achVM.fetchAccounts()
-                        isLinkedAccountLoading = false
-                    }
-                }
-            )
-            .presentationDetents([.height(500)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
+        .sheet(isPresented: $showBankLinkedInfo, onDismiss: {
+            // Start Plaid only after the info sheet is fully gone.
+            if continueToPlaid {
+                continueToPlaid = false
+                startPlaidFlow = true
+            }
+        }) {
+            BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
+                .presentationDetents([.height(430)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
+                .presentationBackground(Color.movo.cardSurface)
+        }
+        .plaidLinkFlow(
+            isActive: $startPlaidFlow,
+            plaidVM: plaidVM,
+            container: container,
+            primaryAccount: primaryAccount,
+            // Enable in-screen funding so the success screen's "Add fund" → Confirm
+            // runs the deposit (it receives container + primaryAccount). Onboarding/
+            // KYC keep their own allowFunding:false calls, so they're unaffected.
+            allowFunding: true,
+            onLinked: { account in
+                // Bind immediately for an instant list update, then refresh in the
+                // background so the row gets the real balance / achAccountId. The
+                // success screen is already on-screen, so this never blocks the UI.
+                achVM.addLinkedAccount(account)
+                Task { await achVM.fetchAccounts() }
+            },
+            onDone: {
+                // Fires when the success/funding flow closes — refresh so the
+                // linked-accounts list reflects the new balance on return.
+                Task { await achVM.fetchAccounts() }
+            }
+        )
+        .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
+            // Pop the withdraw push (FundAccountView) so the profile stack doesn't
+            // keep it behind the dashboard tab the user is being taken to.
+            showWithdraw = false
         }
     }
 
@@ -160,7 +187,7 @@ struct ManageExternalAccountsView: View {
             // Bank logo
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.sm)
-                    .fill(account.logoImage != nil ? Color(.systemBackground) : Color.movo.elevated)
+                    .fill(account.logoImage != nil ? Color.movo.surface : Color.movo.elevated)
                     .frame(width: 44, height: 44)
                 if let logo = account.logoImage {
                     Image(uiImage: logo)
@@ -186,7 +213,7 @@ struct ManageExternalAccountsView: View {
                         .textStyle(Typography.body)
                         .foregroundColor(Color.movo.textPrimary)
                     if account.isDefault {
-                        StatusPill("PRIMARY", variant: .accent)
+                        StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                     }
                 }
                 Text("\(account.accountName) · ••\(account.accountNumber.suffix(4))")
@@ -274,9 +301,7 @@ struct ManageExternalAccountsView: View {
                     .textStyle(Typography.body)
                     .foregroundColor(Color.movo.accent)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.movo.accent)
+                MovoChevron(.disclosure)
             }
             .padding(.vertical, Spacing.rowPaddingVertical)
             .padding(.horizontal, Spacing.lg)

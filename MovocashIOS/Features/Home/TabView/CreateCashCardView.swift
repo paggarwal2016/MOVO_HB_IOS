@@ -9,11 +9,19 @@ import SwiftUI
 
 struct CreateCashCardView: View {
 
-    // MARK: - Callbacks
-    let onCancel: () -> Void
-    let onCreate: (_ nickname: String, _ pin: String) async -> Void
+    // MARK: - Dependencies & Callbacks
+
+    /// View model that performs the create-card network call.
+    let vm: VCardViewModel
+    /// Dismisses this sheet (used by the close button).
+    let onClose: () -> Void
+    /// Invoked after the card is created successfully. The presenter is expected
+    /// to dismiss this sheet and then present the success screen, passing along
+    /// the created card.
+    let onCreated: (VCardListResponse) -> Void
 
     // MARK: - State
+
     @State private var nickname = ""
     @State private var pin = ""
     @State private var confirmPin = ""
@@ -47,23 +55,43 @@ struct CreateCashCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            VStack(spacing: Spacing.xl) {
-                nicknameField
-                pinSection
-                confirmPinSection
+            CustomSheetHeader(
+                title: "Create your cash card",
+                subtitle: "Let's MOVO your way",
+                systemImage: "creditcard.fill",
+                iconTint: Color.movo.accent,
+                iconBackground: Color.movo.accentTint,
+                horizontalPadding: Spacing.xl,
+                closeAction: onClose
+            )
+            GeometryReader { geo in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        VStack(spacing: Spacing.xl) {
+                            nicknameField
+                            pinSection
+                            confirmPinSection
+                        }
+                        .padding(.horizontal, Spacing.xl)
+                        .padding(.top, Spacing.xl)
+
+                        Spacer(minLength: Spacing.xl)
+
+                        actionButtons
+                            .padding(.horizontal, Spacing.xl)
+                            .padding(.top, Spacing.lg)
+                            .padding(.bottom, Spacing.xxxl)
+                    }
+                    .frame(minHeight: geo.size.height)
+                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .padding(.horizontal, Spacing.xl)
-            .padding(.top, Spacing.xl)
-            Spacer()
-            actionButtons
-                .padding(.horizontal, Spacing.xl)
-                .padding(.top, Spacing.lg)
-                .padding(.bottom, Spacing.xxxl)
         }
         .padding(.top, Spacing.xxl)
         .background(Color.movo.surface.ignoresSafeArea())
         .onAppear {
+            // Focus just after the sheet-present animation settles (matches the
+            // app's PIN-entry convention in OTPScreen).
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 focusedField = .nickname
             }
@@ -71,56 +99,6 @@ struct CreateCashCardView: View {
         .onDisappear {
             SpinnerView.hideFullScreen()
         }
-    }
-}
-
-// MARK: - Header
-
-private extension CreateCashCardView {
-
-    var header: some View {
-        HStack(spacing: Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.button)
-                    .fill(Color.movo.accentTint)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.button)
-                            .strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
-                    )
-                Image(systemName: "creditcard")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(Color.movo.accent)
-            }
-            .frame(width: 38, height: 38)
-
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text("Create cash card")
-                    .textStyle(Typography.cardTitle)
-                    .foregroundStyle(Color.movo.textPrimary)
-                Text("Pick a type, name it, set a PIN")
-                    .textStyle(Typography.subtitle)
-                    .foregroundStyle(Color.movo.textSecondary)
-            }
-
-            Spacer()
-
-            Button(action: onCancel) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.movo.textSecondary)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        Circle()
-                            .fill(Color.movo.elevated.opacity(0.8))
-                            .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close")
-        }
-        .padding(.horizontal, Spacing.xl)
-        .padding(.top, Spacing.xl)
-        .padding(.bottom, Spacing.xl)
     }
 }
 
@@ -159,7 +137,7 @@ private extension CreateCashCardView {
     var pinSection: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack {
-                fieldLabel("PIN")
+                fieldLabel("SET YOUR PIN")
                 Spacer()
                 eyeToggle(isOn: $showPin)
             }
@@ -208,12 +186,12 @@ private extension CreateCashCardView {
 
     var actionButtons: some View {
         Button(action: submit) {
-            Text("Create Card")
+            Text("LET'S MOVO!")
+                .tracking(1.5)
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         .disabled(!isValid || isLoading)
         .opacity(isValid && !isLoading ? 1.0 : 0.4)
-        .animation(.easeInOut(duration: DesignTokens.Motion.standard), value: isValid)
     }
 
     // MARK: - Small helpers
@@ -253,11 +231,18 @@ private extension CreateCashCardView {
         focusedField = nil
         isLoading = true
         SpinnerView.showFullScreen()
+        let request = CreateVCardRequest(
+            nickname: nickname.trimmingCharacters(in: .whitespaces),
+            pin: pin,
+            userAction: "VCARD-CREATION"
+        )
         Task {
-            await onCreate(nickname.trimmingCharacters(in: .whitespaces), pin)
+            let card = try? await vm.createVCard(request: request)
+            // Error (card == nil) is surfaced via BaseViewModel toast.
             await MainActor.run {
                 isLoading = false
                 SpinnerView.hideFullScreen()
+                if let card { onCreated(card) }
             }
         }
     }

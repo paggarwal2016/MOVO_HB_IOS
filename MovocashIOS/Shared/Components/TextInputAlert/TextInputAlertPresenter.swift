@@ -113,7 +113,7 @@ struct TextInputAlertPresenter<Content: View>: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 20)
-            .background(Color(.systemBackground))
+            .background(Color.movo.surface)
 
             // Buttons
             Divider()
@@ -134,7 +134,7 @@ struct TextInputAlertPresenter<Content: View>: View {
                 .buttonStyle(MovoCompactButtonStyle())
                 .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            .background(Color(.systemBackground))
+            .background(Color.movo.surface)
         }
     }
 

@@ -9,20 +9,7 @@ import SwiftUI
 import Combine
 
 enum AuthFlow: String {
-    case splash, choice, loginPhone, getStartedPhone, otp, signupDetails, getStartedInfo, enableBiometrics, pickDocument, kyc, kycSuccess, appLock, warmRelock, home
-
-    /// The screen to persist for kill→relaunch restoration during onboarding.
-    /// Returns nil for screens that must not be restored (OTPs expire, home is post-dashboard).
-    var restorationTarget: AuthFlow? {
-        switch self {
-        case .signupDetails:    return .signupDetails
-        case .enableBiometrics: return .enableBiometrics
-        case .getStartedInfo:   return .getStartedInfo
-        case .pickDocument:     return .pickDocument
-        case .kyc:              return .pickDocument    // always restart the scan
-        default:                return nil
-        }
-    }
+    case splash, choice, waitlist, loginPhone, getStartedPhone, otp, signupDetails, emailVerification, getStartedInfo, enableBiometrics, pickDocument, kyc, kycSuccess, appLock, warmRelock, home
 }
 
 enum PhoneFlowType: String {
@@ -54,6 +41,12 @@ final class AppState: ObservableObject {
     var pendingDestination: AuthFlow?
     var pendingContext: PhoneFlowType?
 
+    /// True when the app cold-launched directly into the KYC step (Pick Document) because
+    /// the camera permission was just granted in Settings (iOS force-relaunches for that).
+    /// There is no Get Started Info screen behind it in this launch, so Pick Document's
+    /// Back must exit to Choice instead.
+    var kycStepResumed = false
+
     /// Fintech-standard inactivity window for the pre-dashboard onboarding flow.
     /// Exceeding this triggers a full logout so no partial session can be resumed.
     static let onboardingInactivityTimeout: TimeInterval = 600 // 10 minutes
@@ -62,8 +55,7 @@ final class AppState: ObservableObject {
     /// AppLock for PIN-only users when the server session is certainly dead.
     static let apiIdleTimeout: TimeInterval = 15 * 60
 
-    // NEW — minimum splash duration for visual stability
-    static let splashMinDuration: TimeInterval = 0.8
+    static let splashMinDuration: TimeInterval = 0.25
 
     /// One-shot guard so post-bootstrap warmup cannot re-run if RootView's .task re-fires.
     var hasCompletedBootstrap = false
