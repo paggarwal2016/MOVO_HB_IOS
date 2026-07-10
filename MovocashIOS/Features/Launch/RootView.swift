@@ -94,16 +94,9 @@ struct RootView: View {
                                     appState.flow = .signupDetails
                                 default:
                                     // Returning user — KYC already complete.
-                                    // Enrolled → require a biometric scan (RSA) before the
-                                    // dashboard. Not enrolled (fresh install) → enrollment,
-                                    // which also generates the passkey. No hardware → passkey
-                                    // check only.
+                                    // Show BiometricEnrollView (which also registers device
+                                    // passkey) if not yet done on this device; otherwise go home.
                                     UserDefaults.standard.set(true, forKey: "kycCompleted")
-                                    if lockManager.isBiometricHardwarePresent {
-                                        let enrolledForUser = await authVM.isBiometricEnrolledForCurrentUser()
-                                        appState.flow = enrolledForUser ? .loginBiometricAuth : .enableBiometrics
-                                        return
-                                    }
                                     let passkeyDone = await authVM.isPasskeyRegistered()
                                     appState.flow = passkeyDone ? .home : .enableBiometrics
                                 }
@@ -255,52 +248,6 @@ struct RootView: View {
                             // the permission changes; this flag lets StartupRouter resume
                             // here instead of starting over at Choice.
                             UserDefaults.standard.set(true, forKey: "onboardingBiometricAwaitingSettings")
-                        },
-                        onEnrollmentFailedExit: {
-                            // Enrollment failed / cannot enroll / permission denied and the
-                            // user acknowledged. Log out and return to the Choice screen so
-                            // no half-set-up session reaches the dashboard.
-                            UserDefaults.standard.removeObject(forKey: "onboardingBiometricAwaitingSettings")
-                            Task {
-                                await sessionManager.logout(appState: appState)
-                                lockManager.logout()
-                                appState.flow = .choice
-                            }
-                        }
-                    )
-
-                    // ── Repeat-login biometric authentication (same screen, auth mode)
-                case .loginBiometricAuth:
-                    BiometricEnrollView(
-                        lockManager: lockManager,
-                        onEnable: { return await advanceAfterSecurity() },
-                        onSkip:   { },
-                        onEnrollmentFailedExit: {
-                            // Genuine biometric mismatch (3 failed scans) / cancelled out —
-                            // log out and return to Choice. Does NOT silently re-enroll: a
-                            // valid enrolled biometric must be presented on this device.
-                            authVM.cancelBiometricLogin()
-                            Task {
-                                await sessionManager.logout(appState: appState)
-                                lockManager.logout()
-                                appState.flow = .choice
-                            }
-                        },
-                        onNeedsReenrollment: {
-                            // Structural failure — the RSA key is missing/stale (e.g. after a
-                            // reinstall), so auth can never succeed. Clear the stale state and
-                            // route to enrollment: the user re-enrolls (new key + passkey) and
-                            // then reaches the dashboard. Session stays valid (OTP just passed).
-                            authVM.cancelBiometricLogin()
-                            lockManager.revokeBiometricSafely()   // deletes RSA key + Secure Enclave sentinel
-                            Task {
-                                await authVM.clearBiometricEnrollmentForCurrentUser()
-                                appState.flow = .enableBiometrics
-                            }
-                        },
-                        mode: .authenticate,
-                        authenticate: {
-                            await authVM.loginWithBiometricOutcome(appState: appState)
                         }
                     )
 
@@ -526,11 +473,14 @@ struct RootView: View {
                         // Check enrollment per-user — not per-device — so User B is never
                         // skipped because User A enrolled on the same device previously.
                         let enrolledForUser = await authVM.isBiometricEnrolledForCurrentUser()
-                        // Enrolled → biometric scan gate; not enrolled → enrollment.
-                        appState.flow = enrolledForUser ? .loginBiometricAuth : .enableBiometrics
-                        return
+                        if !enrolledForUser {
+                            // This user has not enrolled biometrics yet — show the screen.
+                            appState.flow = .enableBiometrics
+                            return
+                        }
                     }
-                    // No biometric hardware — passkey may still be missing.
+                    // Biometrics either enrolled or no hardware present.
+                    // Passkey may still be missing — always verify before routing home.
                     let passkeyDone = await authVM.isPasskeyRegistered()
                     appState.flow = passkeyDone ? .home : .enableBiometrics
                 }

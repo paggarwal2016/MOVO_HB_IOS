@@ -23,13 +23,6 @@ struct MovocashIOSApp: App {
         let c = AppContainer()
         let state = AppState()
 
-        // Fresh-install wipe MUST precede bootstrap: bootstrap reads the Keychain to
-        // decide routing, and on reinstall the Keychain still holds stale entries
-        // (RSA key, per-user enrollment flags). Clearing first guarantees a reinstall
-        // routes like a true first run instead of misrouting into a broken biometric
-        // gate whose key is about to be wiped.
-        AppDelegate.clearOnFreshInstallIfNeeded()
-
         // App.init isn't formally @MainActor, but SwiftUI runs it on main.
         // assumeIsolated is the canonical Swift pattern to call @MainActor code
         // from an init that's de-facto-but-not-statically on the main actor.

@@ -27,10 +27,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // as early as possible in the launch path. No-op on simulator / DEBUG.
         JailbreakDetector.denyDebugger()
 
-        // 0. Wipe auth state on fresh install — keychain survives uninstall, UserDefaults
-        // does not. Also invoked at the top of MovocashIOSApp.init() (before routing);
-        // the hasLaunchedBefore guard makes this call a no-op on that second path.
-        AppDelegate.clearOnFreshInstallIfNeeded()
+        // 0. Wipe auth state on fresh install — keychain survives uninstall, UserDefaults does not
+        clearOnFreshInstall()
 
         // 1. Firebase core (Analytics only — Crashlytics/Messaging intentionally disabled)
         FirebaseApp.configure()
@@ -60,9 +58,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
     // MARK: - Fresh Install
 
-    /// Wipes auth state on a fresh install (Keychain survives uninstall, UserDefaults
-    /// does not). Idempotent and `static` so it can run at the very start of
-    static func clearOnFreshInstallIfNeeded() {
+    private func clearOnFreshInstall() {
         let flagKey = "app.hasLaunchedBefore"
         guard !UserDefaults.standard.bool(forKey: flagKey) else { return }
 

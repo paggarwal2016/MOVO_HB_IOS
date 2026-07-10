@@ -28,28 +28,21 @@ protocol PlaidLinkManagerProtocol {
 
 @MainActor
 final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
-    
+
     let network: NetworkServiceProtocol
     let keychain: KeychainManagerProtocol
     private let analytics: AnalyticsTracking
-    private var session: PlaidLinkSession?
+    private var handler: Handler?
     private var pendingContinuation: CheckedContinuation<PlaidLinkResult, Error>?
-    
+
     // Guards against resuming the continuation more than once (Plaid may deliver
     // both onSuccess and a trailing onExit). The first callback wins.
     private var didResume = false
 
-    /// True from the moment a link flow starts until it fully resolves. Guards
-    /// `openLink` against re-entrancy (double-tap, or a retry during the
-    /// `configureSDK` await) that would otherwise orphan the in-flight continuation
-    /// — hanging its awaiting task — and open a second Plaid UI. Set/cleared
-    /// synchronously on the main actor.
-    private var isLinkFlowActive = false
-    
     // Fired once when Plaid's UI presents (the `.open` event). Lets the caller
     // dismiss its loading spinner at the right moment.
     private var onPresented: (() -> Void)?
-    
+
     init(
         network: NetworkServiceProtocol,
         keychain: KeychainManagerProtocol,
@@ -59,7 +52,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
         self.keychain = keychain
         self.analytics = analytics ?? AnalyticsManager.shared
     }
-    
+
     /// Presents the Plaid Link UI and returns the parsed result on success.
     /// The caller is responsible for fetching the link token beforehand.
     func openLink(
@@ -68,70 +61,76 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
         onPresented: (() -> Void)? = nil
     ) async throws -> PlaidLinkResult {
 
-        // Re-entrancy guard — reject a duplicate flow while one is active. Set
-        // synchronously before the first `await`, so two concurrent callers can't
-        // both pass (which would orphan the first continuation and open two Plaid
-        // UIs). The `defer` clears it on every exit path — early throw or resolution.
-        guard !isLinkFlowActive else {
-            SecureLogger.warning("[Plaid] openLink ignored — a link flow is already in progress", category: .payment)
-            throw PlaidLinkError.linkInProgress
-        }
-        isLinkFlowActive = true
-        defer { isLinkFlowActive = false }
-
         self.onPresented = onPresented
 
         SecureLogger.info("[Plaid] flow start — requesting fresh auth token", category: .payment)
-        
+
         // Configure the SDK before presenting the Plaid UI. configureSDK fetches a
         // fresh access token (/auth/token-access) and applies it to the SDK, so the
         // link token having been fetched seconds ago can't leave us on a stale auth token.
         try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-        
-        let config = LinkTokenConfiguration(
+
+        // Configure LinkKit callbacks on the main actor (before entering
+        // continuation). Following the SDK's reference pattern: the success/exit
+        // callbacks resolve the flow directly, and `.viewController` presentation
+        // lets Plaid own (and auto-dismiss) its own UI.
+        var config = LinkTokenConfiguration(
             token: token,
             onSuccess: { [weak self] linkSuccess in
                 Task { @MainActor [weak self] in
                     self?.handleLinkSuccess(linkSuccess)
                 }
-            },
-            onExit: { [weak self] linkExit in
-                Task { @MainActor [weak self] in
-                    self?.handleLinkExit(linkExit)
-                }
-            },
-            onEvent: { [weak self] event in
-                Task { @MainActor [weak self] in
-                    self?.handleLinkEvent(event)
-                }
-            },
-            onLoad: {
-                SecureLogger.info("[Plaid] Link ready (onLoad)", category: .payment)
             }
         )
-        
-        let plaidSession: PlaidLinkSession
-        do {
-            plaidSession = try Plaid.createPlaidLinkSession(configuration: config)
-        } catch {
-            SecureLogger.error("[Plaid] session creation failed — \(error.localizedDescription)", category: .payment)
+
+        config.onExit = { [weak self] linkExit in
+            Task { @MainActor [weak self] in
+                self?.handleLinkExit(linkExit)
+            }
+        }
+
+        config.onEvent = { [weak self] event in
+            Task { @MainActor [weak self] in
+                self?.handleLinkEvent(event)
+            }
+        }
+
+        // Create the Plaid handler on the main actor.
+        let plaidHandler: Handler
+        switch Plaid.create(config) {
+        case .success(let h):
+            plaidHandler = h
+        case .failure(let error):
+            // App-level: Link configuration/handler couldn't be created.
+            SecureLogger.error("[Plaid] handler creation failed — \(error.localizedDescription)", category: .payment)
             analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
                 AnalyticsParam.errorCode: "handler_creation_failed"
             ])
             throw PlaidLinkError.handlerCreationFailed(error.localizedDescription)
         }
-        self.session = plaidSession
+
+        // Retain the handler so it stays alive while the Plaid UI is presented.
+        self.handler = plaidHandler
         self.didResume = false
-        
+
         SecureLogger.info("[Plaid] presenting Link UI", category: .payment)
-        
+
+        // Present the Plaid Link UI, then suspend until onSuccess/onExit fires.
+        // Plaid manages presentation and dismissal of its own view controller.
         return try await withCheckedThrowingContinuation { continuation in
             self.pendingContinuation = continuation
-            plaidSession.open(using: .viewController(presenter))
+            plaidHandler.open(presentUsing: .viewController(presenter))
         }
     }
-    
+
     // MARK: - LinkKit Callbacks
+
+    /// Every Plaid lifecycle event. This is the primary debugging signal: it
+    /// traces exactly which step the user reached (OPEN, SELECT_INSTITUTION,
+    /// TRANSITION_VIEW, SUBMIT_*, HANDOFF, ERROR, EXIT…) and surfaces error
+    /// codes/messages, request IDs and the institution — so a device-specific
+    /// problem (OAuth handoff, MFA, institution outage) can be told apart from
+    /// an app-level one. Error-bearing events log at error level.
     private func handleLinkEvent(_ event: LinkEvent) {
         let meta = event.metadata
         var fields: [String] = ["event=\(event.eventName)", "session=\(meta.linkSessionID)"]
@@ -143,14 +142,14 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
         if let status = meta.exitStatus        { fields.append("exitStatus=\(status)") }
         if let code = meta.errorCode           { fields.append("errorCode=\(code)") }
         if let message = meta.errorMessage     { fields.append("errorMessage=\(message)") }
-        
+
         let line = "[Plaid] " + fields.joined(separator: " ")
         if meta.errorCode != nil || meta.errorMessage != nil {
             SecureLogger.error(line, category: .payment)
         } else {
             SecureLogger.debug(line, category: .payment)
         }
-        
+
         if case .open = event.eventName {
             analytics.log(AnalyticsEvent.plaidLinkStarted)
             // Plaid is now on screen — let the caller drop its loading spinner.
@@ -158,7 +157,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
             onPresented = nil
         }
     }
-    
+
     /// User completed Link. Parse the metadata and resolve the flow.
     private func handleLinkSuccess(_ linkSuccess: LinkSuccess) {
         let meta = linkSuccess.metadata
@@ -166,7 +165,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
             "[Plaid] onSuccess — institution=\(meta.institution.name) accounts=\(meta.accounts.count) session=\(meta.linkSessionID)",
             category: .payment
         )
-        
+
         guard !didResume, let continuation = pendingContinuation else {
             SecureLogger.warning("[Plaid] onSuccess ignored — flow already resolved", category: .payment)
             return
@@ -174,7 +173,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
         didResume = true
         pendingContinuation = nil
         defer { cleanup() }
-        
+
         do {
             let result = try Self.parseMetadata(from: linkSuccess)
             analytics.log(AnalyticsEvent.plaidLinkSuccess, params: [
@@ -191,12 +190,12 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
             continuation.resume(throwing: PlaidLinkError.metadataParseFailed)
         }
     }
-    
+
     /// User exited Link (cancel) or Plaid surfaced a terminal error. Logs the
     /// full exit metadata so the cause is identifiable, then resolves the flow.
     private func handleLinkExit(_ linkExit: LinkExit) {
         logExit(linkExit)
-        
+
         guard !didResume, let continuation = pendingContinuation else {
             SecureLogger.warning("[Plaid] onExit ignored — flow already resolved", category: .payment)
             return
@@ -204,7 +203,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
         didResume = true
         pendingContinuation = nil
         defer { cleanup() }
-        
+
         if let error = linkExit.error {
             // A real error — surface its message to the caller (shows an alert).
             analytics.log(AnalyticsEvent.plaidLinkExited, params: [
@@ -219,7 +218,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
             continuation.resume(throwing: PlaidLinkError.linkExited(nil))
         }
     }
-    
+
     /// Structured log of a Link exit. Error exits log at error level with the
     /// Plaid error code/message; clean cancels log at info level.
     private func logExit(_ linkExit: LinkExit) {
@@ -229,7 +228,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
         if let institution = meta.institution?.name { fields.append("institution=\(institution)") }
         if let session = meta.linkSessionID    { fields.append("session=\(session)") }
         if let request = meta.requestID        { fields.append("request=\(request)") }
-        
+
         if let error = linkExit.error {
             fields.append("errorCode=\(error.errorCode)")
             fields.append("errorMessage=\(error.errorMessage)")
@@ -239,32 +238,32 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
             SecureLogger.info("[Plaid] onExit (user cancelled) " + fields.joined(separator: " "), category: .payment)
         }
     }
-    
+
     private func cleanup() {
-        session = nil
+        handler = nil
         pendingContinuation = nil
         didResume = false
         onPresented = nil
     }
-    
+
     // MARK: - Metadata Parsing
-    
+
     private static func parseMetadata(from success: LinkSuccess) throws -> PlaidLinkResult {
         guard let jsonString = success.metadata.metadataJSON,
               let jsonData = jsonString.data(using: .utf8) else {
             throw PlaidLinkError.metadataParseFailed
         }
-        
+
         let decoded = try JSONDecoder().decode(PlaidMetadataJSON.self, from: jsonData)
-        
+
         guard let institution = decoded.institution else {
             throw PlaidLinkError.metadataParseFailed
         }
-        
+
         guard let linkSessionID = decoded.link_session_id, !linkSessionID.isEmpty else {
             throw PlaidLinkError.metadataParseFailed
         }
-        
+
         let accounts: [LinkPlaidAccountMetadataAccount] = try decoded.accounts.map { account in
             guard let type = account.type, !type.isEmpty else {
                 throw PlaidLinkError.metadataParseFailed
@@ -272,7 +271,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
             guard let subtype = account.subtype, !subtype.isEmpty else {
                 throw PlaidLinkError.metadataParseFailed
             }
-            
+
             return LinkPlaidAccountMetadataAccount(
                 id: account.id,
                 name: account.name,
@@ -284,11 +283,11 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
                 class_type: account.class_type
             )
         }
-        
+
         guard !accounts.isEmpty else {
             throw PlaidLinkError.metadataParseFailed
         }
-        
+
         let metadata = LinkPlaidLinkMetadata(
             institution: LinkPlaidInstitution(
                 institution_id: institution.institution_id,
@@ -297,11 +296,11 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
             accounts: accounts,
             link_session_id: linkSessionID
         )
-        
+
         guard !success.publicToken.isEmpty else {
             throw PlaidLinkError.metadataParseFailed
         }
-        
+
         return PlaidLinkResult(publicToken: success.publicToken, metadata: metadata)
     }
 }

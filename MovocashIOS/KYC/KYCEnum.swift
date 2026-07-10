@@ -50,8 +50,7 @@ enum PlaidLinkError: LocalizedError {
     case linkExited(String?)
     case metadataParseFailed
     case tokenUnavailable
-    case linkInProgress
-
+    
     var errorDescription: String? {
         switch self {
         case .noPresenter:
@@ -64,8 +63,6 @@ enum PlaidLinkError: LocalizedError {
             return "Failed to process bank account data."
         case .tokenUnavailable:
             return "Authentication token unavailable. Please log in again."
-        case .linkInProgress:
-            return "A bank linking flow is already in progress."
         }
     }
 }

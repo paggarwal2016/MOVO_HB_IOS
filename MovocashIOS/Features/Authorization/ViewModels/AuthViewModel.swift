@@ -29,11 +29,7 @@ final class AuthViewModel: ObservableObject {
     /// view's `.task` cancellation nor the caller's actor context can abort an
     /// authentication already underway. Concurrent callers join this task instead
     /// of starting a second flow.
-    /// Result of a biometric-login attempt, so callers can tell a user-cancel
-    /// (retryable, not counted toward the attempt limit) apart from a genuine failure.
-    enum BiometricAuthOutcome { case success, cancelled, failed, needsEnrollment }
-
-    private var biometricLoginTask: Task<BiometricAuthOutcome, Never>?
+    private var biometricLoginTask: Task<Bool, Never>?
     /// Device-session config fetch started after OTP is sent, so the movo-info key
     /// is ready for the tokenSMS validation step. Awaited in `validateOTP`. This is
     /// the ONLY place `/get/config` is requested — during a fresh login.
@@ -474,17 +470,6 @@ extension AuthViewModel {
     // Returns true on success. Caller unlocks the app silently after success.
     @discardableResult
     func loginWithBiometric(appState: AppState, navigateOnSuccess: Bool = true) async -> Bool {
-        await runBiometricLogin(appState: appState, navigateOnSuccess: navigateOnSuccess) == .success
-    }
-
-    /// Same as `loginWithBiometric` but returns the full outcome so callers can
-    /// distinguish a user-cancel (retryable) from a genuine failure — used by the
-    /// post-OTP login biometric gate to enforce a 3-attempt limit.
-    func loginWithBiometricOutcome(appState: AppState) async -> BiometricAuthOutcome {
-        await runBiometricLogin(appState: appState, navigateOnSuccess: false)
-    }
-
-    private func runBiometricLogin(appState: AppState, navigateOnSuccess: Bool) async -> BiometricAuthOutcome {
         // Join an attempt that's already running rather than starting a second flow
         // (which would trigger a duplicate nonce request / Face ID prompt).
         if let existing = biometricLoginTask {
@@ -496,8 +481,8 @@ extension AuthViewModel {
         // Run the flow in a detached task: it does NOT inherit cancellation from the
         // caller's task, so if the hosting view's `.task` is cancelled by a re-render
         // the login still completes instead of throwing CancellationError mid-flight.
-        let task = Task.detached(priority: .userInitiated) { [weak self] () -> BiometricAuthOutcome in
-            guard let self else { return .failed }
+        let task = Task.detached(priority: .userInitiated) { [weak self] () -> Bool in
+            guard let self else { return false }
             return await self.performBiometricLogin(appState: appState, navigateOnSuccess: navigateOnSuccess)
         }
         biometricLoginTask = task
@@ -510,7 +495,8 @@ extension AuthViewModel {
         biometricLoginTask = nil
     }
 
-    private func performBiometricLogin(appState: AppState, navigateOnSuccess: Bool) async -> BiometricAuthOutcome {
+    @discardableResult
+    private func performBiometricLogin(appState: AppState, navigateOnSuccess: Bool) async -> Bool {
 
         let deviceId = await DeviceManager.shared.deviceID()
 
@@ -571,41 +557,33 @@ extension AuthViewModel {
                 }
             }
 
-            return .success
+            return true
 
         } catch is CancellationError {
             SecureLogger.info("Biometric login cancelled — discarding attempt", category: .auth)
-            return .cancelled
+            return false
         } catch let biometricError as BiometricLoginError {
             SecureLogger.error("biometric login failed: \(biometricError)", category: .auth)
             switch biometricError {
             case .userCanceled:
-                // User dismissed the prompt — not counted as a failed attempt.
+                // User dismissed the prompt — no toast, "Try Again" remains available.
                 analytics.trackLoginFailed(method: .biometric, errorCode: "user_cancelled")
-                return .cancelled
-            case .keyNotFound:
-                // The local RSA key is gone (e.g. a reinstall wiped it, or the
-                // enrollment state is stale). Biometric auth can never succeed here —
-                // signal the caller to re-enroll rather than counting a scan failure.
-                analytics.trackLoginFailed(method: .biometric, errorCode: "rsa_key_missing")
-                return .needsEnrollment
             case .lockout:
                 // Biometry is locked at the OS level. Repeated "Try Again" taps cannot
                 // succeed until the device is unlocked with the passcode, so tell the
                 // user exactly that instead of the generic failure message.
                 analytics.trackLoginFailed(method: .biometric, errorCode: "biometric_lockout")
                 ToastManager.shared.show(biometricError.localizedDescription, style: .error, position: .bottom)
-                return .failed
             default:
                 analytics.trackLoginFailed(method: .biometric, errorCode: "\(biometricError)")
                 ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
-                return .failed
             }
+            return false
         } catch {
             analytics.trackLoginFailed(method: .biometric, errorCode: error.localizedDescription)
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
             ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
-            return .failed
+            return false
         }
     }
 }
