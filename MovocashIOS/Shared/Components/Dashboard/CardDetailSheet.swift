@@ -439,7 +439,7 @@ struct CardDetailSheet: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(showFullCardNumber ? "Hide card number" : "Show card number")
                 }
-                Text("Exp \(card.expiration ?? "") · CVC \(card.cvc2 ?? "")")
+                Text("Exp \(card.expiryMMYY) · CVC \(card.cvc2 ?? "")")
                     .textStyle(Typography.captionSmall)
                     .foregroundColor(Color.movo.textTertiary)
                     .padding(.top, 2)
