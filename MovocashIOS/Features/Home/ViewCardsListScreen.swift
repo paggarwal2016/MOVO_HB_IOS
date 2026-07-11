@@ -86,6 +86,7 @@ struct ViewCardsListScreen: View {
         }) {
             CreateCashCardView(
                 vm: cardVM,
+                primaryAccountId: primaryAccountId ?? 0,
                 onClose: { showCreateCard = false },
                 onCreated: { card in
                     // Card created — hold it and dismiss the create sheet; the

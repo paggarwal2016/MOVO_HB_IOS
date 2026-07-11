@@ -13,6 +13,8 @@ struct CreateCashCardView: View {
 
     /// View model that performs the create-card network call.
     let vm: VCardViewModel
+    /// Primary savings account id the new card is created against.
+    let primaryAccountId: Int
     /// Dismisses this sheet (used by the close button).
     let onClose: () -> Void
     /// Invoked after the card is created successfully. The presenter is expected
@@ -234,6 +236,7 @@ private extension CreateCashCardView {
         let request = CreateVCardRequest(
             nickname: nickname.trimmingCharacters(in: .whitespaces),
             pin: pin,
+            primaryAccountId: primaryAccountId,
             userAction: "VCARD-CREATION"
         )
         Task {

@@ -127,6 +127,7 @@ struct DashboardView: View {
         }) {
             CreateCashCardView(
                 vm: vm,
+                primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0,
                 onClose: { showCreateCashCard = false },
                 onCreated: { card in
                     createdCashCard = card
@@ -375,7 +376,7 @@ struct DashboardView: View {
             if let account = displayAccount {
                 AccountDetailsView(account: account, onNicknameUpdated: { name in
                     Task {
-                        await savingVM.updateNickname(name: name, accountId: account.id)
+                        await savingVM.updateNickname(name: name, accountId: account.id, primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0)
                         dashboardVM.optimisticallyUpdateNickname(name)
                         await dashboardVM.refresh()
                     }

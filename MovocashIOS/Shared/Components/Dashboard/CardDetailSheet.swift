@@ -203,7 +203,7 @@ struct CardDetailSheet: View {
     private func saveNickname(_ newValue: String) {
         guard let accountId = displayCard.savingsAccountId else { return }
         refreshTask = Task {
-            await savingVM.updateNickname(name: newValue, accountId: accountId)
+            await savingVM.updateNickname(name: newValue, accountId: accountId, primaryAccountId: primaryLinkedCard?.savingsAccountId ?? 0)
             guard !Task.isCancelled else { return }
             hasChanges = true
             await refreshCardDetails()

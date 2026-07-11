@@ -116,14 +116,14 @@ struct KYCSuccessView: View {
             }
             .buttonStyle(MovoPrimaryButtonStyle())
 
-            Button {
-                onSkip()
-            } label: {
-                Text("Skip for now")
-                    .textStyle(Typography.body)
-                    .foregroundColor(Color.movo.textSecondary)
-            }
-            .buttonStyle(.plain)
+//            Button {
+//                onSkip()
+//            } label: {
+//                Text("Skip for now")
+//                    .textStyle(Typography.body)
+//                    .foregroundColor(Color.movo.textSecondary)
+//            }
+//            .buttonStyle(.plain)
         }
         .padding(.horizontal, Spacing.xxl)
         .padding(.bottom, Spacing.xxl)

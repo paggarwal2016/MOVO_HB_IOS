@@ -32,8 +32,12 @@ struct PlaidLinkFlowModifier: ViewModifier {
     var onLinked: (ACHAccount) -> Void
     var onDone: () -> Void
 
+    // Item-driven presentation: the cover is built only once `linkedAccount` is
+    // non-nil and receives that exact value. This closes the race that let the
+    // isPresented-based cover render with a stale/nil account (the "FROM field
+    // not loaded" bug), where the presentation flag and the account were two
+    // separate @State writes.
     @State private var linkedAccount: ACHAccount?
-    @State private var showSuccess = false
 
     func body(content: Content) -> some View {
         content
@@ -48,10 +52,10 @@ struct PlaidLinkFlowModifier: ViewModifier {
             // presenting its own screen (e.g. onboarding's FundAccountView) while
             // this cover is still dismissing, which would present on a churning
             // stack and cancel that screen's `.task` (leaving it unloaded).
-            .fullScreenCover(isPresented: $showSuccess, onDismiss: { onDone() }) {
+            .fullScreenCover(item: $linkedAccount, onDismiss: { onDone() }) { account in
                 BankLinkedSuccessScreen(
-                    account: linkedAccount,
-                    onDone: { showSuccess = false },
+                    account: account,
+                    onDone: { linkedAccount = nil },
                     container: allowFunding ? container : nil,
                     showBalance: false
                 )
@@ -61,7 +65,7 @@ struct PlaidLinkFlowModifier: ViewModifier {
             // after a successful fund transfer. Without this the success cover stays
             // up and the user never lands back on the dashboard.
             .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
-                showSuccess = false
+                linkedAccount = nil
             }
     }
 
@@ -101,8 +105,9 @@ struct PlaidLinkFlowModifier: ViewModifier {
         guard let linked else { return }
 
         onLinked(linked)
+        // Setting the item presents the cover; the content receives this exact
+        // account, so the FROM row is always populated.
         linkedAccount = linked
-        showSuccess = true
     }
 }
 
