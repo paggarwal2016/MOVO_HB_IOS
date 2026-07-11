@@ -28,5 +28,6 @@ struct VCardsProvisionRequest: Codable, Equatable, Sendable {
 struct CreateVCardRequest: Codable, Equatable, Sendable {
     let nickname: String
     let pin: String
+    let primaryAccountId: Int
     let userAction: String
 }

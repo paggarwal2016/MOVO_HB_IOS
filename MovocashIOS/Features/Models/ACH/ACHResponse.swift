@@ -12,7 +12,10 @@ nonisolated struct ACHResponse: Codable, Sendable {
     let achAccounts: [ACHAccount]
 }
 
-nonisolated struct ACHAccount: Codable, Sendable, Equatable {
+nonisolated struct ACHAccount: Codable, Sendable, Equatable, Identifiable {
+    /// Stable identity for SwiftUI item-driven presentation (e.g. `.fullScreenCover(item:)`).
+    var id: String { plaidAccountId }
+
     let plaidAccountId: String
     let plaidAccountBalance: Decimal
     let isPlaidLoginRequired: Bool

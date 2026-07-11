@@ -51,12 +51,12 @@ final class SavingsAccountViewModel: BaseViewModel {
 
     // MARK: - Update Nickname
 
-    func updateNickname(name: String, accountId: Int) async {
+    func updateNickname(name: String, accountId: Int, primaryAccountId: Int) async {
         do {
             let _: SuccessResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(
-                    SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId, userAction: "UPDATE-ACCOUNT-NICKNAME"))
+                    SavingsAccountAPI.update(SavingsAccountRequest.UpdateAccount(nickname: name, accountId: accountId, primaryAccountId: primaryAccountId, userAction: "UPDATE-ACCOUNT-NICKNAME"))
                 )
             }
             analytics.log(AnalyticsEvent.savingsNicknameUpdated, params: [
@@ -73,7 +73,7 @@ final class SavingsAccountViewModel: BaseViewModel {
 
     // MARK: - Create Account
 
-    func createAccount(name: String) async {
+    func createAccount(name: String, primaryAccountId: Int) async {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             ToastManager.shared.show("Account name cannot be empty.", style: .error, position: .bottom)
@@ -83,7 +83,7 @@ final class SavingsAccountViewModel: BaseViewModel {
             let _: SavingsAccountDetailResponse = try await perform { [weak self] in
                 guard let self else { throw ModelError.deallocated }
                 return try await network.request(
-                    SavingsAccountAPI.create(SavingsAccountRequest.CreateAccount(nickname: trimmed, userAction: ""))
+                    SavingsAccountAPI.create(SavingsAccountRequest.CreateAccount(nickname: trimmed, primaryAccountId: primaryAccountId, userAction: ""))
                 )
             }
             analytics.log(AnalyticsEvent.savingsAccountCreated)
