@@ -144,6 +144,10 @@ struct ShareInviteSheet: View {
                     pendingInvite = false
                     UIApplication.shared.dismissKeyboard()
                     guard MFMessageComposeViewController.canSendText() else {
+                        AnalyticsManager.shared.log(
+                            AnalyticsEvent.smsComposerClosed,
+                            params: [AnalyticsParam.reason: "unavailable"]
+                        )
                         ToastManager.shared.show(
                             "Text messaging isn't available on this device.",
                             style: .error,
@@ -364,6 +368,10 @@ struct MessageComposeView: UIViewControllerRepresentable {
 
         // No SMS capability (e.g. Simulator / no SIM) — bail cleanly.
         guard MFMessageComposeViewController.canSendText() else {
+            AnalyticsManager.shared.log(
+                AnalyticsEvent.smsComposerClosed,
+                params: [AnalyticsParam.reason: "unavailable"]
+            )
             DispatchQueue.main.async {
                 isPresented = false
                 onFinish?(.failed)
@@ -375,6 +383,7 @@ struct MessageComposeView: UIViewControllerRepresentable {
         composer.messageComposeDelegate = context.coordinator
         composer.recipients = recipients
         composer.body = body
+        AnalyticsManager.shared.log(AnalyticsEvent.smsComposerOpened)
         DispatchQueue.main.async { host.present(composer, animated: true) }
     }
 
@@ -390,10 +399,25 @@ struct MessageComposeView: UIViewControllerRepresentable {
 
         func messageComposeViewController(_ controller: MFMessageComposeViewController,
                                           didFinishWith result: MessageComposeResult) {
+            AnalyticsManager.shared.log(
+                AnalyticsEvent.smsComposerClosed,
+                params: [AnalyticsParam.reason: Self.reason(for: result)]
+            )
             controller.dismiss(animated: true) {
                 // Setting isPresented false resets `didPresent` via updateUIViewController.
                 self.parent.isPresented = false
                 self.parent.onFinish?(result)
+            }
+        }
+
+        /// Maps the composer's result to a stable, PII-free reason string for
+        /// the `sms_composer_closed` event (mirrors the KYC SDK reason convention).
+        private static func reason(for result: MessageComposeResult) -> String {
+            switch result {
+            case .sent:      return "sent"
+            case .cancelled: return "canceled"
+            case .failed:    return "failed"
+            @unknown default: return "unknown"
             }
         }
     }

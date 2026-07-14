@@ -98,6 +98,10 @@ enum AnalyticsEvent {
     static let contactCreated                   = "contact_created"
     static let contactCreateFailed              = "contact_create_failed"
 
+    // MARK: - SMS Composer (MFMessageComposeViewController)
+    static let smsComposerOpened                = "sms_composer_opened"
+    static let smsComposerClosed                = "sms_composer_closed"
+
     // MARK: - VCards
     static let vcardViewed                = "vcard_viewed"
     static let vcardFetchFailed           = "vcard_fetch_failed"
