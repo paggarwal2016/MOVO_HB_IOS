@@ -118,6 +118,36 @@ extension Error {
         if let error = self as? NetworkError, case .unauthorized = error { return false }
         return true
     }
+
+    var analyticsCode: String {
+        if self is CancellationError { return "cancelled" }
+        if let net = self as? NetworkError { return net.analyticsCode }
+        return String(describing: type(of: self))
+    }
+}
+
+extension NetworkError {
+    var analyticsCode: String {
+        switch self {
+        case .invalidResponse:        return "invalid_response"
+        case .unauthorized:           return "unauthorized"
+        case .decodingError:          return "decoding_error"
+        case .serverMessage:          return "server_message"
+        case .apiError(let code):     return "http_\(code)"
+        case .rateLimited:            return "rate_limited"
+        case .serverError:            return "server_error"
+        case .noInternet:             return "no_internet"
+        case .timeout:                return "timeout"
+        case .requestFailed:          return "request_failed"
+        case .securityViolation:      return "security_violation"
+        case .secureConnectionFailed: return "secure_connection_failed"
+        case .invalidURL:             return "invalid_url"
+        case .encodingError:          return "encoding_error"
+        case .noContent:              return "no_content"
+        case .deviceSessionExpired:   return "device_session_expired"
+        case .unknown:                return "unknown"
+        }
+    }
 }
 
 // MARK: - Session Expiry Detection

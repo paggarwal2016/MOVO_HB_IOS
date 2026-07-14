@@ -3,28 +3,28 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyCDvHJdoeVB4ICEjeVVwQUHc4oQ2WBoQ-Q</string>
+	<string>AIzaSyAeufIHtuYYHaAKPdfsNMSuWgyDhCsHt1E</string>
 	<key>GCM_SENDER_ID</key>
-	<string>420201198125</string>
+	<string>461141544166</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.movocash.movo</string>
 	<key>PROJECT_ID</key>
-	<string>movocash-70e3d</string>
+	<string>movocash-74011</string>
 	<key>STORAGE_BUCKET</key>
-	<string>movocash-70e3d.firebasestorage.app</string>
+	<string>movocash-74011.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
-	<true/>
+	<false></false>
 	<key>IS_APPINVITE_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_GCM_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_SIGNIN_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:420201198125:ios:d98a9f37e3f9853f41bea4</string>
+	<string>1:461141544166:ios:0163787b2258b682033f27</string>
 </dict>
 </plist>

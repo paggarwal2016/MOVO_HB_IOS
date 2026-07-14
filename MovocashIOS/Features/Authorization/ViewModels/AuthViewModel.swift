@@ -91,6 +91,9 @@ final class AuthViewModel: ObservableObject {
             lastSendDescription = response.description
             state = .otpSent
             showOTP = true
+            analytics.log(AnalyticsEvent.otpSent, params: [
+                AnalyticsParam.context: context?.rawValue ?? "unknown"
+            ])
             // Fetch the X25519 device-session config now, in the background, so the
             // movo-info key is ready for tokenSMS (OTP validation). This is the only
             // place /get/config is requested — i.e. only on a fresh login.
@@ -104,6 +107,11 @@ final class AuthViewModel: ObservableObject {
             }
         } catch {
             state = .idle
+            analytics.log(AnalyticsEvent.otpSendFailed, params: [
+                AnalyticsParam.context: context?.rawValue ?? "unknown",
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -168,7 +176,7 @@ final class AuthViewModel: ObservableObject {
             // Nothing to surface. Pinning failures now throw `.secureConnectionFailed`.
             return
         } catch {
-            analytics.trackLoginFailed(method: .otp, errorCode: error.localizedDescription)
+            analytics.trackLoginFailed(method: .otp, errorCode: error.analyticsCode, errorMessage: error.localizedDescription)
             alertManager.showError(error.localizedDescription)
         }
     }
@@ -602,7 +610,7 @@ extension AuthViewModel {
                 return .failed
             }
         } catch {
-            analytics.trackLoginFailed(method: .biometric, errorCode: error.localizedDescription)
+            analytics.trackLoginFailed(method: .biometric, errorCode: error.analyticsCode, errorMessage: error.localizedDescription)
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
             ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
             return .failed

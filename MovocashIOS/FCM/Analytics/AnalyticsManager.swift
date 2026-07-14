@@ -17,6 +17,18 @@ protocol AnalyticsTracking {
     func setUserProperty(_ value: String, for key: String)
     func trackScreen(_ name: String)
 
+    // Startup / metadata
+    func configureDefaults()
+
+    // Network telemetry
+    func logAPICall(method: String,
+                    endpoint: String,
+                    statusCode: Int,
+                    responseTimeMs: Int,
+                    errorCode: String?,
+                    errorMessage: String?,
+                    requestId: String?)
+
     // Identity
     func identifyUser(from token: String)
     func reapplyIdentity()
@@ -25,7 +37,7 @@ protocol AnalyticsTracking {
     // Auth
     func trackLoginAttempt(method: AuthMethod)
     func trackLogin(method: AuthMethod)
-    func trackLoginFailed(method: AuthMethod, errorCode: String)
+    func trackLoginFailed(method: AuthMethod, errorCode: String, errorMessage: String?)
     func trackLogout()
     func trackSessionExpired()
 
@@ -33,12 +45,18 @@ protocol AnalyticsTracking {
     func trackKYCStarted()
     func trackKYCCompleted(step: KYCStep)
     func trackKYCAbandoned(step: KYCStep)
+    func trackKYCStepFailed(step: KYCStep, errorCode: String, errorMessage: String?)
 }
 
 extension AnalyticsTracking {
     /// Convenience: forwards to the two-arg requirement so it dynamic-dispatches
     /// to the real implementation instead of a no-op default.
     func log(_ event: String) { log(event, params: nil) }
+
+    /// Convenience for callers that only have a stable code (no separate message).
+    func trackLoginFailed(method: AuthMethod, errorCode: String) {
+        trackLoginFailed(method: method, errorCode: errorCode, errorMessage: nil)
+    }
 }
 
 
@@ -51,7 +69,7 @@ private enum JWTHelper {
         guard
             let json    = JWTDecoder.decodePayload(token),
             let payload = json["payload"] as? [String: Any],
-            let userId  = payload["userId"] as? Int
+            let userId  = payload["fineractClientId"] as? Int
         else { return nil }
 
         return String(userId)
@@ -158,6 +176,63 @@ final class AnalyticsManager: AnalyticsTracking {
         Analytics.setUserID(nil)
     }
 
+    // MARK: - Startup / Metadata
+    func configureDefaults() {
+        let info = Bundle.main.infoDictionary
+        let appVersion  = info?["CFBundleShortVersionString"] as? String ?? "unknown"
+        let buildNumber = info?["CFBundleVersion"] as? String ?? "unknown"
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        let osVersion = "\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"
+
+        Analytics.setDefaultEventParameters([
+            "app_version":    appVersion,
+            "build_number":   buildNumber,
+            "device_model":   Self.deviceModelIdentifier,
+            "os_version":     osVersion,
+            "app_session_id": Self.sessionID
+        ])
+    }
+
+    private static let sessionID = UUID().uuidString
+
+    private static let deviceModelIdentifier: String = {
+        var sysinfo = utsname()
+        uname(&sysinfo)
+        let machine = withUnsafeBytes(of: &sysinfo.machine) { raw -> String in
+            let bytes = raw.prefix { $0 != 0 }
+            return String(decoding: bytes, as: UTF8.self)
+        }
+        return machine.isEmpty ? "unknown" : machine
+    }()
+
+    // MARK: - Network Telemetry
+    func logAPICall(method: String,
+                    endpoint: String,
+                    statusCode: Int,
+                    responseTimeMs: Int,
+                    errorCode: String?,
+                    errorMessage: String?,
+                    requestId: String?) {
+        var params: [String: Any] = [
+            AnalyticsParam.httpMethod:     method,
+            AnalyticsParam.endpoint:       endpoint,
+            AnalyticsParam.statusCode:     statusCode,
+            AnalyticsParam.responseTime:   responseTimeMs,
+            AnalyticsParam.responseBucket: AnalyticsBucket.responseTime(responseTimeMs)
+        ]
+        // Prefer the caller's explicit code; otherwise derive from a >=400 status.
+        if let resolved = errorCode ?? (statusCode >= 400 ? "http_\(statusCode)" : nil) {
+            params[AnalyticsParam.errorCode] = resolved
+        }
+        if let errorMessage, !errorMessage.isEmpty {
+            params[AnalyticsParam.errorMessage] = errorMessage
+        }
+        if let requestId {
+            params[AnalyticsParam.requestId] = requestId
+        }
+        log(AnalyticsEvent.apiCall, params: params)
+    }
+
     // MARK: - Core
 
     func log(_ event: String, params: [String: Any]?) {
@@ -195,11 +270,15 @@ final class AnalyticsManager: AnalyticsTracking {
         setUserProperty(AuthStatusValue.loggedIn, for: UserPropertyKey.authStatus)
     }
 
-    func trackLoginFailed(method: AuthMethod, errorCode: String) {
-        log(AnalyticsEvent.loginFailed, params: [
+    func trackLoginFailed(method: AuthMethod, errorCode: String, errorMessage: String?) {
+        var params: [String: Any] = [
             AnalyticsParam.method: method.rawValue,
             AnalyticsParam.errorCode: errorCode
-        ])
+        ]
+        if let errorMessage, !errorMessage.isEmpty {
+            params[AnalyticsParam.errorMessage] = errorMessage
+        }
+        log(AnalyticsEvent.loginFailed, params: params)
     }
 
     func trackLogout() {
@@ -223,5 +302,16 @@ final class AnalyticsManager: AnalyticsTracking {
 
     func trackKYCAbandoned(step: KYCStep) {
         log(AnalyticsEvent.kycAbandoned, params: [AnalyticsParam.step: step.rawValue])
+    }
+
+    func trackKYCStepFailed(step: KYCStep, errorCode: String, errorMessage: String?) {
+        var params: [String: Any] = [
+            AnalyticsParam.kycStep: step.rawValue,
+            AnalyticsParam.errorCode: errorCode
+        ]
+        if let errorMessage, !errorMessage.isEmpty {
+            params[AnalyticsParam.errorMessage] = errorMessage
+        }
+        log(AnalyticsEvent.kycStepFailed, params: params)
     }
 }

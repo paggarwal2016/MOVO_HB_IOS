@@ -34,8 +34,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         // 1. Firebase core (Analytics only — Crashlytics/Messaging intentionally disabled)
         FirebaseApp.configure()
-        // 2. Analytics
-        Task { @MainActor in AnalyticsManager.shared.reapplyIdentity() }
+        Task { @MainActor in
+            AnalyticsManager.shared.configureDefaults()
+            AnalyticsManager.shared.reapplyIdentity()
+        }
 
         // 3. Crashlytics — set user info after login
 

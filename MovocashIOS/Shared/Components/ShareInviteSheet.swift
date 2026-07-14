@@ -142,9 +142,10 @@ struct ShareInviteSheet: View {
                 // Open the SMS composer only after the popup's cover is fully gone.
                 if pendingInvite {
                     pendingInvite = false
+                    UIApplication.shared.dismissKeyboard()
                     guard MFMessageComposeViewController.canSendText() else {
                         ToastManager.shared.show(
-                            "iMessage is not supported on the Simulator.",
+                            "Text messaging isn't available on this device.",
                             style: .error,
                             position: .bottom
                         )
@@ -153,7 +154,12 @@ struct ShareInviteSheet: View {
                     showMessageComposer = true
                 }
             },
-            onContinue: { pendingInvite = true; showConfirm = false },
+            onContinue: {
+                isPhoneFocused = false
+                UIApplication.shared.dismissKeyboard()
+                pendingInvite = true
+                showConfirm = false
+            },
             onCancel: { pendingInvite = false; showConfirm = false }
         )
         // Hosts the native Messages composer, pre-filled with the deeplink + code.
@@ -190,7 +196,8 @@ struct ShareInviteSheet: View {
     /// success shows the enroll popup whose buttons adapt to whether the number
     /// already belongs to a Movo user.
     private func sendInviteTapped() {
-        isPhoneFocused = false   // dismiss keyboard before the network call
+        isPhoneFocused = false
+        UIApplication.shared.dismissKeyboard()
         let normalized = PhoneNumberValidator.normalize(PhoneNumberValidator.sanitize(phoneNo))
         SpinnerView.showFullScreen()
         Task {

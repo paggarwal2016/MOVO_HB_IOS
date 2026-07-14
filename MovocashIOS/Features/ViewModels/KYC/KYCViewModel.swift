@@ -46,7 +46,8 @@ final class KYCViewModel: ObservableObject {
             let saved = await saveUser(user)
             SpinnerView.hideFullScreen()
             guard saved else {
-                analytics.trackKYCAbandoned(step: .idVerified)
+                // saveUser() already emitted a precise `kyc_step_failed` event with
+                // the underlying code/message, so no analytics call is needed here.
                 alertManager.showError("We couldn't save your verification details. Please try again.")
                 onFailure()
                 return
@@ -55,11 +56,13 @@ final class KYCViewModel: ObservableObject {
             analytics.trackKYCCompleted(step: .idVerified)
             onSuccess()
         } catch _ as KYCError {
+            // User did not complete the scanner flow — genuine abandonment.
             analytics.trackKYCAbandoned(step: .idVerified)
             alertManager.showError("Your KYC verification is not completed. Please complete verification to continue.")
             onFailure()
         } catch {
-            analytics.trackKYCAbandoned(step: .idVerified)
+            // SDK/config failure — a real error, not user abandonment.
+            analytics.trackKYCStepFailed(step: .idVerified, errorCode: error.analyticsCode, errorMessage: error.localizedDescription)
             alertManager.showError("Your KYC verification is not completed. Please complete verification to continue.")
             onFailure()
         }
@@ -108,12 +111,14 @@ final class KYCViewModel: ObservableObject {
             let response: SuccessResponse = try await network.request(UserAPI.saveUser(request: request))
             guard response.success != false else {
                 SecureLogger.error("saveUser returned success=false after KYC", category: .network)
+                analytics.trackKYCStepFailed(step: .idVerified, errorCode: "server_rejected", errorMessage: nil)
                 return false
             }
             SecureLogger.info("User data saved successfully after KYC", category: .network)
             return true
         } catch {
             SecureLogger.error("saveUser failed: \(error.localizedDescription)", category: .network)
+            analytics.trackKYCStepFailed(step: .idVerified, errorCode: error.analyticsCode, errorMessage: error.localizedDescription)
             return false
         }
     }

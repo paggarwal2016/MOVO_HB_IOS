@@ -45,6 +45,9 @@ final class SavingsAccountViewModel: BaseViewModel {
         } catch is CancellationError {
             // cancelled — no action
         } catch {
+            analytics.log(AnalyticsEvent.savingsAccountListFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             // error surfaced via BaseViewModel toast
         }
     }
@@ -67,6 +70,10 @@ final class SavingsAccountViewModel: BaseViewModel {
         } catch is CancellationError {
             // cancelled — no action
         } catch {
+            analytics.log(AnalyticsEvent.savingsNicknameUpdateFailed, params: [
+                AnalyticsParam.accountId: accountId,
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             // error surfaced via BaseViewModel toast
         }
     }
@@ -93,7 +100,7 @@ final class SavingsAccountViewModel: BaseViewModel {
             // cancelled — no action
         } catch {
             analytics.log(AnalyticsEvent.savingsAccountCreateFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
             // error surfaced via BaseViewModel toast
         }
@@ -133,14 +140,24 @@ final class SavingsAccountViewModel: BaseViewModel {
     // MARK: - Delete Account
     
     func deleteSavingAccount(request: SavingsAccountRequest.DeleteAccount) async throws -> SuccessResponse {
-        let result: SuccessResponse = try await perform { [weak self] in
-            guard let self else { throw ModelError.deallocated }
-            return try await network.request(SavingsAccountAPI.delete(request))
+        do {
+            let result: SuccessResponse = try await perform { [weak self] in
+                guard let self else { throw ModelError.deallocated }
+                return try await network.request(SavingsAccountAPI.delete(request))
+            }
+            analytics.log(AnalyticsEvent.savingsAccountDeleted, params: [
+                AnalyticsParam.accountId: request.accountId
+            ])
+            return result
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            analytics.log(AnalyticsEvent.savingsAccountDeleteFailed, params: [
+                AnalyticsParam.accountId: request.accountId,
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
+            ])
+            throw error
         }
-        analytics.log(AnalyticsEvent.savingsAccountDeleted, params: [
-            AnalyticsParam.accountId: request.accountId
-        ])
-        return result
     }
         
     // MARK: - Account Details
@@ -166,6 +183,10 @@ final class SavingsAccountViewModel: BaseViewModel {
         } catch is CancellationError {
             // cancelled — no action
         } catch {
+            analytics.log(AnalyticsEvent.savingsAccountDetailFailed, params: [
+                AnalyticsParam.accountId: accountID,
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             // error surfaced via BaseViewModel toast
         }
     }
