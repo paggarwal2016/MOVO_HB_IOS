@@ -99,20 +99,28 @@ final class TransactionViewModel: BaseViewModel {
     // MARK: - Post Withdrawal
 
     func postWithdrawal(request: TransactionRequest.Withdrawal) async throws -> TransactionWithdrawalResponse {
+        analytics.log(AnalyticsEvent.withdrawalInitiated, params: [
+            AnalyticsParam.accountId: request.accountId,
+            AnalyticsParam.amountRange: AnalyticsBucket.amount(request.transactionAmount),
+            AnalyticsParam.savingsAccountId: request.savingsAccountId
+        ])
         do {
             let response: TransactionWithdrawalResponse = try await perform {
                 try await self.network.request(TransactionAPI.withdrawals(request))
             }
-            analytics.log(AnalyticsEvent.withdrawalInitiated, params: [
+            analytics.log(AnalyticsEvent.withdrawalSuccess, params: [
                 AnalyticsParam.accountId: request.accountId,
                 AnalyticsParam.amountRange: AnalyticsBucket.amount(request.transactionAmount),
                 AnalyticsParam.savingsAccountId: request.savingsAccountId
             ])
             return response
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             analytics.log(AnalyticsEvent.withdrawalFailed, params: [
                 AnalyticsParam.accountId: request.accountId,
-                AnalyticsParam.amountRange: AnalyticsBucket.amount(request.transactionAmount)
+                AnalyticsParam.amountRange: AnalyticsBucket.amount(request.transactionAmount),
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
             throw error
         }
@@ -230,11 +238,21 @@ final class TransactionViewModel: BaseViewModel {
                 try await self.network.request(TransactionAPI.checkType(request))
             }
             checkIntentResult = response
+            if response.success == false {
+                analytics.log(AnalyticsEvent.checkIntentFailed, params: [
+                    AnalyticsParam.userAction: userAction,
+                    AnalyticsParam.errorCode: "server_rejected",
+                    AnalyticsParam.errorMessage: response.message ?? ""
+                ])
+            }
         } catch is CancellationError {
             // View dismissed mid-flight — no action needed.
         } catch {
-            // Error already surfaced via BaseViewModel alert.
-            // checkIntentResult stays nil → Pay button remains enabled.
+            analytics.log(AnalyticsEvent.checkIntentFailed, params: [
+                AnalyticsParam.userAction: userAction,
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
         }
     }
 

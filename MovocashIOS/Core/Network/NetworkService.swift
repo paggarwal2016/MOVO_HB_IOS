@@ -245,6 +245,42 @@ actor NetworkService: NetworkServiceProtocol {
             }
         }
     }
+
+    // MARK: - API Analytics
+    
+    private nonisolated func reportAPICall(
+        _ request: URLRequest,
+        statusCode: Int,
+        errorCode: String?,
+        errorMessage: String?,
+        start: Date
+    ) {
+        let ms = Int(Date().timeIntervalSince(start) * 1000)
+        let method = request.httpMethod ?? "?"
+        let endpoint = Self.normalizedPath(request.url?.path)
+        let requestId = request.value(forHTTPHeaderField: "X-Idempotency-Key")
+        Task { @MainActor in
+            AnalyticsManager.shared.logAPICall(
+                method: method,
+                endpoint: endpoint,
+                statusCode: statusCode,
+                responseTimeMs: ms,
+                errorCode: errorCode,
+                errorMessage: errorMessage,
+                requestId: requestId
+            )
+        }
+    }
+
+    private nonisolated static func normalizedPath(_ path: String?) -> String {
+        guard let path, !path.isEmpty else { return "unknown" }
+        let segments = path.split(separator: "/").map { segment -> String in
+            if segment.allSatisfy({ $0.isNumber }) { return ":id" }
+            if segment.count >= 20 { return ":id" }   // UUIDs / opaque tokens
+            return String(segment)
+        }
+        return "/" + segments.joined(separator: "/")
+    }
     
     // MARK: - Perform Request (Nonisolated for Swift 6 concurrency)
     private nonisolated func performRequest<T: Decodable>(_ request: URLRequest, usesDeviceSession: Bool = false) async throws -> T {
@@ -255,6 +291,10 @@ actor NetworkService: NetworkServiceProtocol {
 
         // Duration tracking — logs on all exit paths (success, network error, decode error)
         let start = Date()
+        var statusCode = 0
+        var apiErrorCode: String? = nil
+        var apiErrorMessage: String? = nil
+        var skipReport = false
         defer {
             let ms = Date().timeIntervalSince(start) * 1000
             let formatter = DateFormatter()
@@ -264,8 +304,11 @@ actor NetworkService: NetworkServiceProtocol {
                 "[\(timestamp)] [\(request.httpMethod ?? "?")] \(request.url?.path ?? "unknown") — Duration: \(String(format: "%.0f", ms))ms",
                 category: .network
             )
+            if !skipReport {
+                reportAPICall(request, statusCode: statusCode, errorCode: apiErrorCode, errorMessage: apiErrorMessage, start: start)
+            }
         }
-        
+
         // Network call
         let (data, response): (Data, URLResponse)
         do {
@@ -275,17 +318,23 @@ actor NetworkService: NetworkServiceProtocol {
             // the TLS challenge (cert didn't match a pinned key) — a security failure,
             // not a user/navigation cancel. Only a genuinely cancelled Task is a real
             // CancellationError.
-            if Task.isCancelled { throw CancellationError() }
+            if Task.isCancelled { skipReport = true; throw CancellationError() }
+            apiErrorCode = NetworkError.secureConnectionFailed.analyticsCode
+            apiErrorMessage = urlError.localizedDescription
             throw NetworkError.secureConnectionFailed
         } catch let urlError as URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
                  .internationalRoamingOff, .callIsActive:
                 SecureLogger.warning("No internet: \(urlError.code.rawValue)", category: .network)
+                apiErrorCode = NetworkError.noInternet.analyticsCode
+                apiErrorMessage = urlError.localizedDescription
                 throw NetworkError.noInternet
 
             case .timedOut:
                 SecureLogger.warning("Request timed out", category: .network)
+                apiErrorCode = NetworkError.timeout.analyticsCode
+                apiErrorMessage = urlError.localizedDescription
                 throw NetworkError.timeout
 
             case .serverCertificateUntrusted, .serverCertificateHasUnknownRoot,
@@ -293,27 +342,35 @@ actor NetworkService: NetworkServiceProtocol {
                  .clientCertificateRejected, .clientCertificateRequired,
                  .secureConnectionFailed, .cannotLoadFromNetwork:
                 SecureLogger.error("SSL/TLS failure (code \(urlError.code.rawValue)) — possible MITM", category: .network)
+                apiErrorCode = NetworkError.securityViolation.analyticsCode
+                apiErrorMessage = urlError.localizedDescription
                 throw NetworkError.securityViolation
 
             default:
                 SecureLogger.error("URLError \(urlError.code.rawValue): \(urlError.localizedDescription)", category: .network)
+                apiErrorCode = NetworkError.requestFailed("").analyticsCode
+                apiErrorMessage = urlError.localizedDescription
                 throw NetworkError.requestFailed(urlError.localizedDescription)
             }
         } catch {
             SecureLogger.error("Unexpected network error: \(error.localizedDescription)", category: .network)
+            apiErrorCode = NetworkError.requestFailed("").analyticsCode
+            apiErrorMessage = error.localizedDescription
             throw NetworkError.requestFailed(error.localizedDescription)
         }
-        
+
         // Validate HTTP response
         guard let http = response as? HTTPURLResponse else {
             SecureLogger.error("Invalid response for URL: \(request.url?.absoluteString ?? "Unknown")", category: .network)
+            apiErrorCode = NetworkError.invalidResponse.analyticsCode
             throw NetworkError.invalidResponse
         }
-        
+        statusCode = http.statusCode
+
 #if DEBUG
         debugPrintResponse(data: data, response: response)
 #endif
-                
+
         SecureLogger.info("API Success.", category: .network)
 
         if SessionExpiryNotifier.shouldTerminateSession(statusCode: http.statusCode, data: data) {
@@ -326,6 +383,7 @@ actor NetworkService: NetworkServiceProtocol {
 
         if http.statusCode == 429 {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                apiErrorMessage = apiError.message
                 throw NetworkError.serverMessage(apiError.message)
             }
             throw NetworkError.rateLimited
@@ -333,6 +391,7 @@ actor NetworkService: NetworkServiceProtocol {
 
         if (500...599).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                apiErrorMessage = apiError.message
                 throw NetworkError.serverMessage(apiError.message)
             }
             throw NetworkError.serverError
@@ -341,6 +400,7 @@ actor NetworkService: NetworkServiceProtocol {
         if !(200...299).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
                 SecureLogger.error("API Error: \(apiError.message)", category: .network)
+                apiErrorMessage = apiError.message
                 throw NetworkError.serverMessage(apiError.message)
             }
             throw NetworkError.apiError(http.statusCode)
@@ -360,6 +420,7 @@ actor NetworkService: NetworkServiceProtocol {
             return decoded
         } catch {
             SecureLogger.error("Decoding error for URL: \(request.url?.absoluteString ?? "Unknown") - \(error.localizedDescription)", category: .network)
+            apiErrorCode = NetworkError.decodingError.analyticsCode
             throw NetworkError.decodingError
         }
     }
@@ -372,6 +433,11 @@ actor NetworkService: NetworkServiceProtocol {
 #endif
 
         let start = Date()
+        // Outcome captured for the central `api_call` analytics event (see performRequest).
+        var statusCode = 0
+        var apiErrorCode: String? = nil
+        var apiErrorMessage: String? = nil
+        var skipReport = false
         defer {
             let ms = Date().timeIntervalSince(start) * 1000
             let formatter = DateFormatter()
@@ -381,6 +447,9 @@ actor NetworkService: NetworkServiceProtocol {
                 "[\(timestamp)] [\(request.httpMethod ?? "?")] \(request.url?.path ?? "unknown") — Duration: \(String(format: "%.0f", ms))ms",
                 category: .network
             )
+            if !skipReport {
+                reportAPICall(request, statusCode: statusCode, errorCode: apiErrorCode, errorMessage: apiErrorMessage, start: start)
+            }
         }
 
         let (data, response): (Data, URLResponse)
@@ -391,30 +460,44 @@ actor NetworkService: NetworkServiceProtocol {
             // the TLS challenge (cert didn't match a pinned key) — a security failure,
             // not a user/navigation cancel. Only a genuinely cancelled Task is a real
             // CancellationError.
-            if Task.isCancelled { throw CancellationError() }
+            if Task.isCancelled { skipReport = true; throw CancellationError() }
+            apiErrorCode = NetworkError.secureConnectionFailed.analyticsCode
+            apiErrorMessage = urlError.localizedDescription
             throw NetworkError.secureConnectionFailed
         } catch let urlError as URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
                  .internationalRoamingOff, .callIsActive:
+                apiErrorCode = NetworkError.noInternet.analyticsCode
+                apiErrorMessage = urlError.localizedDescription
                 throw NetworkError.noInternet
             case .timedOut:
+                apiErrorCode = NetworkError.timeout.analyticsCode
+                apiErrorMessage = urlError.localizedDescription
                 throw NetworkError.timeout
             case .serverCertificateUntrusted, .serverCertificateHasUnknownRoot,
                  .serverCertificateNotYetValid, .serverCertificateHasBadDate,
                  .clientCertificateRejected, .clientCertificateRequired,
                  .secureConnectionFailed, .cannotLoadFromNetwork:
+                apiErrorCode = NetworkError.securityViolation.analyticsCode
+                apiErrorMessage = urlError.localizedDescription
                 throw NetworkError.securityViolation
             default:
+                apiErrorCode = NetworkError.requestFailed("").analyticsCode
+                apiErrorMessage = urlError.localizedDescription
                 throw NetworkError.requestFailed(urlError.localizedDescription)
             }
         } catch {
+            apiErrorCode = NetworkError.requestFailed("").analyticsCode
+            apiErrorMessage = error.localizedDescription
             throw NetworkError.requestFailed(error.localizedDescription)
         }
 
         guard let http = response as? HTTPURLResponse else {
+            apiErrorCode = NetworkError.invalidResponse.analyticsCode
             throw NetworkError.invalidResponse
         }
+        statusCode = http.statusCode
 
         if SessionExpiryNotifier.shouldTerminateSession(statusCode: http.statusCode, data: data) {
             let message = SessionExpiryNotifier.displayMessage(statusCode: http.statusCode, data: data)
@@ -426,18 +509,21 @@ actor NetworkService: NetworkServiceProtocol {
 
         if http.statusCode == 429 {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                apiErrorMessage = apiError.message
                 throw NetworkError.serverMessage(apiError.message)
             }
             throw NetworkError.rateLimited
         }
         if (500...599).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                apiErrorMessage = apiError.message
                 throw NetworkError.serverMessage(apiError.message)
             }
             throw NetworkError.serverError
         }
         if !(200...299).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                apiErrorMessage = apiError.message
                 throw NetworkError.serverMessage(apiError.message)
             }
             throw NetworkError.apiError(http.statusCode)

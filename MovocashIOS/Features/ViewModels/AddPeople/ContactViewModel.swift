@@ -293,7 +293,7 @@ final class ContactViewModel: BaseViewModel {
         } catch {
             loadError = error.localizedDescription
             analytics.log(AnalyticsEvent.contactListFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
         }
     }
@@ -314,7 +314,7 @@ final class ContactViewModel: BaseViewModel {
         } catch is CancellationError {
         } catch {
             analytics.log(AnalyticsEvent.contactListFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
         }
     }
@@ -336,7 +336,7 @@ final class ContactViewModel: BaseViewModel {
         } catch is CancellationError {
         } catch {
             analytics.log(AnalyticsEvent.contactFavoritedListFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
         }
     }
@@ -364,7 +364,7 @@ final class ContactViewModel: BaseViewModel {
             return true
         } catch {
             analytics.log(AnalyticsEvent.contactFrequentFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
             return false
         }
@@ -387,9 +387,15 @@ final class ContactViewModel: BaseViewModel {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.create(request: request))
             }
+            analytics.log(AnalyticsEvent.contactCreated)
             return true
         } catch is CancellationError { return false }
-        catch { return false }
+        catch {
+            analytics.log(AnalyticsEvent.contactCreateFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
+            ])
+            return false
+        }
     }
     
     
@@ -418,6 +424,9 @@ final class ContactViewModel: BaseViewModel {
             let _: ContactActionResponse = try await perform {
                 try await self.network.request(ContactAPI.makeFavourite(id: id, request: request))
             }
+            analytics.log(isFav ? AnalyticsEvent.contactAddFavorited
+                                 : AnalyticsEvent.contactRemoveFavorite,
+                          params: [AnalyticsParam.contactId: id])
             if isFav {
                 if let contact = mergedContacts.first(where: { $0.id == id }) {
                     favourites.append(contact)
@@ -426,7 +435,11 @@ final class ContactViewModel: BaseViewModel {
                 favourites.removeAll { $0.id == id }
             }
         } catch is CancellationError {
-        } catch {}
+        } catch {
+            analytics.log(isFav ? AnalyticsEvent.contactAddFavoritedFailed
+                                 : AnalyticsEvent.contactRemoveFavoriteFailed,
+                          params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
+        }
     }
     
     
@@ -453,7 +466,7 @@ final class ContactViewModel: BaseViewModel {
         } catch is CancellationError {
         } catch {
             analytics.log(AnalyticsEvent.contactAddFavoritedFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
         }
     }
@@ -474,7 +487,7 @@ final class ContactViewModel: BaseViewModel {
         } catch is CancellationError {
         } catch {
             analytics.log(AnalyticsEvent.contactRemoveFavoriteFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
         }
     }
@@ -494,6 +507,9 @@ final class ContactViewModel: BaseViewModel {
             referralInvitees = response.data
         } catch is CancellationError {
         } catch {
+            analytics.log(AnalyticsEvent.contactListFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             SecureLogger.error("Referral list load failed: \(error.localizedDescription)", category: .network)
         }
     }
@@ -518,7 +534,7 @@ final class ContactViewModel: BaseViewModel {
             return nil
         } catch {
             analytics.log(AnalyticsEvent.contactReferralInviteFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
             return nil
         }

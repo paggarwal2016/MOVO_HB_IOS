@@ -21,6 +21,8 @@ enum AnalyticsEvent {
     static let logout                = "user_logout"
     static let sessionExpired        = "session_expired"
     static let tokenRefreshed        = "token_refreshed"
+    static let otpSent               = "otp_sent"
+    static let otpSendFailed         = "otp_send_failed"
 
     // MARK: - Signup / Registration
     static let signupStarted         = "signup_started"
@@ -54,10 +56,14 @@ enum AnalyticsEvent {
     // MARK: - Savings Accounts
     static let savingsAccountListViewed   = "savings_account_list_viewed"
     static let savingsAccountDetailViewed = "savings_account_detail_viewed"
+    static let savingsAccountListFailed   = "savings_account_list_failed"
+    static let savingsAccountDetailFailed = "savings_account_detail_failed"
     static let savingsAccountCreated      = "savings_account_created"
     static let savingsAccountCreateFailed = "savings_account_create_failed"
     static let savingsNicknameUpdated     = "savings_nickname_updated"
+    static let savingsNicknameUpdateFailed = "savings_nickname_update_failed"
     static let savingsAccountDeleted      = "savings_account_deleted"
+    static let savingsAccountDeleteFailed = "savings_account_delete_failed"
 
     // MARK: - Rewards
     static let rewardViewed               = "reward_viewed"
@@ -68,7 +74,9 @@ enum AnalyticsEvent {
     static let rewardEnrollFailed         = "reward_enroll_failed"
 
     // MARK: - Withdrawals / Transfers
+    static let checkIntentFailed          = "check_intent_failed"
     static let withdrawalInitiated        = "withdrawal_initiated"
+    static let withdrawalSuccess          = "withdrawal_success"
     static let withdrawalFailed           = "withdrawal_failed"
     static let transactionListViewed      = "transaction_list_viewed"
     static let internalTransferInitiated  = "internal_transfer_initiated"
@@ -87,6 +95,12 @@ enum AnalyticsEvent {
     static let contactFrequentFailed            = "contact_frequent_failed"
     static let contactReferralInvite            = "contact_referral_invite"
     static let contactReferralInviteFailed      = "contact_referral_invite_failed"
+    static let contactCreated                   = "contact_created"
+    static let contactCreateFailed              = "contact_create_failed"
+
+    // MARK: - SMS Composer (MFMessageComposeViewController)
+    static let smsComposerOpened                = "sms_composer_opened"
+    static let smsComposerClosed                = "sms_composer_closed"
 
     // MARK: - VCards
     static let vcardViewed                = "vcard_viewed"
@@ -107,10 +121,18 @@ enum AnalyticsEvent {
     // MARK: - ACH / Funding
     static let achTransferInitiated       = "ach_transfer_initiated"
     static let achTransferFailed          = "ach_transfer_failed"
+    static let achAccountsViewed          = "ach_accounts_viewed"
+    static let achAccountsFetchFailed     = "ach_accounts_fetch_failed"
 
     // MARK: - Documents
     static let documentViewed             = "document_viewed"
     static let documentFetchFailed        = "document_fetch_failed"
+
+    // MARK: - Network
+    /// Emitted once per completed HTTP request from the central network layer
+    /// (success and failure). Carries endpoint, method, status, timing and a
+    /// stable, PII-free error code so any user's failing call is traceable.
+    static let apiCall               = "api_call"
 
     // MARK: - Errors
     static let appError              = "app_error"
@@ -124,6 +146,7 @@ enum AnalyticsParam {
     static let amountRange      = "amount_range"
     static let type             = "type"
     static let errorCode        = "error_code"
+    static let errorMessage     = "error_message"
     static let kycStep          = "kyc_step"
     static let reason           = "reason"
     static let step             = "step"
@@ -136,6 +159,14 @@ enum AnalyticsParam {
     static let institutionName  = "institution_name"
     static let lockoutRound     = "lockout_round"
     static let lockoutDuration  = "lockout_duration"
+    static let endpoint         = "endpoint"
+    static let httpMethod       = "http_method"
+    static let statusCode       = "status_code"
+    static let responseTime     = "response_time_ms"
+    static let responseBucket   = "response_time_bucket"
+    static let requestId        = "request_id"
+    static let context          = "context"
+    static let userAction       = "user_action"
 }
 
 // MARK: - Value Bucketing
@@ -151,6 +182,18 @@ enum AnalyticsBucket {
         case ..<500:   return "100_500"
         case ..<1000:  return "500_1000"
         default:       return "gte_1000"
+        }
+    }
+
+    /// Coarse latency ranges (milliseconds) so we can spot slow endpoints without
+    /// storing exact per-request timings.
+    static func responseTime(_ ms: Int) -> String {
+        switch ms {
+        case ..<200:   return "lt_200"
+        case ..<500:   return "200_500"
+        case ..<1000:  return "500_1000"
+        case ..<3000:  return "1000_3000"
+        default:       return "gte_3000"
         }
     }
 }

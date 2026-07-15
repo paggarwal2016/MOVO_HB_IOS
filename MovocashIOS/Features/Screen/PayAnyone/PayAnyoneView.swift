@@ -259,7 +259,7 @@ struct PayAnyoneView: View {
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) { favouritesExpanded.toggle() }
                 } label: {
-                    sectionHeader(title: "FAVOURITES", isExpanded: favouritesExpanded)
+                    sectionHeader(title: "FAVORITES", isExpanded: favouritesExpanded)
                 }
                 .buttonStyle(.plain)
                 if favouritesExpanded {

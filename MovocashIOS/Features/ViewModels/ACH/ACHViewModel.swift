@@ -60,10 +60,13 @@ final class ACHViewModel: BaseViewModel {
             }
             accounts = response.achAccounts
             hasFetched = true
+            analytics.log(AnalyticsEvent.achAccountsViewed, params: [
+                AnalyticsParam.count: accounts.count
+            ])
         } catch is CancellationError {
             // Task cancelled — no action needed
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+            analytics.log(AnalyticsEvent.achAccountsFetchFailed, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
         }
     }
 
@@ -74,9 +77,13 @@ final class ACHViewModel: BaseViewModel {
             let response: ACHResponse = try await network.request(AchAPI.getAccounts)
             accounts = response.achAccounts
             hasFetched = true
+            analytics.log(AnalyticsEvent.achAccountsViewed, params: [
+                AnalyticsParam.count: accounts.count
+            ])
         } catch is CancellationError {
             SecureLogger.warning("ACH refresh cancelled — task cancelled before response", category: .network)
         } catch {
+            analytics.log(AnalyticsEvent.achAccountsFetchFailed, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
             if error.shouldShowUserFacingToast {
                 ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
             }
@@ -101,7 +108,7 @@ final class ACHViewModel: BaseViewModel {
         } catch {
             analytics.log(AnalyticsEvent.achTransferFailed, params: [
                 AnalyticsParam.amountRange: AnalyticsBucket.amount(Double(request.amount)),
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
             return false
         }
@@ -121,7 +128,7 @@ final class ACHViewModel: BaseViewModel {
         } catch is CancellationError {
             return false
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
             return false
         }
     }
@@ -153,7 +160,7 @@ final class ACHViewModel: BaseViewModel {
         } catch is CancellationError {
             return false
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
             return false
         }
     }

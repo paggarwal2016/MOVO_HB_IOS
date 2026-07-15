@@ -287,7 +287,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 self.virtualCard = try await self.service.activateVirtualCard(pin: pin, accountId: accountId)
                 self.analytics.log(AnalyticsEvent.cardActivated)
             } catch {
-                self.analytics.log(AnalyticsEvent.cardActivationFailed, params: [AnalyticsParam.errorCode: error.localizedDescription])
+                self.analytics.log(AnalyticsEvent.cardActivationFailed, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
                 throw error
             }
         }
@@ -347,7 +347,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             } catch {
                 self.analytics.log(
                     AnalyticsEvent.walletAddFailed,
-                    params: [AnalyticsParam.errorCode: error.localizedDescription]
+                    params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription]
                 )
                 SecureLogger.error("[Wallet] add-to-wallet did not complete: \(error.localizedDescription)", category: .payment)
             }

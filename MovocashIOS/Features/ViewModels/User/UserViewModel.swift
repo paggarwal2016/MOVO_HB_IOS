@@ -53,7 +53,7 @@ final class UserViewModel: BaseViewModel {
         } catch is CancellationError {
             // Task was cancelled — no action needed
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
         }
     }
 
@@ -86,7 +86,7 @@ final class UserViewModel: BaseViewModel {
         } catch is CancellationError {
             return false
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.localizedDescription])
+            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
             return false
         }
     }

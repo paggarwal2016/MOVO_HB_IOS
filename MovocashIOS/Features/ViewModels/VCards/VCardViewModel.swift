@@ -94,6 +94,7 @@ final class VCardViewModel: BaseViewModel {
 #endif
             let card = try JSONDecoder().decode(VCardListResponse.self, from: plainData)
             primaryCardStore?.update(card)
+            analytics.log(AnalyticsEvent.vcardViewed)
             return card
         } catch NetworkError.noContent {
             return nil
@@ -199,7 +200,7 @@ final class VCardViewModel: BaseViewModel {
             return card
         } catch {
             analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
-                AnalyticsParam.errorCode: error.localizedDescription
+                AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
             throw error
         }
