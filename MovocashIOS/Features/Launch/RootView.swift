@@ -36,6 +36,10 @@ struct RootView: View {
     /// the network layer.
     @State private var compromiseReported = false
 
+    /// Ensures the dismissible "update available" prompt is shown at most once per
+    /// session, even if `appState.appUpdate` re-publishes.
+    @State private var optionalUpdatePromptShown = false
+
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -409,6 +413,13 @@ struct RootView: View {
             .environmentObject(lockManager)
             .environmentObject(sessionManager)
 
+            // ── App update / maintenance gate ──────────────────────────────
+            if appState.appUpdate.isBlocking {
+                AppUpdateGateView(outcome: appState.appUpdate) {
+                    appState.appUpdate = await container.appConfigService.fetchUpdateOutcome()
+                }
+            }
+
             // ── Compromised-device gate ────────────────────────────────────
             // Renders above the entire flow and blocks all interaction with it.
             // Also enforced at the network layer (NetworkError.jailbreakDetected).
@@ -439,6 +450,11 @@ struct RootView: View {
             } else {
                 idleTimer.stop()
             }
+        }
+        .onChangeCompat(of: appState.appUpdate) { _ in
+            // A newer-but-supported version → show the dismissible prompt once.
+            // Blocking outcomes are handled by the AppUpdateGateView cover above.
+            showOptionalUpdatePromptIfNeeded()
         }
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
@@ -537,11 +553,8 @@ struct RootView: View {
             }
         }
         .onChangeCompat(of: lockManager.state) { newState in
-            // Warm transition: route to .warmRelock so BiometricGateView
-            // auto-triggers Face ID. Cold launch uses .appLock (handled by
-            // postBootstrap's splash biometric attempt; only reaches .appLock
-            // on biometric failure, where manual retry is appropriate).
             guard newState == .locked,
+                  !appState.appUpdate.isBlocking,   // force-update / maintenance gate wins
                   lockManager.hasAuthMethod,
                   appState.isAuthenticated,
                   !appState.isNewRegistration,
@@ -601,6 +614,32 @@ struct RootView: View {
             AnalyticsParam.reason: "jailbreak_detected",
             AnalyticsParam.type: trigger
         ])
+    }
+
+    // MARK: - Optional Update Prompt
+
+    /// Presents the dismissible "update available" prompt exactly once when the
+    /// launch config reports a newer, non-mandatory version. "Update" opens the
+    /// App Store; "Later" dismisses. Mandatory updates never reach here — they are
+    /// covered by the non-dismissible `AppUpdateGateView`.
+    @MainActor
+    private func showOptionalUpdatePromptIfNeeded() {
+        guard !optionalUpdatePromptShown,
+              case let .optionalUpdate(type, message, storeURL) = appState.appUpdate else { return }
+        optionalUpdatePromptShown = true
+        ToastManager.shared.show(ToastConfig(
+            message: message,
+            style: .info,
+            position: .bottom,
+            duration: nil,
+            title: type == .feature ? "New features available" : "Update available",
+            imageSystemName: "arrow.down.circle",
+            primaryAction: ToastAction(label: "Update") {
+                if let storeURL { UIApplication.shared.open(storeURL) }
+            },
+            secondaryAction: ToastAction(label: "Later") { },
+            dimsBackground: false
+        ))
     }
 
     // MARK: -

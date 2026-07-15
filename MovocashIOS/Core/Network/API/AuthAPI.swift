@@ -21,6 +21,7 @@ enum AuthAPI: Endpoint {
     case deviceConfig
     case logout
     case waitList(request: WaitListRequest)
+    case appCheck
     
     var isAuth: Bool { true }
 
@@ -42,16 +43,27 @@ enum AuthAPI: Endpoint {
         case .deviceConfig:      return "/get/config"//"/device/config"
         case .logout:            return "/auth/logout"
         case .waitList:          return "/waitlist/join"
+        case .appCheck:         return  "/app/check"
         }
     }
 
     // MARK: - HTTP Method
     var method: HTTPMethod {
         switch self {
-        case .messengerOTP, .tokenSMS, .tokenAccess,
-                .enrollRSA, .tokenRSA, .nonceRSA, .logout, .emailOTP, .emailVerify, .acceptAgreements, .waitList:
+        case .messengerOTP,
+             .tokenSMS,
+             .tokenAccess,
+             .enrollRSA,
+             .tokenRSA,
+             .nonceRSA,
+             .logout,
+             .emailOTP,
+             .emailVerify,
+             .acceptAgreements,
+             .waitList:
             return .POST
-        case .deviceConfig:
+        case .deviceConfig,
+             .appCheck:
             return .GET
         }
     }
@@ -61,7 +73,8 @@ enum AuthAPI: Endpoint {
         switch self {
         case .messengerOTP,
              .nonceRSA,
-             .deviceConfig:
+             .deviceConfig,
+             .appCheck:
             return [.officeId]
         case .tokenSMS,
              .tokenRSA,
@@ -118,6 +131,8 @@ enum AuthAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .waitList(let request):
             return try JSONEncoder().encode(request)
+        case .appCheck:
+            return nil
         }
     }
 }

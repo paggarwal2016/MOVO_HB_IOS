@@ -102,6 +102,10 @@ enum AnalyticsEvent {
     static let smsComposerOpened                = "sms_composer_opened"
     static let smsComposerClosed                = "sms_composer_closed"
 
+    // MARK: - Contact Picker (CNContactPickerViewController)
+    static let contactPickerOpened              = "contact_picker_opened"
+    static let contactPickerClosed              = "contact_picker_closed"
+
     // MARK: - VCards
     static let vcardViewed                = "vcard_viewed"
     static let vcardFetchFailed           = "vcard_fetch_failed"
@@ -127,6 +131,14 @@ enum AnalyticsEvent {
     // MARK: - Documents
     static let documentViewed             = "document_viewed"
     static let documentFetchFailed        = "document_fetch_failed"
+
+    // MARK: - App Update / Version Gate (/app/check)
+    static let appUpdateForced            = "app_update_forced"
+    static let appUpdateOptional          = "app_update_optional"
+    static let appMaintenance             = "app_maintenance"
+    static let appUpdateCheckFailed       = "app_update_check_failed"
+    static let appUpdateCtaTapped         = "app_update_cta_tapped"
+    static let appMaintenanceRetry        = "app_maintenance_retry"
 
     // MARK: - Network
     /// Emitted once per completed HTTP request from the central network layer
@@ -167,6 +179,8 @@ enum AnalyticsParam {
     static let requestId        = "request_id"
     static let context          = "context"
     static let userAction       = "user_action"
+    static let updateType       = "update_type"
+    static let latestVersion    = "latest_version"
 }
 
 // MARK: - Value Bucketing
@@ -229,6 +243,7 @@ enum AnalyticsScreen {
     static let addContact        = "add_contact"
     static let securitySettings  = "security_settings"
     static let rewardUnlock      = "reward_unlock"
+    static let appUpdate         = "app_update_gate"
 }
 
 // MARK: - User Property Values

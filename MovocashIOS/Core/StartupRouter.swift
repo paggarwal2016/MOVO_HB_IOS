@@ -140,13 +140,18 @@ enum StartupRouter {
         keychain: KeychainManagerProtocol,
         kycManager: KYCManagerProtocol,
         analytics: AnalyticsTracking,
+        appConfigService: AppConfigServiceProtocol? = nil,
         configure: (() async throws -> Void)? = nil,
         biometricAuthenticate: (() async -> Bool)? = nil
     ) async {
         guard !appState.hasCompletedBootstrap else { return }
         appState.hasCompletedBootstrap = true
-        
+
         let start = Date()
+
+        if let appConfigService {
+            appState.appUpdate = await appConfigService.fetchUpdateOutcome()
+        }
         
         // MoVO session config — fetches the movo-info signing key. This must complete
         // before any other API call (login, biometric, KYC), so it runs first while the
@@ -198,13 +203,13 @@ enum StartupRouter {
             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
         }
         
-        // If biometric gate is pending, attempt Face ID now while still on the
-        // splash screen. On success the user skips BiometricGateView entirely
-        // and lands directly on home. On failure, transition to .appLock for
-        // manual retry. Warm transitions use the .warmRelock flow (auto-trigger
-        // via BiometricGateView.task), not this path.
         var resolvedDestination = appState.pendingDestination
-        if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
+        if appState.appUpdate.isBlocking {
+            SecureLogger.info(
+                "Skipping splash biometric — blocking app update gate is active",
+                category: .auth
+            )
+        } else if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
             let success = await raceAgainstTimeout(
                 seconds: splashBiometricTimeout,
                 operation: authenticate

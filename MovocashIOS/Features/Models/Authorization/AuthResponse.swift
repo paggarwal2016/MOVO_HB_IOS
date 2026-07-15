@@ -47,3 +47,30 @@ nonisolated struct ConfigureResponse: Decodable {
     let movoSessionConfig: String
     let sessionId: String
 }
+
+// MARK: - App Version Check (GET /app/check)
+
+nonisolated struct AppCheckResponse: Decodable, Sendable {
+    let success: Bool
+    let data: AppCheckData
+}
+
+nonisolated struct AppCheckData: Decodable, Sendable {
+    let latestVersion: String
+    let minimumSupportedVersion: String
+    let forceUpdate: Bool
+    let updateType: String
+    let updateMessage: String
+    let appStoreUrl: String
+    var appStoreURL: URL? { URL(string: appStoreUrl) }
+    var type: AppUpdateType { AppUpdateType(rawValue: updateType) ?? .unknown }
+}
+
+enum AppUpdateType: String, Sendable {
+    case mandatory
+    case security
+    case recommended
+    case feature
+    case maintenance
+    case unknown
+}

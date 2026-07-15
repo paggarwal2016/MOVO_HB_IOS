@@ -188,6 +188,7 @@ final class AnalyticsManager: AnalyticsTracking {
             "app_version":    appVersion,
             "build_number":   buildNumber,
             "device_model":   Self.deviceModelIdentifier,
+            "device_id":      DeviceManager.shared.syncDeviceID,
             "os_version":     osVersion,
             "app_session_id": Self.sessionID
         ])

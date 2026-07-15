@@ -28,6 +28,7 @@ final class AppContainer: ObservableObject {
     let sessionManager: SessionManager
     let lockManager: AppLockManager
     let analytics: AnalyticsTracking
+    let appConfigService: AppConfigServiceProtocol
 
     init() {
         keychain = KeychainManager.shared
@@ -35,6 +36,7 @@ final class AppContainer: ObservableObject {
         network = NetworkService.shared
         kycManager = KYCManager.shared
         analytics = AnalyticsManager.shared
+        appConfigService = AppConfigService(network: network)
         lockManager = AppLockManager(
             passcodeManager: PasscodeManager(),
             biometricManager: BiometricManager()
