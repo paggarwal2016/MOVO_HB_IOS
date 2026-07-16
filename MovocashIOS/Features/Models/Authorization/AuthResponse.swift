@@ -60,6 +60,7 @@ nonisolated struct AppCheckData: Decodable, Sendable {
     let minimumSupportedVersion: String
     let forceUpdate: Bool
     let updateType: String
+    let updateTitle: String?
     let updateMessage: String
     let appStoreUrl: String
     var appStoreURL: URL? { URL(string: appStoreUrl) }
@@ -68,8 +69,6 @@ nonisolated struct AppCheckData: Decodable, Sendable {
 
 enum AppUpdateType: String, Sendable {
     case mandatory
-    case security
-    case recommended
     case feature
     case maintenance
     case unknown

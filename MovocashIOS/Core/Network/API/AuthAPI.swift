@@ -43,7 +43,7 @@ enum AuthAPI: Endpoint {
         case .deviceConfig:      return "/get/config"//"/device/config"
         case .logout:            return "/auth/logout"
         case .waitList:          return "/waitlist/join"
-        case .appCheck:         return  "/app/check"
+        case .appCheck:          return  "/app/check"
         }
     }
 

@@ -45,8 +45,6 @@
 		146EB9E7300663B100E43BD0 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9E6300663B100E43BD0 /* FirebaseAnalytics */; };
 		146EB9E9300663B100E43BD0 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9E8300663B100E43BD0 /* FirebaseCrashlytics */; };
 		146EB9EB300663B100E43BD0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9EA300663B100E43BD0 /* FirebaseMessaging */; };
-		146EBB323006668400E43BD0 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 146EBB313006668400E43BD0 /* MobileBankingSDK */; };
-		146EBB35300666BA00E43BD0 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 146EBB34300666BA00E43BD0 /* LinkKit */; };
 		146EBC863007E2C900E43BD0 /* AppConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146EBC853007E2C900E43BD0 /* AppConfigService.swift */; };
 		1470D31D2FEBECC3009764FE /* ShareInviteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1470D31C2FEBECC3009764FE /* ShareInviteSheet.swift */; };
 		14716FFE2F86671600198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FFA2F86671600198064 /* PlaidService.swift */; };

@@ -139,6 +139,7 @@ enum AnalyticsEvent {
     static let appUpdateCheckFailed       = "app_update_check_failed"
     static let appUpdateCtaTapped         = "app_update_cta_tapped"
     static let appMaintenanceRetry        = "app_maintenance_retry"
+    static let appUpdateRequired426       = "app_update_required_426"
 
     // MARK: - Network
     /// Emitted once per completed HTTP request from the central network layer

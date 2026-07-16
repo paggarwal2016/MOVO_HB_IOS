@@ -19,6 +19,7 @@ struct MovocashIOSApp: App {
     @StateObject private var kycVM: KYCViewModel
     @StateObject private var pushManager: PushManager
     @StateObject private var idleTimer: IdleTimerManager = IdleTimerManager()
+    @Environment(\.scenePhase) private var scenePhase
     init() {
         let c = AppContainer()
         let state = AppState()
@@ -71,24 +72,35 @@ struct MovocashIOSApp: App {
                 .sensitiveScreen() // Layer 2: shield during recording + app-switcher (whole app)
                 .secured(forwardDismiss: false) // Layer 1: blank screenshots & recordings of the main hierarchy
                 .task {
-                    await StartupRouter.postBootstrap(
-                        appState: appState,
-                        keychain: KeychainManager.shared,
-                        kycManager: container.kycManager,
-                        analytics: container.analytics,
-                        appConfigService: container.appConfigService,
-                        // Device-session config is fetched only during login (after OTP),
-                        // so it is intentionally not warmed up at bootstrap anymore.
-                        biometricAuthenticate: {
-                            #if targetEnvironment(simulator)
-                            return false
-                            #else
-                            return await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
-                            #endif
-                        }
-                    )
+                    await runPostBootstrap()
+                }
+                .onChangeCompat(of: scenePhase) { phase in
+                    guard phase == .active,
+                          appState.flow == .splash,
+                          !appState.hasCompletedBootstrap else { return }
+                    Task { await runPostBootstrap() }
                 }
         }
+    }
+
+    @MainActor
+    private func runPostBootstrap() async {
+        await StartupRouter.postBootstrap(
+            appState: appState,
+            keychain: KeychainManager.shared,
+            kycManager: container.kycManager,
+            analytics: container.analytics,
+            appConfigService: container.appConfigService,
+            // Device-session config is fetched only during login (after OTP),
+            // so it is intentionally not warmed up at bootstrap anymore.
+            biometricAuthenticate: {
+                #if targetEnvironment(simulator)
+                return false
+                #else
+                return await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
+                #endif
+            }
+        )
     }
 }
 

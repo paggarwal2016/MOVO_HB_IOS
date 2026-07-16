@@ -15,19 +15,26 @@ enum AppUpdateOutcome: Equatable, Sendable {
     /// Installed version is supported and current — no action.
     case upToDate
     /// Shown as a dismissible prompt.
-    case optionalUpdate(type: AppUpdateType, message: String, storeURL: URL?)
+    case optionalUpdate(type: AppUpdateType, title: String, message: String, storeURL: URL?)
     /// Installed version is below the minimum (or the server forced an update).
     /// Shown as a non-dismissible block.
-    case forceUpdate(type: AppUpdateType, message: String, storeURL: URL?)
-    /// Backend is in maintenance — block with a maintenance message.
-    case maintenance(message: String)
-    /// True when the outcome must block all app interaction.
+    case forceUpdate(type: AppUpdateType, title: String, message: String, storeURL: URL?)
+    /// Backend is in maintenance — block with a maintenance title + message.
+    case maintenance(title: String, message: String)
+    /// True when the outcome must block all app interaction (non-dismissible).
     var isBlocking: Bool {
         switch self {
         case .forceUpdate, .maintenance: return true
         case .upToDate, .optionalUpdate: return false
         }
     }
+    /// True for the soft, dismissible update prompt.
+    var isOptionalUpdate: Bool {
+        if case .optionalUpdate = self { return true }
+        return false
+    }
+    
+    var presentsGate: Bool { isBlocking || isOptionalUpdate }
 }
 
 // MARK: - Protocol
@@ -118,28 +125,30 @@ final class AppConfigService: AppConfigServiceProtocol {
         // Maintenance is signalled through the update type.
         if config.type == .maintenance {
             let message = config.updateMessage.isEmpty ? maintenanceMessage : config.updateMessage
-            return .maintenance(message: message)
+            return .maintenance(title: config.updateTitle ?? "", message: message)
         }
         
         // Compare the installed version (AppInfo.version) against the response.
         let hasLatest    = !config.latestVersion.isEmpty
         let belowMinimum = isVersion(currentVersion, olderThan: config.minimumSupportedVersion)
         let belowLatest  = isVersion(currentVersion, olderThan: config.latestVersion)
-        let serverForces = config.forceUpdate || config.type == .mandatory || config.type == .security
+        let serverForces = config.forceUpdate || config.type == .mandatory
         
         // Hard block when the install is below the minimum supported version, OR
         if belowMinimum || (serverForces && (belowLatest || !hasLatest)) {
             return .forceUpdate(
                 type: config.type,
+                title: config.updateTitle ?? "",
                 message: config.updateMessage,
                 storeURL: config.appStoreURL
             )
         }
-        
+
         // Soft prompt: a newer, non-mandatory version is available.
         if belowLatest {
             return .optionalUpdate(
                 type: config.type,
+                title: config.updateTitle ?? "",
                 message: config.updateMessage,
                 storeURL: config.appStoreURL
             )
@@ -182,3 +191,45 @@ final class AppConfigService: AppConfigServiceProtocol {
 enum AppConfigError: Error {
     case timedOut
 }
+
+
+
+
+//// 1️⃣ FORCE UPDATE (blocking — "Update Now" only)
+//return AppCheckResponse(success: true, data: AppCheckData(
+//    latestVersion: "99.0.0",
+//    minimumSupportedVersion: "99.0.0",   // installed is below min → hard block
+//    forceUpdate: true,
+//    updateType: "mandatory",
+//    updateMessage: "A new version is available. Please update to continue.",
+//    appStoreUrl: "https://apps.apple.com/app/id1538828856"
+//))
+//
+// 2️⃣ SOFT / OPTIONAL UPDATE (dismissible prompt — Update / Cancel)
+//return AppCheckResponse(success: true, data: AppCheckData(
+//    latestVersion: "99.0.0",             // above installed → below latest
+//    minimumSupportedVersion: "0.0.0",    // installed NOT below min
+//    forceUpdate: false,
+//    updateType: "feature",
+//    updateMessage: "Version 99.0.0 is now available with new features.",
+//    appStoreUrl: "https://apps.apple.com/app/id1538828856"
+//))
+// 3️⃣ MAINTENANCE (blocking — "Try Again")
+//return AppCheckResponse(success: true, data: AppCheckData(
+//    latestVersion: "",
+//    minimumSupportedVersion: "",
+//    forceUpdate: false,
+//    updateType: "maintenance",           // type drives maintenance
+//    updateMessage: "MovoCash is temporarily unavailable for scheduled maintenance. Please try again shortly.",
+//    appStoreUrl: ""
+//))
+//
+// 4️⃣ UP TO DATE (no gate — app proceeds)
+//return AppCheckResponse(success: true, data: AppCheckData(
+//    latestVersion: "0.0.1",              // below installed → not below latest
+//    minimumSupportedVersion: "0.0.1",
+//    forceUpdate: false,
+//    updateType: "unknown",
+//    updateMessage: "",
+//    appStoreUrl: ""
+//))

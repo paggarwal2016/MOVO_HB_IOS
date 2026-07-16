@@ -36,9 +36,6 @@ struct RootView: View {
     /// the network layer.
     @State private var compromiseReported = false
 
-    /// Ensures the dismissible "update available" prompt is shown at most once per
-    /// session, even if `appState.appUpdate` re-publishes.
-    @State private var optionalUpdatePromptShown = false
 
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
@@ -414,10 +411,18 @@ struct RootView: View {
             .environmentObject(sessionManager)
 
             // ── App update / maintenance gate ──────────────────────────────
-            if appState.appUpdate.isBlocking {
-                AppUpdateGateView(outcome: appState.appUpdate) {
-                    appState.appUpdate = await container.appConfigService.fetchUpdateOutcome()
-                }
+            if appState.appUpdate.presentsGate {
+                AppUpdateGateView(
+                    outcome: appState.appUpdate,
+                    onRetry: {
+                        appState.appUpdate = await container.appConfigService.fetchUpdateOutcome()
+                    },
+                    onDismiss: {
+                        // Soft update "Not Now": clear the gate and let the normal
+                        // launch routing (biometric / Welcome) resume underneath.
+                        appState.appUpdate = .upToDate
+                    }
+                )
             }
 
             // ── Compromised-device gate ────────────────────────────────────
@@ -450,11 +455,6 @@ struct RootView: View {
             } else {
                 idleTimer.stop()
             }
-        }
-        .onChangeCompat(of: appState.appUpdate) { _ in
-            // A newer-but-supported version → show the dismissible prompt once.
-            // Blocking outcomes are handled by the AppUpdateGateView cover above.
-            showOptionalUpdatePromptIfNeeded()
         }
         .onChangeCompat(of: scenePhase) { newPhase in
             lockManager.handleScenePhase(newPhase)
@@ -582,6 +582,14 @@ struct RootView: View {
             deviceCompromised = true
             reportCompromiseIfNeeded(trigger: "network")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .appUpdateRequired)) { note in
+            // Any API returned HTTP 426 (Upgrade Required) → raise the mandatory
+            // update gate app-wide. Don't override an existing blocking gate
+            // (a force update or maintenance already showing).
+            guard !appState.appUpdate.isBlocking else { return }
+            let message = note.userInfo?["message"] as? String ?? ""
+            appState.appUpdate = .forceUpdate(type: .mandatory, title: "", message: message, storeURL: nil)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
             guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
             let message = notification.userInfo?["message"] as? String
@@ -614,32 +622,6 @@ struct RootView: View {
             AnalyticsParam.reason: "jailbreak_detected",
             AnalyticsParam.type: trigger
         ])
-    }
-
-    // MARK: - Optional Update Prompt
-
-    /// Presents the dismissible "update available" prompt exactly once when the
-    /// launch config reports a newer, non-mandatory version. "Update" opens the
-    /// App Store; "Later" dismisses. Mandatory updates never reach here — they are
-    /// covered by the non-dismissible `AppUpdateGateView`.
-    @MainActor
-    private func showOptionalUpdatePromptIfNeeded() {
-        guard !optionalUpdatePromptShown,
-              case let .optionalUpdate(type, message, storeURL) = appState.appUpdate else { return }
-        optionalUpdatePromptShown = true
-        ToastManager.shared.show(ToastConfig(
-            message: message,
-            style: .info,
-            position: .bottom,
-            duration: nil,
-            title: type == .feature ? "New features available" : "Update available",
-            imageSystemName: "arrow.down.circle",
-            primaryAction: ToastAction(label: "Update") {
-                if let storeURL { UIApplication.shared.open(storeURL) }
-            },
-            secondaryAction: ToastAction(label: "Later") { },
-            dimsBackground: false
-        ))
     }
 
     // MARK: -
@@ -712,15 +694,15 @@ struct RootView: View {
     /// Returns true if already registered or successfully registered now.
     /// Returns false if registration failed — caller must not advance the flow.
     private func registerPasskeyIfNeeded() async -> Bool {
-        // Fail-closed: if we cannot decode the token we cannot confirm identity,
-        // so block navigation rather than silently proceeding.
+        let failureMessage = "Device registration failed. Please try again."
+
         guard let token = try? await container.keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
               let userIdInt = payload["userId"] as? Int
         else {
             SecureLogger.error("Passkey check: unable to decode userId from token — blocking navigation", category: .auth)
-            AlertManager.shared.showError("Device registration failed. Please try again.")
+            AlertManager.shared.showError(failureMessage)
             return false
         }
 
@@ -732,41 +714,36 @@ struct RootView: View {
             return true   // already registered on this device
         }
 
-        // Configure MobileBankingSDK with the current token before calling it.
         await PlaidService.shared.configureSDKForTransfer(authToken: token)
 
-        // Wait for any sheet/overlay to finish dismissing before presenting passkey UI.
         var presenter: UIViewController?
         for _ in 0..<20 {
             if let vc = UIApplication.topViewController(),
-               vc.presentedViewController == nil || vc.presentedViewController?.isBeingDismissed == true {
+               vc.presentedViewController == nil {
                 presenter = vc
                 break
             }
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
         guard let presenter = presenter ?? UIApplication.topViewController() else {
-            AlertManager.shared.showError("Device registration failed. Please try again.")
+            AlertManager.shared.showError(failureMessage)
             return false
         }
 
-        let deviceId = await DeviceManager.shared.deviceID()
-
         do {
             try await PlaidService.shared.registerDevicePasskey(
-                userId: userId,
-                deviceId: deviceId,
                 presentingViewController: presenter
             )
-            try? await container.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+            do {
+                try await container.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+            } catch {
+                SecureLogger.error("Failed to persist passkey flag for user \(userId): \(error.localizedDescription)", category: .auth)
+            }
             SecureLogger.info("Device passkey registered for user \(userId)", category: .auth)
             return true
         } catch {
-            // Single attempt only — no automatic retry. If the user cancelled the
-            // passkey prompt or a network error occurred, surface the error and let
-            // them retry manually by tapping the button again.
             SecureLogger.error("Passkey registration failed: \(error.localizedDescription)", category: .auth)
-            AlertManager.shared.showError("Device registration failed. Please try again.")
+            AlertManager.shared.showError(failureMessage)
             return false
         }
     }

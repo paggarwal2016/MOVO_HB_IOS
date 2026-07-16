@@ -145,11 +145,10 @@ enum StartupRouter {
         biometricAuthenticate: (() async -> Bool)? = nil
     ) async {
         guard !appState.hasCompletedBootstrap else { return }
-        appState.hasCompletedBootstrap = true
 
         let start = Date()
 
-        if let appConfigService {
+        if let appConfigService { // Check Force update
             appState.appUpdate = await appConfigService.fetchUpdateOutcome()
         }
         
@@ -204,9 +203,9 @@ enum StartupRouter {
         }
         
         var resolvedDestination = appState.pendingDestination
-        if appState.appUpdate.isBlocking {
+        if appState.appUpdate.presentsGate {
             SecureLogger.info(
-                "Skipping splash biometric — blocking app update gate is active",
+                "Skipping splash biometric — app update gate is active",
                 category: .auth
             )
         } else if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
@@ -228,12 +227,17 @@ enum StartupRouter {
             }
         }
         
-        // Transition splash → destination
+        // Transition splash → destination. Mark bootstrap complete ONLY here, once
+        // the splash has actually been left. Setting the flag earlier meant that if
+        // this task was cancelled before the transition (e.g. the app was backgrounded
+        // during the splash), the guard above would block every re-run and the app
+        // would stay stuck on the splash forever.
         if let destination = resolvedDestination {
             appState.context = appState.pendingContext
             appState.flow = destination
             appState.pendingDestination = nil
             appState.pendingContext = nil
+            appState.hasCompletedBootstrap = true
             SecureLogger.info("Splash transition → \(destination.rawValue)", category: .auth)
         }
     }

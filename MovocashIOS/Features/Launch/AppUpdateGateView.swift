@@ -11,10 +11,15 @@ struct AppUpdateGateView: View {
 
     let outcome: AppUpdateOutcome
     let onRetry: () async -> Void
+    var onDismiss: (() -> Void)? = nil
 
     @SwiftUI.Environment(\.openURL) private var openURL
     @State private var isChecking = false
     @State private var appear = false
+
+    private static let fallbackStoreURL = URL(string: "https://apps.apple.com/app/id1538828856")
+    private static let defaultUpdateMessage =
+        "A new version of MovoCash is available. Please update to continue."
 
     var body: some View {
         ZStack {
@@ -29,16 +34,10 @@ struct AppUpdateGateView: View {
                 heroMedallion
                     .padding(.bottom, Spacing.xxl)
 
-                Text(eyebrow)
-                    .textStyle(Typography.eyebrow)
+                Text(title.capitalized)
+                    .textStyle(Typography.sectionTitle)
                     .foregroundColor(tint)
                     .padding(.bottom, Spacing.sm)
-
-                Text(title)
-                    .textStyle(Typography.heroTitle)
-                    .foregroundColor(Color.movo.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, Spacing.md)
 
                 Text(message)
                     .textStyle(Typography.subtitle)
@@ -47,11 +46,6 @@ struct AppUpdateGateView: View {
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, Spacing.sm)
-
-                if outcome.isSecurity {
-                    reassuranceChip
-                        .padding(.top, Spacing.xl)
-                }
 
                 Spacer(minLength: Spacing.xl)
 
@@ -89,25 +83,6 @@ struct AppUpdateGateView: View {
         }
     }
 
-    /// Trust reassurance shown for security updates.
-    private var reassuranceChip: some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(Color.movo.success)
-            Text("Your money and personal data remain secure")
-                .textStyle(Typography.caption)
-                .foregroundColor(Color.movo.textSecondary)
-                .multilineTextAlignment(.leading)
-        }
-        .padding(.vertical, Spacing.md)
-        .padding(.horizontal, Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.card)
-                .fill(Color.movo.successTint)
-        )
-    }
-
     // MARK: - Footer (CTA + meta)
 
     @ViewBuilder
@@ -125,19 +100,19 @@ struct AppUpdateGateView: View {
     @ViewBuilder
     private var actionButton: some View {
         switch outcome {
-        case .forceUpdate(let type, _, let storeURL):
+        case .forceUpdate(let type, _, _, let storeURL):
             Button {
                 AnalyticsManager.shared.log(
                     AnalyticsEvent.appUpdateCtaTapped,
                     params: [AnalyticsParam.updateType: type.rawValue]
                 )
-                if let storeURL { openURL(storeURL) }
+                // Fall back to the app's known store URL so the button always has a
+                // destination — a force-update must never be a dead-end.
+                if let url = storeURL ?? Self.fallbackStoreURL { openURL(url) }
             } label: {
                 Text("Update Now")
             }
             .buttonStyle(MovoPrimaryButtonStyle())
-            .disabled(storeURL == nil)
-            .opacity(storeURL == nil ? 0.45 : 1)
 
         case .maintenance:
             Button {
@@ -161,63 +136,77 @@ struct AppUpdateGateView: View {
             .buttonStyle(MovoPrimaryButtonStyle())
             .disabled(isChecking)
 
-        case .optionalUpdate, .upToDate:
+        case .optionalUpdate(let type, _, _, let storeURL):
+            VStack(spacing: Spacing.md) {
+                Button {
+                    AnalyticsManager.shared.log(
+                        AnalyticsEvent.appUpdateCtaTapped,
+                        params: [AnalyticsParam.updateType: type.rawValue]
+                    )
+                    if let url = storeURL ?? Self.fallbackStoreURL { openURL(url) }
+                } label: {
+                    Text("Update Now")
+                }
+                .buttonStyle(MovoPrimaryButtonStyle())
+
+                Button {
+                    onDismiss?()
+                } label: {
+                    Text("Not Now")
+                }
+                .buttonStyle(OutlineButtonStyle())
+            }
+
+        case .upToDate:
             EmptyView()
         }
     }
 
     // MARK: - Severity-driven content
 
-    /// Accent hue per severity: security → danger, maintenance → warning,
-    /// mandatory/other → brand accent.
+    /// Accent hue per severity: maintenance → warning; update → brand accent.
     private var tint: Color {
         switch outcome {
-        case .maintenance:                 return Color.movo.warning
-        case .forceUpdate(let type, _, _): return type == .security ? Color.movo.danger : Color.movo.accent
-        case .optionalUpdate, .upToDate:   return Color.movo.accent
+        case .maintenance:               return Color.movo.warning
+        case .forceUpdate:               return Color.movo.accent
+        case .optionalUpdate, .upToDate: return Color.movo.accent
         }
     }
 
     private var iconName: String {
         switch outcome {
-        case .maintenance:                 return "wrench.and.screwdriver.fill"
-        case .forceUpdate(let type, _, _): return type == .security ? "lock.shield.fill" : "arrow.down.circle.fill"
-        case .optionalUpdate, .upToDate:   return "arrow.down.circle.fill"
+        case .maintenance:               return "wrench.and.screwdriver.fill"
+        case .forceUpdate:               return "arrow.down.circle.fill"
+        case .optionalUpdate, .upToDate: return "arrow.down.circle.fill"
         }
     }
 
     private var eyebrow: String {
         switch outcome {
-        case .maintenance:                 return "SCHEDULED MAINTENANCE"
-        case .forceUpdate(let type, _, _): return type == .security ? "SECURITY UPDATE" : "UPDATE REQUIRED"
-        case .optionalUpdate, .upToDate:   return "UPDATE AVAILABLE"
+        case .maintenance:               return "SCHEDULED MAINTENANCE"
+        case .forceUpdate:               return "UPDATE REQUIRED"
+        case .optionalUpdate, .upToDate: return "UPDATE AVAILABLE"
         }
     }
 
     private var title: String {
         switch outcome {
-        case .maintenance:                 return "We'll be right back"
-        case .forceUpdate(let type, _, _): return type == .security ? "Security update required" : "Time to update MovoCash"
-        case .optionalUpdate, .upToDate:   return "Update available"
+        // Prefer the server's `updateTitle`; fall back to sane defaults when empty.
+        case .maintenance(let title, _):          return title.isEmpty ? "We'll be right back" : title
+        case .forceUpdate(_, let title, _, _):    return title.isEmpty ? "Time to update MovoCash" : title
+        case .optionalUpdate(_, let title, _, _): return title.isEmpty ? "Update available" : title
+        case .upToDate:                           return "Update available"
         }
     }
 
     private var message: String {
         switch outcome {
-        case .forceUpdate(_, let message, _):    return message
-        case .maintenance(let message):          return message
-        case .optionalUpdate(_, let message, _): return message
+        // maintenance is already defaulted upstream in AppConfigService; force/optional
+        // fall back here so the screen never renders with an empty body.
+        case .forceUpdate(_, _, let message, _):    return message.isEmpty ? Self.defaultUpdateMessage : message
+        case .maintenance(_, let message):          return message
+        case .optionalUpdate(_, _, let message, _): return message.isEmpty ? Self.defaultUpdateMessage : message
         case .upToDate:                          return ""
         }
-    }
-}
-
-// MARK: - Outcome helpers
-
-private extension AppUpdateOutcome {
-    /// True when this is a force update flagged as a security release.
-    var isSecurity: Bool {
-        if case .forceUpdate(.security, _, _) = self { return true }
-        return false
     }
 }
