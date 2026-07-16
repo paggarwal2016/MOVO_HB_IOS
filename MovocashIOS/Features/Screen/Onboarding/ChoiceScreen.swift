@@ -72,11 +72,14 @@ struct ChoiceScreen: View {
         guard !isBiometricLoading else { return }
         isBiometricLoading = true
         Task {
-            let success = await authVM.loginWithBiometric(appState: appState, navigateOnSuccess: false)
+            let outcome = await authVM.loginWithBiometricOutcome(appState: appState)
             isBiometricLoading = false
-            if success {
+            switch outcome {
+            case .success:
                 appState.flow = .home
-            } else {
+            case .updateRequired:
+                break
+            case .cancelled, .failed, .needsEnrollment:
                 presentBiometricError()
             }
         }

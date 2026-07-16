@@ -140,13 +140,17 @@ enum StartupRouter {
         keychain: KeychainManagerProtocol,
         kycManager: KYCManagerProtocol,
         analytics: AnalyticsTracking,
+        appConfigService: AppConfigServiceProtocol? = nil,
         configure: (() async throws -> Void)? = nil,
         biometricAuthenticate: (() async -> Bool)? = nil
     ) async {
         guard !appState.hasCompletedBootstrap else { return }
-        appState.hasCompletedBootstrap = true
-        
+
         let start = Date()
+
+        if let appConfigService { // Check Force update
+            appState.appUpdate = await appConfigService.fetchUpdateOutcome()
+        }
         
         // MoVO session config — fetches the movo-info signing key. This must complete
         // before any other API call (login, biometric, KYC), so it runs first while the
@@ -198,13 +202,13 @@ enum StartupRouter {
             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
         }
         
-        // If biometric gate is pending, attempt Face ID now while still on the
-        // splash screen. On success the user skips BiometricGateView entirely
-        // and lands directly on home. On failure, transition to .appLock for
-        // manual retry. Warm transitions use the .warmRelock flow (auto-trigger
-        // via BiometricGateView.task), not this path.
         var resolvedDestination = appState.pendingDestination
-        if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
+        if appState.appUpdate.presentsGate {
+            SecureLogger.info(
+                "Skipping splash biometric — app update gate is active",
+                category: .auth
+            )
+        } else if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
             let success = await raceAgainstTimeout(
                 seconds: splashBiometricTimeout,
                 operation: authenticate
@@ -223,12 +227,17 @@ enum StartupRouter {
             }
         }
         
-        // Transition splash → destination
+        // Transition splash → destination. Mark bootstrap complete ONLY here, once
+        // the splash has actually been left. Setting the flag earlier meant that if
+        // this task was cancelled before the transition (e.g. the app was backgrounded
+        // during the splash), the guard above would block every re-run and the app
+        // would stay stuck on the splash forever.
         if let destination = resolvedDestination {
             appState.context = appState.pendingContext
             appState.flow = destination
             appState.pendingDestination = nil
             appState.pendingContext = nil
+            appState.hasCompletedBootstrap = true
             SecureLogger.info("Splash transition → \(destination.rawValue)", category: .auth)
         }
     }

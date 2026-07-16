@@ -276,6 +276,10 @@ struct BiometricEnrollView: View {
             // Structural failure (missing/stale key) — re-enroll instead of retrying,
             // otherwise auth would fail forever.
             onNeedsReenrollment?()
+        case .updateRequired:
+            // HTTP 426 — the mandatory app-update gate is shown app-wide. Don't count
+            // an attempt or show an enrollment error underneath it.
+            break
         case .failed, .cancelled:
             // Count every incomplete attempt. iOS owns the in-sheet "Try Again" retries
             // for a failed scan, so the app regains control once per app-level attempt

@@ -18,6 +18,30 @@ extension Notification.Name {
     /// network layer rejecting a call). Observed by RootView to raise the app-wide
     /// hard block. See `DeviceIntegrityNotifier`.
     static let deviceCompromised = Notification.Name("deviceCompromised")
+    /// Broadcast when any API responds with HTTP 426 (Upgrade Required). Observed by
+    /// RootView to raise the app-wide mandatory-update gate. The server's message is
+    /// carried in `userInfo["message"]`. See `AppUpdateNotifier`.
+    static let appUpdateRequired = Notification.Name("appUpdateRequired")
+}
+
+// MARK: - App Update Broadcast
+
+/// Central, main-actor broadcaster for the mandatory-update signal. Any API that
+/// returns HTTP 426 posts through here so the SwiftUI gate in `RootView` raises on
+/// the main actor without cross-thread `@State` mutation.
+enum AppUpdateNotifier {
+    @MainActor static func broadcastUpdateRequired(message: String?, endpoint: String? = nil) {
+        var params: [String: Any] = [AnalyticsParam.statusCode: 426]
+        if let endpoint, !endpoint.isEmpty { params[AnalyticsParam.endpoint] = endpoint }
+        if let message, !message.isEmpty { params[AnalyticsParam.errorMessage] = message }
+        AnalyticsManager.shared.log(AnalyticsEvent.appUpdateRequired426, params: params)
+
+        NotificationCenter.default.post(
+            name: .appUpdateRequired,
+            object: nil,
+            userInfo: message.map { ["message": $0] }
+        )
+    }
 }
 
 // MARK: - Device Integrity Broadcast
@@ -50,6 +74,9 @@ enum NetworkError: LocalizedError, Sendable {
     case encodingError
     case noContent
     case deviceSessionExpired(message: String?)
+    /// HTTP 426 — the client is too old and must update. Handled centrally by the
+    /// app-update gate, not by per-call toasts.
+    case updateRequired(message: String?)
     case unknown
 
     var errorDescription: String? {
@@ -104,6 +131,9 @@ enum NetworkError: LocalizedError, Sendable {
             // Surface only the server's exact message — no canned default.
             return message
 
+        case .updateRequired(let message):
+            return message ?? "A new version is available. Please update to continue."
+
         case .unknown:
             return "Something went wrong"
         }
@@ -115,7 +145,13 @@ extension Error {
     /// surface duplicate toasts for these errors.
     var shouldShowUserFacingToast: Bool {
         if self is CancellationError { return false }
-        if let error = self as? NetworkError, case .unauthorized = error { return false }
+        if let error = self as? NetworkError {
+            switch error {
+            // Handled centrally (session gate / update gate) — no duplicate toast.
+            case .unauthorized, .updateRequired: return false
+            default: break
+            }
+        }
         return true
     }
 
@@ -145,6 +181,7 @@ extension NetworkError {
         case .encodingError:          return "encoding_error"
         case .noContent:              return "no_content"
         case .deviceSessionExpired:   return "device_session_expired"
+        case .updateRequired:         return "update_required"
         case .unknown:                return "unknown"
         }
     }

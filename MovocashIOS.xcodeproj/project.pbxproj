@@ -45,6 +45,7 @@
 		146EB9E7300663B100E43BD0 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9E6300663B100E43BD0 /* FirebaseAnalytics */; };
 		146EB9E9300663B100E43BD0 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9E8300663B100E43BD0 /* FirebaseCrashlytics */; };
 		146EB9EB300663B100E43BD0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9EA300663B100E43BD0 /* FirebaseMessaging */; };
+		146EBC863007E2C900E43BD0 /* AppConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146EBC853007E2C900E43BD0 /* AppConfigService.swift */; };
 		1470D31D2FEBECC3009764FE /* ShareInviteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1470D31C2FEBECC3009764FE /* ShareInviteSheet.swift */; };
 		14716FFE2F86671600198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FFA2F86671600198064 /* PlaidService.swift */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
@@ -153,6 +154,7 @@
 		146819A02F4F0A2100BED014 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		146819A22F4F272500BED014 /* PhoneFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFormatter.swift; sourceTree = "<group>"; };
 		146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedAccountsSectionView.swift; sourceTree = "<group>"; };
+		146EBC853007E2C900E43BD0 /* AppConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigService.swift; sourceTree = "<group>"; };
 		1470D31C2FEBECC3009764FE /* ShareInviteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareInviteSheet.swift; sourceTree = "<group>"; };
 		14716FFA2F86671600198064 /* PlaidService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidService.swift; sourceTree = "<group>"; };
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
@@ -346,6 +348,7 @@
 			isa = PBXGroup;
 			children = (
 				140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */,
+				146EBC853007E2C900E43BD0 /* AppConfigService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -827,6 +830,7 @@
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,
 				14D8A4242FC5DF5700177617 /* CircleIconAvatar.swift in Sources */,
+				146EBC863007E2C900E43BD0 /* AppConfigService.swift in Sources */,
 				14716FFE2F86671600198064 /* PlaidService.swift in Sources */,
 				14DBC5922F50204D000D84FD /* SecureLogger.swift in Sources */,
 				14DCE2892F5AC31A008A8DC4 /* SessionManager.swift in Sources */,

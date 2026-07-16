@@ -33,6 +33,8 @@ final class AppState: ObservableObject {
     /// first time. Cleared by HomeTabBarView.onAppear once the home screen is live.
     @Published var isNewRegistration: Bool = false
 
+    @Published var appUpdate: AppUpdateOutcome = .upToDate
+
     /// Changes whenever protected navigation (home tabs, nested stacks, sheets) must be
     /// torn down — e.g. session expiry — so SwiftUI rebuilds a fresh shell.
     @Published private(set) var protectedShellID = UUID()
