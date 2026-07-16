@@ -571,7 +571,7 @@ struct InternalTransferView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
             .background(
-                RoundedRectangle(cornerRadius: Radius.largeButton)
+                RoundedRectangle(cornerRadius: Radius.heroCard)
                     .fill(isValid ? Color.movo.accent : Color.movo.elevated)
             )
         }
