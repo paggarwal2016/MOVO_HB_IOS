@@ -502,7 +502,8 @@ struct PayActionButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
             .background(
-                Capsule().fill(isEnabled ? Color.movo.accent : Color.movo.elevated)
+                RoundedRectangle(cornerRadius: Radius.heroCard)
+                    .fill(isEnabled ? Color.movo.accent : Color.movo.elevated)
             )
         }
         .disabled(!isEnabled)
