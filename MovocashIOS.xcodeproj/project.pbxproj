@@ -45,8 +45,6 @@
 		146EB9E7300663B100E43BD0 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9E6300663B100E43BD0 /* FirebaseAnalytics */; };
 		146EB9E9300663B100E43BD0 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9E8300663B100E43BD0 /* FirebaseCrashlytics */; };
 		146EB9EB300663B100E43BD0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 146EB9EA300663B100E43BD0 /* FirebaseMessaging */; };
-		146EBB323006668400E43BD0 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 146EBB313006668400E43BD0 /* MobileBankingSDK */; };
-		146EBB35300666BA00E43BD0 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 146EBB34300666BA00E43BD0 /* LinkKit */; };
 		1470D31D2FEBECC3009764FE /* ShareInviteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1470D31C2FEBECC3009764FE /* ShareInviteSheet.swift */; };
 		14716FFE2F86671600198064 /* PlaidService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716FFA2F86671600198064 /* PlaidService.swift */; };
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
@@ -58,6 +56,8 @@
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
 		14C623E12F6AC7AC00D0B719 /* StatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623E02F6AC7AC00D0B719 /* StatusRow.swift */; };
 		14D2069C2FD69479001726E7 /* DeviceSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D2069B2FD69479001726E7 /* DeviceSessionManager.swift */; };
+		14D2536A3008B8E10084CEBF /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 14D253693008B8E10084CEBF /* MobileBankingSDK */; };
+		14D2536D3008B9080084CEBF /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 14D2536C3008B9080084CEBF /* LinkKit */; };
 		14D2CDBE2FE93FCA007A9EEB /* MovoEditIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D2CDBD2FE93FCA007A9EEB /* MovoEditIcon.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
 		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
@@ -317,11 +317,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				146EBB323006668400E43BD0 /* MobileBankingSDK in Frameworks */,
+				14D2536A3008B8E10084CEBF /* MobileBankingSDK in Frameworks */,
 				146EB9E9300663B100E43BD0 /* FirebaseCrashlytics in Frameworks */,
 				146EB9EB300663B100E43BD0 /* FirebaseMessaging in Frameworks */,
 				146EB9E7300663B100E43BD0 /* FirebaseAnalytics in Frameworks */,
-				146EBB35300666BA00E43BD0 /* LinkKit in Frameworks */,
+				14D2536D3008B9080084CEBF /* LinkKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -662,8 +662,8 @@
 				146EB9E6300663B100E43BD0 /* FirebaseAnalytics */,
 				146EB9E8300663B100E43BD0 /* FirebaseCrashlytics */,
 				146EB9EA300663B100E43BD0 /* FirebaseMessaging */,
-				146EBB313006668400E43BD0 /* MobileBankingSDK */,
-				146EBB34300666BA00E43BD0 /* LinkKit */,
+				14D253693008B8E10084CEBF /* MobileBankingSDK */,
+				14D2536C3008B9080084CEBF /* LinkKit */,
 			);
 			productName = MOVO_HB_IOS;
 			productReference = 14BF48372F4C873A00FD7B53 /* MovocashIOS.app */;
@@ -743,8 +743,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				146EB9E5300663B100E43BD0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
-				146EBB303006668400E43BD0 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
-				146EBB33300666BA00E43BD0 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
+				14D253683008B8E10084CEBF /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */,
+				14D2536B3008B9080084CEBF /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 14BF48382F4C873A00FD7B53 /* Products */;
@@ -1043,7 +1043,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.0.1;
+				MARKETING_VERSION = 5.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.movocash.movo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1085,7 +1085,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.0.1;
+				MARKETING_VERSION = 5.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.movocash.movo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1230,15 +1230,15 @@
 				minimumVersion = 12.16.0;
 			};
 		};
-		146EBB303006668400E43BD0 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
+		14D253683008B8E10084CEBF /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "mobile-banking.mobile-banking-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.19.0;
+				minimumVersion = 1.19.1;
 			};
 		};
-		146EBB33300666BA00E43BD0 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
+		14D2536B3008B9080084CEBF /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/plaid/plaid-link-ios-spm.git";
 			requirement = {
@@ -1264,14 +1264,14 @@
 			package = 146EB9E5300663B100E43BD0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
 		};
-		146EBB313006668400E43BD0 /* MobileBankingSDK */ = {
+		14D253693008B8E10084CEBF /* MobileBankingSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 146EBB303006668400E43BD0 /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
+			package = 14D253683008B8E10084CEBF /* XCRemoteSwiftPackageReference "mobile-banking-ios-sdk" */;
 			productName = MobileBankingSDK;
 		};
-		146EBB34300666BA00E43BD0 /* LinkKit */ = {
+		14D2536C3008B9080084CEBF /* LinkKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 146EBB33300666BA00E43BD0 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
+			package = 14D2536B3008B9080084CEBF /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
 			productName = LinkKit;
 		};
 /* End XCSwiftPackageProductDependency section */

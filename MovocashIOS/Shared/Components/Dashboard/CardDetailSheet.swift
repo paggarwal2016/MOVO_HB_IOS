@@ -35,6 +35,11 @@ struct CardDetailSheet: View {
     @State private var showAllTransactions = false
     @State private var isLoading = false
     @State private var showFullCardNumber = false
+    /// Revealed security code — held transiently in view state only. Never cached,
+    /// logged, or persisted; cleared when the sheet closes or the user hides it.
+    @State private var revealedCvc: String?
+    @State private var isRevealingCvc = false
+    @State private var cvcTask: Task<Void, Never>?
     @State private var walletTask: Task<Void, Never>?
     @State private var deleteTask: Task<Void, Never>?
     @State private var refreshTask: Task<Void, Never>?
@@ -145,6 +150,9 @@ struct CardDetailSheet: View {
             // Cancel in-flight wallet/delete/refresh work only; RootView navigates to login.
             walletTask?.cancel()
             walletTask = nil
+            cvcTask?.cancel()
+            cvcTask = nil
+            revealedCvc = nil
             deleteTask?.cancel()
             deleteTask = nil
             refreshTask?.cancel()
@@ -327,6 +335,27 @@ struct CardDetailSheet: View {
         .padding(.horizontal, Spacing.screenHorizontal)
     }
     
+    /// Reveals the security code behind a passkey step-up, or hides it if already
+    /// shown. The revealed value is kept only in transient view state.
+    private func toggleCvc() {
+        if revealedCvc != nil {
+            revealedCvc = nil
+            return
+        }
+        guard let accountId = card.savingsAccountId else {
+            AlertManager.shared.showError("Unable to reveal security code.")
+            return
+        }
+        cvcTask = Task {
+            isRevealingCvc = true
+            defer { isRevealingCvc = false }
+            if let cvc = try? await achVM.revealVirtualCardCvv(accountId: accountId) {
+                guard !Task.isCancelled else { return }
+                revealedCvc = cvc
+            }
+        }
+    }
+
     public func copyCardNumber() {
         let text = card.fullNumberPasteboard
         UIPasteboard.general.string = text
@@ -439,10 +468,25 @@ struct CardDetailSheet: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(showFullCardNumber ? "Hide card number" : "Show card number")
                 }
-                Text("Exp \(card.expiryMMYY) · CVC \(card.cvc2 ?? "")")
-                    .textStyle(Typography.captionSmall)
-                    .foregroundColor(Color.movo.textTertiary)
-                    .padding(.top, 2)
+                HStack(spacing: 4) {
+                    Text("Exp \(card.expiryMMYY) · CVC \(revealedCvc ?? "•••")")
+                        .textStyle(Typography.captionSmall)
+                        .foregroundColor(Color.movo.textTertiary)
+                    Button(action: toggleCvc) {
+                        if isRevealingCvc {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                        } else {
+                            Image(systemName: revealedCvc == nil ? "eye" : "eye.slash")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color.movo.accent)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isRevealingCvc)
+                    .accessibilityLabel(revealedCvc == nil ? "Reveal security code" : "Hide security code")
+                }
+                .padding(.top, 2)
             }
 
             Spacer(minLength: 0)

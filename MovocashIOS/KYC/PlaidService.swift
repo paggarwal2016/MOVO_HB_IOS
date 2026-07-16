@@ -158,6 +158,23 @@ actor PlaidService {
         }
     }
 
+    @MainActor
+    func getVirtualCardCvvSecure(
+        accountId: Int,
+        presentingViewController: UIViewController,
+        enableEncryptedResponses: Bool = false
+    ) async throws -> VirtualCardCvvResponse {
+        return try await withCheckedThrowingContinuation { continuation in
+            MobileBankingSDK.getVirtualCardCvvSecure(
+                accountId: accountId,
+                presentingViewController: presentingViewController,
+                enableEncryptedResponses: enableEncryptedResponses
+            ) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
     // MARK: - Apple Wallet
 
     nonisolated var canProvisionAppleWalletPasses: Bool {
@@ -250,6 +267,18 @@ actor PlaidService {
             MobileBankingSDK.registerDevicePasskey(
                 userId: userId,
                 deviceId: deviceId,
+                presentingViewController: presentingViewController
+            ) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
+    /// Registers a device passkey letting the SDK derive the authenticated identity
+    @MainActor
+    func registerDevicePasskey(presentingViewController: UIViewController) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            MobileBankingSDK.registerDevicePasskey(
                 presentingViewController: presentingViewController
             ) { result in
                 continuation.resume(with: result)

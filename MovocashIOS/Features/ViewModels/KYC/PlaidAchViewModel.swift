@@ -299,6 +299,53 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         }
     }
 
+    /// Reveals the virtual card CVV after a passkey step-up prompt.
+
+    func revealVirtualCardCvv(accountId: Int, enableEncryptedResponses: Bool = false) async throws -> String {
+        return try await run {
+            guard let token = try? await self.keychain.get("access_token", biometricPrompt: nil),
+                  !token.isEmpty,
+                  let json = JWTDecoder.decodePayload(token),
+                  let payload = json["payload"] as? [String: Any],
+                  let userIdInt = payload["userId"] as? Int
+            else {
+                throw NSError(domain: "VirtualCard", code: -3,
+                              userInfo: [NSLocalizedDescriptionKey: "Unable to verify device identity. Please try again."])
+            }
+            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+
+            let passkeyKey = "passkey_registered_\(userIdInt)"
+            if case .found = self.keychain.getSync(passkeyKey) {
+                // Already registered — proceed.
+            } else {
+                guard let reRegPresenter = await self.waitForPresentableViewController() else {
+                    throw NSError(domain: "VirtualCard", code: -2,
+                                  userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
+                }
+                do {
+                    try await self.service.registerDevicePasskey(presentingViewController: reRegPresenter)
+                    try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+                    SecureLogger.info("Device passkey registered for user \(userIdInt) during CVV reveal", category: .auth)
+                } catch {
+                    SecureLogger.error("Passkey registration failed: \(error.localizedDescription)", category: .auth)
+                    throw NSError(domain: "VirtualCard", code: -2,
+                                  userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
+                }
+            }
+
+            guard let presenter = await self.waitForPresentableViewController() else {
+                throw NSError(domain: "VirtualCard", code: -1,
+                              userInfo: [NSLocalizedDescriptionKey: "Unable to present CVV verification."])
+            }
+            let response = try await self.service.getVirtualCardCvvSecure(
+                accountId: accountId,
+                presentingViewController: presenter,
+                enableEncryptedResponses: enableEncryptedResponses
+            )
+            return response.cvv
+        }
+    }
+
     // MARK: - Apple Wallet
 
     var canProvisionAppleWalletPasses: Bool {
@@ -416,15 +463,8 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         toMask: String? = nil
     ) async {
         await perform {
-            // Step 1 — Configure KYC SDK on every transfer so the SDK always holds
-            // the current token. Skipping this with an isConfigured guard would leave
-            // the SDK using a stale/expired token after the first refresh cycle.
             try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
 
-            // Step 2 — Ensure device passkey is registered before attempting transfer.
-            // Keychain is the source of truth (survives OS memory pressure; UserDefaults does not).
-            // If the flag is missing (e.g. cleared by OS), attempt silent re-registration here
-            // so the user never sees a "sign out" error for a transient OS eviction.
             guard let passkeyToken = try? await self.keychain.get("access_token", biometricPrompt: nil),
                   let json = JWTDecoder.decodePayload(passkeyToken),
                   let payload = json["payload"] as? [String: Any],
@@ -437,19 +477,12 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             if case .found = self.keychain.getSync(passkeyKey) {
                 // Already registered — proceed.
             } else {
-                // Flag missing: attempt silent re-registration before blocking the transfer.
-                await self.service.configureSDKForTransfer(authToken: passkeyToken)
-                let reRegDeviceId = await DeviceManager.shared.deviceID()
                 guard let reRegPresenter = await self.waitForPresentableViewController() else {
                     throw NSError(domain: "QuickTransfer", code: -2,
                                   userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
                 }
                 do {
-                    try await self.service.registerDevicePasskey(
-                        userId: String(userIdInt),
-                        deviceId: reRegDeviceId,
-                        presentingViewController: reRegPresenter
-                    )
+                    try await self.service.registerDevicePasskey(presentingViewController: reRegPresenter)
                     try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
                     SecureLogger.info("Device passkey re-registered for user \(userIdInt) during transfer", category: .auth)
                 } catch {
@@ -459,9 +492,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 }
             }
 
-            // Step 3 — Create transaction intent
-            // Use .internalTransfer when the recipient is a registered MOVO user
-            // (checkIntent returned exists == true), otherwise .externalTransfer.
             let requestBody = CreateTransactionIntentRequestBody(
                 type:    isInternal ? .internalTransfer : .externalTransfer,
                 details: isInternal
@@ -484,15 +514,11 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             let intent = try await self.service.createTransactionIntent(requestBody: requestBody)
             self.transactionIntent = intent
 
-            // Step 4 — Approve intent (triggers biometric)
             guard let approvalPresenter = await self.waitForPresentableViewController() else {
                 throw NSError(domain: "QuickTransfer", code: -1,
                               userInfo: [NSLocalizedDescriptionKey: "Unable to present biometric approval."])
             }
             let deviceId = await DeviceManager.shared.deviceID()
-            // Remove the loading spinner before presenting the biometric approval sheet:
-            // it must not sit behind the system sheet, and it must not be left stuck if
-            // the user cancels/dismisses the approval.
             self.state = .idle
             let approvalResult = try await self.service.approveTransactionIntent(
                 intentId: intent.id,
@@ -500,7 +526,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 presentingViewController: approvalPresenter,
                 approvalSheetHeight: .fraction(0.85)
             )
-            // Approval completed — restore the spinner for the remaining completion step.
             self.state = .loading
 
             let completeRequest = TransactionRequest.Complete(
@@ -512,8 +537,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 phoneNumber:   normalizedPhone,
                 nickname:      toName
             )
-            // Best-effort: capture and log the response so failures are visible,
-            // but never rethrow — a failure here must not break the approved transfer.
             do {
                 let data = try await self.network.requestData(TransactionAPI.complete(completeRequest))
                 let body = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
@@ -522,7 +545,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 SecureLogger.error("intent-complete failed: \(error.localizedDescription)", category: .payment)
             }
 
-            // Step 6 — Publish success
             self.peerTransferSuccess = SuccessConfirmation(
                 channel: .peer,
                 amount: Decimal(string: amountText) ?? 0,
@@ -565,7 +587,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             state = .success
         } catch {
             state = .failure
-            AlertManager.shared.showError(error.localizedDescription)
         }
     }
 
