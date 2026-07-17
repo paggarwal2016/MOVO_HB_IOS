@@ -36,8 +36,8 @@ struct ShareInviteSheet: View {
     private var inviteSMSBody: String {
         let inviter = inviterName.trimmingCharacters(in: .whitespacesAndNewlines)
         let opener = inviter.isEmpty
-            ? "You've been invited to become the next Movoian!"
-            : "\(inviter) invited you to become the next Movoian!"
+            ? "You've been invited to become the next Movoian! Claim your invite within 72 hours"
+            : "\(inviter) invited you to become the next Movoian! Claim your invite within 72 hours."
         return """
         \(opener)
 
