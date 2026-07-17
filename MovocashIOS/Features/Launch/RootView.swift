@@ -537,17 +537,17 @@ struct RootView: View {
             }
         }
         .onChangeCompat(of: lockManager.state) { newState in
-            // Warm transition: route to .warmRelock so BiometricGateView
-            // auto-triggers Face ID. Cold launch uses .appLock (handled by
-            // postBootstrap's splash biometric attempt; only reaches .appLock
-            // on biometric failure, where manual retry is appropriate).
+            // Warm transition (and backgrounding while on the .appLock gate): route
+            // to .warmRelock so BiometricGateView auto-triggers Face ID and owns
+            // cover dismissal. .appLock is intentionally not excluded — if the user
+            // backgrounds while the cold-launch gate is up and returns after the
+            // timeout, the state transition fires here and upgrades to auto-trigger.
             guard newState == .locked,
                   lockManager.hasAuthMethod,
                   appState.isAuthenticated,
                   !appState.isNewRegistration,
                   !UserDefaults.standard.bool(forKey: "kycInProgress"),
                   UserDefaults.standard.bool(forKey: "kycCompleted"),
-                  appState.flow != .appLock,
                   appState.flow != .warmRelock
             else { return }
 

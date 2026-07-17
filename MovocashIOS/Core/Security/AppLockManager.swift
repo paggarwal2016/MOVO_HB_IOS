@@ -169,6 +169,12 @@ final class AppLockManager: ObservableObject {
     private var permissionFlowActive: Bool = false
     /// Token for the willEnterForeground observer that raises the auth cover.
     private var foregroundCoverObserver: NSObjectProtocol?
+    /// Injected at app startup. Returns true when the biometric lock gate is the
+    /// currently presented screen — in that case the auth cover would only obscure
+    /// an already-opaque lock UI, so it is skipped.
+    /// nil is treated as false (gate not visible) so any wiring omission degrades
+    /// to raising the cover — the safe, visible direction.
+    var isLockUIVisible: (@MainActor () -> Bool)? = nil
 
     // MARK: - Init (Production)
 
@@ -273,6 +279,11 @@ final class AppLockManager: ObservableObject {
             // synchronously, before the foreground frame is drawn.
             MainActor.assumeIsolated {
                 guard let self, self.shouldRelockOnForeground() else { return }
+                // Skip the cover when the lock gate is already the visible screen —
+                // it is itself opaque, so the cover would only block user interaction
+                // with the retry UI. nil closure → false → cover raised (safe default).
+                let gateVisible = self.isLockUIVisible?() ?? false
+                guard !gateVisible else { return }
                 SecureWindowShield.shared.show(.auth)
             }
         }
