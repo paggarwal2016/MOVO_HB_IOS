@@ -62,6 +62,12 @@ final class AppState: ObservableObject {
     /// One-shot guard so post-bootstrap warmup cannot re-run if RootView's .task re-fires.
     var hasCompletedBootstrap = false
 
+    var warmupCompleted = false
+
+    var didAttemptSplashBiometric = false
+
+    var backgroundedFlow: AuthFlow?
+
     func invalidateProtectedShell() {
         protectedShellID = UUID()
     }

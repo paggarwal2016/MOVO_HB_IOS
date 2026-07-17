@@ -560,6 +560,11 @@ struct RootView: View {
                   !appState.isNewRegistration,
                   !UserDefaults.standard.bool(forKey: "kycInProgress"),
                   UserDefaults.standard.bool(forKey: "kycCompleted"),
+                  // Splash-lock is owned by StartupRouter's resume path, which routes
+                  // to .appLock WITHOUT auto-triggering biometric. Excluding .splash
+                  // here stops warm relock (which auto-triggers Face ID) from hijacking
+                  // that case and silently prompting on a splash-then-unlock.
+                  appState.flow != .splash,
                   appState.flow != .appLock,
                   appState.flow != .warmRelock
             else { return }

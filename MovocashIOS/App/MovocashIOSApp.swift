@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 @main
 struct MovocashIOSApp: App {
@@ -71,15 +72,63 @@ struct MovocashIOSApp: App {
                 .globalAlert()
                 .sensitiveScreen() // Layer 2: shield during recording + app-switcher (whole app)
                 .secured(forwardDismiss: false) // Layer 1: blank screenshots & recordings of the main hierarchy
+                .logAppLifecycle(appState)
                 .task {
                     await runPostBootstrap()
                 }
+            
                 .onChangeCompat(of: scenePhase) { phase in
-                    guard phase == .active,
-                          appState.flow == .splash,
-                          !appState.hasCompletedBootstrap else { return }
-                    Task { await runPostBootstrap() }
+                    switch phase {
+                    case .background:
+                        recordBackgroundedScreen()
+                    case .active:
+                        resumeSplashIfNeeded()
+                    default:
+                        break
+                    }
                 }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.didEnterBackgroundNotification
+                )) { _ in
+                    recordBackgroundedScreen()
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.protectedDataWillBecomeUnavailableNotification
+                )) { _ in
+                    recordBackgroundedScreen()
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.didBecomeActiveNotification
+                )) { _ in
+                    resumeSplashIfNeeded()
+                }
+        }
+    }
+
+    @MainActor
+    private func recordBackgroundedScreen() {
+        appState.backgroundedFlow = appState.flow
+    }
+
+    @MainActor
+    private func resumeSplashIfNeeded() {
+        guard appState.flow == .splash,
+              !appState.hasCompletedBootstrap,
+              appState.backgroundedFlow == .splash else { return }
+        SecureLogger.info(
+            "[Lifecycle] resumeSplashIfNeeded fired (warmupDone=\(appState.warmupCompleted)) — "
+            + (appState.warmupCompleted ? "finalizing from cache" : "re-running warmup"),
+            category: .auth
+        )
+        Task {
+            if appState.warmupCompleted {
+                await StartupRouter.finalizeNavigation(
+                    appState: appState,
+                    biometricAuthenticate: nil
+                )
+            } else {
+                await runPostBootstrap()
+            }
         }
     }
 

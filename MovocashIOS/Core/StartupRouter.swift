@@ -146,16 +146,22 @@ enum StartupRouter {
     ) async {
         guard !appState.hasCompletedBootstrap else { return }
 
+        guard !appState.warmupCompleted else {
+            await finalizeNavigation(
+                appState: appState,
+                biometricAuthenticate: biometricAuthenticate
+            )
+            return
+        }
+
         let start = Date()
+        SecureLogger.info("[Lifecycle] postBootstrap warmup started (pending=\(appState.pendingDestination?.rawValue ?? "nil"))", category: .auth)
 
         if let appConfigService { // Check Force update
             appState.appUpdate = await appConfigService.fetchUpdateOutcome()
+            SecureLogger.info("[Lifecycle] app-config / splash-check returned → \(appState.appUpdate)", category: .auth)
         }
         
-        // MoVO session config — fetches the movo-info signing key. This must complete
-        // before any other API call (login, biometric, KYC), so it runs first while the
-        // splash is still showing. Bounded retries cover transient failures; if it still
-        // fails the app proceeds rather than blocking launch indefinitely.
         if let configure {
             for attempt in 1...3 {
                 do {
@@ -194,21 +200,42 @@ enum StartupRouter {
                 SecureLogger.info("Skipping KYC SDK warmup — kycCompleted=true", category: .auth)
             }
         }
-        
+
+        appState.warmupCompleted = true
+        SecureLogger.info("[Lifecycle] warmup complete (warmupCompleted=true)", category: .auth)
+
         // Enforce minimum splash duration for visual stability
         let elapsed = Date().timeIntervalSince(start)
         let remaining = AppState.splashMinDuration - elapsed
         if remaining > 0 {
+            SecureLogger.info("[Lifecycle] min-splash sleep \(Int(remaining * 1000))ms", category: .auth)
             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
         }
         
+        await finalizeNavigation(
+            appState: appState,
+            biometricAuthenticate: biometricAuthenticate
+        )
+    }
+
+    // MARK: - Navigation finalization
+    static func finalizeNavigation(
+        appState: AppState,
+        biometricAuthenticate: (() async -> Bool)?
+    ) async {
+        guard !appState.hasCompletedBootstrap else { return }
+
         var resolvedDestination = appState.pendingDestination
         if appState.appUpdate.presentsGate {
             SecureLogger.info(
                 "Skipping splash biometric — app update gate is active",
                 category: .auth
             )
-        } else if resolvedDestination == .appLock, let authenticate = biometricAuthenticate {
+        } else if resolvedDestination == .appLock,
+                  appState.backgroundedFlow != .splash,
+                  !appState.didAttemptSplashBiometric,
+                  let authenticate = biometricAuthenticate {
+            appState.didAttemptSplashBiometric = true
             let success = await raceAgainstTimeout(
                 seconds: splashBiometricTimeout,
                 operation: authenticate
@@ -225,13 +252,14 @@ enum StartupRouter {
                     category: .auth
                 )
             }
+        } else if resolvedDestination == .appLock, appState.backgroundedFlow == .splash {
+            SecureLogger.info(
+                "Launch was interrupted by a lock while on splash — skipping auto biometric, routing to .appLock for manual retry",
+                category: .auth
+            )
         }
-        
-        // Transition splash → destination. Mark bootstrap complete ONLY here, once
-        // the splash has actually been left. Setting the flag earlier meant that if
-        // this task was cancelled before the transition (e.g. the app was backgrounded
-        // during the splash), the guard above would block every re-run and the app
-        // would stay stuck on the splash forever.
+        guard !appState.hasCompletedBootstrap else { return }
+
         if let destination = resolvedDestination {
             appState.context = appState.pendingContext
             appState.flow = destination
@@ -241,7 +269,7 @@ enum StartupRouter {
             SecureLogger.info("Splash transition → \(destination.rawValue)", category: .auth)
         }
     }
-    
+
     // MARK: - Private helpers
     
     private static func raceAgainstTimeout(

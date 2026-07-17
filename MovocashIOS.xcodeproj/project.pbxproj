@@ -51,6 +51,7 @@
 		1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1489F2672F67D3AE0046FAD4 /* ToastManager.swift */; };
 		1495840E2FED768D005E64A9 /* CustomAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1495840D2FED768D005E64A9 /* CustomAlertView.swift */; };
 		149C19EC2FD1937A00FFC014 /* CommonCustomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */; };
+		14B722D53009F24F0018E16C /* AppLifecycleLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B722D43009F24F0018E16C /* AppLifecycleLogger.swift */; };
 		14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */; };
 		14C383882FBB0C0D002C2215 /* StartupRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C383872FBB0C0D002C2215 /* StartupRouter.swift */; };
 		14C56CAD2FC96FBF000A397E /* SecureContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C56CAC2FC96FBF000A397E /* SecureContainerView.swift */; };
@@ -160,6 +161,7 @@
 		1489F2672F67D3AE0046FAD4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
 		1495840D2FED768D005E64A9 /* CustomAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomAlertView.swift; sourceTree = "<group>"; };
 		149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonCustomView.swift; sourceTree = "<group>"; };
+		14B722D43009F24F0018E16C /* AppLifecycleLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLifecycleLogger.swift; sourceTree = "<group>"; };
 		14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -399,6 +401,7 @@
 		1468195F2F4DE6CF00BED014 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				14B722D43009F24F0018E16C /* AppLifecycleLogger.swift */,
 				14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */,
 				1468195E2F4DE6CF00BED014 /* AppInfo.swift */,
 				14DBC5912F50204D000D84FD /* SecureLogger.swift */,
@@ -808,6 +811,7 @@
 				14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */,
 				99C2EAA62FC9ABDE00384E28 /* StatusBarScrim.swift in Sources */,
 				1468197F2F4DE6CF00BED014 /* AuthViewModel.swift in Sources */,
+				14B722D53009F24F0018E16C /* AppLifecycleLogger.swift in Sources */,
 				14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */,
 				14DBC5982F507C4D000D84FD /* ScreenSecurityManager.swift in Sources */,
 				146819812F4DE6CF00BED014 /* HTTPMethod.swift in Sources */,
@@ -1047,7 +1051,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.0.4;
+				MARKETING_VERSION = 5.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.movocash.movo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1089,7 +1093,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.0.4;
+				MARKETING_VERSION = 5.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.movocash.movo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
