@@ -46,7 +46,7 @@ struct MovocashIOSApp: App {
             // it blocks the retry UI). Weak capture so AppLockManager never retains
             // AppState; nil flow degrades to false → cover raised, the safe direction.
             c.lockManager.isLockUIVisible = { [weak state] in
-                state?.flow == .appLock || state?.flow == .warmRelock
+                state?.flow == .warmRelock
             }
         }
 
