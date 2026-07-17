@@ -560,7 +560,6 @@ struct RootView: View {
                   !appState.isNewRegistration,
                   !UserDefaults.standard.bool(forKey: "kycInProgress"),
                   UserDefaults.standard.bool(forKey: "kycCompleted"),
-                  appState.flow != .appLock,
                   appState.flow != .warmRelock
             else { return }
 

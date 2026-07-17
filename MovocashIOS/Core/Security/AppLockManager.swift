@@ -169,6 +169,12 @@ final class AppLockManager: ObservableObject {
     private var permissionFlowActive: Bool = false
     /// Token for the willEnterForeground observer that raises the auth cover.
     private var foregroundCoverObserver: NSObjectProtocol?
+    /// Injected at app startup. Returns true when the biometric lock gate is the
+    /// currently presented screen — in that case the auth cover would only obscure
+    /// an already-opaque lock UI, so it is skipped.
+    /// nil is treated as false (gate not visible) so any wiring omission degrades
+    /// to raising the cover — the safe, visible direction.
+    var isLockUIVisible: (@MainActor () -> Bool)? = nil
 
     // MARK: - Init (Production)
 
@@ -273,6 +279,11 @@ final class AppLockManager: ObservableObject {
             // synchronously, before the foreground frame is drawn.
             MainActor.assumeIsolated {
                 guard let self, self.shouldRelockOnForeground() else { return }
+                // Skip the cover when the lock gate is already the visible screen —
+                // it is itself opaque, so the cover would only block user interaction
+                // with the retry UI. nil closure → false → cover raised (safe default).
+                let gateVisible = self.isLockUIVisible?() ?? false
+                guard !gateVisible else { return }
                 SecureWindowShield.shared.show(.auth)
             }
         }
@@ -314,19 +325,21 @@ final class AppLockManager: ObservableObject {
             guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
 
             if hasAuthMethod {
-                // Biometric (or legacy passcode) user — 30s aggressive re-auth.
-                // Lock so the RootView overlay renders BiometricGateView and
-                // auto-triggers Face ID via loginWithBiometric (validates with
-                // backend + refreshes access token). Short backgrounds resume
-                // seamlessly.
-                state = .locked
-                if elapsed < config.backgroundTimeout && wasUnlockedWhenBackgrounded {
-                    state = .unlocked
-                    // Warm resume within the window — no re-auth, drop the cover.
+                if elapsed >= config.backgroundTimeout || !wasUnlockedWhenBackgrounded {
+                    // Long background or user was already on the lock screen:
+                    // require re-auth. RootView's lockManager.state observer
+                    // routes to .warmRelock (auto-trigger Face ID).
+                    state = .locked
+                } else {
+                    // Short background while unlocked — seamless resume, no re-auth.
+                    // Assumption: state is .unlocked here because wasUnlockedWhenBackgrounded
+                    // is true and nothing transitions state to .locked between .background
+                    // and .active (lock() has no call sites; handleScenePhase(.background)
+                    // does not lock). The old pattern emitted .locked then immediately
+                    // .unlocked, which spuriously fired RootView's lockManager.state
+                    // observer and routed to .warmRelock on every brief app switch.
                     SecureWindowShield.shared.hide(.auth)
                 }
-                // wasUnlockedWhenBackgrounded == false (user was on lock overlay
-                // when backgrounded) → stays locked regardless of elapsed time.
             } else {
                 // No biometric — 15 min permissive re-auth (matches server idle).
                 // OTP is high-friction so only fire after server session is
@@ -347,6 +360,10 @@ final class AppLockManager: ObservableObject {
         }
     }
 
+    /// Immediately locks the app. Currently has no call sites.
+    /// If you add one (e.g. remote-kill or fraud-triggered lockout), revisit the
+    /// short-background resume assumption in handleScenePhase(.active) — it relies
+    /// on nothing transitioning state to .locked between .background and .active.
     func lock() {
         guard hasAuthMethod else { return }
         state = .locked

@@ -40,6 +40,14 @@ struct MovocashIOSApp: App {
                 keychain: KeychainManager.shared,
                 lockManager: c.lockManager
             )
+            // Wire the cover-gate coordination closure. The cover-raiser calls this
+            // at willEnterForeground to skip the auth cover when the lock gate is
+            // already on screen (the gate is itself opaque; raising the cover above
+            // it blocks the retry UI). Weak capture so AppLockManager never retains
+            // AppState; nil flow degrades to false → cover raised, the safe direction.
+            c.lockManager.isLockUIVisible = { [weak state] in
+                state?.flow == .warmRelock
+            }
         }
 
         _appState         = StateObject(wrappedValue: state)
