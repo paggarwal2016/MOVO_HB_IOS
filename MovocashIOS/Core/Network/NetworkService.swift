@@ -389,6 +389,16 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.rateLimited
         }
 
+        // 426 Upgrade Required — client too old. Raise the mandatory-update gate
+        // centrally so every API is covered, then stop this call.
+        if http.statusCode == 426 {
+            let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data))?.message
+            apiErrorMessage = message
+            let endpoint = request.url?.path
+            Task { @MainActor in AppUpdateNotifier.broadcastUpdateRequired(message: message, endpoint: endpoint) }
+            throw NetworkError.updateRequired(message: message)
+        }
+
         if (500...599).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
                 apiErrorMessage = apiError.message
@@ -513,6 +523,15 @@ actor NetworkService: NetworkServiceProtocol {
                 throw NetworkError.serverMessage(apiError.message)
             }
             throw NetworkError.rateLimited
+        }
+        // 426 Upgrade Required — client too old. Raise the mandatory-update gate
+        // centrally so every API is covered, then stop this call.
+        if http.statusCode == 426 {
+            let message = (try? JSONDecoder().decode(APIErrorResponse.self, from: data))?.message
+            apiErrorMessage = message
+            let endpoint = request.url?.path
+            Task { @MainActor in AppUpdateNotifier.broadcastUpdateRequired(message: message, endpoint: endpoint) }
+            throw NetworkError.updateRequired(message: message)
         }
         if (500...599).contains(http.statusCode) {
             if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {

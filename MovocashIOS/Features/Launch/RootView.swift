@@ -36,6 +36,7 @@ struct RootView: View {
     /// the network layer.
     @State private var compromiseReported = false
 
+
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -409,6 +410,21 @@ struct RootView: View {
             .environmentObject(lockManager)
             .environmentObject(sessionManager)
 
+            // ── App update / maintenance gate ──────────────────────────────
+            if appState.appUpdate.presentsGate {
+                AppUpdateGateView(
+                    outcome: appState.appUpdate,
+                    onRetry: {
+                        appState.appUpdate = await container.appConfigService.fetchUpdateOutcome()
+                    },
+                    onDismiss: {
+                        // Soft update "Not Now": clear the gate and let the normal
+                        // launch routing (biometric / Welcome) resume underneath.
+                        appState.appUpdate = .upToDate
+                    }
+                )
+            }
+
             // ── Compromised-device gate ────────────────────────────────────
             // Renders above the entire flow and blocks all interaction with it.
             // Also enforced at the network layer (NetworkError.jailbreakDetected).
@@ -537,12 +553,8 @@ struct RootView: View {
             }
         }
         .onChangeCompat(of: lockManager.state) { newState in
-            // Warm transition (and backgrounding while on the .appLock gate): route
-            // to .warmRelock so BiometricGateView auto-triggers Face ID and owns
-            // cover dismissal. .appLock is intentionally not excluded — if the user
-            // backgrounds while the cold-launch gate is up and returns after the
-            // timeout, the state transition fires here and upgrades to auto-trigger.
             guard newState == .locked,
+                  !appState.appUpdate.isBlocking,   // force-update / maintenance gate wins
                   lockManager.hasAuthMethod,
                   appState.isAuthenticated,
                   !appState.isNewRegistration,
@@ -568,6 +580,14 @@ struct RootView: View {
             // on a flagged device — see DeviceIntegrityNotifier.
             deviceCompromised = true
             reportCompromiseIfNeeded(trigger: "network")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .appUpdateRequired)) { note in
+            // Any API returned HTTP 426 (Upgrade Required) → raise the mandatory
+            // update gate app-wide. Don't override an existing blocking gate
+            // (a force update or maintenance already showing).
+            guard !appState.appUpdate.isBlocking else { return }
+            let message = note.userInfo?["message"] as? String ?? ""
+            appState.appUpdate = .forceUpdate(type: .mandatory, title: "", message: message, storeURL: nil)
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { notification in
             guard !sessionManager.isSessionExpired, !sessionManager.isLoggingOut else { return }
@@ -673,15 +693,15 @@ struct RootView: View {
     /// Returns true if already registered or successfully registered now.
     /// Returns false if registration failed — caller must not advance the flow.
     private func registerPasskeyIfNeeded() async -> Bool {
-        // Fail-closed: if we cannot decode the token we cannot confirm identity,
-        // so block navigation rather than silently proceeding.
+        let failureMessage = "Device registration failed. Please try again."
+
         guard let token = try? await container.keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
               let userIdInt = payload["userId"] as? Int
         else {
             SecureLogger.error("Passkey check: unable to decode userId from token — blocking navigation", category: .auth)
-            AlertManager.shared.showError("Device registration failed. Please try again.")
+            AlertManager.shared.showError(failureMessage)
             return false
         }
 
@@ -693,41 +713,36 @@ struct RootView: View {
             return true   // already registered on this device
         }
 
-        // Configure MobileBankingSDK with the current token before calling it.
         await PlaidService.shared.configureSDKForTransfer(authToken: token)
 
-        // Wait for any sheet/overlay to finish dismissing before presenting passkey UI.
         var presenter: UIViewController?
         for _ in 0..<20 {
             if let vc = UIApplication.topViewController(),
-               vc.presentedViewController == nil || vc.presentedViewController?.isBeingDismissed == true {
+               vc.presentedViewController == nil {
                 presenter = vc
                 break
             }
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
         guard let presenter = presenter ?? UIApplication.topViewController() else {
-            AlertManager.shared.showError("Device registration failed. Please try again.")
+            AlertManager.shared.showError(failureMessage)
             return false
         }
 
-        let deviceId = await DeviceManager.shared.deviceID()
-
         do {
             try await PlaidService.shared.registerDevicePasskey(
-                userId: userId,
-                deviceId: deviceId,
                 presentingViewController: presenter
             )
-            try? await container.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+            do {
+                try await container.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+            } catch {
+                SecureLogger.error("Failed to persist passkey flag for user \(userId): \(error.localizedDescription)", category: .auth)
+            }
             SecureLogger.info("Device passkey registered for user \(userId)", category: .auth)
             return true
         } catch {
-            // Single attempt only — no automatic retry. If the user cancelled the
-            // passkey prompt or a network error occurred, surface the error and let
-            // them retry manually by tapping the button again.
             SecureLogger.error("Passkey registration failed: \(error.localizedDescription)", category: .auth)
-            AlertManager.shared.showError("Device registration failed. Please try again.")
+            AlertManager.shared.showError(failureMessage)
             return false
         }
     }

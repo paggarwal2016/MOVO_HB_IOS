@@ -345,7 +345,10 @@ struct PhoneContactPicker: UIViewControllerRepresentable {
             context.coordinator.picker = picker
             let onPresented = self.onPresented
             DispatchQueue.main.async {
-                host.present(picker, animated: true) { onPresented?() }
+                host.present(picker, animated: true) {
+                    AnalyticsManager.shared.log(AnalyticsEvent.contactPickerOpened)
+                    onPresented?()
+                }
             }
         }
     }
@@ -367,14 +370,18 @@ struct PhoneContactPicker: UIViewControllerRepresentable {
                     .trimmingCharacters(in: .whitespaces)
                 parent.onPick(name, phone)
             }
-            finish()
+            finish(reason: "selected")
         }
 
         func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
-            finish()
+            finish(reason: "cancelled")
         }
 
-        private func finish() {
+        private func finish(reason: String) {
+            AnalyticsManager.shared.log(
+                AnalyticsEvent.contactPickerClosed,
+                params: [AnalyticsParam.reason: reason]
+            )
             picker = nil
             parent.isPresented = false
         }

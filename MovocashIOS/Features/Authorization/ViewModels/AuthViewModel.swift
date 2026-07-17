@@ -31,7 +31,7 @@ final class AuthViewModel: ObservableObject {
     /// of starting a second flow.
     /// Result of a biometric-login attempt, so callers can tell a user-cancel
     /// (retryable, not counted toward the attempt limit) apart from a genuine failure.
-    enum BiometricAuthOutcome { case success, cancelled, failed, needsEnrollment }
+    enum BiometricAuthOutcome { case success, cancelled, failed, needsEnrollment, updateRequired }
 
     private var biometricLoginTask: Task<BiometricAuthOutcome, Never>?
     /// Device-session config fetch started after OTP is sent, so the movo-info key
@@ -177,6 +177,9 @@ final class AuthViewModel: ObservableObject {
             return
         } catch {
             analytics.trackLoginFailed(method: .otp, errorCode: error.analyticsCode, errorMessage: error.localizedDescription)
+            // HTTP 426 is handled centrally by the app-update gate — don't stack an
+            // error alert on top of it.
+            guard !isUpdateRequired(error) else { return }
             alertManager.showError(error.localizedDescription)
         }
     }
@@ -260,7 +263,10 @@ final class AuthViewModel: ObservableObject {
             // Nothing to surface. Pinning failures now throw `.secureConnectionFailed`.
             return
         } catch {
-            if let message = waitlistMessage(from: error) {
+            if isUpdateRequired(error) {
+                // HTTP 426 — the mandatory app-update gate is shown app-wide; don't
+                // stack a phone-submit error alert on top of it.
+            } else if let message = waitlistMessage(from: error) {
                 AlertManager.shared.showCustom(
                     title: "Join the waitlist",
                     message: message,
@@ -288,6 +294,14 @@ final class AuthViewModel: ObservableObject {
         guard let net = error as? NetworkError, case .serverMessage(let msg) = net else { return nil }
         let normalized = msg.lowercased().replacingOccurrences(of: " ", with: "")
         return normalized.contains("waitlist") ? msg : nil
+    }
+
+    /// True when the error is the HTTP 426 mandatory-update signal. It is handled
+    /// centrally by the app-update gate, so callers must not surface a duplicate
+    /// toast/alert on top of it.
+    private func isUpdateRequired(_ error: Error) -> Bool {
+        if let net = error as? NetworkError, case .updateRequired = net { return true }
+        return false
     }
 
     // MARK: - Send Email OTP
@@ -610,6 +624,12 @@ extension AuthViewModel {
                 return .failed
             }
         } catch {
+            // HTTP 426 (Upgrade Required) is handled centrally by the app-update gate.
+            // Don't show a biometric-failure toast or count it as a retryable failure.
+            if let net = error as? NetworkError, case .updateRequired = net {
+                SecureLogger.info("Biometric login halted — app update required (426)", category: .auth)
+                return .updateRequired
+            }
             analytics.trackLoginFailed(method: .biometric, errorCode: error.analyticsCode, errorMessage: error.localizedDescription)
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
             ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)

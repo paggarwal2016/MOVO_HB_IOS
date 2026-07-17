@@ -257,24 +257,8 @@ actor PlaidService {
         }
     }
 
-    @MainActor
-    func registerDevicePasskey(
-        userId: String,
-        deviceId: String,
-        presentingViewController: UIViewController
-    ) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            MobileBankingSDK.registerDevicePasskey(
-                userId: userId,
-                deviceId: deviceId,
-                presentingViewController: presentingViewController
-            ) { result in
-                continuation.resume(with: result)
-            }
-        }
-    }
-
     /// Registers a device passkey letting the SDK derive the authenticated identity
+    /// and manage the device ID from the configured JWT.
     @MainActor
     func registerDevicePasskey(presentingViewController: UIViewController) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
