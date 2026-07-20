@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct MovocashIOSApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @AppStorage("appearancePreference") private var appearance: Appearance = .system
     @StateObject private var appState: AppState
     @StateObject private var container: AppContainer
     @StateObject private var lockManager: AppLockManager
@@ -64,6 +65,7 @@ struct MovocashIOSApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(kycVM: kycVM)
+                .preferredColorScheme(appearance.colorScheme)
                 .environmentObject(appState)
                 .environmentObject(container)
                 .environmentObject(container.primaryCardStore)

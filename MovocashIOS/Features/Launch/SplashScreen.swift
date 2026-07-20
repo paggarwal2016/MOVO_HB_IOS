@@ -13,14 +13,17 @@
 
 import SwiftUI
 
+// NOTE: LaunchBackground.colorset and LaunchLogoTint.colorset in Assets.xcassets
+// are manually coupled to DesignTokens.Palette.background and
+// DesignTokens.Palette.textPrimary/textSecondary. The storyboard cannot read
+// Swift tokens — if those token values ever change, update the colorsets to match.
 struct SplashScreen: View {
     var body: some View {
         ZStack {
-            MovoBackground()
-            AmbientGlowView()
+            Color.movo.background.ignoresSafeArea()
             MovoSplashLogo()
         }
-        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea()
     }

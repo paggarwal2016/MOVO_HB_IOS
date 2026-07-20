@@ -94,7 +94,7 @@ final class AppConfig {
     static let isScreenProtectionEnabled: Bool = false
 
     /// SSL pinning enable
-    static let isSSLPinningEnabled: Bool = true
+    static let isSSLPinningEnabled: Bool = false
 
     /// SSL pinning certificate name
     static let pinnedCertificateName: String   = AppEnvironment.current.pinnedCertificateNames
