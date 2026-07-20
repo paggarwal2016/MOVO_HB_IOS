@@ -620,7 +620,7 @@ extension AuthViewModel {
                 return .failed
             default:
                 analytics.trackLoginFailed(method: .biometric, errorCode: "\(biometricError)")
-                ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
+                ToastManager.shared.show(biometricError.localizedDescription, style: .error, position: .bottom)
                 return .failed
             }
         } catch {
@@ -632,7 +632,7 @@ extension AuthViewModel {
             }
             analytics.trackLoginFailed(method: .biometric, errorCode: error.analyticsCode, errorMessage: error.localizedDescription)
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
-            ToastManager.shared.show("Biometric login failed. Please use your phone number.", style: .error, position: .bottom)
+            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
             return .failed
         }
     }
