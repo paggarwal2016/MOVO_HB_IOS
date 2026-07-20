@@ -604,7 +604,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             return result
         } catch {
             state = .failure
-            AlertManager.shared.showError(error.localizedDescription)
             throw error
         }
     }
