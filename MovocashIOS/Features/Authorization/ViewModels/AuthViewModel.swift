@@ -34,6 +34,7 @@ final class AuthViewModel: ObservableObject {
     enum BiometricAuthOutcome { case success, cancelled, failed, needsEnrollment, updateRequired }
 
     private var biometricLoginTask: Task<BiometricAuthOutcome, Never>?
+    @Published private(set) var lastBiometricErrorMessage: String?
     /// Device-session config fetch started after OTP is sent, so the movo-info key
     /// is ready for the tokenSMS validation step. Awaited in `validateOTP`. This is
     /// the ONLY place `/get/config` is requested — during a fresh login.
@@ -513,6 +514,9 @@ extension AuthViewModel {
             return await existing.value
         }
 
+        // Fresh attempt — clear any message left from a previous failure.
+        lastBiometricErrorMessage = nil
+
         analytics.trackLoginAttempt(method: .biometric)
 
         // Run the flow in a detached task: it does NOT inherit cancellation from the
@@ -616,11 +620,11 @@ extension AuthViewModel {
                 // succeed until the device is unlocked with the passcode, so tell the
                 // user exactly that instead of the generic failure message.
                 analytics.trackLoginFailed(method: .biometric, errorCode: "biometric_lockout")
-                ToastManager.shared.show(biometricError.localizedDescription, style: .error, position: .bottom)
+                lastBiometricErrorMessage = biometricError.localizedDescription
                 return .failed
             default:
                 analytics.trackLoginFailed(method: .biometric, errorCode: "\(biometricError)")
-                ToastManager.shared.show(biometricError.localizedDescription, style: .error, position: .bottom)
+                lastBiometricErrorMessage = biometricError.localizedDescription
                 return .failed
             }
         } catch {
@@ -632,7 +636,7 @@ extension AuthViewModel {
             }
             analytics.trackLoginFailed(method: .biometric, errorCode: error.analyticsCode, errorMessage: error.localizedDescription)
             SecureLogger.error("biometric login failed: \(error)", category: .auth)
-            ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
+            lastBiometricErrorMessage = error.localizedDescription
             return .failed
         }
     }

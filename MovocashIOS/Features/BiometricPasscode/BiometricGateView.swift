@@ -32,32 +32,25 @@ import SwiftUI
 
 struct BiometricGateView: View {
 
-    let biometricIcon: String        // SF Symbol name, e.g. "faceid" / "touchid"
-    let biometricLabel: String       // Display name, e.g. "Face ID"
+    let biometricIcon: String
+    let biometricLabel: String
     let authenticate: () async -> Bool
     let onAuthenticated: () -> Void
     let onUsePhoneNumber: () -> Void
     var autoTriggerBiometric: Bool = false
+    var apiErrorMessage: () -> String? = { nil }
 
     @State private var isLoading = false
     @State private var showError = false
 
     var body: some View {
         ZStack {
-            // Stable background — renders in both splash and retry modes
-            // so transitions between them don't re-render the backdrop.
             MovoBackground()
             AmbientGlowView()
 
             if showError || !autoTriggerBiometric {
-                // Retry mode — shown when auto-trigger is off (cold-launch
-                // failure case) or when a biometric attempt has failed.
                 retryContent
             } else {
-                // Splash mode — pixel-perfect match with SplashScreen.
-                // Shown briefly during warm-transition while Face ID
-                // auto-prompts. Dismissed on success before any retry
-                // UI ever appears.
                 MovoSplashLogo()
             }
         }
@@ -66,7 +59,7 @@ struct BiometricGateView: View {
         .ignoresSafeArea()
         .task {
             if autoTriggerBiometric {
-                await attempt()
+                await attempt(isManualRetry: false)
             }
         }
     }
@@ -107,7 +100,7 @@ struct BiometricGateView: View {
             Spacer().frame(height: 48)
 
             Button {
-                Task { await attempt() }
+                Task { await attempt(isManualRetry: true) }
             } label: {
                 Group {
                     if isLoading {
@@ -142,20 +135,20 @@ struct BiometricGateView: View {
         }
     }
 
-    private func attempt() async {
+    private func attempt(isManualRetry: Bool) async {
         guard !isLoading else { return }
         isLoading = true
         showError = false
         let success = await authenticate()
         isLoading = false
-        // The gate is now the visible top layer (success → Home, failure → retry).
-        // Lift the auth cover so the gate's own UI is reachable. (No-op on cold
-        // launch, where the cover was never shown.)
         SecureWindowShield.shared.hide(.auth)
         if success {
             onAuthenticated()
         } else {
             showError = true
+            if isManualRetry, let message = apiErrorMessage(), !message.isEmpty {
+                AlertManager.shared.showError(message)
+            }
         }
     }
 }
