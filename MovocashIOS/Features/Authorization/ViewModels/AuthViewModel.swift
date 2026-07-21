@@ -315,8 +315,15 @@ final class AuthViewModel: ObservableObject {
                 AuthAPI.emailVerify(request: EmailVerifyRequest(email: email, userAction: "VERIFY-EMAIL"))
             )
             state = .otpSent
+        } catch is CancellationError {
+            state = .idle
+            throw CancellationError()
         } catch {
             state = .idle
+            analytics.log(AnalyticsEvent.appError, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -371,8 +378,15 @@ final class AuthViewModel: ObservableObject {
             let _: SuccessResponse = try await network.request(AuthAPI.acceptAgreements)
             analytics.log(AnalyticsEvent.signupTermsAccepted)
             state = .idle
+        } catch is CancellationError {
+            state = .idle
+            throw CancellationError()
         } catch {
             state = .idle
+            analytics.log(AnalyticsEvent.appError, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
