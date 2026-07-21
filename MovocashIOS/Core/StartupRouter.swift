@@ -232,13 +232,27 @@ enum StartupRouter {
         // this task was cancelled before the transition (e.g. the app was backgrounded
         // during the splash), the guard above would block every re-run and the app
         // would stay stuck on the splash forever.
+        //
+        // Guard: only overwrite flow if still on splash. Warm-relock routing in
+        // RootView may have already moved flow to .warmRelock (the user locked the
+        // phone during the splash biometric attempt and returned before the 8-second
+        // race resolved). Overwriting .warmRelock with .appLock here would cancel
+        // BiometricGateView's .task before attempt() can call hide(.auth), leaving
+        // the auth cover permanently stuck on the M Logo screen.
         if let destination = resolvedDestination {
-            appState.context = appState.pendingContext
-            appState.flow = destination
+            if appState.flow == .splash {
+                appState.context = appState.pendingContext
+                appState.flow = destination
+                SecureLogger.info("Splash transition → \(destination.rawValue)", category: .auth)
+            } else {
+                SecureLogger.info(
+                    "Splash transition skipped — flow already moved to .\(appState.flow.rawValue) by warm-relock routing",
+                    category: .auth
+                )
+            }
             appState.pendingDestination = nil
             appState.pendingContext = nil
             appState.hasCompletedBootstrap = true
-            SecureLogger.info("Splash transition → \(destination.rawValue)", category: .auth)
         }
     }
     

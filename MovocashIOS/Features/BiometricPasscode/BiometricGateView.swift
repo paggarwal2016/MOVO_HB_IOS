@@ -40,6 +40,7 @@ struct BiometricGateView: View {
     var autoTriggerBiometric: Bool = false
     var apiErrorMessage: () -> String? = { nil }
 
+    @AppStorage("appearancePreference") private var appearance: Appearance = .system
     @State private var isLoading = false
     @State private var showError = false
 
@@ -54,7 +55,7 @@ struct BiometricGateView: View {
                 MovoSplashLogo()
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(appearance.colorScheme)
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea()
         .task {
@@ -68,33 +69,38 @@ struct BiometricGateView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            MovoBrandLockup(
-                markSize: 80,
-                wordmarkSize: 22,
-                spacing: 16,
-                color: .white,
-                vertical: true
-            )
+            // Updated brand lockup — MovoMVSymbol (current mark) + adaptive wordmark
+            VStack(spacing: Spacing.lg) {
+                MovoMVSymbol()
+                    .frame(width: 80, height: 80)
+                Text("MOVOCASH")
+                    .font(FontFamily.font(size: 22, weight: .regular))
+                    .tracking(8)
+                    .foregroundStyle(Color.movo.textPrimary)
+                    .padding(.leading, 8)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("MovoCash")
 
             Spacer().frame(height: 60)
 
             Image(systemName: biometricIcon)
                 .font(.system(size: 56, weight: .light))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(Color.movo.textPrimary)
 
             Spacer().frame(height: 20)
 
             Text("Unlock with \(biometricLabel)")
-                .font(.headline)
+                .font(Typography.cardTitle.font)
                 .foregroundStyle(Color.movo.textPrimary)
 
             if showError {
-                Spacer().frame(height: 12)
+                Spacer().frame(height: Spacing.md)
                 Text("\(biometricLabel) failed. Try again or use your phone number.")
-                    .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .font(Typography.caption.font)
+                    .foregroundStyle(Color.movo.textSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, Spacing.huge)
             }
 
             Spacer().frame(height: 48)
@@ -104,19 +110,23 @@ struct BiometricGateView: View {
             } label: {
                 Group {
                     if isLoading {
-                        ProgressView().tint(.white)
+                        ProgressView().tint(Color.movo.textPrimary)
                     } else {
                         Text("Try Again")
-                            .font(.headline)
+                            .font(Typography.buttonLarge.font)
                             .foregroundStyle(Color.movo.textPrimary)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
             }
-            .background(Color.movo.elevated.opacity(0.4))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, 40)
+            .background(Color.movo.surface)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.xl)
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+            )
+            .padding(.horizontal, Spacing.huge)
             .disabled(isLoading)
 
             Spacer().frame(height: 20)
@@ -125,8 +135,8 @@ struct BiometricGateView: View {
                 onUsePhoneNumber()
             } label: {
                 Text("Use phone number instead")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.65))
+                    .font(Typography.subtitle.font)
+                    .foregroundStyle(Color.movo.textSecondary)
                     .underline()
             }
             .disabled(isLoading)

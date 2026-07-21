@@ -24,12 +24,16 @@ struct ProfileScreen: View {
     /// Title shown in the nav bar — passed from the tab's MENU label.
     private let screenTitle: String
 
+    @AppStorage("appearancePreference") private var appearance: Appearance = .system
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var isBiometricOn             = false
     @State private var showDisableBiometricAlert = false
     @State private var showBiometricEnrollSheet  = false
     @State private var showSecuritySettings      = false
     @State private var showManageAccounts        = false
     @State private var showDeletedCards          = false
+    @State private var showAppearance            = false
     @State private var isLoggingOut              = false
     @State private var showSignOutAlert          = false
     @State private var showDeleteAlert           = false
@@ -75,7 +79,9 @@ struct ProfileScreen: View {
             }
             StatusBarScrim()
             if isLoggingOut {
-                Color.black.opacity(0.45).ignoresSafeArea()
+                // Scrim is lighter in light mode: 0.45 is correct over the near-black
+                // Void Silver dark surface, but reads too heavy over near-white in light.
+                Color.black.opacity(colorScheme == .dark ? 0.45 : 0.3).ignoresSafeArea()
                 SpinnerView()
             }
         }
@@ -88,6 +94,29 @@ struct ProfileScreen: View {
         .onAppear { isBiometricOn = lockManager.isBiometricEnabled }
         .onReceive(lockManager.objectWillChange) {
             Task { @MainActor in isBiometricOn = lockManager.isBiometricEnabled }
+        }
+        // Navigation destinations live on the stable outer ZStack so they
+        // survive any conditional re-render of profileContent (e.g. a data
+        // refresh that briefly sets effectiveProfile to nil).
+        .navigationDestination(isPresented: $showSecuritySettings) {
+            SecuritySettingsView(lockManager: lockManager)
+        }
+        .navigationDestination(isPresented: $showManageAccounts) {
+            ManageExternalAccountsView(
+                achVM: achVM,
+                primaryAccount: dashboardVM.primaryAccount,
+                container: container
+            )
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarBackButtonHidden(true)
+        }
+        .navigationDestination(isPresented: $showDeletedCards) {
+            DeletedCardsView(cards: dashboardVM.deletedCards)
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
+        }
+        .navigationDestination(isPresented: $showAppearance) {
+            AppearanceSettingsView()
         }
     }
 }
@@ -122,6 +151,7 @@ private extension ProfileScreen {
                 }
                 
                 securityCard
+                preferencesCard
                 linkedBankCard
 //                if !dashboardVM.deletedCards.isEmpty {
 //                    Cards
@@ -170,23 +200,6 @@ private extension ProfileScreen {
             Button("Cancel",  role: .cancel) { isBiometricOn = true }
         } message: {
             Text("You'll need to re-enroll to use \(effectiveBiometricType.displayName) again.")
-        }
-        .navigationDestination(isPresented: $showSecuritySettings) {
-            SecuritySettingsView(lockManager: lockManager)
-        }
-        .navigationDestination(isPresented: $showManageAccounts) {
-            ManageExternalAccountsView(
-                achVM: achVM,
-                primaryAccount: dashboardVM.primaryAccount,
-                container: container
-            )
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationBarBackButtonHidden(true)
-        }
-        .navigationDestination(isPresented: $showDeletedCards) {
-            DeletedCardsView(cards: dashboardVM.deletedCards)
-                .toolbar(.hidden, for: .navigationBar)
-                .navigationBarBackButtonHidden(true)
         }
         .alert("Sign Out?", isPresented: $showSignOutAlert) {
             Button("Sign Out", role: .destructive) {
@@ -405,8 +418,48 @@ private extension ProfileScreen {
         }
     }
     
+    // MARK: Preferences Card
+
+    var preferencesCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            eyebrowLabel("PREFERENCES")
+            Button { showAppearance = true } label: {
+                HStack(spacing: Spacing.lg) {
+                    // Icon tile — same Heritage Green tinted style as the Face ID row
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Radius.sm)
+                            .fill(Color.movo.accent.opacity(0.18))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: appearance.icon)
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(Color.movo.accent)
+                    }
+
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text("Appearance")
+                            .font(Typography.body.font)
+                            .foregroundStyle(Color.movo.textPrimary)
+                        Text(appearance.label)
+                            .font(Typography.subtitle.font)
+                            .foregroundStyle(Color.movo.textTertiary)
+                    }
+
+                    Spacer()
+
+                    MovoChevron(.disclosure, color: Color.movo.textTertiary)
+                }
+                .padding(Spacing.lg)
+                .background(Color.movo.surface)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+                .overlay(RoundedRectangle(cornerRadius: Radius.card)
+                    .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     // MARK: Linked Bank Accounts Card
-    
+
     var linkedBankCard: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             eyebrowLabel("LINKED BANK ACCOUNTS")

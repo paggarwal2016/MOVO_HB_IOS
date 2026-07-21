@@ -142,6 +142,10 @@ final class ToastManager: ObservableObject {
         let window = PassthroughWindow(windowScene: scene)
         window.windowLevel = .statusBar + 1
         window.backgroundColor = .clear
+        // Apply the current appearance preference. Read fresh on every presentation
+        // so a preference change between toasts is immediately reflected.
+        // .unspecified lets the window follow the device setting live (System mode).
+        window.overrideUserInterfaceStyle = Appearance.current.uiStyle
         // Modal toasts (actionable or dimmed) must capture all taps so their buttons
         // receive them; non-modal toasts let taps outside the capsule fall through.
         let isModal = config.hasActions || config.dimsBackground

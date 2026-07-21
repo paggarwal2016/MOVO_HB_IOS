@@ -130,6 +130,10 @@ extension SpinnerView {
         window.windowLevel = .alert + 1
         window.backgroundColor = .clear
         window.isUserInteractionEnabled = true
+        // Apply the current appearance preference. Read fresh on every presentation
+        // so a preference change between spinner shows is immediately reflected.
+        // .unspecified lets the window follow the device setting live (System mode).
+        window.overrideUserInterfaceStyle = Appearance.current.uiStyle
 
         let host = UIHostingController(rootView: SpinnerView(configuration: configuration))
         host.view.backgroundColor = .clear
