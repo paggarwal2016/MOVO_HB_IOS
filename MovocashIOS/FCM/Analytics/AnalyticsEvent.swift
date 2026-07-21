@@ -12,7 +12,8 @@ import Foundation
 enum AnalyticsEvent {
 
     // MARK: - General
-    static let screenView            = "screen_view"
+    static let screenView                = "screen_view"
+    static let successConfirmationDone   = "success_confirmation_done"
 
     // MARK: - Auth
     static let loginAttempt          = "login_attempt"
@@ -48,6 +49,8 @@ enum AnalyticsEvent {
     static let kycAbandoned          = "kyc_abandoned"
     static let kycSdkOpened          = "kyc_sdk_opened"
     static let kycSdkClosed          = "kyc_sdk_closed"
+    static let sdkConfigured         = "sdk_configured"
+    static let sdkSessionCleared     = "sdk_session_cleared"
 
     // MARK: - Accounts / Balances
     static let accountViewed         = "account_viewed"
@@ -81,6 +84,12 @@ enum AnalyticsEvent {
     static let transactionListViewed      = "transaction_list_viewed"
     static let internalTransferInitiated  = "internal_transfer_initiated"
     static let internalTransferFailed     = "internal_transfer_failed"
+    /// Peer send-money workflow (sendMoneyToContact): configure → device identity
+    /// → passkey (re)registration → create intent → approve → complete.
+    static let moneySent                  = "money_sent"
+    static let moneySendFailed            = "money_send_failed"
+    static let intentCompleteConfirmed    = "intent_complete_confirmed"
+    static let intentCompleteFailed       = "intent_complete_failed"
 
     // MARK: - Contacts
     static let contactListViewed                = "contact_list_viewed"
@@ -113,6 +122,9 @@ enum AnalyticsEvent {
     static let vcardCreateFailed          = "vcard_create_failed"
     static let cardActivated              = "card_activated"
     static let cardActivationFailed       = "card_activation_failed"
+    /// Virtual card CVV reveal. The CVV value itself is never logged.
+    static let cvvRevealed                = "cvv_revealed"
+    static let cvvRevealFailed            = "cvv_reveal_failed"
     static let walletAdd                  = "wallet_add"
     static let walletAddFailed            = "wallet_add_failed"
 

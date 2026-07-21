@@ -9,6 +9,8 @@ import Foundation
 import Combine
 import MobileBankingSDK
 import UIKit
+import AuthenticationServices
+import PassKit
 
 @MainActor
 final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
@@ -157,12 +159,17 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         } catch {
             _ = await presenterTask
             SecureLogger.error("[Plaid] link token fetch failed — \(error.localizedDescription)", category: .payment)
+            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
+                AnalyticsParam.reason: "link_token_fetch",
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             return nil
         }
 
         guard !tokenResponse.linkToken.isEmpty else {
             _ = await presenterTask
             SecureLogger.error("[Plaid] backend returned an empty link token", category: .payment)
+            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [AnalyticsParam.reason: "empty_link_token"])
             AlertManager.shared.showError("Unable to start bank linking. Please try again.")
             return nil
         }
@@ -170,6 +177,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         guard let presenter = await presenterTask else {
             // Device/app-level: nothing available to present Plaid from.
             SecureLogger.error("[Plaid] no presentable view controller", category: .payment)
+            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [AnalyticsParam.reason: "no_presenter"])
             AlertManager.shared.showError(PlaidLinkError.noPresenter.localizedDescription)
             return nil
         }
@@ -231,12 +239,17 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 SecureLogger.error("[Plaid] middleware sync failed — \(error.localizedDescription)", category: .payment)
             }
 
+            analytics.log(AnalyticsEvent.plaidLinkSuccess, params: [AnalyticsParam.reason: "backend_link"])
             return Self.makeLinkedAccount(
                 from: plaidResult.metadata,
                 savingsId: response.accountsAdded.first?.resourceId ?? 0
             )
         } catch {
             SecureLogger.error("[Plaid] backend link failed — \(error.localizedDescription)", category: .payment)
+            analytics.log(AnalyticsEvent.plaidLinkFailed, params: [
+                AnalyticsParam.reason: "backend_link",
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             return nil
         }
     }
@@ -302,15 +315,18 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     /// Reveals the virtual card CVV after a passkey step-up prompt.
 
     func revealVirtualCardCvv(accountId: Int, enableEncryptedResponses: Bool = false) async throws -> String {
-        return try await run {
+        guard state != .loading else { throw NSError(domain: "Already loading", code: 1) }
+        state = .loading
+        defer { state = .idle }
+        do {
             guard let token = try? await self.keychain.get("access_token", biometricPrompt: nil),
                   !token.isEmpty,
                   let json = JWTDecoder.decodePayload(token),
                   let payload = json["payload"] as? [String: Any],
                   let userIdInt = payload["userId"] as? Int
             else {
-                throw NSError(domain: "VirtualCard", code: -3,
-                              userInfo: [NSLocalizedDescriptionKey: "Unable to verify device identity. Please try again."])
+                // Internal precondition — suppressed from the alert (SDK errors only).
+                throw NSError(domain: "VirtualCard", code: -3)
             }
             try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
 
@@ -319,30 +335,35 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 // Already registered — proceed.
             } else {
                 guard let reRegPresenter = await self.waitForPresentableViewController() else {
-                    throw NSError(domain: "VirtualCard", code: -2,
-                                  userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
+                    throw NSError(domain: "VirtualCard", code: -2)
                 }
-                do {
-                    try await self.service.registerDevicePasskey(presentingViewController: reRegPresenter)
-                    try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
-                    SecureLogger.info("Device passkey registered for user \(userIdInt) during CVV reveal", category: .auth)
-                } catch {
-                    SecureLogger.error("Passkey registration failed: \(error.localizedDescription)", category: .auth)
-                    throw NSError(domain: "VirtualCard", code: -2,
-                                  userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
-                }
+                // Let the SDK's real error propagate — no generic hardcoded wrapper.
+                try await self.service.registerDevicePasskey(presentingViewController: reRegPresenter)
+                try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+                SecureLogger.info("Device passkey registered for user \(userIdInt) during CVV reveal", category: .auth)
             }
 
             guard let presenter = await self.waitForPresentableViewController() else {
-                throw NSError(domain: "VirtualCard", code: -1,
-                              userInfo: [NSLocalizedDescriptionKey: "Unable to present CVV verification."])
+                throw NSError(domain: "VirtualCard", code: -1)
             }
             let response = try await self.service.getVirtualCardCvvSecure(
                 accountId: accountId,
                 presentingViewController: presenter,
                 enableEncryptedResponses: enableEncryptedResponses
             )
+            state = .success
+            self.analytics.log(AnalyticsEvent.cvvRevealed)
             return response.cvv
+        } catch {
+            state = .failure
+            analytics.log(AnalyticsEvent.cvvRevealFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
+            if self.isSDKError(error) {
+                AlertManager.shared.showError(error.localizedDescription)
+            }
+            throw error
         }
     }
 
@@ -397,6 +418,9 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                     params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription]
                 )
                 SecureLogger.error("[Wallet] add-to-wallet did not complete: \(error.localizedDescription)", category: .payment)
+                if !self.isUserCancellation(error) {
+                    AlertManager.shared.showError(error.localizedDescription)
+                }
             }
         }
     }
@@ -463,100 +487,140 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         toMask: String? = nil
     ) async {
         await perform {
-            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-
-            guard let passkeyToken = try? await self.keychain.get("access_token", biometricPrompt: nil),
-                  let json = JWTDecoder.decodePayload(passkeyToken),
-                  let payload = json["payload"] as? [String: Any],
-                  let userIdInt = payload["userId"] as? Int
-            else {
-                throw NSError(domain: "QuickTransfer", code: -3,
-                              userInfo: [NSLocalizedDescriptionKey: "Unable to verify device identity. Please try again."])
-            }
-            let passkeyKey = "passkey_registered_\(userIdInt)"
-            if case .found = self.keychain.getSync(passkeyKey) {
-                // Already registered — proceed.
-            } else {
-                guard let reRegPresenter = await self.waitForPresentableViewController() else {
-                    throw NSError(domain: "QuickTransfer", code: -2,
-                                  userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
-                }
-                do {
-                    try await self.service.registerDevicePasskey(presentingViewController: reRegPresenter)
-                    try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
-                    SecureLogger.info("Device passkey re-registered for user \(userIdInt) during transfer", category: .auth)
-                } catch {
-                    SecureLogger.error("Passkey re-registration failed: \(error.localizedDescription)", category: .auth)
-                    throw NSError(domain: "QuickTransfer", code: -2,
-                                  userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
-                }
-            }
-
-            let requestBody = CreateTransactionIntentRequestBody(
-                type:    isInternal ? .internalTransfer : .externalTransfer,
-                details: isInternal
-                    ? .internalTransfer(
-                        amount: amount,
-                        fromAccountId: fromCard.savingsAccountId,
-                        phoneNumber: normalizedPhone.isEmpty ? nil : normalizedPhone,
-                        toClientId: toClientId,
-                        toAccountId: toAccountId,
-                        description: description
-                    )
-                    : .externalTransfer(
-                        fromAccountId: fromCard.savingsAccountId ?? 0,
-                        recipientPhoneNumber: normalizedPhone,
-                        amount: amount,
-                        description: description
-                    ),
-                webhookUrl: nil
-            )
-            let intent = try await self.service.createTransactionIntent(requestBody: requestBody)
-            self.transactionIntent = intent
-
-            guard let approvalPresenter = await self.waitForPresentableViewController() else {
-                throw NSError(domain: "QuickTransfer", code: -1,
-                              userInfo: [NSLocalizedDescriptionKey: "Unable to present biometric approval."])
-            }
-            let deviceId = await DeviceManager.shared.deviceID()
-            self.state = .idle
-            let approvalResult = try await self.service.approveTransactionIntent(
-                intentId: intent.id,
-                deviceId: deviceId,
-                presentingViewController: approvalPresenter,
-                approvalSheetHeight: .fraction(0.85)
-            )
-            self.state = .loading
-
-            let completeRequest = TransactionRequest.Complete(
-                transferId:    approvalResult.intent.id,
-                amount:        amountText,
-                fromAccountId: fromCard.savingsAccountId ?? 0,
-                toAccountId:   toAccountId ?? 0,
-                toClientId:    toClientId ?? 0,
-                phoneNumber:   normalizedPhone,
-                nickname:      toName,
-                userType: isInternal ? "internal" : "external"
-            )
+            let transferType = isInternal ? "internal" : "external"
+            var step = "configure_sdk"
             do {
-                let data = try await self.network.requestData(TransactionAPI.complete(completeRequest))
-                let body = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
-                SecureLogger.debug("intent-complete response: \(body)", category: .payment)
-            } catch {
-                SecureLogger.error("intent-complete failed: \(error.localizedDescription)", category: .payment)
-            }
+                try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
 
-            self.peerTransferSuccess = SuccessConfirmation(
-                channel: .peer,
-                amount: Decimal(string: amountText) ?? 0,
-                fromAccountName: fromCard.savingsAccountNickname ?? fromCard.name ?? fromCard.displayName,
-                fromAccountMask: fromCard.maskedNumber,
-                toAccountName: toName,
-                toAccountMask: toMask ?? normalizedPhone,
-                arrivesText: "Instantly",
-                dateText: Date.now.formatted(date: .long, time: .shortened),
-                referenceCode: approvalResult.intent.id
-            )
+                step = "device_identity"
+                guard let passkeyToken = try? await self.keychain.get("access_token", biometricPrompt: nil),
+                      let json = JWTDecoder.decodePayload(passkeyToken),
+                      let payload = json["payload"] as? [String: Any],
+                      let userIdInt = payload["userId"] as? Int
+                else {
+                    throw NSError(domain: "QuickTransfer", code: -3,
+                                  userInfo: [NSLocalizedDescriptionKey: "Unable to verify device identity. Please try again."])
+                }
+                let passkeyKey = "passkey_registered_\(userIdInt)"
+                if case .found = self.keychain.getSync(passkeyKey) {
+                    // Already registered — proceed.
+                } else {
+                    step = "passkey_registration"
+                    guard let reRegPresenter = await self.waitForPresentableViewController() else {
+                        throw NSError(domain: "QuickTransfer", code: -2,
+                                      userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
+                    }
+                    do {
+                        try await self.service.registerDevicePasskey(presentingViewController: reRegPresenter)
+                        try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+                        SecureLogger.info("Device passkey re-registered for user \(userIdInt) during transfer", category: .auth)
+                    } catch {
+                        // Preserve the SDK's real error so the outer handler can show its
+                        // actual message (or recognise a user cancellation) — no generic wrapper.
+                        SecureLogger.error("Passkey re-registration failed: \(error.localizedDescription)", category: .auth)
+                        throw error
+                    }
+                }
+
+                step = "create_intent"
+                let requestBody = CreateTransactionIntentRequestBody(
+                    type:    isInternal ? .internalTransfer : .externalTransfer,
+                    details: isInternal
+                        ? .internalTransfer(
+                            amount: amount,
+                            fromAccountId: fromCard.savingsAccountId,
+                            phoneNumber: normalizedPhone.isEmpty ? nil : normalizedPhone,
+                            toClientId: toClientId,
+                            toAccountId: toAccountId,
+                            description: description
+                        )
+                        : .externalTransfer(
+                            fromAccountId: fromCard.savingsAccountId ?? 0,
+                            recipientPhoneNumber: normalizedPhone,
+                            amount: amount,
+                            description: description
+                        ),
+                    webhookUrl: nil
+                )
+                let intent = try await self.service.createTransactionIntent(requestBody: requestBody)
+                self.transactionIntent = intent
+
+                step = "approve"
+                guard let approvalPresenter = await self.waitForPresentableViewController() else {
+                    throw NSError(domain: "QuickTransfer", code: -1,
+                                  userInfo: [NSLocalizedDescriptionKey: "Unable to present biometric approval."])
+                }
+                let deviceId = await DeviceManager.shared.deviceID()
+                self.state = .idle
+                let approvalResult = try await self.service.approveTransactionIntent(
+                    intentId: intent.id,
+                    deviceId: deviceId,
+                    presentingViewController: approvalPresenter,
+                    approvalSheetHeight: .fraction(0.85)
+                )
+                self.state = .loading
+
+                step = "complete"
+                let completeRequest = TransactionRequest.Complete(
+                    transferId:    approvalResult.intent.id,
+                    amount:        amountText,
+                    fromAccountId: fromCard.savingsAccountId ?? 0,
+                    toAccountId:   toAccountId ?? 0,
+                    toClientId:    toClientId ?? 0,
+                    phoneNumber:   normalizedPhone,
+                    nickname:      toName,
+                    userType: isInternal ? "internal" : "external"
+                )
+                do {
+                    let data = try await self.network.requestData(TransactionAPI.complete(completeRequest))
+                    let body = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
+                    SecureLogger.debug("intent-complete response: \(body)", category: .payment)
+                    self.analytics.log(AnalyticsEvent.intentCompleteConfirmed, params: [
+                        AnalyticsParam.type: transferType
+                    ])
+                } catch {
+                    SecureLogger.error("intent-complete failed: \(error.localizedDescription)", category: .payment)
+                    self.analytics.log(AnalyticsEvent.intentCompleteFailed, params: [
+                        AnalyticsParam.type: transferType,
+                        AnalyticsParam.errorCode: error.analyticsCode,
+                        AnalyticsParam.errorMessage: error.localizedDescription
+                    ])
+                }
+
+                self.peerTransferSuccess = SuccessConfirmation(
+                    channel: .peer,
+                    amount: Decimal(string: amountText) ?? 0,
+                    fromAccountName: fromCard.savingsAccountNickname ?? fromCard.name ?? fromCard.displayName,
+                    fromAccountMask: fromCard.maskedNumber,
+                    toAccountName: toName,
+                    toAccountMask: toMask ?? normalizedPhone,
+                    arrivesText: "Instantly",
+                    dateText: Date.now.formatted(date: .long, time: .shortened),
+                    referenceCode: approvalResult.intent.id
+                )
+
+                self.analytics.log(AnalyticsEvent.moneySent, params: [
+                    AnalyticsParam.type: transferType,
+                    AnalyticsParam.amountRange: AnalyticsBucket.amount(amount)
+                ])
+            } catch {
+                // User cancellations (approval/passkey sheet dismissed, task cancelled)
+                // are benign — never alert and don't count as a failure.
+                if self.isUserCancellation(error) {
+                    SecureLogger.info("Transfer cancelled by user at step: \(step)", category: .payment)
+                    throw error
+                }
+                // Real failure: capture in analytics and show the SDK's own message.
+                self.analytics.log(AnalyticsEvent.moneySendFailed, params: [
+                    AnalyticsParam.type: transferType,
+                    AnalyticsParam.step: step,
+                    AnalyticsParam.amountRange: AnalyticsBucket.amount(amount),
+                    AnalyticsParam.errorCode: error.analyticsCode,
+                    AnalyticsParam.errorMessage: error.localizedDescription
+                ])
+                AlertManager.shared.showError(error.localizedDescription)
+                throw error
+            }
         }
     }
     
@@ -576,6 +640,26 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
         return UIApplication.topViewController()
+    }
+
+    private func isUserCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let asError = error as? ASAuthorizationError, asError.code == .canceled { return true }
+        if (error as? URLError)?.code == .cancelled { return true }
+        // Apple Wallet provisioning sheet dismissed by the user.
+        if case AppleWalletProvisioningError.cancelled = error { return true }
+        // SDK approval sheet dismissed by the user.
+        let ns = error as NSError
+        if ns.domain == "TransactionApproval" && ns.code == -1 { return true }
+        // Apple/PassKit-originated errors (e.g. closing the "Add to Wallet" sheet
+        if ns.domain == PKPassKitErrorDomain { return true }
+        return false
+    }
+
+    private func isSDKError(_ error: Error) -> Bool {
+        if isUserCancellation(error) { return false }
+        if (error as NSError).domain == "VirtualCard" { return false }
+        return true
     }
 
     // Wraps a throwing async call — manages state and surfaces errors.

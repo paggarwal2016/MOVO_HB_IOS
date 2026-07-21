@@ -73,8 +73,15 @@ final class DashboardViewModel: BaseViewModel {
         do {
             dashboard = try await perform { try await network.request(DashboardAPI.dashboard) }
             decryptAndSplitCards()
+        } catch is CancellationError {
+            // Benign — task cancelled.
         } catch {
-            // Error is already presented via ToastManager in perform(_:)
+            // Error is already presented via ToastManager in perform(_:); capture it
+            // in analytics too (perform only toasts, it doesn't log).
+            AnalyticsManager.shared.log(AnalyticsEvent.appError, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
         }
     }
 
@@ -95,6 +102,10 @@ final class DashboardViewModel: BaseViewModel {
         } catch is CancellationError {
             // User dismissed the pull gesture — keep existing data silently
         } catch {
+            AnalyticsManager.shared.log(AnalyticsEvent.appError, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             if error.shouldShowUserFacingToast {
                 ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
             }

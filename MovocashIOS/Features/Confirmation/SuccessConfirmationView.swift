@@ -74,7 +74,12 @@ public final class SuccessConfirmationViewModel: ObservableObject {
         self.onDone = onDone
     }
     
-    public func done() { onDone() }
+    public func done() {
+        AnalyticsManager.shared.log(AnalyticsEvent.successConfirmationDone, params: [
+            AnalyticsParam.type: success.channel.rawValue
+        ])
+        onDone()
+    }
     public func close() { onDone() }
 }
 
@@ -92,26 +97,24 @@ public struct SuccessConfirmationView: View {
         ZStack(alignment: .bottom) {
             
             SuccessBackdrop()
-            
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    
-                    heroBlock
-                        .padding(.top, Spacing.xxl)
-                        .padding(.bottom, Spacing.sm)
-                    
-                    amountHero
-                        .padding(.top, Spacing.xl + 6)
-                        .padding(.bottom, Spacing.xxxl)
-                    
-                    summaryCard
-                        .padding(.horizontal, Spacing.lg + 2)
-                        .padding(.bottom, Spacing.lg)
-                    
-                    Spacer().frame(height: 120)
-                }
+
+            VStack(spacing: 0) {
+
+                heroBlock
+                    .padding(.top, Spacing.xxl)
+                    .padding(.bottom, Spacing.sm)
+
+                amountHero
+                    .padding(.top, Spacing.xl + 6)
+                    .padding(.bottom, Spacing.xxxl)
+
+                summaryCard
+                    .padding(.horizontal, Spacing.lg + 2)
+
+                Spacer(minLength: Spacing.xxl)
             }
-            
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
             bottomActions
             
         }
@@ -124,7 +127,8 @@ public struct SuccessConfirmationView: View {
         VStack(spacing: Spacing.md + 4) {
             CheckmarkHalo()
                 .frame(width: 88, height: 88)
-            
+                .padding(.bottom, Spacing.lg)
+
             Text(heroTitleText)
                 .textStyle(Typography.heroTitle)
                 .foregroundColor(Color.movo.textPrimary)
@@ -261,7 +265,6 @@ public struct SuccessConfirmationView: View {
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         .padding(.horizontal, Spacing.lg)
-        .padding(.bottom, Spacing.xl + 8)
     }
     
     // MARK: - Helpers

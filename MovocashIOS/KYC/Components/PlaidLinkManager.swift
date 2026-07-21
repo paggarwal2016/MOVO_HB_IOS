@@ -178,6 +178,7 @@ final class PlaidLinkManager: PlaidLinkManagerProtocol, TokenRefreshable {
         do {
             let result = try Self.parseMetadata(from: linkSuccess)
             analytics.log(AnalyticsEvent.plaidLinkSuccess, params: [
+                AnalyticsParam.reason: "plaid_widget",
                 AnalyticsParam.institutionName: result.metadata.institution.name,
                 AnalyticsParam.count: result.metadata.accounts.count
             ])

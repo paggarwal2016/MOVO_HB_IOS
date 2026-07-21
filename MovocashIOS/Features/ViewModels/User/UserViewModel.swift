@@ -66,6 +66,10 @@ final class UserViewModel: BaseViewModel {
         } catch is CancellationError {
             // User dismissed the pull gesture — keep existing data silently
         } catch {
+            analytics.log(AnalyticsEvent.appError, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             if error.shouldShowUserFacingToast {
                 ToastManager.shared.show(error.localizedDescription, style: .error, position: .bottom)
             }
