@@ -79,22 +79,18 @@ struct ChoiceScreen: View {
                 appState.flow = .home
             case .updateRequired:
                 break
-            case .cancelled, .failed, .needsEnrollment:
+            case .failed:
                 presentBiometricError()
+            case .cancelled, .needsEnrollment:
+                break
             }
         }
     }
 
     private func presentBiometricError() {
-        AlertManager.shared.showCustom(
-            title: "Sign-In Failed",
-            message: "Biometric sign-in was unsuccessful. You can try again or log in with your phone number.",
-            primary: "Try Again",
-            secondary: "Use Phone Number",
-            icon: .error,
-            onPrimary: { runBiometricLogin() },
-            onSecondary: { appState.flow = .loginPhone }
-        )
+        guard let message = authVM.lastBiometricErrorMessage,
+              !message.isEmpty else { return }
+        AlertManager.shared.showError(message)
     }
 
 

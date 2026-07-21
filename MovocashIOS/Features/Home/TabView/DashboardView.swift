@@ -421,6 +421,8 @@ struct DashboardView: View {
             showInternalTransfer = false
             showPlaidInfo = false
             showInvite = false
+            showCardDetail = false
+            showViewCardList = false
             needsDashboardRefresh = true
         }
         .onAppear {

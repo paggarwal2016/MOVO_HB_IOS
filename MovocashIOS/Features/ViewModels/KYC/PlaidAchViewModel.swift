@@ -535,7 +535,8 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 toAccountId:   toAccountId ?? 0,
                 toClientId:    toClientId ?? 0,
                 phoneNumber:   normalizedPhone,
-                nickname:      toName
+                nickname:      toName,
+                userType: isInternal ? "internal" : "external"
             )
             do {
                 let data = try await self.network.requestData(TransactionAPI.complete(completeRequest))

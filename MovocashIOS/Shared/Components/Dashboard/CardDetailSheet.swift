@@ -178,8 +178,6 @@ struct CardDetailSheet: View {
                         refreshTask = Task { await refreshCardDetails() }
                     }
                 )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
             }
         }
         .task {

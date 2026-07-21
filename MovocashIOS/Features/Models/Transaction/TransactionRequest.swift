@@ -115,6 +115,7 @@ enum TransactionRequest {
         let toClientId: Int
         let phoneNumber: String
         let nickname: String
+        let userType: String
         let userAction: String = "SAVE-TRANSFER-DATA"
     }
 }

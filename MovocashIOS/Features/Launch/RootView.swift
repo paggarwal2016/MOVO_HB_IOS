@@ -347,7 +347,8 @@ struct RootView: View {
                                 lockManager.logout()
                                 appState.flow = .choice
                             }
-                        }
+                        },
+                        apiErrorMessage: { authVM.lastBiometricErrorMessage }
                     )
 
                 case .warmRelock:
@@ -371,7 +372,8 @@ struct RootView: View {
                                 appState.flow = .choice
                             }
                         },
-                        autoTriggerBiometric: true
+                        autoTriggerBiometric: true,
+                        apiErrorMessage: { authVM.lastBiometricErrorMessage }
                     )
 
                 case .kyc:
