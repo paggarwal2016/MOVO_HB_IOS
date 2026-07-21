@@ -74,8 +74,13 @@ final class VCardViewModel: BaseViewModel {
             return VCardPrimaryResponse(success: true, message: envelope.message, data: card)
         } catch NetworkError.noContent {
             return nil
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
-            analytics.log(AnalyticsEvent.vcardFetchFailed)
+            analytics.log(AnalyticsEvent.vcardFetchFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -98,8 +103,13 @@ final class VCardViewModel: BaseViewModel {
             return card
         } catch NetworkError.noContent {
             return nil
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
-            analytics.log(AnalyticsEvent.vcardFetchFailed)
+            analytics.log(AnalyticsEvent.vcardFetchFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -146,8 +156,13 @@ final class VCardViewModel: BaseViewModel {
             let cards = try JSONDecoder().decode([VCardListResponse].self, from: plainData)
             analytics.log(AnalyticsEvent.vcardViewed)
             return cards
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
-            analytics.log(AnalyticsEvent.vcardFetchFailed)
+            analytics.log(AnalyticsEvent.vcardFetchFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -173,9 +188,13 @@ final class VCardViewModel: BaseViewModel {
                 AnalyticsParam.accountId: request.accountId
             ])
             return card
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
-                AnalyticsParam.accountId: request.accountId
+                AnalyticsParam.accountId: request.accountId,
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
             ])
             throw error
         }
@@ -198,6 +217,8 @@ final class VCardViewModel: BaseViewModel {
             let card = try JSONDecoder().decode(VCardListResponse.self, from: plainData)
             analytics.log(AnalyticsEvent.vcardCreated)
             return card
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             analytics.log(AnalyticsEvent.vcardCreateFailed, params: [
                 AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription

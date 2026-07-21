@@ -31,8 +31,13 @@ final class RewardViewModel: BaseViewModel {
             let response: RewardResponse = try await perform { try await self.network.request(RewardAPI.getReward) }
             analytics.log(AnalyticsEvent.rewardViewed)
             return response
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
-            analytics.log(AnalyticsEvent.rewardFetchFailed)
+            analytics.log(AnalyticsEvent.rewardFetchFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -44,8 +49,13 @@ final class RewardViewModel: BaseViewModel {
             let response: RewardResponse = try await perform { try await self.network.request(RewardAPI.postReward) }
             analytics.log(AnalyticsEvent.rewardRedeemed)
             return response
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
-            analytics.log(AnalyticsEvent.rewardRedemptionFailed)
+            analytics.log(AnalyticsEvent.rewardRedemptionFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -57,8 +67,13 @@ final class RewardViewModel: BaseViewModel {
             let response: RewardResponse = try await perform { try await self.network.request(RewardAPI.enrollReward) }
             analytics.log(AnalyticsEvent.rewardEnrolled)
             return response
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
-            analytics.log(AnalyticsEvent.rewardEnrollFailed)
+            analytics.log(AnalyticsEvent.rewardEnrollFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }

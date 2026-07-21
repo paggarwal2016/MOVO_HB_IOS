@@ -167,6 +167,11 @@ final class TransactionViewModel: BaseViewModel {
         } catch is CancellationError {
         } catch {
             hasMorePages = false
+            analytics.log(AnalyticsEvent.transactionListFailed, params: [
+                AnalyticsParam.accountId: filter.accountId,
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
         }
     }
 
@@ -219,6 +224,11 @@ final class TransactionViewModel: BaseViewModel {
             // cancelled — no action
         } catch {
             // error surfaced via BaseViewModel toast
+            analytics.log(AnalyticsEvent.transactionListFailed, params: [
+                AnalyticsParam.accountId: accountId,
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
         }
     }
 

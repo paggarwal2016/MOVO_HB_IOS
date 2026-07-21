@@ -124,11 +124,12 @@ final class ACHViewModel: BaseViewModel {
                 return try await network.request(AchAPI.deleteAccount(id: id))
             }
             accounts.removeAll { $0.achAccountId == id }
+            analytics.log(AnalyticsEvent.achAccountDeleted)
             return true
         } catch is CancellationError {
             return false
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
+            analytics.log(AnalyticsEvent.achAccountDeleteFailed, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
             return false
         }
     }
@@ -156,11 +157,12 @@ final class ACHViewModel: BaseViewModel {
                 )
             }
             //await fetchAccounts() // TODO:- future option
+            analytics.log(AnalyticsEvent.achAccountSetDefault)
             return true
         } catch is CancellationError {
             return false
         } catch {
-            analytics.log(AnalyticsEvent.appError, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
+            analytics.log(AnalyticsEvent.achAccountSetDefaultFailed, params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription])
             return false
         }
     }

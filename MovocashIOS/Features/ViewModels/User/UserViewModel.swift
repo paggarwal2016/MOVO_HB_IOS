@@ -63,6 +63,7 @@ final class UserViewModel: BaseViewModel {
         do {
             let response: UserProfileAPIResponse = try await network.request(UserAPI.getProfile)
             profile = response.data
+            analytics.log(AnalyticsEvent.accountViewed)
         } catch is CancellationError {
             // User dismissed the pull gesture — keep existing data silently
         } catch {
