@@ -6,11 +6,18 @@
 //
 
 import Foundation
+import OSLog
 import SwiftUI
+
+// TODO: remove before merge
+private let logger = Logger(subsystem: "com.movo.otp", category: "autofill")
 
 struct OTPScreen: View {
     @StateObject private var otpVM: OTPViewModel
-    @FocusState private var isFocused: Bool
+    // @State instead of @FocusState: focus is managed via UIKit (becomeFirstResponder /
+    // resignFirstResponder) inside OTPTextField.updateUIView, so SwiftUI's focus engine
+    // is not needed here. @State gives a plain Binding<Bool> that OTPTextField accepts.
+    @State private var isFocused: Bool = false
 
     let title: String
     let subtitle: String
@@ -41,7 +48,7 @@ struct OTPScreen: View {
         ZStack {
             MovoBackground()
             AmbientGlowView()
-            
+
             VStack(alignment: .leading, spacing: Spacing.xxl) {
                 topBar
                     .padding(.bottom, DesignTokens.Spacing.xl)
@@ -58,6 +65,10 @@ struct OTPScreen: View {
         }
         .onAppear(perform: setupOnAppear)
         .onChangeCompat(of: otpVM.otpText, perform: handleOTPChange)
+        .onChangeCompat(of: isFocused) { newValue in // TODO: remove before merge
+            let ts = Date().formatted(.dateTime.hour().minute().second())
+            logger.debug("[autofill] isFocused → \(newValue) at \(ts)")
+        }
     }
 }
 
@@ -73,7 +84,6 @@ private extension OTPScreen {
             Spacer()
         }
     }
-
 
     var titleView: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -91,18 +101,19 @@ private extension OTPScreen {
 
     var otpSectionView: some View {
         VStack(spacing: Spacing.md) {
-            // .overlay keeps otpBoxesView in full control of layout;
-            // the TextField matches its frame exactly — no layout interference.
+            // OTPTextField (UIViewRepresentable) overlays the visual boxes and owns all
+            // keyboard/autofill interaction. It has a clear background and clear text
+            // colour, so only the blinking cursor is visible — intentionally, so iOS
+            // autofill can detect the active field.
             otpBoxesView
                 .overlay(
-                    TextField("", text: otpBinding)
-                        .keyboardType(.numberPad)
-                        .textContentType(.oneTimeCode)
-                        .focused($isFocused)
-                        .tint(.clear)
-                        .foregroundColor(.clear)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .opacity(0.011)
+                    OTPTextField(
+                        text: $otpVM.otpText,
+                        isFocused: $isFocused,
+                        maxLength: otpVM.maxLength,
+                        onTextChange: { otpVM.updateOTP($0) }
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 )
                 .contentShape(Rectangle())
                 .onTapGesture { isFocused = true }
@@ -168,13 +179,6 @@ private extension OTPScreen {
 // MARK: - Helpers
 private extension OTPScreen {
 
-    var otpBinding: Binding<String> {
-        Binding(
-            get: { otpVM.otpText },
-            set: { otpVM.updateOTP($0) }
-        )
-    }
-
     func digit(at index: Int) -> String {
         guard index < otpVM.otpText.count else { return "" }
         let i = otpVM.otpText.index(otpVM.otpText.startIndex, offsetBy: index)
@@ -183,13 +187,27 @@ private extension OTPScreen {
 
     func setupOnAppear() {
         otpVM.startTimer()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.3))
             isFocused = true
+            // TODO: remove before merge
+            logger.debug("[autofill] setupOnAppear: isFocused set to true after 0.3 s")
+            try? await Task.sleep(for: .seconds(0.5))
+            // TODO: remove before merge
+            logger.debug("[autofill] setupOnAppear: isFocused after 0.5 s stabilisation = \(isFocused)")
         }
     }
 
     func handleOTPChange(_ newValue: String) {
-        guard newValue.count == otpVM.maxLength, !otpVM.isSubmitting else { return }
+        // TODO: remove before merge
+        logger.debug("[autofill] handleOTPChange: count=\(newValue.count) isSubmitting=\(otpVM.isSubmitting)")
+        guard newValue.count == otpVM.maxLength, !otpVM.isSubmitting else {
+            // TODO: remove before merge
+            logger.debug("[autofill] handleOTPChange: guard failed — not submitting")
+            return
+        }
+        // TODO: remove before merge
+        logger.debug("[autofill] handleOTPChange: submitting")
         isFocused = false
         UIApplication.shared.dismissKeyboard()
         Task {

@@ -78,6 +78,7 @@
 		14E44E742FF7C3E5001E358D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 14E44E732FF7C3E5001E358D /* PrivacyInfo.xcprivacy */; };
 		14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */; };
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
+		9988A0AE300E906D00B03DD1 /* OTPTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9988A0AD300E906D00B03DD1 /* OTPTextField.swift */; };
 		99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */ = {isa = PBXBuildFile; fileRef = 99C2EAA22FC9AAB600384E28 /* terms-layout.css */; };
 		99C2EAA62FC9ABDE00384E28 /* StatusBarScrim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */; };
 		99C2F1D32FDC610A00384E28 /* PhoneNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */; };
@@ -191,6 +192,7 @@
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
+		9988A0AD300E906D00B03DD1 /* OTPTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPTextField.swift; sourceTree = "<group>"; };
 		99C2EAA22FC9AAB600384E28 /* terms-layout.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "terms-layout.css"; sourceTree = "<group>"; };
 		99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarScrim.swift; sourceTree = "<group>"; };
 		99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNormalizer.swift; sourceTree = "<group>"; };
@@ -434,6 +436,7 @@
 		146819682F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				9988A0AD300E906D00B03DD1 /* OTPTextField.swift */,
 				146819662F4DE6CF00BED014 /* CompromisedDeviceView.swift */,
 				146819A22F4F272500BED014 /* PhoneFormatter.swift */,
 				1468199C2F4EDEF000BED014 /* OTPDigitBox.swift */,
@@ -850,6 +853,7 @@
 				146819A32F4F272500BED014 /* PhoneFormatter.swift in Sources */,
 				14DCE28B2F5AD88E008A8DC4 /* AppLockManager.swift in Sources */,
 				1468198E2F4DE6CF00BED014 /* KeychainManager.swift in Sources */,
+				9988A0AE300E906D00B03DD1 /* OTPTextField.swift in Sources */,
 				142864572F92251B006F8C39 /* TokenRefreshable.swift in Sources */,
 				1463E7A72FE4117800371ADC /* CustomBackButton.swift in Sources */,
 				14C56CAD2FC96FBF000A397E /* SecureContainerView.swift in Sources */,

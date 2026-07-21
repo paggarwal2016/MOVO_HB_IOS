@@ -45,8 +45,16 @@ struct MovocashIOSApp: App {
             // already on screen (the gate is itself opaque; raising the cover above
             // it blocks the retry UI). Weak capture so AppLockManager never retains
             // AppState; nil flow degrades to false → cover raised, the safe direction.
+            //
+            // Both lock gates (.appLock and .warmRelock) are included:
+            //   • .warmRelock: warm-relock auto-trigger; gate handles its own cover via attempt()
+            //   • .appLock: cold-launch timeout gate; has no auto-trigger, so if the cover
+            //     is raised when the user backgrounds from this state, handleScenePhase(.active)
+            //     cannot fire an onChange (state is already .locked → no value change),
+            //     attempt() never runs, and hide(.auth) is never called → cover stuck forever.
+            //     Suppressing the cover here lets the opaque retry UI show directly.
             c.lockManager.isLockUIVisible = { [weak state] in
-                state?.flow == .warmRelock
+                state?.flow == .warmRelock || state?.flow == .appLock
             }
         }
 

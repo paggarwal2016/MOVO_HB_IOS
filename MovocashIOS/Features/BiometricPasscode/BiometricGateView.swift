@@ -146,12 +146,18 @@ struct BiometricGateView: View {
         guard !isLoading else { return }
         isLoading = true
         showError = false
+        // Release the auth cover before calling authenticate(). The gate's own
+        // view — MovoSplashLogo in warm mode, retry UI on failure — is the visible
+        // top layer from this point on and is pixel-identical to the cover, so the
+        // transition is seamless. Releasing early prevents the cover from appearing
+        // permanently stuck when authenticate() takes time before it can trigger
+        // Face ID (e.g. the /rsa/nonce network call fires before evaluatePolicy in
+        // the RSA biometric path — a slow or recovering network after a long
+        // background can make that call hang, blocking Face ID indefinitely).
+        // On cold launch the cover was never raised, so this call is a no-op.
+        SecureWindowShield.shared.hide(.auth)
         let success = await authenticate()
         isLoading = false
-        // The gate is now the visible top layer (success → Home, failure → retry).
-        // Lift the auth cover so the gate's own UI is reachable. (No-op on cold
-        // launch, where the cover was never shown.)
-        SecureWindowShield.shared.hide(.auth)
         if success {
             onAuthenticated()
         } else {

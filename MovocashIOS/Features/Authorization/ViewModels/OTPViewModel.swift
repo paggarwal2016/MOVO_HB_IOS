@@ -7,7 +7,11 @@
 
 import Foundation
 import Combine
+import OSLog
 import SwiftUI
+
+// TODO: remove before merge
+private let logger = Logger(subsystem: "com.movo.otp", category: "autofill")
 
 enum OTPViewState {
     case idle
@@ -33,13 +37,22 @@ final class OTPViewModel: ObservableObject {
     }
 
     // MARK: - OTP Input
+
     func updateOTP(_ value: String) {
-        let digits = value.filter { $0.isNumber }
-        let truncated = String(digits.prefix(maxLength))
-        otpText = truncated
+        // Digit filtering and maxLength limiting are handled upstream in
+        // OTPTextField.Coordinator.editingChanged — one filter path, not two.
+        // TODO: remove before merge
+        logger.debug("[autofill] updateOTP: count=\(value.count)")
+        guard value != otpText else {
+            // TODO: remove before merge
+            logger.debug("[autofill] updateOTP: guard short-circuited — value unchanged")
+            return
+        }
+        otpText = value
     }
 
     // MARK: - Start Timer (iOS 15+ compatible)
+
     func startTimer(seconds: Int = 30) {
         stopTimer()
         remainingSeconds = seconds
@@ -72,14 +85,16 @@ final class OTPViewModel: ObservableObject {
     deinit {
         timerTask?.cancel()
     }
-    
+
     // MARK: - Resend OTP
+
     func resetForResend() {
         otpText = ""
         startTimer()
     }
 
     // MARK: - Submit OTP
+
     func submitOTP(onVerify: @escaping @MainActor (String) async -> Void) async {
         guard isValidOTP, !isSubmitting else { return }
         isSubmitting = true
