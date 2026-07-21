@@ -130,6 +130,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         Task { @MainActor in PushManager.shared.clearBadgeOnActive() }
     }
 
+    // Force fresh TCP connections on a background → foreground transition. While
     // backgrounded, iOS silently drops the app's sockets; reusing a dead keep-alive
     func applicationWillEnterForeground(_ application: UIApplication) {
         Task { await NetworkService.shared.flushConnections() }
