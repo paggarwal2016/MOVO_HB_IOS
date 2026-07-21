@@ -130,6 +130,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         Task { @MainActor in PushManager.shared.clearBadgeOnActive() }
     }
 
+    // backgrounded, iOS silently drops the app's sockets; reusing a dead keep-alive
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        Task { await NetworkService.shared.flushConnections() }
+    }
+
     // Background / silent push
     func application(_ application: UIApplication,
                      didReceiveRemoteNotification userInfo: [AnyHashable: Any],

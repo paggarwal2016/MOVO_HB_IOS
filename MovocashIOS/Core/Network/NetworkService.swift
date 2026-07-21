@@ -45,7 +45,6 @@ actor NetworkService: NetworkServiceProtocol {
         config.allowsCellularAccess = true
         config.networkServiceType = .responsiveData
         config.httpMaximumConnectionsPerHost = 5
-        config.multipathServiceType = .handover
 
         self.session = URLSession(
             configuration: config,
@@ -54,7 +53,17 @@ actor NetworkService: NetworkServiceProtocol {
         )
         self.builder = RequestBuilder()
     }
-    
+
+    // MARK: - Connection Reset
+
+    /// Forces subsequent requests onto fresh TCP connections. After a long
+    /// background, iOS silently tears down the app's sockets; reusing a dead
+    func flushConnections() async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            session.flush { continuation.resume() }
+        }
+    }
+
     // MARK: - Public Request
     func request<T: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> T {
 
