@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1404E8893010CC8700AF8633 /* OTPTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1404E8883010CC8700AF8633 /* OTPTextField.swift */; };
 		140D48C12FA099ED007C3C0E /* SealedCryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */; };
 		140D48C82FA0DD4E007C3C0E /* KYCSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */; };
 		140DF3562F559C590060C1B7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */; };
@@ -120,6 +121,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1404E8883010CC8700AF8633 /* OTPTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPTextField.swift; sourceTree = "<group>"; };
 		140D48BF2FA099ED007C3C0E /* SealedCryptoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SealedCryptoService.swift; sourceTree = "<group>"; };
 		140D48C72FA0DD4E007C3C0E /* KYCSuccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCSuccessView.swift; sourceTree = "<group>"; };
 		140DF3552F559C590060C1B7 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -437,6 +439,7 @@
 		146819682F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				1404E8883010CC8700AF8633 /* OTPTextField.swift */,
 				146819662F4DE6CF00BED014 /* CompromisedDeviceView.swift */,
 				146819A22F4F272500BED014 /* PhoneFormatter.swift */,
 				1468199C2F4EDEF000BED014 /* OTPDigitBox.swift */,
@@ -844,6 +847,7 @@
 				14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */,
 				14413D152FD9662C00EBC972 /* CustomContactEnrollView.swift in Sources */,
 				14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */,
+				1404E8893010CC8700AF8633 /* OTPTextField.swift in Sources */,
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
 				1468198C2F4DE6CF00BED014 /* SpinnerView.swift in Sources */,
 				1468199D2F4EDEF000BED014 /* OTPDigitBox.swift in Sources */,
