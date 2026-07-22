@@ -34,9 +34,10 @@ final class OTPViewModel: ObservableObject {
 
     // MARK: - OTP Input
     func updateOTP(_ value: String) {
-        let digits = value.filter { $0.isNumber }
-        let truncated = String(digits.prefix(maxLength))
-        otpText = truncated
+        guard value != otpText else {
+            return
+        }
+        otpText = value
     }
 
     // MARK: - Start Timer (iOS 15+ compatible)
