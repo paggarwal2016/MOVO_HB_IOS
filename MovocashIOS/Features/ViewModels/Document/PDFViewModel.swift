@@ -48,6 +48,8 @@ final class PDFViewModel: BaseViewModel {
                 AnalyticsParam.type: String(describing: documentType)
             ])
 
+        } catch is CancellationError {
+            // Benign — task cancelled (e.g. view dismissed). Not a failure.
         } catch {
             // Error surfaced to the user in BaseViewModel; recorded here for analytics.
             analytics.log(AnalyticsEvent.documentFetchFailed, params: [

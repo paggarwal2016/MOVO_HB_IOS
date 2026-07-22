@@ -115,6 +115,7 @@ final class KYCViewModel: ObservableObject {
                 return false
             }
             SecureLogger.info("User data saved successfully after KYC", category: .network)
+            analytics.log(AnalyticsEvent.kycUserSaved)
             return true
         } catch {
             SecureLogger.error("saveUser failed: \(error.localizedDescription)", category: .network)

@@ -52,6 +52,7 @@
 		1495840E2FED768D005E64A9 /* CustomAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1495840D2FED768D005E64A9 /* CustomAlertView.swift */; };
 		149C19EC2FD1937A00FFC014 /* CommonCustomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149C19EB2FD1937A00FFC014 /* CommonCustomView.swift */; };
 		14BA4E412F7BB84D00607891 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 14BA4E402F7BB84D00607891 /* GoogleService-Info.plist */; };
+		14C378B6300F716D00DD5179 /* AppearancePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C378B5300F716D00DD5179 /* AppearancePreference.swift */; };
 		14C383882FBB0C0D002C2215 /* StartupRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C383872FBB0C0D002C2215 /* StartupRouter.swift */; };
 		14C56CAD2FC96FBF000A397E /* SecureContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C56CAC2FC96FBF000A397E /* SecureContainerView.swift */; };
 		14C623DF2F6AC39100D0B719 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C623DE2F6AC39100D0B719 /* StatusBadge.swift */; };
@@ -164,6 +165,7 @@
 		14BF48372F4C873A00FD7B53 /* MovocashIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MovocashIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF48442F4C873E00FD7B53 /* MovocashIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14BF484E2F4C873E00FD7B53 /* MovocashIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MovocashIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14C378B5300F716D00DD5179 /* AppearancePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearancePreference.swift; sourceTree = "<group>"; };
 		14C383872FBB0C0D002C2215 /* StartupRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRouter.swift; sourceTree = "<group>"; };
 		14C56CAC2FC96FBF000A397E /* SecureContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureContainerView.swift; sourceTree = "<group>"; };
 		14C623DE2F6AC39100D0B719 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
@@ -409,6 +411,7 @@
 		146819602F4DE6CF00BED014 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				14C378B5300F716D00DD5179 /* AppearancePreference.swift */,
 				14C383872FBB0C0D002C2215 /* StartupRouter.swift */,
 				140D48C02FA099ED007C3C0E /* Services */,
 				14DCE2362F59BDA4008A8DC4 /* Reachability */,
@@ -829,6 +832,7 @@
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,
+				14C378B6300F716D00DD5179 /* AppearancePreference.swift in Sources */,
 				14D8A4242FC5DF5700177617 /* CircleIconAvatar.swift in Sources */,
 				146EBC863007E2C900E43BD0 /* AppConfigService.swift in Sources */,
 				14716FFE2F86671600198064 /* PlaidService.swift in Sources */,

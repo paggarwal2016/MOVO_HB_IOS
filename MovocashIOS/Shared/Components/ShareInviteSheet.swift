@@ -36,17 +36,19 @@ struct ShareInviteSheet: View {
     private var inviteSMSBody: String {
         let inviter = inviterName.trimmingCharacters(in: .whitespacesAndNewlines)
         let opener = inviter.isEmpty
-            ? "You've been invited to become the next Movoian! Claim your invite within 72 hours"
-            : "\(inviter) invited you to become the next Movoian! Claim your invite within 72 hours."
+            ? "You've been invited to join the exclusive, invite-only MOVO Digital Cash Network."
+            : "\(inviter) has invited you to join the exclusive, invite-only MOVO Digital Cash Network."
         return """
         \(opener)
+        
+        Your invitation expires in 72 hours. Claim your access now.
 
         Download the app:
         \(Self.appStoreURL)
 
         Android support coming soon.
 
-        Let's MOVO!
+        Welcome to MOVO.
         """
     }
     
