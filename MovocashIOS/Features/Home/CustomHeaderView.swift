@@ -27,9 +27,9 @@ struct CustomHeaderView: View {
         HStack(alignment: .center) {
 
             HStack(spacing: 10) {
-                MovoMVSymbol()
-                    .frame(width: 22, height: 22)
-                Text("MOVOCASH")
+                AppLogo()
+                    .frame(width: 35, height: 35)
+                Text("HERRING BANK")
                     .textStyle(Typography.sectionTitle)
                     .foregroundStyle(Color.movo.textPrimary)
             }

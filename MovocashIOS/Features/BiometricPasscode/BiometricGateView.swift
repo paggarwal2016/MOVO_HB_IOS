@@ -71,7 +71,7 @@ struct BiometricGateView: View {
 
             // Updated brand lockup — MovoMVSymbol (current mark) + adaptive wordmark
             VStack(spacing: Spacing.lg) {
-                MovoMVSymbol()
+                AppLogo()
                     .frame(width: 80, height: 80)
                 Text("MOVOCASH")
                     .font(FontFamily.font(size: 22, weight: .regular))

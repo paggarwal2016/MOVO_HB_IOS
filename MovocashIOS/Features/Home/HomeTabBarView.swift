@@ -365,7 +365,7 @@ private extension HomeTabBarView {
             let label = tabLabel(at: index)
             if tab == .home,
                let img = selectedTab == .home ? homeIconSelected : homeIconUnselected {
-                // MovoMVSymbol rasterised to UIImage — .alwaysOriginal preserves two-tone colors.
+                // App logo rasterised to UIImage — .alwaysOriginal preserves the logo's colors.
                 Label { Text(label) } icon: { Image(uiImage: img) }
             } else {
                 Label(label, systemImage: tab.icon)
@@ -430,17 +430,15 @@ private extension HomeTabBarView {
     /// Must be called from the main actor (ImageRenderer requires it).
     /// Returns nil only if ImageRenderer produces no output (should not happen in practice).
     func makeHomeIcon(selected: Bool, scale: CGFloat, scheme: ColorScheme) -> UIImage? {
-        let unselected: Color = scheme == .dark ? .white : .black
-        let body    = selected ? Color.movo.accent : unselected
-        let chevron = selected ? Color.movo.accent : unselected
-        // .environment(\.colorScheme) forces ImageRenderer (which defaults to light)
-        // to resolve dynamic colors (secondaryLabel, movo tokens) in the correct scheme.
-        let view = MovoMVSymbol(bodyStyle: body, accent: chevron)
+        // Home tab now uses the shared app-logo image. It's a fixed-color asset,
+        // so the render is state-independent (selected/unselected look the same).
+        // .environment(\.colorScheme) is kept so ImageRenderer resolves in scheme.
+        let view = AppLogo()
             .frame(width: 24, height: 24)
             .environment(\.colorScheme, scheme)
         let renderer = ImageRenderer(content: view)
         renderer.scale = scale
-        // .alwaysOriginal — never let UIKit recolor the image (preserves two-tone M).
+        // .alwaysOriginal — never let UIKit recolor the image (preserves the logo's colors).
         return renderer.uiImage?.withRenderingMode(.alwaysOriginal)
     }
 

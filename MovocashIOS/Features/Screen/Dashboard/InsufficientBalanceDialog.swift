@@ -119,7 +119,7 @@ struct InsufficientBalanceDialog: View {
                     .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
                     .frame(width: 28, height: 28)
 
-                MovoMVSymbol()
+                AppLogo()
                     .frame(width: 14, height: 14)
             }
         }

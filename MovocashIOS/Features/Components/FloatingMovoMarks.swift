@@ -98,7 +98,7 @@ struct FloatingMovoMarks: View {
 
                 ForEach(marks) { mark in
                     if isClear(mark, in: geo.size) {
-                        MovoMVSymbol()
+                        AppLogo()
                             .frame(width: mark.size, height: mark.size)
                             .rotationEffect(.degrees(mark.rotation))
                             .modifier(DropInModifier(targetOpacity: mark.opacity,

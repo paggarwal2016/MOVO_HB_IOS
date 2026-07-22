@@ -44,7 +44,7 @@ struct CustomSheetHeader: View {
                 // the rounded square.
                 ZStack {
                     MovoBackground()
-                    MovoMVSymbol()
+                    AppLogo()
                         .frame(width: 24, height: 24)
                 }
                 .frame(width: 44, height: 44)
@@ -623,5 +623,16 @@ private struct PressableScaleStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.7 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .animation(.easeOut(duration: DesignTokens.Motion.fast), value: configuration.isPressed)
+    }
+}
+
+/// The app logo, rendered from the `applogo` image asset. Resizable and
+/// aspect-fit — call sites only pass a frame, e.g.
+/// `AppLogo().frame(width: 110, height: 110)`.
+struct AppLogo: View {
+    var body: some View {
+        Image("applogo")
+            .resizable()
+            .scaledToFit()
     }
 }

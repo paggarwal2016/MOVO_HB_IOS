@@ -80,7 +80,7 @@ private struct CardMockIllustration: View {
                 // Branding row
                 HStack(spacing: 5) {
                     
-                    MovoMVSymbol().frame(width: 12, height: 12)
+                    AppLogo().frame(width: 12, height: 12)
                     
                     Text("MOVOCASH")
                         .font(.system(size: 9, weight: .semibold))

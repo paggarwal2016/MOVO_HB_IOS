@@ -73,7 +73,7 @@ struct CustomContactEnrollView: View {
                             .fill(Color.movo.surface)
                             .frame(width: 28, height: 28)
                             .overlay {
-                                MovoMVSymbol()
+                                AppLogo()
                                     .frame(width: 15, height: 15)
                             }
                             .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)

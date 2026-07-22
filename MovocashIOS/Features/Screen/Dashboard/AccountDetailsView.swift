@@ -53,7 +53,7 @@ struct AccountDetailsView: View {
     private var header: some View {
         HStack {
             HStack(spacing: Spacing.sm) {
-                MovoMVSymbol()
+                AppLogo()
                     .frame(width: 18, height: 18)
                     .padding(5)
                     .background(Color.movo.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm))

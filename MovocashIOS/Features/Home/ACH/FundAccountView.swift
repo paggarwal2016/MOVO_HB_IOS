@@ -263,7 +263,7 @@ struct FundAccountView: View {
             Button {
                 NotificationCenter.default.post(name: .returnToDashboard, object: nil)
             } label: {
-                MovoMVSymbol()
+                AppLogo()
                     .frame(width: 22, height: 22)
                     .contentShape(Rectangle())
             }
@@ -527,7 +527,7 @@ struct FundAccountView: View {
                     RoundedRectangle(cornerRadius: Radius.button)
                         .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
                 )
-            MovoMVSymbol()
+            AppLogo()
                 .frame(width: 28, height: 28)
         }
     }

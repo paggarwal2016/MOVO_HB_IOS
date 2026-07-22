@@ -99,7 +99,7 @@ struct ChoiceScreen: View {
             
             // Logo block
             VStack(spacing: Spacing.xxl) {
-                MovoMVSymbol()
+                AppLogo()
                     .frame(width: 110, height: 110)
                 
                 Text("MOVOCASH")

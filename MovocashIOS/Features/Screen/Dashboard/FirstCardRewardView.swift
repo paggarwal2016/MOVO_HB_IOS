@@ -48,7 +48,7 @@ struct FirstCardRewardView: View {
 
             // Brand symbol centered, with the close button pinned top-right.
             ZStack {
-                MovoMVSymbol()
+                AppLogo()
                     .frame(width: 44, height: 44)
 
                 HStack {

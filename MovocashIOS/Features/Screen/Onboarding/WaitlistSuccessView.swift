@@ -44,7 +44,7 @@ struct WaitlistSuccessView: View {
                                 }
                             )
 
-                        MovoMVSymbol()
+                        AppLogo()
                             .frame(width: 52, height: 52)
                     }
 

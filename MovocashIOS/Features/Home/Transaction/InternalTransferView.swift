@@ -239,7 +239,7 @@ struct InternalTransferView: View {
                 // DashboardView) tear down this screen — no cascading dismisses.
                 NotificationCenter.default.post(name: .returnToDashboard, object: nil)
             } label: {
-                MovoMVSymbol()
+                AppLogo()
                     .frame(width: 22, height: 22)
                     .contentShape(Rectangle())
             }
@@ -423,7 +423,7 @@ struct InternalTransferView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.elevatedHigh)
-                MovoMVSymbol().frame(width: 28, height: 28)
+                AppLogo().frame(width: 28, height: 28)
             }
             .frame(width: 52, height: 52)
 
@@ -475,7 +475,7 @@ struct InternalTransferView: View {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.elevatedHigh)
                 if card != nil {
-                    MovoMVSymbol().frame(width: 28, height: 28)
+                    AppLogo().frame(width: 28, height: 28)
                 } else {
                     Image(systemName: "creditcard")
                         .font(.system(size: 15, weight: .medium))
@@ -712,7 +712,7 @@ private struct CardPickerSheet: View {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: Radius.button)
                                         .fill(Color.movo.elevatedHigh)
-                                    MovoMVSymbol().frame(width: 26, height: 26)
+                                    AppLogo().frame(width: 26, height: 26)
                                 }
                                 .frame(width: 46, height: 46)
 

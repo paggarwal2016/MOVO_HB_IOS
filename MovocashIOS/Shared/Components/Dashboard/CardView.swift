@@ -55,7 +55,7 @@ struct CardItemView: View {
 
             // Top row: small M mark + card name + Virtual pill
             HStack(spacing: Spacing.xs) {
-            MovoMVSymbol()
+                AppLogo()
                     .frame(width: 19, height: 19)
                 Text(cardName)
                     .font(.system(size: 16, weight: .semibold))

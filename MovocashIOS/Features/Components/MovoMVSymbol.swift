@@ -130,38 +130,6 @@ struct MovoMVChevronShape: Shape {
 
 // MARK: - Preview
 
-#Preview("MovoMVSymbol") {
-    VStack(spacing: 32) {
-        // Canonical: platinum gradient + teal chevron on dark surface.
-        MovoMVSymbol()
-            .padding(20)
-            .frame(width: 180, height: 180)
-            .background(.black, in: RoundedRectangle(cornerRadius: 32))
-
-        // Compared on a light surface (gradient still reads).
-        MovoMVSymbol()
-            .padding(20)
-            .frame(width: 180, height: 180)
-            .background(.white, in: RoundedRectangle(cornerRadius: 32))
-
-        // Size sweep — see how the gradient renders at small sizes.
-        HStack(spacing: 16) {
-            ForEach([28.0, 44.0, 64.0, 96.0], id: \.self) { size in
-                MovoMVSymbol()
-                    .frame(width: size, height: size)
-                    .padding(6)
-                    .background(.black, in: RoundedRectangle(cornerRadius: size * 0.2))
-            }
-        }
-
-        // Override example: flat color body.
-        MovoMVSymbol(bodyStyle: Color.white)
-            .frame(width: 100, height: 100)
-            .padding(10)
-            .background(.indigo, in: RoundedRectangle(cornerRadius: 20))
-    }
-    .padding()
-}
 struct AmbientGlowView: View {
     
     var color: Color = .movo.accent

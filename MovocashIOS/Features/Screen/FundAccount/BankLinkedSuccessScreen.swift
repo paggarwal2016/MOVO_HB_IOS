@@ -318,7 +318,7 @@ struct BankLinkedSuccessScreen: View {
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
             )
             .overlay(
-                MovoMVSymbol()
+                AppLogo()
                     .frame(width: 26, height: 26)
             )
     }

@@ -268,7 +268,7 @@ struct ShareInviteSheet: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(joined ? Color.movo.accent : Color.movo.textPrimary)
                 } else {
-                    MovoMVSymbol()
+                    AppLogo()
                         .frame(width: 16, height: 16)
                 }
             }

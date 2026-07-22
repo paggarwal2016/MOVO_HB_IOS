@@ -284,7 +284,7 @@ struct QuickTransferView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.button)
                     .fill(Color.movo.elevatedHigh)
-                MovoMVSymbol().frame(width: 28, height: 28)
+                AppLogo().frame(width: 28, height: 28)
             }
             .frame(width: 52, height: 52)
             
