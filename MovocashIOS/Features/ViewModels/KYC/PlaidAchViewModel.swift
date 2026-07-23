@@ -43,7 +43,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
 
     // Apple Wallet
     @Published var provisionedPass: AppleWalletProvisionedPass?
-    @Published var canAddToWallet: Bool = false
+    @Published var canAddToWallet: Bool = true
 
     init(
         service: PlaidService = .shared,
@@ -266,7 +266,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             isDefault: false,
             institutionLogo: "",
             accountNumber: account?.mask ?? "",
-            accountName: account?.name ?? "Checking",
+            accountName: account?.institutionName ?? account?.name ?? "Checking",
             institutionName: metadata.institution.name,
             achAccountId: savingsId
         )

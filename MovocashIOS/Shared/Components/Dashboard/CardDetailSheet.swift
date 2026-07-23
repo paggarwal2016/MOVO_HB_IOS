@@ -84,6 +84,24 @@ struct CardDetailSheet: View {
     /// completes; otherwise the card handed down from the Dashboard.
     private var displayCard: VCardListResponse { liveCard ?? card }
 
+    /// Wallet button title, driven by the latest eligibility check. When the card
+    /// can't be added (already provisioned on this device, or unsupported) the
+    /// button is disabled and reads "In Apple Wallet".
+    private var walletButtonTitle: String {
+        achVM.canAddToWallet ? "Add to Apple Wallet" : "In Apple Wallet"
+    }
+
+    /// Disabled state uses dedicated neutral tokens rather than dimming the accent
+    /// fill with opacity (which looks washed-out); the button stays crisp and
+    /// clearly reads as inactive.
+    private var walletButtonFill: Color {
+        achVM.canAddToWallet ? Color.movo.accent : Color.movo.elevated
+    }
+
+    private var walletButtonForeground: Color {
+        achVM.canAddToWallet ? Color.movo.background : Color.movo.textDisabled
+    }
+
     private var transferMode: TransferFlowMode {
         if card.id == primaryLinkedCard?.id {
             return .fixedFrom
@@ -185,6 +203,9 @@ struct CardDetailSheet: View {
             await loadRecentTransactions()
             isLoading = false
         }
+        .task {
+            await refreshWalletEligibility()
+        }
         .sheet(isPresented: $showEditNickname) {
             EditNicknameView(currentNickname: cardNickname) { newValue in
                 saveNickname(newValue)
@@ -214,6 +235,23 @@ struct CardDetailSheet: View {
             hasChanges = true
             await refreshCardDetails()
         }
+    }
+
+    /// Refreshes the SDK configuration, then re-evaluates Apple Wallet eligibility
+    /// so the "Add to Apple Wallet" button's enabled state reflects the latest
+    /// status every time this screen is shown. Runs via `.task` on appear.
+    private func refreshWalletEligibility() async {
+        do {
+            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+        } catch {
+            SecureLogger.error("[Wallet] SDK config for eligibility failed: \(error.localizedDescription)", category: .payment)
+            achVM.canAddToWallet = false
+            return
+        }
+        achVM.checkCanAddToWallet(
+            primaryAccountNumberSuffix: card.lastFour ?? "",
+            localizedDescription: "Apple Pay"
+        )
     }
 
     /// Loads the latest 10 transactions for this card's savings account.
@@ -284,20 +322,21 @@ struct CardDetailSheet: View {
                         }
                     }
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.movo.background)
-                    Text("Add to Apple Wallet")
+                    .foregroundStyle(walletButtonForeground)
+                    Text(walletButtonTitle)
                         .textStyle(Typography.bodyCompact)
                         .fontWeight(.semibold)
                 }
-                .foregroundColor(Color.movo.background)
+                .foregroundColor(walletButtonForeground)
                 .frame(width: transferWidth)
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .fill(Color.movo.accent)
+                        .fill(walletButtonFill)
                 )
             }
             .buttonStyle(.plain)
+            .disabled(!achVM.canAddToWallet)
 
             Button(action: { showTransfer = true }) {
                 HStack(spacing: Spacing.sm) {
