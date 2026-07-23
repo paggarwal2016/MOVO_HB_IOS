@@ -163,6 +163,10 @@ struct InternalTransferView: View {
         .animation(.easeInOut(duration: 0.3), value: achVM.peerTransferSuccess?.id)
         .background(Color.movo.background.ignoresSafeArea())
         .navigationBarHidden(true)
+        // Presented as a fullScreenCover, which covers RootView's `.globalAlert()`.
+        // Attach our own so AlertManager errors (e.g. a failed transfer) are visible
+        // from this screen — mirrors QuickTransferView / QuickPayView.
+        .globalAlert()
         .onChange(of: isAmountFocused) { focused in
             if focused && amountText == "0" { amountText = "" }
             if !focused && amountText.isEmpty { amountText = "0" }
