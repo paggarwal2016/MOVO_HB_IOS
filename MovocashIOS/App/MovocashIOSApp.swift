@@ -31,6 +31,7 @@ struct MovocashIOSApp: App {
         // routes like a true first run instead of misrouting into a broken biometric
         // gate whose key is about to be wiped.
         AppDelegate.clearOnFreshInstallIfNeeded()
+        RelockLog.mark("APP INIT pid=\(ProcessInfo.processInfo.processIdentifier)")
 
         // App.init isn't formally @MainActor, but SwiftUI runs it on main.
         // assumeIsolated is the canonical Swift pattern to call @MainActor code

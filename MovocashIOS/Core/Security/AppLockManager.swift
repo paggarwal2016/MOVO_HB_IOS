@@ -278,12 +278,19 @@ final class AppLockManager: ObservableObject {
             // Delivered on the main thread; assumeIsolated lets us show the cover
             // synchronously, before the foreground frame is drawn.
             MainActor.assumeIsolated {
-                guard let self, self.shouldRelockOnForeground() else { return }
+                guard let self else { return }
+                RelockLog.log("willEnterFg: evaluating shouldRelock")
+                guard self.shouldRelockOnForeground() else { return }
                 // Skip the cover when the lock gate is already the visible screen —
                 // it is itself opaque, so the cover would only block user interaction
                 // with the retry UI. nil closure → false → cover raised (safe default).
                 let gateVisible = self.isLockUIVisible?() ?? false
-                guard !gateVisible else { return }
+                RelockLog.log("willEnterFg: shouldRelock=true gateVisible=\(gateVisible)")
+                guard !gateVisible else {
+                    RelockLog.log("willEnterFg: gate visible → skip cover")
+                    return
+                }
+                RelockLog.log("willEnterFg: → show(.auth)")
                 SecureWindowShield.shared.show(.auth)
             }
         }
@@ -293,13 +300,30 @@ final class AppLockManager: ObservableObject {
     /// `willEnterForeground` (before `backgroundedAt` is cleared) so the cover is
     /// raised only when the gate will actually appear.
     private func shouldRelockOnForeground() -> Bool {
-        guard hasAuthMethod else { return false }
-        guard !skipNextLock && !permissionFlowActive else { return false }
-        guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return false }
-        guard let since = backgroundedAt else { return false }
+        guard hasAuthMethod else {
+            RelockLog.log("shouldRelock=false hasAuthMethod=false")
+            return false
+        }
+        guard !skipNextLock && !permissionFlowActive else {
+            RelockLog.log("shouldRelock=false skip=\(skipNextLock) permFlow=\(permissionFlowActive)")
+            return false
+        }
+        guard UserDefaults.standard.bool(forKey: "kycCompleted") else {
+            RelockLog.log("shouldRelock=false kycCompleted=false")
+            return false
+        }
+        guard let since = backgroundedAt else {
+            RelockLog.log("shouldRelock=false backgroundedAt=nil")
+            return false
+        }
         let elapsed = clock.now().timeIntervalSince(since)
-        if !wasUnlockedWhenBackgrounded { return true }
-        return elapsed >= config.backgroundTimeout
+        if !wasUnlockedWhenBackgrounded {
+            RelockLog.log("shouldRelock=true wasUnlocked=false elapsed=\(String(format: "%.1f", elapsed))")
+            return true
+        }
+        let result = elapsed >= config.backgroundTimeout
+        RelockLog.log("shouldRelock=\(result) elapsed=\(String(format: "%.1f", elapsed)) bgTimeout=\(config.backgroundTimeout)")
+        return result
     }
 
     func handleScenePhase(_ phase: ScenePhase) {
@@ -307,28 +331,39 @@ final class AppLockManager: ObservableObject {
         case .background:
             backgroundedAt = clock.now()
             wasUnlockedWhenBackgrounded = (state == .unlocked)
+            RelockLog.log("scene background wasUnlocked=\(wasUnlockedWhenBackgrounded) state=\(state)")
         case .active:
             let suppress = skipNextLock || permissionFlowActive
+            RelockLog.log("scene active skip=\(skipNextLock) permFlow=\(permissionFlowActive) suppress=\(suppress)")
             skipNextLock = false
             permissionFlowActive = false
             if suppress {
                 backgroundedAt = nil
+                RelockLog.log("scene active suppressed → hide(.auth)")
                 SecureWindowShield.shared.hide(.auth)
                 return
             }
-            guard let since = backgroundedAt else { return }
+            guard let since = backgroundedAt else {
+                RelockLog.log("scene active backgroundedAt=nil → early return")
+                return
+            }
             backgroundedAt = nil
             let elapsed = clock.now().timeIntervalSince(since)
+            RelockLog.log("scene active elapsed=\(String(format: "%.1f", elapsed))s kycCompleted=\(UserDefaults.standard.bool(forKey: "kycCompleted")) hasAuthMethod=\(hasAuthMethod) bgTimeout=\(config.backgroundTimeout)")
 
             // Only enforce for users past the dashboard. Mid-onboarding is
             // governed by RootView's 10-minute timeout.
-            guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
+            guard UserDefaults.standard.bool(forKey: "kycCompleted") else {
+                RelockLog.log("scene active kycCompleted=false → early return")
+                return
+            }
 
             if hasAuthMethod {
                 if elapsed >= config.backgroundTimeout || !wasUnlockedWhenBackgrounded {
                     // Long background or user was already on the lock screen:
                     // require re-auth. RootView's lockManager.state observer
                     // routes to .warmRelock (auto-trigger Face ID).
+                    RelockLog.log("scene active → state=.locked elapsed=\(String(format: "%.1f", elapsed)) wasUnlocked=\(wasUnlockedWhenBackgrounded) currentState=\(state)")
                     state = .locked
                 } else {
                     // Short background while unlocked — seamless resume, no re-auth.
@@ -338,12 +373,14 @@ final class AppLockManager: ObservableObject {
                     // does not lock). The old pattern emitted .locked then immediately
                     // .unlocked, which spuriously fired RootView's lockManager.state
                     // observer and routed to .warmRelock on every brief app switch.
+                    RelockLog.log("scene active short-bg → hide(.auth)")
                     SecureWindowShield.shared.hide(.auth)
                 }
             } else {
                 // No biometric — 15 min permissive re-auth (matches server idle).
                 // OTP is high-friction so only fire after server session is
                 // actually likely dead.
+                RelockLog.log("scene active hasAuthMethod=false elapsed=\(String(format: "%.1f", elapsed))")
                 guard elapsed >= AppState.apiIdleTimeout else { return }
                 SecureLogger.info(
                     "Background \(Int(elapsed))s, no biometric → ChoiceScreen",

@@ -555,19 +555,26 @@ struct RootView: View {
             }
         }
         .onChangeCompat(of: lockManager.state) { newState in
+            let kycDone   = UserDefaults.standard.bool(forKey: "kycCompleted")
+            let kycInProg = UserDefaults.standard.bool(forKey: "kycInProgress")
+            RelockLog.log("lockStateObs newState=\(newState) auth=\(appState.isAuthenticated) hasKey=\(lockManager.hasAuthMethod) blocking=\(appState.appUpdate.isBlocking) kycDone=\(kycDone) kycInProg=\(kycInProg) newReg=\(appState.isNewRegistration) flow=\(appState.flow)")
             guard newState == .locked,
                   !appState.appUpdate.isBlocking,   // force-update / maintenance gate wins
                   lockManager.hasAuthMethod,
                   appState.isAuthenticated,
                   !appState.isNewRegistration,
-                  !UserDefaults.standard.bool(forKey: "kycInProgress"),
-                  UserDefaults.standard.bool(forKey: "kycCompleted"),
+                  !kycInProg,
+                  kycDone,
                   appState.flow != .warmRelock
-            else { return }
+            else {
+                RelockLog.log("lockStateObs GUARD DROPPED newState=\(newState) auth=\(appState.isAuthenticated) hasKey=\(lockManager.hasAuthMethod) blocking=\(appState.appUpdate.isBlocking) kycDone=\(kycDone) kycInProg=\(kycInProg) flow=\(appState.flow)")
+                return
+            }
 
             // Clear any transient alert so it can't sit above the biometric gate.
             AlertManager.shared.dismiss()
             appState.flow = .warmRelock
+            RelockLog.log("lockStateObs → flow=.warmRelock SET")
         }
         .task {
             // Proactive integrity check at launch — shows the gate before any

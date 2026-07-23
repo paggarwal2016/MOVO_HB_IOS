@@ -525,9 +525,11 @@ extension AuthViewModel {
         // Join an attempt that's already running rather than starting a second flow
         // (which would trigger a duplicate nonce request / Face ID prompt).
         if let existing = biometricLoginTask {
+            RelockLog.log("runBiometricLogin JOIN existing task")
             return await existing.value
         }
 
+        RelockLog.log("runBiometricLogin START fresh task")
         // Fresh attempt — clear any message left from a previous failure.
         lastBiometricErrorMessage = nil
 
@@ -556,9 +558,11 @@ extension AuthViewModel {
 
         do {
             // Step 1 — GET /rsa/nonce
+            RelockLog.log("performBiometric: before GET /rsa/nonce")
             let nonceResponse: RSANonceResponse = try await network.request(
                 AuthAPI.nonceRSA(request: RSANonceRequest(deviceId: deviceId, userAction: "RSA-NONCE"))
             )
+            RelockLog.log("performBiometric: nonce returned")
             SecureLogger.info("nonce fetched successfully", category: .auth)
 
             // After the nonce, refresh the device-session config in the background so
@@ -567,6 +571,7 @@ extension AuthViewModel {
             let configTask = Task { [weak self] in try? await self?.configure() }
 
             // Step 2 — sign nonce (evaluatePolicy guarantees Face ID fully completes before signing)
+            RelockLog.log("performBiometric: before createSignature (FaceID prompt)")
             let signedMessage = try await RSAKeyManager.shared.createSignature(
                 payload: nonceResponse.nonce,
                 promptMessage: "Sign in with Face ID"

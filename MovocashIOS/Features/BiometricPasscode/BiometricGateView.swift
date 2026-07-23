@@ -59,9 +59,11 @@ struct BiometricGateView: View {
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea()
         .task {
+            RelockLog.log("BiometricGateView .task fired autoTrigger=\(autoTriggerBiometric)")
             if autoTriggerBiometric {
                 await attempt(isManualRetry: false)
             }
+            RelockLog.log("BiometricGateView .task exited autoTrigger=\(autoTriggerBiometric)")
         }
     }
 
@@ -146,12 +148,19 @@ struct BiometricGateView: View {
     }
 
     private func attempt(isManualRetry: Bool) async {
-        guard !isLoading else { return }
+        RelockLog.log("attempt isManualRetry=\(isManualRetry) isLoading=\(isLoading)")
+        guard !isLoading else {
+            RelockLog.log("attempt GUARD DROPPED isLoading=true")
+            return
+        }
         isLoading = true
         showError = false
+        RelockLog.log("attempt calling authenticate()")
         let success = await authenticate()
+        RelockLog.log("attempt authenticate() returned success=\(success)")
         isLoading = false
         SecureWindowShield.shared.hide(.auth)
+        RelockLog.log("attempt called hide(.auth)")
         if success {
             onAuthenticated()
         } else {
