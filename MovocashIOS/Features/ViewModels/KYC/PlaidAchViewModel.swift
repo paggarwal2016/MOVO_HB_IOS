@@ -440,6 +440,69 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         }
     }
 
+    /// Secure activate + Apple Wallet provisioning (passkey step-up route).
+    /// Ensures the SDK is configured and the device passkey is registered, then
+    func activateVirtualCardSecureToWallet(pin: String, accountId: Int? = nil, localizedDescription: String? = nil) async {
+        await perform {
+            do {
+                try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+
+                guard let token = try? await self.keychain.get("access_token", biometricPrompt: nil),
+                      !token.isEmpty,
+                      let json = JWTDecoder.decodePayload(token),
+                      let payload = json["payload"] as? [String: Any],
+                      let userIdInt = payload["userId"] as? Int
+                else {
+                    throw NSError(domain: "VirtualCard", code: -3,
+                                  userInfo: [NSLocalizedDescriptionKey: "Unable to verify device identity. Please try again."])
+                }
+
+                // The secure helper performs passkey step-up, so a device passkey
+                // must already be registered — register it once if needed.
+                let passkeyKey = "passkey_registered_\(userIdInt)"
+                if case .found = self.keychain.getSync(passkeyKey) {
+                    // Already registered — proceed.
+                } else {
+                    guard let reRegPresenter = await self.waitForPresentableViewController() else {
+                        throw NSError(domain: "VirtualCard", code: -2,
+                                      userInfo: [NSLocalizedDescriptionKey: "Device registration failed. Please try again."])
+                    }
+                    // Let the SDK's real error propagate — no generic hardcoded wrapper.
+                    try await self.service.registerDevicePasskey(presentingViewController: reRegPresenter)
+                    try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+                    SecureLogger.info("Device passkey registered for user \(userIdInt) during wallet activation", category: .auth)
+                }
+
+                let deviceId = await DeviceManager.shared.deviceID()
+
+                guard let presenter = await self.waitForPresentableViewController() else {
+                    throw NSError(domain: "VirtualCard", code: -1,
+                                  userInfo: [NSLocalizedDescriptionKey: "Unable to present wallet flow."])
+                }
+
+                self.provisionedPass = try await self.service.activateVirtualCardSecureAndAddToAppleWallet(
+                    pin: pin,
+                    userId: String(userIdInt),
+                    deviceId: deviceId,
+                    presentingViewController: presenter,
+                    accountId: accountId,
+                    localizedDescription: localizedDescription
+                )
+                self.analytics.log(AnalyticsEvent.walletAdd)
+                SecureLogger.info("[Wallet] virtual card activated + added to Apple Wallet", category: .payment)
+            } catch {
+                self.analytics.log(
+                    AnalyticsEvent.walletAddFailed,
+                    params: [AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription]
+                )
+                SecureLogger.error("[Wallet] activate + add-to-wallet did not complete: \(error.localizedDescription)", category: .payment)
+                if !self.isUserCancellation(error) {
+                    AlertManager.shared.showError(error.localizedDescription)
+                }
+            }
+        }
+    }
+
     // MARK: -   Intent
 
     @Published var transactionIntent: TransactionIntent?

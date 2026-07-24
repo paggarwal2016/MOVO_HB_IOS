@@ -32,6 +32,8 @@ struct CardDetailSheet: View {
     @State private var showEditNickname = false
     @State private var isDeleting = false
     @State private var showTransfer = false
+    @State private var showPinEntry = false
+    @State private var walletPin = ""
     @State private var showAllTransactions = false
     @State private var isLoading = false
     @State private var showFullCardNumber = false
@@ -215,6 +217,35 @@ struct CardDetailSheet: View {
             .presentationBackground(Color.movo.cardSurface)
             .presentationCornerRadius(Radius.sheet)
         }
+        .sheet(isPresented: $showPinEntry) {
+            WalletPinEntrySheet(
+                pin: $walletPin,
+                onConfirm: {
+                    let pin = walletPin
+                    walletPin = ""
+                    showPinEntry = false
+                    walletTask = Task {
+                        guard let accountId = card.savingsAccountId else { return }
+                        isLoading = true
+                        defer { isLoading = false }
+                        await achVM.activateVirtualCardSecureToWallet(
+                            pin: pin,
+                            accountId: accountId,
+                            localizedDescription: "Apple Pay"
+                        )
+                        hasChanges = true
+                    }
+                },
+                onCancel: {
+                    walletPin = ""
+                    showPinEntry = false
+                }
+            )
+            .presentationDetents([.height(360)])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.movo.cardSurface)
+            .presentationCornerRadius(Radius.sheet)
+        }
         .onDisappear {
             // Refresh the Dashboard on the way back only if something changed here.
             if hasChanges { onChanged?() }
@@ -295,24 +326,7 @@ struct CardDetailSheet: View {
         let transferWidth = (availableWidth - 55) * 3 / 4
 
         return HStack(spacing: Spacing.sm) {
-            Button(action: {
-                walletTask = Task {
-                    guard let accountId = card.savingsAccountId else { return }
-                    isLoading = true
-                    defer { isLoading = false }
-                    do {
-                        try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
-                    } catch {
-                        AlertManager.shared.showError(error.localizedDescription)
-                        return
-                    }
-                    await achVM.addVirtualCardToAppleWallet(
-                        accountId: accountId,
-                        localizedDescription: "Apple Pay"
-                    )
-                    hasChanges = true
-                }
-            }) {
+            Button(action: { showPinEntry = true }) {
                 HStack(spacing: Spacing.sm) {
                     Group {
                         if #available(iOS 18.0, *) {
@@ -698,5 +712,59 @@ struct CardDetailSheet: View {
             // error surfaced via BaseViewModel toast
         }
         isDeleting = false
+    }
+}
+
+// MARK: - Wallet PIN entry
+
+/// Collects the card PIN for the activate + add-to-Apple-Wallet flow. The PIN is
+/// bound to transient parent state and never persisted here.
+private struct WalletPinEntrySheet: View {
+    @Binding var pin: String
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: Spacing.lg) {
+            Text("Enter Card PIN")
+                .textStyle(Typography.cardTitle)
+                .foregroundColor(Color.movo.textPrimary)
+
+            Text("Enter your card PIN to activate this card and add it to Apple Wallet.")
+                .textStyle(Typography.subtitle)
+                .foregroundColor(Color.movo.textTertiary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            SecureField("Card PIN", text: $pin)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
+                .font(.system(size: 20, weight: .medium, design: .monospaced))
+                .foregroundColor(Color.movo.textPrimary)
+                .padding(Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.button)
+                        .fill(Color.movo.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
+                        )
+                )
+
+            Button(action: onConfirm) {
+                Text("Activate & Add to Wallet")
+            }
+            .buttonStyle(MovoPrimaryButtonStyle())
+            .disabled(pin.isEmpty)
+
+            Button(action: onCancel) {
+                Text("Cancel")
+                    .textStyle(Typography.body)
+                    .foregroundColor(Color.movo.textSecondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(Spacing.xl)
+        .frame(maxWidth: .infinity)
     }
 }

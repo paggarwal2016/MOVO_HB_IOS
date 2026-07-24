@@ -238,6 +238,31 @@ actor PlaidService {
         }
     }
 
+    /// Secure route: performs passkey step-up, activates the virtual card, then
+    /// drives Apple Wallet provisioning. Requires a registered device passkey.
+    @MainActor
+    func activateVirtualCardSecureAndAddToAppleWallet(
+        pin: String,
+        userId: String,
+        deviceId: String,
+        presentingViewController: UIViewController,
+        accountId: Int? = nil,
+        localizedDescription: String? = nil
+    ) async throws -> AppleWalletProvisionedPass {
+        return try await withCheckedThrowingContinuation { continuation in
+            MobileBankingSDK.activateVirtualCardSecureAndAddToAppleWallet(
+                pin: pin,
+                userId: userId,
+                deviceId: deviceId,
+                presentingViewController: presentingViewController,
+                accountId: accountId,
+                localizedDescription: localizedDescription
+            ) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
     // MARK: - Transaction Intent
 
     func configureSDKForTransfer(authToken: String) async {
