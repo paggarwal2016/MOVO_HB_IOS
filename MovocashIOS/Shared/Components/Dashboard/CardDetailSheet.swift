@@ -215,6 +215,25 @@ struct CardDetailSheet: View {
             .presentationBackground(Color.movo.cardSurface)
             .presentationCornerRadius(Radius.sheet)
         }
+        .onChange(of: achVM.walletProvisioningEvent) { event in
+            switch event {
+            case .completed:
+                // SDK confirmed the card is in Wallet. The VM already flipped
+                // `canAddToWallet`, so the button now reads "In Apple Wallet";
+                // confirm to the user and mark the sheet dirty for a Dashboard refresh.
+                hasChanges = true
+                ToastManager.shared.show("Card added to Apple Wallet.", style: .success, position: .bottom)
+            case .failed(let message):
+                AlertManager.shared.showError(message ?? "Couldn't add the card to Apple Wallet. Please try again.")
+            case .canceled:
+                // User dismissed the Apple Wallet sheet — leave the screen as-is.
+                break
+            case .none:
+                break
+            }
+            // Clear so a later add attempt re-triggers this handler.
+            if event != nil { achVM.walletProvisioningEvent = nil }
+        }
         .onDisappear {
             // Refresh the Dashboard on the way back only if something changed here.
             if hasChanges { onChanged?() }
