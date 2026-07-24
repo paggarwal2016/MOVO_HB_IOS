@@ -130,26 +130,43 @@ struct ChoiceScreen: View {
     private var actionStack: some View {
         VStack(spacing: Spacing.md) {
             
-            if hasCompletedSignup {
-                Button("Accept an Invite") { appState.flow = .getStartedPhone }.buttonStyle(OutlineButtonStyle())
-                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
-            } else {
-                Button("Accept an Invite") { appState.flow = .getStartedPhone }.buttonStyle(MovoPrimaryButtonStyle())
-                Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
+            VStack(spacing: Spacing.lg) {
+                if hasCompletedSignup {
+                    Button("Accept an Invite") { appState.flow = .getStartedPhone }.buttonStyle(OutlineButtonStyle())
+                    Button("Log In") { appState.flow = .loginPhone }.buttonStyle(MovoPrimaryButtonStyle())
+                } else {
+                    Button("Accept an Invite") { appState.flow = .getStartedPhone }.buttonStyle(MovoPrimaryButtonStyle())
+                    Button("Log In") { appState.flow = .loginPhone }.buttonStyle(OutlineButtonStyle())
+                }
             }
-        
-            Button {
-                authVM.waitlistPrefillPhone = ""
-                appState.flow = .waitlist
-            } label: {
-                Text("Join the Waitlist")
-                    .textStyle(Typography.buttonLarge)
-                    .foregroundColor(Color.movo.textPrimary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-            }
-            .buttonStyle(.plain)
             
+            HStack(spacing: Spacing.md) {
+                Button {
+                    authVM.waitlistPrefillPhone = ""
+                    appState.flow = .waitlist
+                } label: {
+                    Text("Join the Waitlist")
+                        .textStyle(Typography.bodyCompact)
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+                .buttonStyle(.plain)
+                
+                Rectangle()
+                    .fill(Color.movo.borderStrong)
+                    .frame(width: Stroke.hairline, height: 16)
+                
+                Button {
+                    appState.flow = .getStartedPhone
+                } label: {
+                    Text("Claim your money")
+                        .textStyle(Typography.bodyCompact)
+                        .foregroundColor(Color.movo.textPrimary)
+                }
+                .buttonStyle(.plain)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.md)
+
             if RSAKeyManager.shared.keysExist() {
                 Button {
                     runBiometricLogin()
