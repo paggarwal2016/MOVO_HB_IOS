@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import MobileBankingSDK
 
 extension Notification.Name {
     static let sessionExpired = Notification.Name("sessionExpired")
