@@ -147,7 +147,7 @@ struct ChoiceScreen: View {
                 } label: {
                     Text("Join the Waitlist")
                         .textStyle(Typography.bodyCompact)
-                        .foregroundColor(Color.movo.accent)
+                        .foregroundColor(Color.movo.textPrimary)
                 }
                 .buttonStyle(.plain)
                 
@@ -160,7 +160,7 @@ struct ChoiceScreen: View {
                 } label: {
                     Text("Claim your money")
                         .textStyle(Typography.bodyCompact)
-                        .foregroundColor(Color.movo.accent)
+                        .foregroundColor(Color.movo.textPrimary)
                 }
                 .buttonStyle(.plain)
             }
