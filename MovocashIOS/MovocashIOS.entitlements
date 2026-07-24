@@ -6,10 +6,10 @@
 	<string>production</string>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:api.qa.herringbank.com</string>
-		<string>applinks:api.qa.herringbank.com</string>
 		<string>webcredentials:api.mobile-banking-prod.herringbank.com</string>
 		<string>applinks:api.mobile-banking-prod.herringbank.com</string>
+		<string>webcredentials:api.mobile-banking-qa.herringbank.com</string>
+		<string>applinks:api.mobile-banking-qa.herringbank.com</string>
 	</array>
 	<key>com.apple.developer.payment-pass-provisioning</key>
 	<true/>
