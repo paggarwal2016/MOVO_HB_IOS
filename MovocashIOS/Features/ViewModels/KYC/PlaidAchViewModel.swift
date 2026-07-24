@@ -44,6 +44,13 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     // Apple Wallet
     @Published var provisionedPass: AppleWalletProvisionedPass?
     @Published var canAddToWallet: Bool = true
+    /// Last Apple Wallet provisioning outcome broadcast by the KYC SDK via the
+    /// `appleWalletProvisioning*` notifications. Views bind to this to react
+    /// (dismiss, toast) without owning the NotificationCenter wiring themselves.
+    @Published var walletProvisioningEvent: WalletProvisioningEvent?
+
+    /// Tokens for the SDK wallet-provisioning notification observers; removed in deinit.
+    private var walletProvisioningObservers: [NSObjectProtocol] = []
 
     init(
         service: PlaidService = .shared,
@@ -60,6 +67,48 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             network: resolvedNetwork,
             keychain: resolvedKeychain
         )
+        observeAppleWalletProvisioning()
+    }
+
+    deinit {
+        walletProvisioningObservers.forEach { NotificationCenter.default.removeObserver($0) }
+    }
+
+    /// Subscribes to the Apple Wallet provisioning notifications posted by the KYC
+    /// SDK (`MobileBankingKycSdk`). The SDK owns the posting during its provisioning
+    /// flow; this VM only observes — mirroring how `KYCManager` observes the SDK's
+    /// `verification*` events. Callbacks are delivered on the main queue, so
+    /// `MainActor.assumeIsolated` is safe for touching `@Published` state.
+    private func observeAppleWalletProvisioning() {
+        let nc = NotificationCenter.default
+        walletProvisioningObservers = [
+            nc.addObserver(forName: .appleWalletProvisioningCompleted, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    // Card is now in Wallet — refresh the add button state.
+                    self.canAddToWallet = false
+                    self.walletProvisioningEvent = .completed
+                    SecureLogger.info("[Wallet] SDK reported provisioning completed", category: .payment)
+                }
+            },
+            nc.addObserver(forName: .appleWalletProvisioningFailed, object: nil, queue: .main) { [weak self] note in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    // SDK payload shape mirrors the verification events (Error/NSError) —
+                    // verify against the SDK source if the message comes through empty.
+                    let message = (note.object as? Error)?.localizedDescription
+                    self.walletProvisioningEvent = .failed(message)
+                    SecureLogger.error("[Wallet] SDK reported provisioning failed: \(message ?? "unknown")", category: .payment)
+                }
+            },
+            nc.addObserver(forName: .appleWalletProvisioningCanceled, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.walletProvisioningEvent = .canceled
+                    SecureLogger.info("[Wallet] SDK reported provisioning canceled", category: .payment)
+                }
+            }
+        ]
     }
 
     // MARK: - Auth
@@ -764,4 +813,14 @@ enum ModelState: Equatable {
     case loading
     case success
     case failure
+}
+
+// MARK: - WalletProvisioningEvent
+
+/// Apple Wallet provisioning outcome, driven by the KYC SDK's
+/// `appleWalletProvisioning*` notifications and surfaced on `PlaidAchViewModel`.
+enum WalletProvisioningEvent: Equatable {
+    case completed
+    case canceled
+    case failed(String?)
 }
