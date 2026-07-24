@@ -19,6 +19,10 @@ struct KYCSuccessView: View {
     @State private var startPlaidFlow = false
     @State private var showFund = false
 
+    /// Measured frame of the celebration hero — fed to the background so its marks
+    /// never overlap the hero.
+    @State private var badgeFrame: CGRect = .zero
+
     init(container: AppContainer,
          onFinish: @escaping () -> Void,
          onSkip: @escaping () -> Void) {
@@ -32,14 +36,28 @@ struct KYCSuccessView: View {
         ZStack {
             MovoBackground()
             AmbientGlowView()
-
-            SparkleDecorations()
+            FloatingMovoMarks(excludedCircle: badgeFrame)
 
             VStack(spacing: 0) {
                 Spacer(minLength: Spacing.xxl)
 
                 RegistrationCelebrationHero()
                     .frame(maxHeight: 190)
+                    // Measure a tight 116×116 anchor centered on the hero (mirrors the
+                    // waitlist badge circle) so the marks' glow/exclusion stays compact
+                    // instead of scaling to the full-width hero.
+                    .overlay(
+                        Color.clear
+                            .frame(width: 116, height: 116)
+                            .background(
+                                GeometryReader { proxy in
+                                    Color.clear.preference(
+                                        key: BadgeFramePreferenceKey.self,
+                                        value: proxy.frame(in: .named("kycSuccess"))
+                                    )
+                                }
+                            )
+                    )
                     .padding(.bottom, Spacing.lg)
                 // no .clipped() — would cut the balloon's −12° tilt corners
 
@@ -69,6 +87,8 @@ struct KYCSuccessView: View {
             }
             .padding(.top, Spacing.md)
         }
+        .coordinateSpace(name: "kycSuccess")
+        .onPreferenceChange(BadgeFramePreferenceKey.self) { badgeFrame = $0 }
         .background(Color.movo.background)
         .navigationBarHidden(true)
         // "Fund My Account" → link a bank via Plaid (link-only; success screen shows
