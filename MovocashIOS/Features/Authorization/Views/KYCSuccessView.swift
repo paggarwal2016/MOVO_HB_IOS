@@ -14,10 +14,19 @@ struct KYCSuccessView: View {
     let onSkip: () -> Void
 
     @StateObject private var plaidVM: PlaidAchViewModel
+    @StateObject private var vCardVM: VCardViewModel
+    @StateObject private var savingVM: SavingsAccountViewModel
     @State private var showBankLink = false
     @State private var continueToPlaid = false
     @State private var startPlaidFlow = false
     @State private var showFund = false
+    /// Drives the "Activate Card" (Create Cash Card) sheet.
+    @State private var showActivateCard = false
+    /// Set true when the card is created; consumed in the sheet's onDismiss to
+    /// surface the activation alert (a root alert can't present over a sheet).
+    @State private var cardActivated = false
+    /// Primary savings account id resolved just before presenting the sheet.
+    @State private var activatePrimaryAccountId = 0
 
     /// Measured frame of the celebration hero — fed to the background so its marks
     /// never overlap the hero.
@@ -30,6 +39,8 @@ struct KYCSuccessView: View {
         self.onFinish = onFinish
         self.onSkip = onSkip
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
+        _vCardVM = StateObject(wrappedValue: container.makeVCardViewModel())
+        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
 
     var body: some View {
@@ -91,8 +102,37 @@ struct KYCSuccessView: View {
         .onPreferenceChange(BadgeFramePreferenceKey.self) { badgeFrame = $0 }
         .background(Color.movo.background)
         .navigationBarHidden(true)
-        // "Fund My Account" → link a bank via Plaid (link-only; success screen shows
-        // "Done"). When the link succeeds, advance into the onboarding fund step.
+        // "Activate Card" → create (activate) the user's cash card. On success we
+        // dismiss the sheet and, in onDismiss, show the activation alert whose
+        // action runs the original fund flow (showBankLink).
+        .sheet(isPresented: $showActivateCard, onDismiss: {
+            guard cardActivated else { return }
+            cardActivated = false
+            AlertManager.shared.showCustom(
+                title: "Card Activated",
+                message: "Your card is activated. Please fund your account.",
+                primary: "Fund My Account",
+                onPrimary: { showBankLink = true }
+            )
+        }) {
+            CreateCashCardView(
+                vm: vCardVM,
+                primaryAccountId: activatePrimaryAccountId,
+                title: "Activate Card",
+                mode: .activate,
+                onClose: { showActivateCard = false },
+                onActivated: {
+                    cardActivated = true
+                    showActivateCard = false
+                }
+            )
+            .presentationDetents([.height(500)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.cardSurface)
+        }
+        // "Fund My Account" (alert action) → link a bank via Plaid (link-only; success
+        // screen shows "Done"). When the link succeeds, advance into the onboarding fund step.
         .sheet(isPresented: $showBankLink, onDismiss: {
             // Start Plaid only after the info sheet is fully gone.
             if continueToPlaid {
@@ -129,10 +169,27 @@ struct KYCSuccessView: View {
         }
     }
 
+    /// Resolves the primary savings account, then presents the "Activate Card"
+    /// (Create Cash Card) sheet. The card is created against the primary account.
+    private func startActivateCard() {
+        Task {
+            SpinnerView.showFullScreen()
+            await savingVM.loadAccounts()
+            SpinnerView.hideFullScreen()
+            guard let primaryId = savingVM.accountList?.data.accounts
+                .first(where: { $0.isPrimary })?.id else {
+                AlertManager.shared.showError("Unable to find your account. Please try again.")
+                return
+            }
+            activatePrimaryAccountId = primaryId
+            showActivateCard = true
+        }
+    }
+
     private var ctaFooter: some View {
         VStack(spacing: Spacing.xl) {
-            Button(action: { showBankLink = true }) {
-                Text("Fund My Account")
+            Button(action: { startActivateCard() }) {
+                Text("Activate Card")
             }
             .buttonStyle(MovoPrimaryButtonStyle())
 

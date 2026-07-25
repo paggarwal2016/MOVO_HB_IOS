@@ -15,12 +15,25 @@ struct CreateCashCardView: View {
     let vm: VCardViewModel
     /// Primary savings account id the new card is created against.
     let primaryAccountId: Int
+    /// Header title. Defaults to the create-card copy; the registration
+    /// "Activate Card" entry point overrides it.
+    var title: String = "Create your cash card"
+    /// Selects which API the submit action calls.
+    /// - `.create`: creates a new virtual card (`createVCard` / `VCardAPI.createVCard`).
+    /// - `.activate`: activates the card (`postVCard` / `VCardAPI.postVCards`,
+    ///   `userAction: "VCARD-ACTIVATE"`). The nickname field is still shown but the
+    ///   activate request does not send it.
+    var mode: Mode = .create
     /// Dismisses this sheet (used by the close button).
     let onClose: () -> Void
-    /// Invoked after the card is created successfully. The presenter is expected
-    /// to dismiss this sheet and then present the success screen, passing along
-    /// the created card.
-    let onCreated: (VCardListResponse) -> Void
+    /// Invoked after the card is created successfully (`.create` mode). The presenter
+    /// is expected to dismiss this sheet and then present the success screen, passing
+    /// along the created card.
+    var onCreated: ((VCardListResponse) -> Void)? = nil
+    /// Invoked after the card is activated successfully (`.activate` mode).
+    var onActivated: (() -> Void)? = nil
+
+    enum Mode { case create, activate }
 
     // MARK: - State
 
@@ -58,7 +71,7 @@ struct CreateCashCardView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomSheetHeader(
-                title: "Create your cash card",
+                title: title,
                 subtitle: "Let's MOVO your way",
                 systemImage: "creditcard.fill",
                 iconTint: Color.movo.accent,
@@ -233,19 +246,39 @@ private extension CreateCashCardView {
         focusedField = nil
         isLoading = true
         SpinnerView.showFullScreen()
-        let request = CreateVCardRequest(
-            nickname: nickname.trimmingCharacters(in: .whitespaces),
-            pin: pin,
-            primaryAccountId: primaryAccountId,
-            userAction: "VCARD-CREATION"
-        )
-        Task {
-            let card = try? await vm.createVCard(request: request)
-            // Error (card == nil) is surfaced via BaseViewModel toast.
-            await MainActor.run {
-                isLoading = false
-                SpinnerView.hideFullScreen()
-                if let card { onCreated(card) }
+        switch mode {
+        case .create:
+            let request = CreateVCardRequest(
+                nickname: nickname.trimmingCharacters(in: .whitespaces),
+                pin: pin,
+                primaryAccountId: primaryAccountId,
+                userAction: "VCARD-CREATION"
+            )
+            Task {
+                let card = try? await vm.createVCard(request: request)
+                // Error (card == nil) is surfaced via BaseViewModel toast.
+                await MainActor.run {
+                    isLoading = false
+                    SpinnerView.hideFullScreen()
+                    if let card { onCreated?(card) }
+                }
+            }
+        case .activate:
+            // Activate uses the /vcards POST API. The nickname is collected for
+            // consistency with create but is not part of the activate request.
+            let request = VCardsRequest(
+                pin: pin,
+                accountId: primaryAccountId,
+                userAction: "VCARD-ACTIVATE"
+            )
+            Task {
+                let result = try? await vm.postVCard(request: request)
+                // Error (result == nil) is surfaced via BaseViewModel toast.
+                await MainActor.run {
+                    isLoading = false
+                    SpinnerView.hideFullScreen()
+                    if result != nil { onActivated?() }
+                }
             }
         }
     }
