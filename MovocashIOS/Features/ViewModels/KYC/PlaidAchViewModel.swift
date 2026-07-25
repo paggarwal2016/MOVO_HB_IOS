@@ -312,6 +312,75 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         }
     }
 
+    /// Activates the virtual card after a passkey/biometric step-up prompt.
+    ///
+    /// Mirrors `revealVirtualCardCvv`: resolves the user identity from the JWT,
+    /// ensures the SDK is configured and a device passkey is registered, then calls
+    /// the secure activation endpoint (which drives the biometric prompt). The
+    /// user-entered `pin` travels inside the SDK request body. Returns `true` on
+    /// success. Only genuine SDK errors are surfaced via `AlertManager` — internal
+    /// preconditions and user cancellations are suppressed.
+    @discardableResult
+    func activateVirtualCardSecure(
+        pin: String,
+        accountId: Int? = nil,
+        enableEncryptedResponses: Bool = false
+    ) async -> Bool {
+        guard state != .loading else { return false }
+        state = .loading
+        defer { state = .idle }
+        do {
+            guard let token = try? await self.keychain.get("access_token", biometricPrompt: nil),
+                  !token.isEmpty,
+                  let json = JWTDecoder.decodePayload(token),
+                  let payload = json["payload"] as? [String: Any],
+                  let userIdInt = payload["userId"] as? Int
+            else {
+                // Internal precondition — suppressed from the alert (SDK errors only).
+                throw NSError(domain: "VirtualCard", code: -3)
+            }
+            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+
+            let passkeyKey = "passkey_registered_\(userIdInt)"
+            if case .found = self.keychain.getSync(passkeyKey) {
+                // Already registered — proceed.
+            } else {
+                guard let reRegPresenter = await self.waitForPresentableViewController() else {
+                    throw NSError(domain: "VirtualCard", code: -2)
+                }
+                try await self.service.registerDevicePasskey(presentingViewController: reRegPresenter)
+                try? await self.keychain.save("1", for: passkeyKey, protection: .backgroundSafe)
+                SecureLogger.info("Device passkey registered for user \(userIdInt) during card activation", category: .auth)
+            }
+
+            let deviceId = await DeviceManager.shared.deviceID()
+            guard let presenter = await self.waitForPresentableViewController() else {
+                throw NSError(domain: "VirtualCard", code: -1)
+            }
+            self.virtualCard = try await self.service.activateVirtualCardSecure(
+                pin: pin,
+                accountId: accountId,
+                userId: String(userIdInt),
+                deviceId: deviceId,
+                presentingViewController: presenter,
+                enableEncryptedResponses: enableEncryptedResponses
+            )
+            state = .success
+            self.analytics.log(AnalyticsEvent.cardActivated)
+            return true
+        } catch {
+            state = .failure
+            analytics.log(AnalyticsEvent.cardActivationFailed, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
+            if self.isSDKError(error) {
+                AlertManager.shared.showError(error.localizedDescription)
+            }
+            return false
+        }
+    }
+
     /// Reveals the virtual card CVV after a passkey step-up prompt.
 
     func revealVirtualCardCvv(accountId: Int, enableEncryptedResponses: Bool = false) async throws -> String {

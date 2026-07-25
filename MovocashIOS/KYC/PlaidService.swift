@@ -175,6 +175,31 @@ actor PlaidService {
         }
     }
 
+    /// Activates a virtual card behind a passkey/biometric step-up. The SDK drives
+    /// the device-auth prompt (using `userId`/`deviceId`) and, on success, activates
+    /// the card via the step-up endpoint. The PIN travels inside the request body.
+    @MainActor
+    func activateVirtualCardSecure(
+        pin: String,
+        accountId: Int?,
+        userId: String,
+        deviceId: String,
+        presentingViewController: UIViewController,
+        enableEncryptedResponses: Bool = false
+    ) async throws -> VirtualCard? {
+        return try await withCheckedThrowingContinuation { continuation in
+            MobileBankingSDK.activateVirtualCardSecure(
+                requestBody: ActivateVirtualCardRequestBody(pin: pin, accountId: accountId),
+                userId: userId,
+                deviceId: deviceId,
+                presentingViewController: presentingViewController,
+                enableEncryptedResponses: enableEncryptedResponses
+            ) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
     // MARK: - Apple Wallet
 
     nonisolated var canProvisionAppleWalletPasses: Bool {

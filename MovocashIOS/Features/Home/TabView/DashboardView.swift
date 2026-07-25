@@ -93,7 +93,11 @@ struct DashboardView: View {
     @State private var inviteSent = false
     /// Server success message from the invite API, surfaced in the post-dismiss alert.
     @State private var inviteMessage: String?
-    
+    /// Drives the PIN-entry sheet for the bottom "Activate Virtual Card" action.
+    @State private var showActivateCardPinEntry = false
+    /// True while the secure card-activation call is in flight — shows the card spinner.
+    @State private var isActivatingCard = false
+
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
     }
@@ -122,6 +126,23 @@ struct DashboardView: View {
             }
         }
         .dimmingOverlay(isActive: isSheetActive)
+        .pinInputAlert(
+            isPresented: $showActivateCardPinEntry,
+            title: "Activate Virtual Card",
+            message: "Enter a 4-digit PIN for your virtual card.",
+            style: .sheet,
+            onCreate: { pin in
+                Task {
+                    isActivatingCard = true
+                    defer { isActivatingCard = false }
+                    let success = await achVM.activateVirtualCardSecure(
+                        pin: pin,
+                        accountId: dashboardVM.primaryAccount?.id
+                    )
+                    if success { needsDashboardRefresh = true }
+                }
+            }
+        )
         .sheet(isPresented: $showCreateCashCard, onDismiss: {
             if createdCashCard != nil { showCashCardSuccess = true }
         }) {
@@ -506,6 +527,7 @@ struct DashboardView: View {
             LazyVStack(spacing: 20) {
                 headerView
                 savingsSection
+                activateCardSection
             }
             .padding(.top, 56)
             .padding(.bottom, 24)
@@ -520,6 +542,15 @@ struct DashboardView: View {
         }
     }
     
+    /// Bottom-of-dashboard call to action. Tapping opens the shared PIN-entry
+    /// sheet; on confirm it runs the secure (biometric step-up) activation.
+    private var activateCardSection: some View {
+        ActivateVirtualCardCard(isLoading: isActivatingCard) {
+            showActivateCardPinEntry = true
+        }
+        .padding(.horizontal, 15)
+    }
+
     @ViewBuilder
     private var savingsSection: some View {
         if let sections = dashboardVM.dashboard?.data {

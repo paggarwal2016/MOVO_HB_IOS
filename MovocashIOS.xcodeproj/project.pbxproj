@@ -62,6 +62,7 @@
 		14D2CDBE2FE93FCA007A9EEB /* MovoEditIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D2CDBD2FE93FCA007A9EEB /* MovoEditIcon.swift */; };
 		14D36C5A2F7AAF150024760F /* SkeletonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C592F7AAF150024760F /* SkeletonViews.swift */; };
 		14D36C5B2F7AAF150024760F /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D36C582F7AAF150024760F /* ShimmerModifier.swift */; };
+		14D39CAC30151EA100986B52 /* ActivateVirtualCardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D39CAB30151EA100986B52 /* ActivateVirtualCardCard.swift */; };
 		14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D52CBC2F9B908500CB648B /* EmptyStateView.swift */; };
 		14D8165F2F73C30300B7D1EF /* ActionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D8165E2F73C30300B7D1EF /* ActionCard.swift */; };
 		14D816612F73D3B100B7D1EF /* ContactsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D816602F73D3B100B7D1EF /* ContactsManager.swift */; };
@@ -176,6 +177,7 @@
 		14D2CDBD2FE93FCA007A9EEB /* MovoEditIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovoEditIcon.swift; sourceTree = "<group>"; };
 		14D36C582F7AAF150024760F /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
 		14D36C592F7AAF150024760F /* SkeletonViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonViews.swift; sourceTree = "<group>"; };
+		14D39CAB30151EA100986B52 /* ActivateVirtualCardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivateVirtualCardCard.swift; sourceTree = "<group>"; };
 		14D52CBC2F9B908500CB648B /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		14D8165E2F73C30300B7D1EF /* ActionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionCard.swift; sourceTree = "<group>"; };
 		14D816602F73D3B100B7D1EF /* ContactsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsManager.swift; sourceTree = "<group>"; };
@@ -582,6 +584,7 @@
 		146893D92FA33D7A001918AE /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				14D39CAB30151EA100986B52 /* ActivateVirtualCardCard.swift */,
 				146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */,
 				1417849B2FA34B8E000E802C /* CardView.swift */,
 				1417849D2FA34CC9000E802C /* CreateCardView.swift */,
@@ -846,6 +849,7 @@
 				14C383882FBB0C0D002C2215 /* StartupRouter.swift in Sources */,
 				14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */,
 				14413D152FD9662C00EBC972 /* CustomContactEnrollView.swift in Sources */,
+				14D39CAC30151EA100986B52 /* ActivateVirtualCardCard.swift in Sources */,
 				14DCE1392F595474008A8DC4 /* KYCEnum.swift in Sources */,
 				1404E8893010CC8700AF8633 /* OTPTextField.swift in Sources */,
 				146819892F4DE6CF00BED014 /* CompromisedDeviceView.swift in Sources */,
