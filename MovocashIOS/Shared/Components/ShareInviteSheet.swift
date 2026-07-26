@@ -268,8 +268,8 @@ struct ShareInviteSheet: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(joined ? Color.movo.accent : Color.movo.textPrimary)
                 } else {
-                    MovoMVSymbol()
-                        .frame(width: 16, height: 16)
+                    Image("herringLogo").resizable().scaledToFit()
+                        .frame(width: 32, height: 32)
                 }
             }
             .frame(width: 44, height: 44)

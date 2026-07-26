@@ -26,12 +26,19 @@ struct CustomHeaderView: View {
     var body: some View {
         HStack(alignment: .center) {
 
-            HStack(spacing: 10) {
-                MovoMVSymbol()
-                    .frame(width: 22, height: 22)
-                Text("MOVOCASH")
-                    .textStyle(Typography.sectionTitle)
-                    .foregroundStyle(Color.movo.textPrimary)
+            HStack(alignment: .center, spacing: 10) {
+                Image("herringLogo").resizable().scaledToFit()
+                    .frame(width: 40, height: 40)
+
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("MOVOCASH")
+                        .textStyle(Typography.sectionTitle)
+                        .foregroundStyle(Color.movo.textPrimary)
+
+                    Text("Powered by HyperBin\u{00AE}")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textSecondary)
+                }
             }
 
             Spacer()

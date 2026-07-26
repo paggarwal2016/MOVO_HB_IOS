@@ -224,8 +224,8 @@ private struct LinkBankIllustration: View {
             GeometryReader { geo in
                 let s = geo.size.width / 230.0
                 VStack(spacing: max(1, 3 * s)) {
-                    MovoMVSymbol()
-                        .frame(width: 44 * s, height: 44 * s)
+                    Image("herringLogo").resizable().scaledToFit()
+                        .frame(width: max(44 * s, 32), height: max(44 * s, 32))
                     Text("Let\u{2019}s Movo.")
                         .font(.system(size: max(7, 13 * s), weight: .medium).italic())
                         .foregroundColor(Color.movo.textTertiary)

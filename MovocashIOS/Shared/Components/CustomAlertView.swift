@@ -123,7 +123,7 @@ struct CustomAlertView: View {
             }
         case .movo:
             badge(tint: Color.movo.accent, background: Color.movo.accentTint) {
-                MovoMVSymbol()
+                Image("herringLogo").resizable().scaledToFit()
                     .frame(width: 34, height: 34)
             }
         case .error:

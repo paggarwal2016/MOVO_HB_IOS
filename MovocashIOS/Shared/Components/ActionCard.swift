@@ -355,8 +355,8 @@ struct InviteAFriendCard: View {
             }
         } else {
             avatarCircle(fill: Color.movo.elevatedHigh) {
-                MovoMVSymbol()
-                    .frame(width: 15, height: 15)
+                Image("herringLogo").resizable().scaledToFit()
+                    .frame(width: 32, height: 32)
             }
         }
     }

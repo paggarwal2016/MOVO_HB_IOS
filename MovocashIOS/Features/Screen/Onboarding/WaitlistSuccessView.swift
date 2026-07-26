@@ -44,7 +44,7 @@ struct WaitlistSuccessView: View {
                                 }
                             )
 
-                        MovoMVSymbol()
+                        Image("herringLogo").resizable().scaledToFit()
                             .frame(width: 52, height: 52)
                     }
 

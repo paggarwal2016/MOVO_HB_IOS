@@ -318,8 +318,8 @@ struct BankLinkedSuccessScreen: View {
                     .strokeBorder(Color.movo.border, lineWidth: Stroke.hairline)
             )
             .overlay(
-                MovoMVSymbol()
-                    .frame(width: 26, height: 26)
+                Image("herringLogo").resizable().scaledToFit()
+                    .frame(width: 32, height: 32)
             )
     }
 

@@ -44,8 +44,8 @@ struct CustomSheetHeader: View {
                 // the rounded square.
                 ZStack {
                     MovoBackground()
-                    MovoMVSymbol()
-                        .frame(width: 24, height: 24)
+                    Image("herringLogo").resizable().scaledToFit()
+                        .frame(width: 32, height: 32)
                 }
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))

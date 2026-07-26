@@ -95,18 +95,26 @@ struct ChoiceScreen: View {
 
 
     private var hero: some View {
-        VStack(spacing: 0) {
-            
+        let poweredByText = "Powered by HyperBin\u{00AE}"
+        return VStack(spacing: 0) {
+
             // Logo block
             VStack(spacing: Spacing.xxl) {
-                MovoMVSymbol()
+                Image("herringLogo").resizable().scaledToFit()
                     .frame(width: 110, height: 110)
-                
-                Text("MOVOCASH")
-                    .font(.system(size: 22, weight: .regular))
-                    .tracking(8.8) // 0.4em at 22pt
-                    .foregroundColor(Color.movo.textPrimary)
-                    .padding(.leading, 8.8) // optical centering for tracked text
+
+                VStack(spacing: Spacing.xs) {
+                    Text("MOVOCASH")
+                        .font(.system(size: 22, weight: .regular))
+                        .tracking(8.8) // 0.4em at 22pt
+                        .foregroundColor(Color.movo.textPrimary)
+                        .padding(.leading, 8.8) // optical centering for tracked text
+
+                    Text(poweredByText)
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             .padding(.bottom, Spacing.huge + 16)
             

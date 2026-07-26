@@ -1,0 +1,8 @@
+{
+  "images" : [
+    { "idiom":"universal", "filename":"HerringEmblem_DarkOnLight.png" },
+    { "idiom":"universal", "filename":"HerringEmblem_LightOnDark_clean.png",
+      "appearances":[{"appearance":"luminosity","value":"dark"}] }
+  ],
+  "info" : { "author":"xcode", "version":1 }
+}

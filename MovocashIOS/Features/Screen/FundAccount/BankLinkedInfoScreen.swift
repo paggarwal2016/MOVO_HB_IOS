@@ -44,7 +44,7 @@ struct BankLinkedInfoScreen: View {
                     .overlay(Circle().strokeBorder(Color.movo.surface, lineWidth: 1))
                     .frame(width: 64, height: 64)
                     .overlay(
-                        MovoMVSymbol()
+                        Image("herringLogo").resizable().scaledToFit()
                             .frame(width: 34, height: 34)
                     )
                     .offset(x: -22)

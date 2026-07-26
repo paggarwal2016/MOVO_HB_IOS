@@ -71,10 +71,10 @@ struct CustomContactEnrollView: View {
 
                         Circle()
                             .fill(Color.movo.surface)
-                            .frame(width: 28, height: 28)
+                            .frame(width: 40, height: 40)
                             .overlay {
-                                MovoMVSymbol()
-                                    .frame(width: 15, height: 15)
+                                Image("herringLogo").resizable().scaledToFit()
+                                    .frame(width: 32, height: 32)
                             }
                             .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
                             .offset(x: 3, y: 3)

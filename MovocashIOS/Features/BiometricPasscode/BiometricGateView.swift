@@ -71,13 +71,21 @@ struct BiometricGateView: View {
 
             // Updated brand lockup — MovoMVSymbol (current mark) + adaptive wordmark
             VStack(spacing: Spacing.lg) {
-                MovoMVSymbol()
+                Image("herringLogo").resizable().scaledToFit()
                     .frame(width: 80, height: 80)
-                Text("MOVOCASH")
-                    .font(FontFamily.font(size: 22, weight: .regular))
-                    .tracking(8)
-                    .foregroundStyle(Color.movo.textPrimary)
-                    .padding(.leading, 8)
+
+                VStack(spacing: Spacing.xs) {
+                    Text("MOVOCASH")
+                        .font(FontFamily.font(size: 22, weight: .regular))
+                        .tracking(8)
+                        .foregroundStyle(Color.movo.textPrimary)
+                        .padding(.leading, 8)
+
+                    Text("Powered by HyperBin\u{00AE}")
+                        .textStyle(Typography.caption)
+                        .foregroundColor(Color.movo.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("MovoCash")
