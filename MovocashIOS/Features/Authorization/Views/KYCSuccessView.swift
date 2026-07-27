@@ -101,6 +101,9 @@ struct KYCSuccessView: View {
         .onPreferenceChange(BadgeFramePreferenceKey.self) { badgeFrame = $0 }
         .background(Color.movo.background)
         .navigationBarHidden(true)
+        // Preload the accounts silently when this screen appears (no spinner), so
+        // "Activate Card" can resolve the primary account instantly.
+        .task { await savingVM.loadAccounts() }
         // Registration activation flow — each screen is presented ON TOP of the
         // previous one (stacked); nothing below is dismissed until the flow ends.
         // Tapping X on Bank Linked Info calls finishToDashboard(), which swaps the
@@ -114,6 +117,7 @@ struct KYCSuccessView: View {
                 primaryAccountId: activatePrimaryAccountId,
                 title: "Set your card PIN",
                 mode: .activate,
+                nicknameFieldLabel: "NICK NAME",
                 onClose: { showActivateCard = false },
                 // Present "You're all set!" ON TOP — do NOT dismiss this screen.
                 onActivated: { showAllSet = true }
@@ -167,8 +171,6 @@ struct KYCSuccessView: View {
         }
     }
 
-    /// Finishes onboarding and lands on the Dashboard. Guarded so it runs at most
-    /// once even though the bank-link close is observed in both onClose and onDismiss.
     private func finishToDashboard() {
         guard !didFinish else { return }
         didFinish = true
@@ -180,21 +182,14 @@ struct KYCSuccessView: View {
         withTransaction(tx) { onFinish() }
     }
 
-    /// Resolves the primary savings account, then presents the "Activate Card"
-    /// (Create Cash Card) sheet. The card is created against the primary account.
     private func startActivateCard() {
-        Task {
-            SpinnerView.showFullScreen()
-            await savingVM.loadAccounts()
-            SpinnerView.hideFullScreen()
-            guard let primaryId = savingVM.accountList?.data.accounts
-                .first(where: { $0.isPrimary })?.id else {
-                AlertManager.shared.showError("Unable to find your account. Please try again.")
-                return
-            }
-            activatePrimaryAccountId = primaryId
-            showActivateCard = true
+        guard let primaryId = savingVM.accountList?.data.accounts
+            .first(where: { $0.isPrimary })?.id else {
+            AlertManager.shared.showError("Unable to find your account. Please try again.")
+            return
         }
+        activatePrimaryAccountId = primaryId
+        showActivateCard = true
     }
 
     private var ctaFooter: some View {

@@ -36,6 +36,9 @@ struct CreateCashCardView: View {
     /// current value). Used by the First Card Reward "Create new PIN" screen,
     /// whose mockup is PIN-only.
     var showsNicknameField: Bool = true
+    /// Label shown above the nickname field. Defaults to "CARD NAME"; the
+    /// registration (KYCSuccessView) entry overrides it with "NICK NAME".
+    var nicknameFieldLabel: String = "CARD NAME"
     /// Dismisses this sheet (used by the close button).
     let onClose: () -> Void
     /// Invoked after the card is created successfully (`.create` mode). The presenter
@@ -49,7 +52,7 @@ struct CreateCashCardView: View {
 
     // MARK: - State
 
-    @State private var nickname = "MOVO"
+    @State private var nickname = ""
     @State private var pin = ""
     @State private var confirmPin = ""
     @State private var showPin = false
@@ -95,9 +98,7 @@ struct CreateCashCardView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         VStack(spacing: Spacing.xl) {
-                            if showsNicknameField {
-                                nicknameField
-                            }
+                            nicknameField
                             pinSection
                             confirmPinSection
                         }
@@ -136,7 +137,7 @@ private extension CreateCashCardView {
 
     var nicknameField: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            fieldLabel("CARD NAME")
+            fieldLabel(nicknameFieldLabel)
             TextField(
                 "",
                 text: $nickname,
