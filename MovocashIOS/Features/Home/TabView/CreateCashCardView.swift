@@ -264,12 +264,11 @@ private extension CreateCashCardView {
                 }
             }
         case .activate:
-            // Activate uses the /vcards POST API. The nickname is collected for
-            // consistency with create but is not part of the activate request.
             let request = VCardsRequest(
+                nickname: nickname.trimmingCharacters(in: .whitespaces),
                 pin: pin,
                 accountId: primaryAccountId,
-                userAction: "VCARD-ACTIVATE"
+                userAction: "ACTIVE-FIRST-VCARD"
             )
             Task {
                 let result = try? await vm.postVCard(request: request)

@@ -97,8 +97,10 @@ struct RootView: View {
                                     // same destination those steps would have produced on success.
                                     // To restore the real flow, replace the two lines below with:
                                     //     appState.flow = .signupDetails   // test only
+                                    //
                                     let passkeyDone = await authVM.isPasskeyRegistered()
                                     appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                    //
                                 default:
                                     // Returning user — KYC already complete.
                                     // Enrolled → require a biometric scan (RSA) before the

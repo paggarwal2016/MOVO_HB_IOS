@@ -105,7 +105,7 @@ struct KYCSuccessView: View {
         // "Activate Card" → create (activate) the user's cash card. On success we
         // dismiss the sheet and, in onDismiss, show the activation alert whose
         // action runs the original fund flow (showBankLink).
-        .sheet(isPresented: $showActivateCard, onDismiss: {
+        .fullScreenCover(isPresented: $showActivateCard, onDismiss: {
             guard cardActivated else { return }
             cardActivated = false
             AlertManager.shared.showCustom(
@@ -126,10 +126,6 @@ struct KYCSuccessView: View {
                     showActivateCard = false
                 }
             )
-            .presentationDetents([.height(500)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
         }
         // "Fund My Account" (alert action) → link a bank via Plaid (link-only; success
         // screen shows "Done"). When the link succeeds, advance into the onboarding fund step.

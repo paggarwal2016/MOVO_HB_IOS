@@ -122,7 +122,7 @@ struct DashboardView: View {
             }
         }
         .dimmingOverlay(isActive: isSheetActive)
-        .sheet(isPresented: $showCreateCashCard, onDismiss: {
+        .fullScreenCover(isPresented: $showCreateCashCard, onDismiss: {
             if createdCashCard != nil { showCashCardSuccess = true }
         }) {
             CreateCashCardView(
@@ -135,10 +135,6 @@ struct DashboardView: View {
                     Task { await dashboardVM.refresh() }
                 }
             )
-            .presentationDetents([.height(500)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
         }
         .fullScreenCover(isPresented: $showCashCardSuccess, onDismiss: {
             createdCashCard = nil

@@ -74,7 +74,7 @@ struct FirstCardRewardView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             Button(action: { animateOut { onViewDetails() } }) {
-                Text("LET'S MOVO!")
+                Text("Activate Your First Cash Card")
                     .tracking(1.5)
             }
             .buttonStyle(MovoPrimaryButtonStyle())
