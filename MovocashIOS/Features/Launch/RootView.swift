@@ -708,7 +708,7 @@ struct RootView: View {
         guard let token = try? await container.keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else {
             SecureLogger.error("Passkey check: unable to decode userId from token — blocking navigation", category: .auth)
             AlertManager.shared.showError(failureMessage)

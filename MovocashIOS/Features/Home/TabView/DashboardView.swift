@@ -79,7 +79,6 @@ struct DashboardView: View {
     @State private var continueToPlaid = false
     @State private var startPlaidFlow = false
     @State private var showFirstCardReward = false
-    @State private var didCheckFirstCardReward = false
     // Stacked First Card Reward → activation flow. Each screen is presented ON TOP
     // of the previous one (nested covers); the whole stack collapses to the
     // Dashboard in one non-animated action when finished.
@@ -459,7 +458,7 @@ struct DashboardView: View {
                         // then present "You're all set!" ON TOP. userAction
                         // "ACTIVE-FIRST-VCARD" is specific to this flow.
                         guard case .found(let existingPin) =
-                                KeychainManager.shared.getSync(KeychainManager.Keys.cardPin),
+                                KeychainManager.shared.getSync(KeychainManager.Keys.cardPinForCurrentUser),
                               !existingPin.isEmpty else {
                             // No stored PIN yet — fall back to manual entry (on top).
                             showVirtualCardCreatePin = true
@@ -488,7 +487,7 @@ struct DashboardView: View {
                 )
                 // Level 3a — "Use existing PIN" success → All Set, on top of the choice.
                 .fullScreenCover(isPresented: $showAllSetOverChoice) {
-                    VirtualCardAllSetView(onDone: { dismissVirtualCardStack() })
+                    VirtualCardAllSetView(onDone: { completeFirstCardReward() })
                 }
                 // Level 3b — "Create new PIN" → Create Cash Card (manual PIN), on top
                 // of the choice. Calls VCardAPI.createVCard with the First Card Reward
@@ -507,10 +506,19 @@ struct DashboardView: View {
                     )
                     // Level 4 — All Set, stacked over the Create Cash Card screen.
                     .fullScreenCover(isPresented: $showAllSetOverCreate) {
-                        VirtualCardAllSetView(onDone: { dismissVirtualCardStack() })
+                        VirtualCardAllSetView(onDone: { completeFirstCardReward() })
                     }
                 }
             }
+        }
+    }
+
+    /// Successful completion of the First Card Reward flow ("Let's MOVO" on the
+    /// All Set screen). Deletes the per-user card-PIN Keychain marker FIRST
+    private func completeFirstCardReward() {
+        Task {
+            //try? await KeychainManager.shared.delete(KeychainManager.Keys.cardPinForCurrentUser)
+            await MainActor.run { dismissVirtualCardStack() }
         }
     }
 
@@ -540,20 +548,15 @@ struct DashboardView: View {
     /// and the `.onChange` on `primaryLinkedCard` retries once it loads. The
     /// session guard prevents re-checking on tab re-entry.
     private func maybeShowFirstCardReward() {
-//        guard !didCheckFirstCardReward else { return }
-//        guard UserDefaults.standard.bool(forKey: "pendingFirstCardReward") else { return }
-//        // Wait until the MYCARDS payload has resolved so we can reliably tell whether
-//        // a secondary card exists before deciding (the `.onChange` retries on load).
-//        guard dashboardVM.hasLoadedCards else { return }
-
-        // One-shot check — consume the flag whether or not we show the review.
-//        didCheckFirstCardReward = true
-//        UserDefaults.standard.set(false, forKey: "pendingFirstCardReward")
-//
-//        // First-time flow applies only when a secondary card (a non-primary card in
-//        // the My Cards list) was issued alongside the primary. The reward simply
-//        // returns to the Dashboard when dismissed. No secondary card → skip silently.
-//        guard dashboardVM.cards.first != nil else { return }
+        // Evaluate only once the MYCARDS payload has resolved.
+        guard dashboardVM.hasLoadedCards else { return }
+        // Show only when the user has exactly ONE card and it is the primary card
+        // (no other card exists in the list yet).
+        guard dashboardVM.primaryLinkedCard != nil, dashboardVM.apiCards.isEmpty else { return }
+        // The reward is offered only while the first-card marker still exists in the
+        // Keychain (the PIN stored when the primary card was activated). It is
+        // deleted on successful completion, so the reward is shown exactly once.
+        guard case .found = KeychainManager.shared.getSync(KeychainManager.Keys.cardPinForCurrentUser) else { return }
         setFirstCardReward(true)
     }
 
@@ -607,6 +610,7 @@ struct DashboardView: View {
             await Task {
                 await dashboardVM.refresh()
             }.value
+            maybeShowFirstCardReward()
         }
     }
     

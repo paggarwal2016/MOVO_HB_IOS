@@ -289,7 +289,7 @@ private extension CreateCashCardView {
                 // Persist the PIN on success so a later card can offer "Use existing PIN".
                 if result != nil {
                     try? await KeychainManager.shared.save(
-                        pin, for: KeychainManager.Keys.cardPin, protection: .backgroundSafe
+                        pin, for: KeychainManager.Keys.cardPinForCurrentUser, protection: .backgroundSafe
                     )
                 }
                 // Error (result == nil) is surfaced via BaseViewModel toast.

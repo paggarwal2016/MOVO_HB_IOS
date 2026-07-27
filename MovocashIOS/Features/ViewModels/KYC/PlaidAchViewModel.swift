@@ -323,7 +323,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                   !token.isEmpty,
                   let json = JWTDecoder.decodePayload(token),
                   let payload = json["payload"] as? [String: Any],
-                  let userIdInt = payload["userId"] as? Int
+                  let userIdInt = payload["fineractClientId"] as? Int
             else {
                 // Internal precondition — suppressed from the alert (SDK errors only).
                 throw NSError(domain: "VirtualCard", code: -3)
@@ -496,7 +496,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 guard let passkeyToken = try? await self.keychain.get("access_token", biometricPrompt: nil),
                       let json = JWTDecoder.decodePayload(passkeyToken),
                       let payload = json["payload"] as? [String: Any],
-                      let userIdInt = payload["userId"] as? Int
+                      let userIdInt = payload["fineractClientId"] as? Int
                 else {
                     throw NSError(domain: "QuickTransfer", code: -3,
                                   userInfo: [NSLocalizedDescriptionKey: "Unable to verify device identity. Please try again."])
