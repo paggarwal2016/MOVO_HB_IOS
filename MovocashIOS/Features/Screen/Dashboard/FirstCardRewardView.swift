@@ -50,11 +50,8 @@ struct FirstCardRewardView: View {
             ZStack {
                 MovoMVSymbol()
                     .frame(width: 44, height: 44)
-
-                HStack {
-                    Spacer()
-                    CircularNavButton(systemName: "xmark", action: { animateOut { onClose() } })
-                }
+                
+                Spacer()
             }
 
             // Reward eyebrow pill

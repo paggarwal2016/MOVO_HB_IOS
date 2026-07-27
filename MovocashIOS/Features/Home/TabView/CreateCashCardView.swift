@@ -24,6 +24,14 @@ struct CreateCashCardView: View {
     ///   `userAction: "VCARD-ACTIVATE"`). The nickname field is still shown but the
     ///   activate request does not send it.
     var mode: Mode = .create
+    /// `userAction` sent for the `.activate` request. Defaults to the registration
+    /// ("primary card") value; the First Card Reward entry overrides it with
+    /// "ACTIVE-FIRST-VCARD". Ignored in `.create` mode.
+    var activateUserAction: String = "ACTIVE-PRIMARY-VCARD"
+    /// When `false`, the CARD NAME field is hidden (the nickname still sends its
+    /// current value). Used by the First Card Reward "Create new PIN" screen,
+    /// whose mockup is PIN-only.
+    var showsNicknameField: Bool = true
     /// Dismisses this sheet (used by the close button).
     let onClose: () -> Void
     /// Invoked after the card is created successfully (`.create` mode). The presenter
@@ -37,7 +45,7 @@ struct CreateCashCardView: View {
 
     // MARK: - State
 
-    @State private var nickname = ""
+    @State private var nickname = "MOVO"
     @State private var pin = ""
     @State private var confirmPin = ""
     @State private var showPin = false
@@ -83,7 +91,9 @@ struct CreateCashCardView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         VStack(spacing: Spacing.xl) {
-                            nicknameField
+                            if showsNicknameField {
+                                nicknameField
+                            }
                             pinSection
                             confirmPinSection
                         }
@@ -102,13 +112,12 @@ struct CreateCashCardView: View {
                 .scrollDismissesKeyboard(.interactively)
             }
         }
-        .padding(.top, Spacing.xxl)
         .background(Color.movo.surface.ignoresSafeArea())
         .onAppear {
             // Focus just after the sheet-present animation settles (matches the
             // app's PIN-entry convention in OTPScreen).
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                focusedField = .nickname
+                focusedField = showsNicknameField ? .nickname : .pin
             }
         }
         .onDisappear {
@@ -268,10 +277,16 @@ private extension CreateCashCardView {
                 nickname: nickname.trimmingCharacters(in: .whitespaces),
                 pin: pin,
                 accountId: primaryAccountId,
-                userAction: "ACTIVE-FIRST-VCARD"
+                userAction: activateUserAction
             )
             Task {
                 let result = try? await vm.postVCard(request: request)
+                // Persist the PIN on success so a later card can offer "Use existing PIN".
+                if result != nil {
+                    try? await KeychainManager.shared.save(
+                        pin, for: KeychainManager.Keys.cardPin, protection: .backgroundSafe
+                    )
+                }
                 // Error (result == nil) is surfaced via BaseViewModel toast.
                 await MainActor.run {
                     isLoading = false
@@ -302,7 +317,7 @@ private struct PinBoxRow: View {
 
     var body: some View {
         ZStack {
-            HStack(spacing: Spacing.sm + 2) {
+            HStack(spacing: Spacing.md + 2) {
                 ForEach(0..<4, id: \.self) { i in
                     PinCell(
                         char: char(at: i),

@@ -80,6 +80,21 @@ struct DashboardView: View {
     @State private var startPlaidFlow = false
     @State private var showFirstCardReward = false
     @State private var didCheckFirstCardReward = false
+    /// Drives the "Activate your first cash card" PIN flow launched from the reward.
+    @State private var showVirtualCardActivation = false
+    /// Set when the reward's "Activate" button is tapped; consumed in the reward
+    /// cover's onDismiss so the activation flow presents on a clean stack.
+    @State private var pendingVirtualCardActivation = false
+    /// Drives the "You're all set!" screen shown after "Use existing PIN".
+    @State private var showVirtualCardAllSet = false
+    /// Set when "Use existing PIN" is tapped; consumed in the choice cover's
+    /// onDismiss so the confirmation presents on a clean stack.
+    @State private var pendingVirtualCardAllSet = false
+    /// Drives the "Create new PIN" screen (reuses CreateCashCardView in .activate).
+    @State private var showVirtualCardCreatePin = false
+    /// Set when "Create new PIN" is tapped; consumed in the choice cover's
+    /// onDismiss so the PIN screen presents on a clean stack.
+    @State private var pendingVirtualCardCreatePin = false
     /// The card just created in CreateCashCardView. Held while the create sheet
     @State private var createdCashCard: VCardListResponse? = nil
     /// Drives the post-create success cover.
@@ -428,11 +443,76 @@ struct DashboardView: View {
         .onChange(of: dashboardVM.hasLoadedCards) { _ in
             maybeShowFirstCardReward()
         }
-        .fullScreenCover(isPresented: $showFirstCardReward) {
-            // Both actions simply return to the Dashboard — neither opens Card Details.
+        .fullScreenCover(isPresented: $showFirstCardReward, onDismiss: {
+            // Present the activation flow only once the reward cover is fully gone,
+            // so it opens on a clean presentation stack.
+            if pendingVirtualCardActivation {
+                pendingVirtualCardActivation = false
+                showVirtualCardActivation = true
+            }
+        }) {
             FirstCardRewardView(
-                onViewDetails: { setFirstCardReward(false) },
+                // "Activate Your First Cash Card" → open the PIN activation flow.
+                onViewDetails: {
+                    pendingVirtualCardActivation = true
+                    setFirstCardReward(false)
+                },
                 onClose: { setFirstCardReward(false) }
+            )
+        }
+        // "Set a PIN for your virtual card" choice screen (mockup, screen 1).
+        .fullScreenCover(isPresented: $showVirtualCardActivation, onDismiss: {
+            // Present the next screen only once the choice cover is fully gone.
+            if pendingVirtualCardAllSet {
+                pendingVirtualCardAllSet = false
+                showVirtualCardAllSet = true
+            } else if pendingVirtualCardCreatePin {
+                pendingVirtualCardCreatePin = false
+                showVirtualCardCreatePin = true
+            }
+        }) {
+            VirtualCardPinChoiceView(
+                onUseExisting: {
+                    showVirtualCardActivation = false
+                    pendingVirtualCardAllSet = true
+                },
+                onCreateNew: {
+                    pendingVirtualCardCreatePin = true
+                    showVirtualCardActivation = false
+                },
+                onClose: { showVirtualCardActivation = false }
+            )
+        }
+        // "You're all set!" confirmation (mockup, screen 2a).
+        .fullScreenCover(isPresented: $showVirtualCardAllSet) {
+            VirtualCardAllSetView(onDone: {
+                showVirtualCardAllSet = false
+                needsDashboardRefresh = true
+                Task { await dashboardVM.refresh() }
+            })
+        }
+        // "Create new PIN" (mockup, screen 2b) — reuses CreateCashCardView in
+        // .activate mode with the First Card Reward userAction.
+        .fullScreenCover(isPresented: $showVirtualCardCreatePin) {
+            CreateCashCardView(
+                vm: vm,
+                primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0,
+                title: "Set your virtual card PIN",
+                mode: .activate,
+                activateUserAction: "ACTIVE-FIRST-VCARD",
+                showsNicknameField: false,
+                onClose: { showVirtualCardCreatePin = false },
+                onActivated: {
+                    // Seamless finish: the CreateCashCardView spinner stays up through
+                    // the API call, then this drops the cover with NO dismissal
+                    // animation so the user lands directly on the Dashboard without
+                    // seeing the PIN screen slide away. Refresh to reflect the new card.
+                    var tx = SwiftUI.Transaction()
+                    tx.disablesAnimations = true
+                    withTransaction(tx) { showVirtualCardCreatePin = false }
+                    needsDashboardRefresh = true
+                    Task { await dashboardVM.refresh() }
+                }
             )
         }
     }
@@ -446,20 +526,20 @@ struct DashboardView: View {
     /// and the `.onChange` on `primaryLinkedCard` retries once it loads. The
     /// session guard prevents re-checking on tab re-entry.
     private func maybeShowFirstCardReward() {
-        guard !didCheckFirstCardReward else { return }
-        guard UserDefaults.standard.bool(forKey: "pendingFirstCardReward") else { return }
-        // Wait until the MYCARDS payload has resolved so we can reliably tell whether
-        // a secondary card exists before deciding (the `.onChange` retries on load).
-        guard dashboardVM.hasLoadedCards else { return }
+//        guard !didCheckFirstCardReward else { return }
+//        guard UserDefaults.standard.bool(forKey: "pendingFirstCardReward") else { return }
+//        // Wait until the MYCARDS payload has resolved so we can reliably tell whether
+//        // a secondary card exists before deciding (the `.onChange` retries on load).
+//        guard dashboardVM.hasLoadedCards else { return }
 
         // One-shot check — consume the flag whether or not we show the review.
-        didCheckFirstCardReward = true
-        UserDefaults.standard.set(false, forKey: "pendingFirstCardReward")
-
-        // First-time flow applies only when a secondary card (a non-primary card in
-        // the My Cards list) was issued alongside the primary. The reward simply
-        // returns to the Dashboard when dismissed. No secondary card → skip silently.
-        guard dashboardVM.cards.first != nil else { return }
+//        didCheckFirstCardReward = true
+//        UserDefaults.standard.set(false, forKey: "pendingFirstCardReward")
+//
+//        // First-time flow applies only when a secondary card (a non-primary card in
+//        // the My Cards list) was issued alongside the primary. The reward simply
+//        // returns to the Dashboard when dismissed. No secondary card → skip silently.
+//        guard dashboardVM.cards.first != nil else { return }
         setFirstCardReward(true)
     }
 

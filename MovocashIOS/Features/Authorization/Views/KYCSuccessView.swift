@@ -20,13 +20,14 @@ struct KYCSuccessView: View {
     @State private var continueToPlaid = false
     @State private var startPlaidFlow = false
     @State private var showFund = false
-    /// Drives the "Activate Card" (Create Cash Card) sheet.
     @State private var showActivateCard = false
-    /// Set true when the card is created; consumed in the sheet's onDismiss to
-    /// surface the activation alert (a root alert can't present over a sheet).
     @State private var cardActivated = false
-    /// Primary savings account id resolved just before presenting the sheet.
     @State private var activatePrimaryAccountId = 0
+    @State private var showAllSet = false
+    @State private var pendingBankLink = false
+    /// Guards against `onFinish` firing more than once (the bank-link close is
+    /// handled in both the sheet's onClose and its onDismiss).
+    @State private var didFinish = false
 
     /// Measured frame of the celebration hero — fed to the background so its marks
     /// never overlap the hero.
@@ -108,22 +109,33 @@ struct KYCSuccessView: View {
         .fullScreenCover(isPresented: $showActivateCard, onDismiss: {
             guard cardActivated else { return }
             cardActivated = false
-            AlertManager.shared.showCustom(
-                title: "Card Activated",
-                message: "Your card is activated. Please fund your account.",
-                primary: "Fund My Account",
-                onPrimary: { showBankLink = true }
-            )
+            // Show the "You're all set!" confirmation (replaces the old alert).
+            showAllSet = true
         }) {
             CreateCashCardView(
                 vm: vCardVM,
                 primaryAccountId: activatePrimaryAccountId,
-                title: "Activate Card",
+                title: "Set your card PIN",
                 mode: .activate,
                 onClose: { showActivateCard = false },
                 onActivated: {
                     cardActivated = true
                     showActivateCard = false
+                }
+            )
+        }
+        // Activation confirmation → continue to the bank-link fund step.
+        .fullScreenCover(isPresented: $showAllSet, onDismiss: {
+            if pendingBankLink {
+                pendingBankLink = false
+                showBankLink = true
+            }
+        }) {
+            VirtualCardAllSetView(
+                message: "Your virtual card is activated and ready to use.",
+                onDone: {
+                    pendingBankLink = true
+                    showAllSet = false
                 }
             )
         }
@@ -134,13 +146,28 @@ struct KYCSuccessView: View {
             if continueToPlaid {
                 continueToPlaid = false
                 startPlaidFlow = true
+            } else {
+                finishToDashboard()
             }
         }) {
-            BankLinkedInfoScreen(onContinue: { continueToPlaid = true })
-                .presentationDetents([.height(430)])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(Radius.sheet)
-                .presentationBackground(Color.movo.cardSurface)
+            BankLinkedInfoScreen(
+                onContinue: { continueToPlaid = true },
+                // xmark → seamless: drop the sheet AND swap to the Dashboard in one
+                // non-animated transaction, so the user never sees this sheet slide
+                // away or the KYC screen behind it (no double-dismiss).
+                onClose: {
+                    var tx = SwiftUI.Transaction()
+                    tx.disablesAnimations = true
+                    withTransaction(tx) {
+                        showBankLink = false
+                        finishToDashboard()
+                    }
+                }
+            )
+            .presentationDetents([.height(430)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.cardSurface)
         }
         // After Plaid links and the success screen is dismissed ("Done"),
         // advance into the onboarding fund step.
@@ -149,7 +176,8 @@ struct KYCSuccessView: View {
             plaidVM: plaidVM,
             container: container,
             allowFunding: false,
-            onDone: { showFund = true }
+            onDone: { showFund = true },
+            onCancel: { onFinish() }
         )
         // The onboarding fund step. Self-loads from/to accounts and lands on the
         // dashboard on success or back.
@@ -163,6 +191,14 @@ struct KYCSuccessView: View {
                 }
             )
         }
+    }
+
+    /// Finishes onboarding and lands on the Dashboard. Guarded so it runs at most
+    /// once even though the bank-link close is observed in both onClose and onDismiss.
+    private func finishToDashboard() {
+        guard !didFinish else { return }
+        didFinish = true
+        onFinish()
     }
 
     /// Resolves the primary savings account, then presents the "Activate Card"
@@ -185,18 +221,9 @@ struct KYCSuccessView: View {
     private var ctaFooter: some View {
         VStack(spacing: Spacing.xl) {
             Button(action: { startActivateCard() }) {
-                Text("Activate Card")
+                Text("Set Your Card PIN")
             }
             .buttonStyle(MovoPrimaryButtonStyle())
-
-//            Button {
-//                onSkip()
-//            } label: {
-//                Text("Skip for now")
-//                    .textStyle(Typography.body)
-//                    .foregroundColor(Color.movo.textSecondary)
-//            }
-//            .buttonStyle(.plain)
         }
         .padding(.horizontal, Spacing.xxl)
         .padding(.bottom, Spacing.xxl)

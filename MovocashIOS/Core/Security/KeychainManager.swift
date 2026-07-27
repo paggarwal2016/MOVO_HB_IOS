@@ -305,7 +305,19 @@ enum KeychainError: Error {
 enum KeychainProtection {
     /// Used for refresh tokens (background access allowed)
     case backgroundSafe
-    
+
     /// Used for biometric unlock / payments
     case userPresence
+}
+
+// MARK: - Well-known Keys
+
+extension KeychainManager {
+    /// Shared keychain key identifiers, so callers don't duplicate string literals.
+    enum Keys {
+        /// Reusable 4-digit card PIN. Written on a successful card activation so a
+        /// later card can offer "Use existing PIN". Stored `.backgroundSafe` so it
+        /// can be read silently to pre-fill the reuse path.
+        static let cardPin = "movo_card_pin"
+    }
 }

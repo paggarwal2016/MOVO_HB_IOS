@@ -17,6 +17,11 @@ struct BankLinkedInfoScreen: View {
     /// Called when the user taps "Continue". The parent starts the Plaid flow
     /// after this sheet has dismissed (typically from the sheet's `onDismiss`).
     var onContinue: () -> Void = {}
+    /// Optional override for the close (xmark) action. When provided, the parent
+    /// fully controls the close (e.g. the registration flow lands directly on the
+    /// Dashboard). When `nil`, the standard sheet dismiss is used — so every other
+    /// presenter of this screen is unaffected.
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
@@ -53,8 +58,10 @@ struct BankLinkedInfoScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, Spacing.huge)
             .overlay(alignment: .topTrailing) {
-                CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
-                    .accessibilityLabel("Close")
+                CircularNavButton(systemName: "xmark") {
+                    if let onClose { onClose() } else { (securedDismiss ?? dismiss)() }
+                }
+                .accessibilityLabel("Close")
             }
 
             // Title
