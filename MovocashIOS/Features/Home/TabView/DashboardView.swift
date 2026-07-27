@@ -80,21 +80,17 @@ struct DashboardView: View {
     @State private var startPlaidFlow = false
     @State private var showFirstCardReward = false
     @State private var didCheckFirstCardReward = false
-    /// Drives the "Activate your first cash card" PIN flow launched from the reward.
+    // Stacked First Card Reward → activation flow. Each screen is presented ON TOP
+    // of the previous one (nested covers); the whole stack collapses to the
+    // Dashboard in one non-animated action when finished.
+    /// PIN choice, on top of the reward.
     @State private var showVirtualCardActivation = false
-    /// Set when the reward's "Activate" button is tapped; consumed in the reward
-    /// cover's onDismiss so the activation flow presents on a clean stack.
-    @State private var pendingVirtualCardActivation = false
-    /// Drives the "You're all set!" screen shown after "Use existing PIN".
-    @State private var showVirtualCardAllSet = false
-    /// Set when "Use existing PIN" is tapped; consumed in the choice cover's
-    /// onDismiss so the confirmation presents on a clean stack.
-    @State private var pendingVirtualCardAllSet = false
-    /// Drives the "Create new PIN" screen (reuses CreateCashCardView in .activate).
+    /// Create Cash Card (manual PIN entry), on top of the choice.
     @State private var showVirtualCardCreatePin = false
-    /// Set when "Create new PIN" is tapped; consumed in the choice cover's
-    /// onDismiss so the PIN screen presents on a clean stack.
-    @State private var pendingVirtualCardCreatePin = false
+    /// "You're all set!" after "Use existing PIN" — on top of the choice.
+    @State private var showAllSetOverChoice = false
+    /// "You're all set!" after "Create new PIN" — on top of the Create Cash Card.
+    @State private var showAllSetOverCreate = false
     /// The card just created in CreateCashCardView. Held while the create sheet
     @State private var createdCashCard: VCardListResponse? = nil
     /// Drives the post-create success cover.
@@ -443,78 +439,96 @@ struct DashboardView: View {
         .onChange(of: dashboardVM.hasLoadedCards) { _ in
             maybeShowFirstCardReward()
         }
-        .fullScreenCover(isPresented: $showFirstCardReward, onDismiss: {
-            // Present the activation flow only once the reward cover is fully gone,
-            // so it opens on a clean presentation stack.
-            if pendingVirtualCardActivation {
-                pendingVirtualCardActivation = false
-                showVirtualCardActivation = true
-            }
-        }) {
+        // First Card Reward → activation flow. Each screen is presented ON TOP of
+        // the previous one (nested covers); nothing below is dismissed until the
+        // flow ends. "Let's MOVO" on the All Set screen collapses the WHOLE stack
+        // back to the Dashboard in one non-animated action (see dismissVirtualCardStack).
+        //
+        // Level 1 — First Card Reward (on top of the Dashboard).
+        .fullScreenCover(isPresented: $showFirstCardReward) {
             FirstCardRewardView(
-                // "Activate Your First Cash Card" → open the PIN activation flow.
-                onViewDetails: {
-                    pendingVirtualCardActivation = true
-                    setFirstCardReward(false)
-                },
+                // Present the PIN choice ON TOP — do NOT dismiss the reward.
+                onViewDetails: { showVirtualCardActivation = true },
                 onClose: { setFirstCardReward(false) }
             )
-        }
-        // "Set a PIN for your virtual card" choice screen (mockup, screen 1).
-        .fullScreenCover(isPresented: $showVirtualCardActivation, onDismiss: {
-            // Present the next screen only once the choice cover is fully gone.
-            if pendingVirtualCardAllSet {
-                pendingVirtualCardAllSet = false
-                showVirtualCardAllSet = true
-            } else if pendingVirtualCardCreatePin {
-                pendingVirtualCardCreatePin = false
-                showVirtualCardCreatePin = true
-            }
-        }) {
-            VirtualCardPinChoiceView(
-                onUseExisting: {
-                    showVirtualCardActivation = false
-                    pendingVirtualCardAllSet = true
-                },
-                onCreateNew: {
-                    pendingVirtualCardCreatePin = true
-                    showVirtualCardActivation = false
-                },
-                onClose: { showVirtualCardActivation = false }
-            )
-        }
-        // "You're all set!" confirmation (mockup, screen 2a).
-        .fullScreenCover(isPresented: $showVirtualCardAllSet) {
-            VirtualCardAllSetView(onDone: {
-                showVirtualCardAllSet = false
-                needsDashboardRefresh = true
-                Task { await dashboardVM.refresh() }
-            })
-        }
-        // "Create new PIN" (mockup, screen 2b) — reuses CreateCashCardView in
-        // .activate mode with the First Card Reward userAction.
-        .fullScreenCover(isPresented: $showVirtualCardCreatePin) {
-            CreateCashCardView(
-                vm: vm,
-                primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0,
-                title: "Set your virtual card PIN",
-                mode: .activate,
-                activateUserAction: "ACTIVE-FIRST-VCARD",
-                showsNicknameField: false,
-                onClose: { showVirtualCardCreatePin = false },
-                onActivated: {
-                    // Seamless finish: the CreateCashCardView spinner stays up through
-                    // the API call, then this drops the cover with NO dismissal
-                    // animation so the user lands directly on the Dashboard without
-                    // seeing the PIN screen slide away. Refresh to reflect the new card.
-                    var tx = SwiftUI.Transaction()
-                    tx.disablesAnimations = true
-                    withTransaction(tx) { showVirtualCardCreatePin = false }
-                    needsDashboardRefresh = true
-                    Task { await dashboardVM.refresh() }
+            // Level 2 — PIN choice, stacked over the reward.
+            .fullScreenCover(isPresented: $showVirtualCardActivation) {
+                VirtualCardPinChoiceView(
+                    onUseExisting: {
+                        // Create the card with the PIN already stored in the keychain,
+                        // then present "You're all set!" ON TOP. userAction
+                        // "ACTIVE-FIRST-VCARD" is specific to this flow.
+                        guard case .found(let existingPin) =
+                                KeychainManager.shared.getSync(KeychainManager.Keys.cardPin),
+                              !existingPin.isEmpty else {
+                            // No stored PIN yet — fall back to manual entry (on top).
+                            showVirtualCardCreatePin = true
+                            return
+                        }
+                        SpinnerView.showFullScreen()
+                        let request = CreateVCardRequest(
+                            nickname: "MOVO",
+                            pin: existingPin,
+                            primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0,
+                            userAction: "ACTIVE-FIRST-VCARD"
+                        )
+                        Task {
+                            let card = try? await vm.createVCard(request: request)
+                            await MainActor.run {
+                                SpinnerView.hideFullScreen()
+                                // Error (card == nil) surfaced via BaseViewModel toast.
+                                guard card != nil else { return }
+                                showAllSetOverChoice = true
+                            }
+                        }
+                    },
+                    // Present the manual PIN-entry (Create Cash Card) ON TOP.
+                    onCreateNew: { showVirtualCardCreatePin = true },
+                    onClose: { dismissVirtualCardStack() }
+                )
+                // Level 3a — "Use existing PIN" success → All Set, on top of the choice.
+                .fullScreenCover(isPresented: $showAllSetOverChoice) {
+                    VirtualCardAllSetView(onDone: { dismissVirtualCardStack() })
                 }
-            )
+                // Level 3b — "Create new PIN" → Create Cash Card (manual PIN), on top
+                // of the choice. Calls VCardAPI.createVCard with the First Card Reward
+                // userAction; the manually-entered PIN is sent.
+                .fullScreenCover(isPresented: $showVirtualCardCreatePin) {
+                    CreateCashCardView(
+                        vm: vm,
+                        primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0,
+                        title: "Set your virtual card PIN",
+                        mode: .create,
+                        createUserAction: "ACTIVE-FIRST-VCARD",
+                        showsNicknameField: false,
+                        onClose: { showVirtualCardCreatePin = false },
+                        // Present "You're all set!" ON TOP — do NOT dismiss this screen.
+                        onCreated: { _ in showAllSetOverCreate = true }
+                    )
+                    // Level 4 — All Set, stacked over the Create Cash Card screen.
+                    .fullScreenCover(isPresented: $showAllSetOverCreate) {
+                        VirtualCardAllSetView(onDone: { dismissVirtualCardStack() })
+                    }
+                }
+            }
         }
+    }
+
+    /// Collapses the entire First Card Reward → activation stack back to the
+    /// Dashboard in a single non-animated action (dismissing the root reward cover
+    /// tears down every nested cover at once — no intermediate dismiss animations).
+    private func dismissVirtualCardStack() {
+        var tx = SwiftUI.Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) {
+            showAllSetOverChoice = false
+            showAllSetOverCreate = false
+            showVirtualCardCreatePin = false
+            showVirtualCardActivation = false
+            showFirstCardReward = false
+        }
+        needsDashboardRefresh = true
+        Task { await dashboardVM.refresh() }
     }
 
     /// Shows the one-time first-card reward for newly registered users.

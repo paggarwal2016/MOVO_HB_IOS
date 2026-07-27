@@ -28,6 +28,10 @@ struct CreateCashCardView: View {
     /// ("primary card") value; the First Card Reward entry overrides it with
     /// "ACTIVE-FIRST-VCARD". Ignored in `.create` mode.
     var activateUserAction: String = "ACTIVE-PRIMARY-VCARD"
+    /// `userAction` sent for the `.create` request. Defaults to standard card
+    /// creation; the First Card Reward "Create new PIN" entry overrides it with
+    /// "ACTIVE-FIRST-VCARD" (manual PIN entry). Ignored in `.activate` mode.
+    var createUserAction: String = "VCARD-CREATION"
     /// When `false`, the CARD NAME field is hidden (the nickname still sends its
     /// current value). Used by the First Card Reward "Create new PIN" screen,
     /// whose mockup is PIN-only.
@@ -261,7 +265,7 @@ private extension CreateCashCardView {
                 nickname: nickname.trimmingCharacters(in: .whitespaces),
                 pin: pin,
                 primaryAccountId: primaryAccountId,
-                userAction: "VCARD-CREATION"
+                userAction: createUserAction
             )
             Task {
                 let card = try? await vm.createVCard(request: request)

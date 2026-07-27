@@ -21,10 +21,8 @@ struct KYCSuccessView: View {
     @State private var startPlaidFlow = false
     @State private var showFund = false
     @State private var showActivateCard = false
-    @State private var cardActivated = false
     @State private var activatePrimaryAccountId = 0
     @State private var showAllSet = false
-    @State private var pendingBankLink = false
     /// Guards against `onFinish` firing more than once (the bank-link close is
     /// handled in both the sheet's onClose and its onDismiss).
     @State private var didFinish = false
@@ -103,93 +101,69 @@ struct KYCSuccessView: View {
         .onPreferenceChange(BadgeFramePreferenceKey.self) { badgeFrame = $0 }
         .background(Color.movo.background)
         .navigationBarHidden(true)
-        // "Activate Card" → create (activate) the user's cash card. On success we
-        // dismiss the sheet and, in onDismiss, show the activation alert whose
-        // action runs the original fund flow (showBankLink).
-        .fullScreenCover(isPresented: $showActivateCard, onDismiss: {
-            guard cardActivated else { return }
-            cardActivated = false
-            // Show the "You're all set!" confirmation (replaces the old alert).
-            showAllSet = true
-        }) {
+        // Registration activation flow — each screen is presented ON TOP of the
+        // previous one (stacked); nothing below is dismissed until the flow ends.
+        // Tapping X on Bank Linked Info calls finishToDashboard(), which swaps the
+        // root to the Dashboard and tears the WHOLE stack down at once (no per-
+        // screen dismiss animation).
+        //
+        // Level 1 — Create Cash Card (Set your card PIN).
+        .fullScreenCover(isPresented: $showActivateCard) {
             CreateCashCardView(
                 vm: vCardVM,
                 primaryAccountId: activatePrimaryAccountId,
                 title: "Set your card PIN",
                 mode: .activate,
                 onClose: { showActivateCard = false },
-                onActivated: {
-                    cardActivated = true
-                    showActivateCard = false
-                }
+                // Present "You're all set!" ON TOP — do NOT dismiss this screen.
+                onActivated: { showAllSet = true }
             )
-        }
-        // Activation confirmation → continue to the bank-link fund step.
-        .fullScreenCover(isPresented: $showAllSet, onDismiss: {
-            if pendingBankLink {
-                pendingBankLink = false
-                showBankLink = true
-            }
-        }) {
-            VirtualCardAllSetView(
-                message: "Your virtual card is activated and ready to use.",
-                onDone: {
-                    pendingBankLink = true
-                    showAllSet = false
-                }
-            )
-        }
-        // "Fund My Account" (alert action) → link a bank via Plaid (link-only; success
-        // screen shows "Done"). When the link succeeds, advance into the onboarding fund step.
-        .sheet(isPresented: $showBankLink, onDismiss: {
-            // Start Plaid only after the info sheet is fully gone.
-            if continueToPlaid {
-                continueToPlaid = false
-                startPlaidFlow = true
-            } else {
-                finishToDashboard()
-            }
-        }) {
-            BankLinkedInfoScreen(
-                onContinue: { continueToPlaid = true },
-                // xmark → seamless: drop the sheet AND swap to the Dashboard in one
-                // non-animated transaction, so the user never sees this sheet slide
-                // away or the KYC screen behind it (no double-dismiss).
-                onClose: {
-                    var tx = SwiftUI.Transaction()
-                    tx.disablesAnimations = true
-                    withTransaction(tx) {
-                        showBankLink = false
-                        finishToDashboard()
+            // Level 2 — "You're all set!" stacked over Create Cash Card.
+            .fullScreenCover(isPresented: $showAllSet) {
+                VirtualCardAllSetView(
+                    message: "Your virtual card is activated and ready to use.",
+                    // Present Bank Linked Info ON TOP — do NOT dismiss this screen.
+                    onDone: { showBankLink = true }
+                )
+                // Level 3 — Bank Linked Info stacked over "You're all set!".
+                .sheet(isPresented: $showBankLink, onDismiss: {
+                    // Continue → start Plaid once the sheet is gone. (The X finishes
+                    // onboarding directly via onClose, so no else-branch here.)
+                    if continueToPlaid {
+                        continueToPlaid = false
+                        startPlaidFlow = true
                     }
+                }) {
+                    BankLinkedInfoScreen(
+                        onContinue: { continueToPlaid = true },
+                        // X → finish onboarding: the root swaps to the Dashboard,
+                        // collapsing the entire stack at once with no animation.
+                        onClose: { finishToDashboard() }
+                    )
+                    .presentationDetents([.height(430)])
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(Radius.sheet)
+                    .presentationBackground(Color.movo.cardSurface)
                 }
-            )
-            .presentationDetents([.height(430)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
-        }
-        // After Plaid links and the success screen is dismissed ("Done"),
-        // advance into the onboarding fund step.
-        .plaidLinkFlow(
-            isActive: $startPlaidFlow,
-            plaidVM: plaidVM,
-            container: container,
-            allowFunding: false,
-            onDone: { showFund = true },
-            onCancel: { onFinish() }
-        )
-        // The onboarding fund step. Self-loads from/to accounts and lands on the
-        // dashboard on success or back.
-        .fullScreenCover(isPresented: $showFund) {
-            FundAccountView(
-                container: container,
-                mode: .onboardingDeposit,
-                onSuccess: {
-                    showFund = false
-                    onFinish()
+                // Plaid link + onboarding fund step run ABOVE the "You're all set!"
+                // screen (which stays presented), so they don't collide with the
+                // outer cover. Both finish by landing on the Dashboard.
+                .plaidLinkFlow(
+                    isActive: $startPlaidFlow,
+                    plaidVM: plaidVM,
+                    container: container,
+                    allowFunding: false,
+                    onDone: { showFund = true },
+                    onCancel: { finishToDashboard() }
+                )
+                .fullScreenCover(isPresented: $showFund) {
+                    FundAccountView(
+                        container: container,
+                        mode: .onboardingDeposit,
+                        onSuccess: { finishToDashboard() }
+                    )
                 }
-            )
+            }
         }
     }
 
@@ -198,7 +172,12 @@ struct KYCSuccessView: View {
     private func finishToDashboard() {
         guard !didFinish else { return }
         didFinish = true
-        onFinish()
+        // Swap the root to the Dashboard with animations disabled, so the entire
+        // presentation stack (Create Cash Card → All Set → Bank Info) is removed in
+        // one shot with no intermediate dismiss animation.
+        var tx = SwiftUI.Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) { onFinish() }
     }
 
     /// Resolves the primary savings account, then presents the "Activate Card"
