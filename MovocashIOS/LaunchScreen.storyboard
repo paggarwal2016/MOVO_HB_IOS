@@ -16,17 +16,38 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="logo-image-view" image="LaunchLogo">
-                                <rect key="frame" x="136.5" y="366.0" width="120" height="120"/>
-                                <color key="tintColor" name="LaunchLogoTint" catalog="Asset Catalog" colorSpace="custom" customColorSpace="sRGB"/>
+                            <!-- Herring logo, centered slightly above midpoint to leave room for text -->
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="logo-image-view" image="herringLogo">
+                                <rect key="frame" x="134" y="326" width="125" height="125"/>
                             </imageView>
+                            <!-- MOVOCASH label, 24pt below logo bottom -->
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="MOVOCASH" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="movocash-label">
+                                <rect key="frame" x="96.5" y="475" width="200" height="28"/>
+                                <fontDescription type="system" pointSize="22"/>
+                                <color key="textColor" red="0.82745098039215681" green="0.84313725490196079" blue="0.87450980392156863" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            </label>
+                            <!-- Powered by HyperBin label, 4pt below MOVOCASH -->
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Powered by HyperBin®" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="hyperbin-label">
+                                <rect key="frame" x="96.5" y="507" width="200" height="16"/>
+                                <fontDescription type="system" pointSize="12"/>
+                                <color key="textColor" red="0.82745098039215681" green="0.84313725490196079" blue="0.87450980392156863" alpha="0.65" colorSpace="custom" customColorSpace="sRGB"/>
+                            </label>
                         </subviews>
                         <color key="backgroundColor" name="LaunchBackground" catalog="Asset Catalog" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <constraint firstItem="logo-image-view" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cx-constraint"/>
-                            <constraint firstItem="logo-image-view" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cy-constraint"/>
-                            <constraint firstItem="logo-image-view" firstAttribute="width" constant="120" id="w-constraint"/>
-                            <constraint firstItem="logo-image-view" firstAttribute="height" constant="120" id="h-constraint"/>
+                            <!-- Logo: centered horizontally, centered vertically offset by -48 -->
+                            <constraint firstItem="logo-image-view" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="logo-cx"/>
+                            <constraint firstItem="logo-image-view" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-48" id="logo-cy"/>
+                            <constraint firstItem="logo-image-view" firstAttribute="width" constant="125" id="logo-w"/>
+                            <constraint firstItem="logo-image-view" firstAttribute="height" constant="125" id="logo-h"/>
+                            <!-- MOVOCASH: 24pt below logo, centered, fixed width -->
+                            <constraint firstItem="movocash-label" firstAttribute="top" secondItem="logo-image-view" secondAttribute="bottom" constant="24" id="movocash-top"/>
+                            <constraint firstItem="movocash-label" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="movocash-cx"/>
+                            <constraint firstItem="movocash-label" firstAttribute="width" constant="200" id="movocash-w"/>
+                            <!-- HyperBin: 4pt below MOVOCASH, centered, fixed width -->
+                            <constraint firstItem="hyperbin-label" firstAttribute="top" secondItem="movocash-label" secondAttribute="bottom" constant="4" id="hyperbin-top"/>
+                            <constraint firstItem="hyperbin-label" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="hyperbin-cx"/>
+                            <constraint firstItem="hyperbin-label" firstAttribute="width" constant="200" id="hyperbin-w"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -36,6 +57,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="LaunchLogo" width="360" height="360"/>
+        <image name="herringLogo" width="360" height="360"/>
     </resources>
 </document>

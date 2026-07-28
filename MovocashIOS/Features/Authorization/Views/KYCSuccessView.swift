@@ -58,8 +58,22 @@ struct KYCSuccessView: View {
                                 }
                             )
                     )
-                    .padding(.bottom, Spacing.lg)
+                    .padding(.bottom, Spacing.md)
                 // no .clipped() — would cut the balloon's −12° tilt corners
+
+                VStack(spacing: Spacing.xs) {
+                    Text("MOVOCASH")
+                        .font(.system(size: 22, weight: .regular))
+                        .tracking(8.8)
+                        .foregroundColor(Color.movo.textPrimary)
+                        .padding(.leading, 8.8)
+
+                    Text("Powered by HyperBin\u{00AE}")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(Color.movo.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.bottom, Spacing.lg)
 
                 VStack(spacing: Spacing.xl) {
                     Text("Your MOVO account\u{2019}s ready! Let\u{2019}s Movo.")

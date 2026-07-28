@@ -587,15 +587,14 @@ struct QuickPayHeroIllustration: View {
                     drawCard(ctx, center: CGPoint(x: 70, y: 26))
                 }
 
-                // MV symbol overlaid at card centre, scaled + rotated with the card
+                // Herring logo overlaid at card centre, scaled + rotated with the card
                 let mvSize: CGFloat = 18 * scale
-                MovoMVSymbol(
-                    bodyStyle: Color.movo.heritageGreenLine,
-                    accent: Color.movo.heritageGreenLine.opacity(0.55)
-                )
-                .frame(width: mvSize, height: mvSize)
-                .rotationEffect(.degrees(-8))
-                .position(x: ox + 70 * scale, y: oy + 26 * scale)
+                Image("herringLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: mvSize, height: mvSize)
+                    .rotationEffect(.degrees(-8))
+                    .position(x: ox + 70 * scale, y: oy + 26 * scale)
             }
         }
     }

@@ -181,8 +181,10 @@ struct RegistrationCelebrationHero: View {
                 .offset(x: -size * 0.16, y: -size * 0.22)
                 .mask(BalloonShape())
 
-            // Reuse the existing mark, rendered all-white.
-            MovoMVSymbol(bodyStyle: Color.white, accent: Color.white)
+            // Herring logo centred on balloon face.
+            Image("herringLogo")
+                .resizable()
+                .scaledToFit()
                 .frame(width: size * 0.55)
                 .offset(y: -size * 0.04)   // optical-center on the bulge
         }

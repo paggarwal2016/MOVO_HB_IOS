@@ -426,21 +426,24 @@ private extension HomeTabBarView {
 
     // MARK: Home tab icon rasteriser
 
-    /// Renders MovoMVSymbol at the current display scale into a UIImage.
+    /// Renders the Herring monogram at the current display scale into a UIImage.
+    /// Template rendering mode lets us tint selected (accent) vs unselected (white/black).
     /// Must be called from the main actor (ImageRenderer requires it).
     /// Returns nil only if ImageRenderer produces no output (should not happen in practice).
     func makeHomeIcon(selected: Bool, scale: CGFloat, scheme: ColorScheme) -> UIImage? {
         let unselected: Color = scheme == .dark ? .white : .black
-        let body    = selected ? Color.movo.accent : unselected
-        let chevron = selected ? Color.movo.accent : unselected
-        // .environment(\.colorScheme) forces ImageRenderer (which defaults to light)
-        // to resolve dynamic colors (secondaryLabel, movo tokens) in the correct scheme.
-        let view = MovoMVSymbol(bodyStyle: body, accent: chevron)
+        let tint = selected ? Color.movo.accent : unselected
+        // Template rendering fills the monogram's opaque pixels with the tint color —
+        // selected = accent (teal), unselected = white/black. No extra layers.
+        let view = Image("herringMonogram")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .foregroundColor(tint)
             .frame(width: 24, height: 24)
             .environment(\.colorScheme, scheme)
         let renderer = ImageRenderer(content: view)
         renderer.scale = scale
-        // .alwaysOriginal — never let UIKit recolor the image (preserves two-tone M).
         return renderer.uiImage?.withRenderingMode(.alwaysOriginal)
     }
 

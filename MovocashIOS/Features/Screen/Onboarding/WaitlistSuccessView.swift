@@ -24,17 +24,11 @@ struct WaitlistSuccessView: View {
 
                 Spacer(minLength: 0)
 
-                // Hero — logo badge + title + message
+                // Hero — logo + MOVOCASH + Powered by HyperBin + title + message
                 VStack(spacing: Spacing.xl) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.movo.accent.opacity(0.12))
-                            .overlay(
-                                Circle()
-                                    .strokeBorder(Color.movo.accent.opacity(0.18),
-                                                  lineWidth: Stroke.thin)
-                            )
-                            .frame(width: 116, height: 116)
+                    VStack(spacing: Spacing.xxl) {
+                        Image("herringLogo").resizable().scaledToFit()
+                            .frame(width: 125, height: 125)
                             .background(
                                 GeometryReader { proxy in
                                     Color.clear.preference(
@@ -44,8 +38,18 @@ struct WaitlistSuccessView: View {
                                 }
                             )
 
-                        Image("herringLogo").resizable().scaledToFit()
-                            .frame(width: 52, height: 52)
+                        VStack(spacing: Spacing.xs) {
+                            Text("MOVOCASH")
+                                .font(.system(size: 22, weight: .regular))
+                                .tracking(8.8)
+                                .foregroundColor(Color.movo.textPrimary)
+                                .padding(.leading, 8.8)
+
+                            Text("Powered by HyperBin\u{00AE}")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(Color.movo.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
                     }
 
                     VStack(spacing: Spacing.sm) {

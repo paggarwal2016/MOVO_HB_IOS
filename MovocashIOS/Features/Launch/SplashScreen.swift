@@ -35,6 +35,24 @@ struct SplashScreen: View {
 /// transition from LaunchScreen to SwiftUI splash is visually seamless.
 struct MovoSplashLogo: View {
     var body: some View {
-        MovoMVSymbol().frame(width: 120, height: 120)
+        VStack(spacing: Spacing.xxl) {
+            Image("herringLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 125, height: 125)
+
+            VStack(spacing: Spacing.xs) {
+                Text("MOVOCASH")
+                    .font(.system(size: 22, weight: .regular))
+                    .tracking(8.8)
+                    .foregroundColor(Color.movo.textPrimary)
+                    .padding(.leading, 8.8)
+
+                Text("Powered by HyperBin\u{00AE}")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(Color.movo.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
     }
 }

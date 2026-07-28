@@ -98,7 +98,11 @@ struct FloatingMovoMarks: View {
 
                 ForEach(marks) { mark in
                     if isClear(mark, in: geo.size) {
-                        MovoMVSymbol()
+                        Image("herringMonogram")
+                            .resizable()
+                            .renderingMode(.template)
+                            .scaledToFit()
+                            .foregroundColor(Color.movo.accent)
                             .frame(width: mark.size, height: mark.size)
                             .rotationEffect(.degrees(mark.rotation))
                             .modifier(DropInModifier(targetOpacity: mark.opacity,
