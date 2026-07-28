@@ -125,7 +125,8 @@ struct KYCSuccessView: View {
             // Level 2 — "You're all set!" stacked over Create Cash Card.
             .fullScreenCover(isPresented: $showAllSet) {
                 VirtualCardAllSetView(
-                    message: "Your virtual card is activated and ready to use.",
+                    title: "Your digital cash card is live!",
+                    message: "Your MOVO card is ready to go. Add it to Apple Wallet or start spending right away.",
                     // Present Bank Linked Info ON TOP — do NOT dismiss this screen.
                     onDone: { showBankLink = true }
                 )
@@ -195,7 +196,7 @@ struct KYCSuccessView: View {
     private var ctaFooter: some View {
         VStack(spacing: Spacing.xl) {
             Button(action: { startActivateCard() }) {
-                Text("Set Your Card PIN")
+                Text("Set your card PIN")
             }
             .buttonStyle(MovoPrimaryButtonStyle())
         }

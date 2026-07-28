@@ -2,17 +2,20 @@
 //  VirtualCardAllSetView.swift
 //  MovocashIOS
 //
-//  "You're all set!" confirmation shown after the user chooses "Use existing PIN"
-//  for their virtual card (product mockup, screen 2a).
+//  Confirmation screen shown after PIN is set for a virtual card.
+//  Used in two flows:
+//    1. Dashboard "Use existing PIN" / "Create new PIN" (default title/message)
+//    2. KYC registration activate (custom title + message passed from KYCSuccessView)
 //
 
 import SwiftUI
 
 struct VirtualCardAllSetView: View {
 
-    /// Body copy under the title. Defaults to the "Use existing PIN" wording;
-    /// the registration activate flow passes an activate-specific message.
-    var message = "Your virtual card is using the same PIN as your first MOVO card."
+    /// Headline. Defaults to the PIN-set confirmation copy.
+    var title: String = "You're all set"
+    /// Body copy under the title.
+    var message: String = "Your PIN is set and your digital cash card is ready to use."
     /// Finishes the flow ("Let's MOVO").
     let onDone: () -> Void
 
@@ -22,7 +25,7 @@ struct VirtualCardAllSetView: View {
 
             glyph
 
-            Text("You\u{2019}re all set!")
+            Text(title)
                 .textStyle(Typography.sectionTitle)
                 .foregroundStyle(Color.movo.textPrimary)
                 .multilineTextAlignment(.center)
@@ -51,14 +54,22 @@ struct VirtualCardAllSetView: View {
     }
 
     private var glyph: some View {
-        ZStack {
-            Circle()
-                .fill(Color.movo.accentTint)
-                .frame(width: 128, height: 128)
-            Image(systemName: "checkmark")
-                .font(.system(size: 48, weight: .semibold))
-                .foregroundStyle(Color.movo.accent)
+        ZStack(alignment: .bottomTrailing) {
+            Image("CardFrontHerring")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 200)
+
+            ZStack {
+                Circle()
+                    .fill(Color.movo.accent)
+                    .frame(width: 44, height: 44)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.movo.onAccent)
+            }
+            .offset(x: 8, y: 8)
         }
-        .padding(.bottom, Spacing.xl)
+        .padding(.bottom, Spacing.xl + 8)
     }
 }

@@ -281,7 +281,7 @@ private extension GetStartedInfoScreen {
 
     private var continueButton: some View {
         Button(action: { onReady() }) {
-            Text("Accept & continue")
+            Text("Continue")
                 .textStyle(Typography.buttonLarge)
                 .foregroundStyle(
                     allAccepted

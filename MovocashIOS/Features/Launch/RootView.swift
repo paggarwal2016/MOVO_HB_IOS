@@ -575,6 +575,10 @@ struct RootView: View {
 
             // Clear any transient alert so it can't sit above the biometric gate.
             AlertManager.shared.dismiss()
+            // Cancel any in-flight cold-launch biometric task before entering warm relock.
+            // Without this, runBiometricLogin joins the stale splash-race task and the
+            // warm-relock screen stays frozen until the original nonce fetch times out.
+            authVM.cancelBiometricLogin()
             appState.flow = .warmRelock
         }
         .task {
