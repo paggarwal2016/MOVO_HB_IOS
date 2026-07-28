@@ -82,12 +82,24 @@ struct Transaction: Decodable, Identifiable, Sendable {
         case id, status, location, description, amount, to, from, type, date, createdAt
     }
 
-    private static let dateFormatter: DateFormatter = {
+    // The backend sends timestamps in UTC with no offset, so the source zone
+    // must be pinned explicitly — otherwise the device's local zone is used to
+    // interpret it, producing a different absolute instant depending on where
+    // the device's clock is set.
+    private static func utcFormatter(_ format: String) -> DateFormatter {
         let f = DateFormatter()
-        f.dateFormat = "M/d/yyyy HH:mm:ss"
+        f.dateFormat = format
         f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
         return f
-    }()
+    }
+
+    // Matches `createdAt`, e.g. "2026-07-25T00:10:19".
+    private static let createdAtFormatter = utcFormatter("yyyy-MM-dd'T'HH:mm:ss")
+
+    // Matches the legacy `date` field, e.g. "7/25/2026 00:10:19" — same UTC
+    // instant as `createdAt`, just a different format.
+    private static let legacyDateFormatter = utcFormatter("M/d/yyyy HH:mm:ss")
 
     func toItem() -> TransactionItem {
         let isCredit   = type == .deposit
@@ -103,7 +115,9 @@ struct Transaction: Decodable, Identifiable, Sendable {
             // Payment / Transfer: prefer recipient (to), then description
             title = toNil ?? descNil ?? "Unknown"
         }
-        let parsedDate = Self.dateFormatter.date(from: date) ?? Date()
+        let parsedDate = Self.createdAtFormatter.date(from: date)
+            ?? Self.legacyDateFormatter.date(from: date)
+            ?? Date()
         return TransactionItem(
             id:       id,
             title:    title,
