@@ -609,13 +609,26 @@ struct CardDetailSheet: View {
             return "\(prefix)\(formatted)"
         }
         
-        private var formattedDate: String {
-            let calendar = Calendar.current
-            if calendar.isDateInToday(item.date)     { return "Today" }
-            if calendar.isDateInYesterday(item.date) { return "Yesterday" }
+        private static let timeFormatter: DateFormatter = {
+            let f = DateFormatter()
+            f.dateFormat = "h:mm a"
+            f.timeZone = .current
+            return f
+        }()
+
+        private static let monthDayFormatter: DateFormatter = {
             let f = DateFormatter()
             f.dateFormat = "MMM d"
-            return f.string(from: item.date)
+            f.timeZone = .current
+            return f
+        }()
+
+        private var formattedDate: String {
+            let calendar = Calendar.current
+            let time = Self.timeFormatter.string(from: item.date)
+            if calendar.isDateInToday(item.date)     { return "Today, \(time)" }
+            if calendar.isDateInYesterday(item.date) { return "Yesterday, \(time)" }
+            return "\(Self.monthDayFormatter.string(from: item.date)), \(time)"
         }
 
         private var amountColor: Color {

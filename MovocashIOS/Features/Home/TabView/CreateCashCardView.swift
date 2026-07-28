@@ -39,6 +39,12 @@ struct CreateCashCardView: View {
     /// Label shown above the nickname field. Defaults to "CARD NAME"; the
     /// registration (KYCSuccessView) entry overrides it with "NICK NAME".
     var nicknameFieldLabel: String = "CARD NAME"
+    /// When set, seeds the nickname field with this value on appear. Used by
+    /// the KYCSuccessView entry, which always names the card "MOVO Vault Card".
+    var fixedNickname: String? = nil
+    /// When `false`, the nickname field is locked (shows `fixedNickname` but
+    /// cannot be edited). Used by the KYCSuccessView entry.
+    var isNicknameEditable: Bool = true
     /// Dismisses this sheet (used by the close button).
     let onClose: () -> Void
     /// Invoked after the card is created successfully (`.create` mode). The presenter
@@ -119,10 +125,11 @@ struct CreateCashCardView: View {
         }
         .background(Color.movo.surface.ignoresSafeArea())
         .onAppear {
+            if let fixedNickname { nickname = fixedNickname }
             // Focus just after the sheet-present animation settles (matches the
             // app's PIN-entry convention in OTPScreen).
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                focusedField = showsNicknameField ? .nickname : .pin
+                focusedField = (showsNicknameField && isNicknameEditable) ? .nickname : .pin
             }
         }
         .onDisappear {
@@ -149,7 +156,7 @@ private extension CreateCashCardView {
             .submitLabel(.next)
             .onSubmit { focusedField = .pin }
             .focused($focusedField, equals: .nickname)
-            .disabled(isLoading)
+            .disabled(isLoading || !isNicknameEditable)
             .padding(.horizontal, Spacing.md)
             .frame(height: 48)
             .background(Color.movo.elevated, in: RoundedRectangle(cornerRadius: Radius.card))
