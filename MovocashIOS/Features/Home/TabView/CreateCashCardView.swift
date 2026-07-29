@@ -255,7 +255,7 @@ private extension CreateCashCardView {
         guard isValid else { return }
         focusedField = nil
         isLoading = true
-        UIApplication.shared.dismissKeyboard()
+        dismissKeyboardForcefully()
         SpinnerView.showFullScreen()
         switch mode {
         case .create:
@@ -293,6 +293,21 @@ private extension CreateCashCardView {
                 }
             }
         }
+    }
+
+    /// `UIApplication.dismissKeyboard()` (`sendAction(resignFirstResponder...)`)
+    /// resigns whatever the CURRENT responder chain points at, but this screen's
+    /// PIN entry uses a near-invisible `TextField` (`PinBoxRow`, opacity 0.011) and
+    /// submit() immediately transitions into a new presented screen (the wallet
+    /// SDK / next cover) — in that combination the responder-chain approach can
+    /// leave the keyboard visually stuck up. Forcing the key window itself to end
+    /// editing reaches the field regardless, so the keyboard is reliably gone
+    /// before the next screen appears.
+    func dismissKeyboardForcefully() {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?
+            .endEditing(true)
     }
 }
 

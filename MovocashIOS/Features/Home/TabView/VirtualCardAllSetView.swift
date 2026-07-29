@@ -9,7 +9,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct VirtualCardAllSetView: View {
 
@@ -52,14 +51,6 @@ struct VirtualCardAllSetView: View {
         }
         .padding(.top, Spacing.md)
         .background(Color.movo.surface.ignoresSafeArea())
-        .onAppear {
-            // This screen has no text fields of its own — dismiss any keyboard left
-            // focused on the screen underneath (e.g. CreateCashCardView's PIN entry)
-            // so it doesn't linger/reappear once this cover is on top.
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
-            )
-        }
     }
 
     private var glyph: some View {
