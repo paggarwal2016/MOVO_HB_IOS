@@ -153,6 +153,7 @@ private extension ProfileScreen {
                 securityCard
                 preferencesCard
                 linkedBankCard
+                SupportSection()
 //                if !dashboardVM.deletedCards.isEmpty {
 //                    Cards
 //                }
