@@ -219,6 +219,29 @@ struct CardDetailSheet: View {
             // Refresh the Dashboard on the way back only if something changed here.
             if hasChanges { onChanged?() }
         }
+        // Bound directly to the ViewModel's flag — set by the SDK's wallet
+        // provisioning notifications as soon as any of them fires, not after this
+        // screen's own `await achVM.addVirtualCardToAppleWallet(...)` resolves.
+        .fullScreenCover(isPresented: $achVM.showVirtualCardAllSet) {
+            VirtualCardAllSetView(
+                title: walletAllSetTitle,
+                message: walletAllSetMessage,
+                onDone: { achVM.showVirtualCardAllSet = false }
+            )
+        }
+    }
+
+    private var walletAllSetTitle: String {
+        achVM.walletProvisioningOutcome == .addedToWallet ? "Added to Apple Wallet" : "Card is Active"
+    }
+
+    private var walletAllSetMessage: String {
+        switch achVM.walletProvisioningOutcome {
+        case .addedToWallet:
+            return "Your card has been added to Apple Wallet."
+        case .activeButNotInWallet, .none:
+            return "We couldn't add your card to Apple Wallet just now — you can try again anytime from here."
+        }
     }
 
     private var cardNickname: String {
@@ -226,6 +249,13 @@ struct CardDetailSheet: View {
     }
 
     private var hasNickname: Bool { !cardNickname.isEmpty }
+
+    /// True when the card being shown is the user's primary linked card — its
+    /// name is fixed ("Main MOVO Card") and not editable, unlike other cards.
+    private var isPrimaryCard: Bool {
+        guard let primaryLinkedCard else { return false }
+        return displayCard.id == primaryLinkedCard.id
+    }
 
     private func saveNickname(_ newValue: String) {
         guard let accountId = displayCard.savingsAccountId else { return }
@@ -404,15 +434,17 @@ struct CardDetailSheet: View {
     private var navBar: some View {
         HStack(spacing: Spacing.sm) {
             CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
-            Text(hasNickname ? cardNickname : "My Card")
+            Text(isPrimaryCard ? "Main MOVO Card" : (hasNickname ? cardNickname : "My Card"))
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.tail)
-            Button(action: { showEditNickname = true }) {
-                MovoEditIcon(size: 18)
+            if !isPrimaryCard {
+                Button(action: { showEditNickname = true }) {
+                    MovoEditIcon(size: 18)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             Spacer()
         }
         .padding(.horizontal, Spacing.lg)

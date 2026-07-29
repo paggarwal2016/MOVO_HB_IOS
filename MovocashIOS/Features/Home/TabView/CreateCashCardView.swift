@@ -11,48 +11,33 @@ struct CreateCashCardView: View {
 
     // MARK: - Dependencies & Callbacks
 
-    /// View model that performs the create-card network call.
     let vm: VCardViewModel
-    /// Primary savings account id the new card is created against.
+
+    var plaidVM: PlaidAchViewModel? = nil
+    
     let primaryAccountId: Int
-    /// Header title. Defaults to the create-card copy; the registration
-    /// "Activate Card" entry point overrides it.
-    var title: String = "Create your cash card"
-    /// Selects which API the submit action calls.
-    /// - `.create`: creates a new virtual card (`createVCard` / `VCardAPI.createVCard`).
-    /// - `.activate`: activates the card (`postVCard` / `VCardAPI.postVCards`,
-    ///   `userAction: "VCARD-ACTIVATE"`). The nickname field is still shown but the
-    ///   activate request does not send it.
+
+    var title: String = "Set digital cash card PIN"
+    
     var mode: Mode = .create
-    /// `userAction` sent for the `.activate` request. Defaults to the registration
-    /// ("primary card") value; the First Card Reward entry overrides it with
-    /// "ACTIVE-FIRST-VCARD". Ignored in `.create` mode.
-    var activateUserAction: String = "ACTIVE-PRIMARY-VCARD"
-    /// `userAction` sent for the `.create` request. Defaults to standard card
-    /// creation; the First Card Reward "Create new PIN" entry overrides it with
-    /// "ACTIVE-FIRST-VCARD" (manual PIN entry). Ignored in `.activate` mode.
+    
     var createUserAction: String = "VCARD-CREATION"
-    /// When `false`, the CARD NAME field is hidden (the nickname still sends its
-    /// current value). Used by the First Card Reward "Create new PIN" screen,
-    /// whose mockup is PIN-only.
+    
     var showsNicknameField: Bool = true
-    /// Label shown above the nickname field. Defaults to "CARD NAME"; the
-    /// registration (KYCSuccessView) entry overrides it with "NICK NAME".
+    
     var nicknameFieldLabel: String = "CARD NAME"
-    /// When set, seeds the nickname field with this value on appear. Used by
-    /// the KYCSuccessView entry, which always names the card "MOVO Vault Card".
+    
     var fixedNickname: String? = nil
-    /// When `false`, the nickname field is locked (shows `fixedNickname` but
-    /// cannot be edited). Used by the KYCSuccessView entry.
+    
     var isNicknameEditable: Bool = true
-    /// Dismisses this sheet (used by the close button).
+    
     let onClose: () -> Void
-    /// Invoked after the card is created successfully (`.create` mode). The presenter
-    /// is expected to dismiss this sheet and then present the success screen, passing
-    /// along the created card.
+    
     var onCreated: ((VCardListResponse) -> Void)? = nil
-    /// Invoked after the card is activated successfully (`.activate` mode).
+    
     var onActivated: (() -> Void)? = nil
+
+    var onActivationRequiresSupport: (() -> Void)? = nil
 
     enum Mode { case create, activate }
 
@@ -93,10 +78,12 @@ struct CreateCashCardView: View {
         VStack(spacing: 0) {
             CustomSheetHeader(
                 title: title,
-                subtitle: "Let's MOVO your way",
+                // KYCSuccessView's .activate entry hides the subtitle and close button.
+                subtitle: "",
                 systemImage: "creditcard.fill",
                 iconTint: Color.movo.accent,
                 iconBackground: Color.movo.accentTint,
+                showsCloseButton: mode != .activate,
                 horizontalPadding: Spacing.xl,
                 closeAction: onClose
             )
@@ -104,7 +91,10 @@ struct CreateCashCardView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         VStack(spacing: Spacing.xl) {
-                            nicknameField
+                            // KYCSuccessView's .activate entry shows PIN entry only.
+                            if mode != .activate {
+                                nicknameField
+                            }
                             pinSection
                             confirmPinSection
                         }
@@ -126,8 +116,6 @@ struct CreateCashCardView: View {
         .background(Color.movo.surface.ignoresSafeArea())
         .onAppear {
             if let fixedNickname { nickname = fixedNickname }
-            // Focus just after the sheet-present animation settles (matches the
-            // app's PIN-entry convention in OTPScreen).
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 focusedField = (showsNicknameField && isNicknameEditable) ? .nickname : .pin
             }
@@ -135,6 +123,7 @@ struct CreateCashCardView: View {
         .onDisappear {
             SpinnerView.hideFullScreen()
         }
+        .globalAlert()
     }
 }
 
@@ -266,6 +255,7 @@ private extension CreateCashCardView {
         guard isValid else { return }
         focusedField = nil
         isLoading = true
+        UIApplication.shared.dismissKeyboard()
         SpinnerView.showFullScreen()
         switch mode {
         case .create:
@@ -277,7 +267,6 @@ private extension CreateCashCardView {
             )
             Task {
                 let card = try? await vm.createVCard(request: request)
-                // Error (card == nil) is surfaced via BaseViewModel toast.
                 await MainActor.run {
                     isLoading = false
                     SpinnerView.hideFullScreen()
@@ -285,25 +274,22 @@ private extension CreateCashCardView {
                 }
             }
         case .activate:
-            let request = VCardsRequest(
-                nickname: nickname.trimmingCharacters(in: .whitespaces),
-                pin: pin,
-                accountId: primaryAccountId,
-                userAction: activateUserAction
-            )
             Task {
-                let result = try? await vm.postVCard(request: request)
-                // Persist the PIN on success so a later card can offer "Use existing PIN".
-                if result != nil {
+                await plaidVM?.activateVirtualCard(
+                    pin: pin,
+                    accountId: primaryAccountId,
+                    onRequiresSupport: onActivationRequiresSupport
+                )
+                let succeeded = plaidVM?.state == .success
+                if succeeded {
                     try? await KeychainManager.shared.save(
                         pin, for: KeychainManager.Keys.cardPinForCurrentUser, protection: .backgroundSafe
                     )
                 }
-                // Error (result == nil) is surfaced via BaseViewModel toast.
                 await MainActor.run {
                     isLoading = false
                     SpinnerView.hideFullScreen()
-                    if result != nil { onActivated?() }
+                    if succeeded { onActivated?() }
                 }
             }
         }
