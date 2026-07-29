@@ -39,12 +39,14 @@ struct CreateCashCardView: View {
     /// Label shown above the nickname field. Defaults to "CARD NAME"; the
     /// registration (KYCSuccessView) entry overrides it with "NICK NAME".
     var nicknameFieldLabel: String = "CARD NAME"
-    /// When set, seeds the nickname field with this value on appear. Used by
-    /// the KYCSuccessView entry, which always names the card "MOVO Vault Card".
+    /// When set, seeds the nickname field with this value on appear — validated
+    /// and sent to the API like any user-typed nickname. Used by entries that
+    /// hide the field via `showsNicknameField = false` (KYCSuccessView,
+    /// First Card Reward) so there's still a value to submit.
     var fixedNickname: String? = nil
-    /// When `false`, the nickname field is locked (shows `fixedNickname` but
-    /// cannot be edited). Used by the KYCSuccessView entry.
-    var isNicknameEditable: Bool = true
+    /// When `false`, the header's close (X) button is hidden. Used by the
+    /// KYCSuccessView entry, which shouldn't let the user back out mid-flow.
+    var showsCloseButton: Bool = true
     /// Dismisses this sheet (used by the close button).
     let onClose: () -> Void
     /// Invoked after the card is created successfully (`.create` mode). The presenter
@@ -97,6 +99,7 @@ struct CreateCashCardView: View {
                 systemImage: "creditcard.fill",
                 iconTint: Color.movo.accent,
                 iconBackground: Color.movo.accentTint,
+                showsCloseButton: showsCloseButton,
                 horizontalPadding: Spacing.xl,
                 closeAction: onClose
             )
@@ -104,7 +107,9 @@ struct CreateCashCardView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         VStack(spacing: Spacing.xl) {
-                            nicknameField
+                            if showsNicknameField {
+                                nicknameField
+                            }
                             pinSection
                             confirmPinSection
                         }
@@ -126,10 +131,19 @@ struct CreateCashCardView: View {
         .background(Color.movo.surface.ignoresSafeArea())
         .onAppear {
             if let fixedNickname { nickname = fixedNickname }
+            let target: Field = showsNicknameField ? .nickname : .pin
             // Focus just after the sheet-present animation settles (matches the
-            // app's PIN-entry convention in OTPScreen).
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                focusedField = (showsNicknameField && isNicknameEditable) ? .nickname : .pin
+            // app's PIN-entry convention in OTPScreen). Re-asserted a couple more
+            // times for entries presented several `fullScreenCover`s deep (e.g. the
+            // First Card Reward flow), where a single 0.3s attempt can land before
+            // the view is actually ready to accept focus. Forcing `nil` first on
+            // each retry guarantees a real value change, so SwiftUI re-attempts the
+            // focus binding instead of treating it as a no-op.
+            for delay in [0.3, 0.6, 1.0] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    focusedField = nil
+                    focusedField = target
+                }
             }
         }
         .onDisappear {
@@ -156,7 +170,7 @@ private extension CreateCashCardView {
             .submitLabel(.next)
             .onSubmit { focusedField = .pin }
             .focused($focusedField, equals: .nickname)
-            .disabled(isLoading || !isNicknameEditable)
+            .disabled(isLoading)
             .padding(.horizontal, Spacing.md)
             .frame(height: 48)
             .background(Color.movo.elevated, in: RoundedRectangle(cornerRadius: Radius.card))

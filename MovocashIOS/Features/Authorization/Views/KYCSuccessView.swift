@@ -117,9 +117,9 @@ struct KYCSuccessView: View {
                 primaryAccountId: activatePrimaryAccountId,
                 title: "Set your card PIN",
                 mode: .activate,
-                nicknameFieldLabel: "NICK NAME",
+                showsNicknameField: false,
                 fixedNickname: "MOVO Vault Card",
-                isNicknameEditable: false,
+                showsCloseButton: false,
                 onClose: { showActivateCard = false },
                 // Present "You're all set!" ON TOP — do NOT dismiss this screen.
                 onActivated: { showAllSet = true }

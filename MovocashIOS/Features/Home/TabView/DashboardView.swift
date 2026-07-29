@@ -500,6 +500,7 @@ struct DashboardView: View {
                         mode: .create,
                         createUserAction: "ACTIVE-FIRST-VCARD",
                         showsNicknameField: false,
+                        fixedNickname: "MOVO",
                         onClose: { showVirtualCardCreatePin = false },
                         // Present "You're all set!" ON TOP — do NOT dismiss this screen.
                         onCreated: { _ in showAllSetOverCreate = true }
