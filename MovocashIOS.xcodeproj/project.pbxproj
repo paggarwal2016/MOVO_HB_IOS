@@ -78,6 +78,7 @@
 		14E44E742FF7C3E5001E358D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 14E44E732FF7C3E5001E358D /* PrivacyInfo.xcprivacy */; };
 		14EAD5E92FA5AFDF00617D84 /* PDFViewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EAD5E82FA5AFDF00617D84 /* PDFViewScreen.swift */; };
 		14FF718F2F7E9F3200EC0B57 /* JWTDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */; };
+		83D22074301A379A00DCD6B7 /* FirstCardRewardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D22073301A379A00DCD6B7 /* FirstCardRewardCard.swift */; };
 		998E6E9830124992007DFEC1 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 998E6E9730124992007DFEC1 /* MobileBankingSDK */; };
 		998E6E9B301249B3007DFEC1 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 998E6E9A301249B3007DFEC1 /* LinkKit */; };
 		99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */ = {isa = PBXBuildFile; fileRef = 99C2EAA22FC9AAB600384E28 /* terms-layout.css */; };
@@ -195,6 +196,7 @@
 		14FC32662F7C028A0063F6FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
+		83D22073301A379A00DCD6B7 /* FirstCardRewardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstCardRewardCard.swift; sourceTree = "<group>"; };
 		99C2EAA22FC9AAB600384E28 /* terms-layout.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "terms-layout.css"; sourceTree = "<group>"; };
 		99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarScrim.swift; sourceTree = "<group>"; };
 		99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNormalizer.swift; sourceTree = "<group>"; };
@@ -582,6 +584,7 @@
 		146893D92FA33D7A001918AE /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				83D22073301A379A00DCD6B7 /* FirstCardRewardCard.swift */,
 				146E02202FA4A9020000C193 /* LinkedAccountsSectionView.swift */,
 				1417849B2FA34B8E000E802C /* CardView.swift */,
 				1417849D2FA34CC9000E802C /* CreateCardView.swift */,
@@ -810,6 +813,7 @@
 				146819782F4DE6CF00BED014 /* NetworkServiceProtocol.swift in Sources */,
 				146819792F4DE6CF00BED014 /* NetworkService.swift in Sources */,
 				1468197D2F4DE6CF00BED014 /* AppInfo.swift in Sources */,
+				83D22074301A379A00DCD6B7 /* FirstCardRewardCard.swift in Sources */,
 				149C19EC2FD1937A00FFC014 /* CommonCustomView.swift in Sources */,
 				14DBC5962F504AF8000D84FD /* NetworkError.swift in Sources */,
 				99C2EAA62FC9ABDE00384E28 /* StatusBarScrim.swift in Sources */,

@@ -7,12 +7,19 @@
 
 import SwiftUI
 
-struct KYCSuccessView: View {
+/// Wraps the resolved primary account id so it can drive `.fullScreenCover(item:)` —
+/// binding the id directly into what's presented, rather than through a sibling
+/// `@State` var set just before flipping a separate `isPresented` flag.
+private struct ActivateCardAccount: Identifiable {
+    let id: Int
+}
 
+struct KYCSuccessView: View {
+    
     let container: AppContainer
     let onFinish: () -> Void
     let onSkip: () -> Void
-
+    
     @StateObject private var plaidVM: PlaidAchViewModel
     @StateObject private var vCardVM: VCardViewModel
     @StateObject private var savingVM: SavingsAccountViewModel
@@ -20,17 +27,11 @@ struct KYCSuccessView: View {
     @State private var continueToPlaid = false
     @State private var startPlaidFlow = false
     @State private var showFund = false
-    @State private var showActivateCard = false
-    @State private var activatePrimaryAccountId = 0
-    @State private var showAllSet = false
-    /// Guards against `onFinish` firing more than once (the bank-link close is
-    /// handled in both the sheet's onClose and its onDismiss).
+    @State private var activateCardAccount: ActivateCardAccount? = nil
     @State private var didFinish = false
-
-    /// Measured frame of the celebration hero — fed to the background so its marks
-    /// never overlap the hero.
+    
     @State private var badgeFrame: CGRect = .zero
-
+    
     init(container: AppContainer,
          onFinish: @escaping () -> Void,
          onSkip: @escaping () -> Void) {
@@ -41,21 +42,18 @@ struct KYCSuccessView: View {
         _vCardVM = StateObject(wrappedValue: container.makeVCardViewModel())
         _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
-
+    
     var body: some View {
         ZStack {
             MovoBackground()
             AmbientGlowView()
             FloatingMovoMarks(excludedCircle: badgeFrame)
-
+            
             VStack(spacing: 0) {
                 Spacer(minLength: Spacing.xxl)
-
+                
                 RegistrationCelebrationHero()
                     .frame(maxHeight: 190)
-                    // Measure a tight 116×116 anchor centered on the hero (mirrors the
-                    // waitlist badge circle) so the marks' glow/exclusion stays compact
-                    // instead of scaling to the full-width hero.
                     .overlay(
                         Color.clear
                             .frame(width: 116, height: 116)
@@ -69,15 +67,14 @@ struct KYCSuccessView: View {
                             )
                     )
                     .padding(.bottom, Spacing.lg)
-                // no .clipped() — would cut the balloon's −12° tilt corners
-
+                
                 VStack(spacing: Spacing.xl) {
                     Text("Your MOVO account\u{2019}s ready! Let\u{2019}s Movo.")
                         .textStyle(Typography.heroTitle)
                         .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
-
+                    
                     Text("Identity verified. Add money to send to family & friends \u{2014} or spend anywhere.")
                         .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
@@ -90,9 +87,9 @@ struct KYCSuccessView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, Spacing.screenHorizontal)
                 .padding(.bottom, Spacing.lg)
-
+                
                 Spacer(minLength: Spacing.xl)
-
+                
                 ctaFooter
             }
             .padding(.top, Spacing.md)
@@ -101,41 +98,35 @@ struct KYCSuccessView: View {
         .onPreferenceChange(BadgeFramePreferenceKey.self) { badgeFrame = $0 }
         .background(Color.movo.background)
         .navigationBarHidden(true)
-        // Preload the accounts silently when this screen appears (no spinner), so
-        // "Activate Card" can resolve the primary account instantly.
         .task { await savingVM.loadAccounts() }
-        // Registration activation flow — each screen is presented ON TOP of the
-        // previous one (stacked); nothing below is dismissed until the flow ends.
-        // Tapping X on Bank Linked Info calls finishToDashboard(), which swaps the
-        // root to the Dashboard and tears the WHOLE stack down at once (no per-
-        // screen dismiss animation).
-        //
+        
         // Level 1 — Create Cash Card (Set your card PIN).
-        .fullScreenCover(isPresented: $showActivateCard) {
+        .fullScreenCover(item: $activateCardAccount) { account in
             CreateCashCardView(
                 vm: vCardVM,
-                primaryAccountId: activatePrimaryAccountId,
+                plaidVM: plaidVM,
+                primaryAccountId: account.id,
                 title: "Set your card PIN",
                 mode: .activate,
                 nicknameFieldLabel: "NICK NAME",
                 fixedNickname: "MOVO Vault Card",
                 isNicknameEditable: false,
-                onClose: { showActivateCard = false },
-                // Present "You're all set!" ON TOP — do NOT dismiss this screen.
-                onActivated: { showAllSet = true }
+                onClose: { activateCardAccount = nil },
+                onActivationRequiresSupport: { finishToDashboard() }
             )
-            // Level 2 — "You're all set!" stacked over Create Cash Card.
-            .fullScreenCover(isPresented: $showAllSet) {
+            // Bound directly to the ViewModel's flag — set by the SDK's wallet
+            // provisioning notifications as soon as any of them fires, not after
+            // CreateCashCardView's own `await activateVirtualCard(...)` resolves.
+            .fullScreenCover(isPresented: $plaidVM.showVirtualCardAllSet) {
                 VirtualCardAllSetView(
                     title: "Your digital cash card is live!",
-                    message: "Your MOVO card is ready to go. Add it to Apple Wallet or start spending right away.",
-                    // Present Bank Linked Info ON TOP — do NOT dismiss this screen.
-                    onDone: { showBankLink = true }
+                    message: allSetMessage,
+                    onDone: {
+                        plaidVM.showVirtualCardAllSet = false
+                        showBankLink = true
+                    }
                 )
-                // Level 3 — Bank Linked Info stacked over "You're all set!".
                 .sheet(isPresented: $showBankLink, onDismiss: {
-                    // Continue → start Plaid once the sheet is gone. (The X finishes
-                    // onboarding directly via onClose, so no else-branch here.)
                     if continueToPlaid {
                         continueToPlaid = false
                         startPlaidFlow = true
@@ -143,8 +134,6 @@ struct KYCSuccessView: View {
                 }) {
                     BankLinkedInfoScreen(
                         onContinue: { continueToPlaid = true },
-                        // X → finish onboarding: the root swaps to the Dashboard,
-                        // collapsing the entire stack at once with no animation.
                         onClose: { finishToDashboard() }
                     )
                     .presentationDetents([.height(430)])
@@ -152,9 +141,6 @@ struct KYCSuccessView: View {
                     .presentationCornerRadius(Radius.sheet)
                     .presentationBackground(Color.movo.cardSurface)
                 }
-                // Plaid link + onboarding fund step run ABOVE the "You're all set!"
-                // screen (which stays presented), so they don't collide with the
-                // outer cover. Both finish by landing on the Dashboard.
                 .plaidLinkFlow(
                     isActive: $startPlaidFlow,
                     plaidVM: plaidVM,
@@ -173,32 +159,52 @@ struct KYCSuccessView: View {
             }
         }
     }
-
+    
     private func finishToDashboard() {
         guard !didFinish else { return }
         didFinish = true
-        // Swap the root to the Dashboard with animations disabled, so the entire
-        // presentation stack (Create Cash Card → All Set → Bank Info) is removed in
-        // one shot with no intermediate dismiss animation.
         var tx = SwiftUI.Transaction()
         tx.disablesAnimations = true
-        withTransaction(tx) { onFinish() }
+        withTransaction(tx) {
+            // Collapse every nested cover in THIS view before the root swaps away.
+            // RootView replacing this whole subtree (appState.flow = .home) does not
+            // reliably tear down fullScreenCovers still bound to this view's own
+            // state — leaving an orphaned screen (e.g. CreateCashCardView) visible
+            // underneath. Zeroing them here, in the same non-animated transaction as
+            // the flow swap, ensures nothing is left presented.
+            showFund = false
+            startPlaidFlow = false
+            showBankLink = false
+            plaidVM.showVirtualCardAllSet = false
+            activateCardAccount = nil
+            onFinish()
+        }
     }
-
+    
     private func startActivateCard() {
+        // `id == 0` is never a real account id — treat it the same as "not found yet"
+        // rather than sending a bogus accountId through to the SDK/activation call.
         guard let primaryId = savingVM.accountList?.data.accounts
-            .first(where: { $0.isPrimary })?.id else {
+            .first(where: { $0.isPrimary })?.id, primaryId != 0 else {
             AlertManager.shared.showError("Unable to find your account. Please try again.")
             return
         }
-        activatePrimaryAccountId = primaryId
-        showActivateCard = true
+        activateCardAccount = ActivateCardAccount(id: primaryId)
     }
-
+    
+    private var allSetMessage: String {
+        switch plaidVM.walletProvisioningOutcome {
+        case .activeButNotInWallet:
+            return "Your Main MOVO card is live and ready to use. We couldn't add it to Apple Wallet just now — you can try again anytime from your Card screen."
+        case .addedToWallet, .none:
+            return "Your main MOVO card is live and in your Apple Wallet. Add money to start spending."
+        }
+    }
+    
     private var ctaFooter: some View {
         VStack(spacing: Spacing.xl) {
             Button(action: { startActivateCard() }) {
-                Text("Set your card PIN")
+                Text("Add to Apple Wallet")
             }
             .buttonStyle(MovoPrimaryButtonStyle())
         }
