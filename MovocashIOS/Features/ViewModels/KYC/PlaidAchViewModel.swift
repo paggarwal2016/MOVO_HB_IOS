@@ -481,8 +481,24 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         showVirtualCardAllSet = false
         guard let presenter = await waitForPresentableViewController() else {
             AlertManager.shared.showError("Unable to present wallet flow.")
+            SpinnerView.hideFullScreen()
             return
         }
+
+        let spinnerWatcher = Task { [weak self] in
+            while !Task.isCancelled {
+                if presenter.presentedViewController != nil || (self?.walletProvisioningOutcome ?? .none) != .none {
+                    SpinnerView.hideFullScreen()
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+        }
+        defer {
+            spinnerWatcher.cancel()
+            SpinnerView.hideFullScreen()
+        }
+
         await perform {
             do {
                 self.provisionedPass = try await self.service.activateVirtualCardAndAddToAppleWallet(
@@ -495,6 +511,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 if self.walletProvisioningOutcome != .none {
                     return
                 }
+                SecureLogger.error("[Wallet] activate-and-add-to-wallet did not complete: \(error.localizedDescription)", category: .payment)
                 let nsError = error as NSError
                 if nsError.code == 400 {
                     AlertManager.shared.showCustom(
@@ -504,6 +521,8 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                         icon: .error,
                         onPrimary: onRequiresSupport
                     )
+                } else if !self.isUserCancellation(error) {
+                    AlertManager.shared.showError(error.localizedDescription)
                 }
                 throw error
             }

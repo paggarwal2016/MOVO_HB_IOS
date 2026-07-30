@@ -14,6 +14,13 @@ private struct ActivateCardAccount: Identifiable {
     let id: Int
 }
 
+/// PIN confirmed in `CreateCashCardView`, captured just before it's dismissed, so the
+/// activation SDK can be launched from `onDismiss` — once that screen is actually gone.
+private struct PendingActivation {
+    let pin: String
+    let accountId: Int
+}
+
 struct KYCSuccessView: View {
     
     let container: AppContainer
@@ -28,6 +35,7 @@ struct KYCSuccessView: View {
     @State private var startPlaidFlow = false
     @State private var showFund = false
     @State private var activateCardAccount: ActivateCardAccount? = nil
+    @State private var pendingActivation: PendingActivation? = nil
     @State private var didFinish = false
     
     @State private var badgeFrame: CGRect = .zero
@@ -101,7 +109,12 @@ struct KYCSuccessView: View {
         .task { await savingVM.loadAccounts() }
         
         // Level 1 — Create Cash Card (Set your card PIN).
-        .fullScreenCover(item: $activateCardAccount) { account in
+        // `onDismiss` only fires once this cover has actually finished dismissing —
+        // that's what launches the SDK, so it's never presented on top of (or falls
+        // back to) this screen. See `launchPendingActivationIfNeeded()`.
+        .fullScreenCover(item: $activateCardAccount, onDismiss: {
+            launchPendingActivationIfNeeded()
+        }) { account in
             CreateCashCardView(
                 vm: vCardVM,
                 plaidVM: plaidVM,
@@ -112,50 +125,84 @@ struct KYCSuccessView: View {
                 fixedNickname: "MOVO Vault Card",
                 isNicknameEditable: false,
                 onClose: { activateCardAccount = nil },
-                onActivationRequiresSupport: { finishToDashboard() }
+                onActivationRequiresSupport: { finishToDashboard() },
+                onPinConfirmed: { pin in
+                    pendingActivation = PendingActivation(pin: pin, accountId: account.id)
+                    activateCardAccount = nil
+                }
             )
-            // Bound directly to the ViewModel's flag — set by the SDK's wallet
-            // provisioning notifications as soon as any of them fires, not after
-            // CreateCashCardView's own `await activateVirtualCard(...)` resolves.
-            .fullScreenCover(isPresented: $plaidVM.showVirtualCardAllSet) {
-                VirtualCardAllSetView(
-                    title: "Your digital cash card is live!",
-                    message: allSetMessage,
-                    onDone: {
-                        plaidVM.showVirtualCardAllSet = false
-                        showBankLink = true
-                    }
-                )
-                .sheet(isPresented: $showBankLink, onDismiss: {
-                    if continueToPlaid {
-                        continueToPlaid = false
-                        startPlaidFlow = true
-                    }
-                }) {
-                    BankLinkedInfoScreen(
-                        onContinue: { continueToPlaid = true },
-                        onClose: { finishToDashboard() }
-                    )
-                    .presentationDetents([.height(430)])
-                    .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(Radius.sheet)
-                    .presentationBackground(Color.movo.cardSurface)
+        }
+        // Level 2 — Virtual Card All Set. A sibling of the Create Cash Card cover
+        // above (not nested inside it) so it presents cleanly over THIS screen
+        // regardless of SDK success, failure, or cancellation — Create Cash Card is
+        // already gone by the time this can appear. Bound directly to the ViewModel's
+        // flag — set by the SDK's wallet provisioning notifications as soon as any of
+        // them fires, not after `activateVirtualCard(...)` resolves.
+        .fullScreenCover(isPresented: $plaidVM.showVirtualCardAllSet) {
+            VirtualCardAllSetView(
+                title: "Your digital cash card is live!",
+                message: allSetMessage,
+                onDone: {
+                    plaidVM.showVirtualCardAllSet = false
+                    showBankLink = true
                 }
-                .plaidLinkFlow(
-                    isActive: $startPlaidFlow,
-                    plaidVM: plaidVM,
-                    container: container,
-                    allowFunding: false,
-                    onDone: { showFund = true },
-                    onCancel: { finishToDashboard() }
+            )
+        }
+        // Level 3 — Bank Linked Info. Also a sibling, NOT nested inside Level 2's
+        // cover: `onDone` above flips `showVirtualCardAllSet` to false in the very
+        // same action that flips `showBankLink` to true, so if this sheet were
+        // attached to Level 2's content it would be torn down together with its
+        // parent the instant it was meant to appear — dismissing itself immediately.
+        .sheet(isPresented: $showBankLink, onDismiss: {
+            if continueToPlaid {
+                continueToPlaid = false
+                startPlaidFlow = true
+            }
+        }) {
+            BankLinkedInfoScreen(
+                onContinue: { continueToPlaid = true },
+                onClose: { finishToDashboard() }
+            )
+            .presentationDetents([.height(430)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(Radius.sheet)
+            .presentationBackground(Color.movo.cardSurface)
+        }
+        // Level 4 — Plaid link flow, same sibling reasoning as Level 3.
+        .plaidLinkFlow(
+            isActive: $startPlaidFlow,
+            plaidVM: plaidVM,
+            container: container,
+            allowFunding: false,
+            onDone: { showFund = true },
+            onCancel: { finishToDashboard() }
+        )
+        // Level 5 — Fund Account, same sibling reasoning as Level 3.
+        .fullScreenCover(isPresented: $showFund) {
+            FundAccountView(
+                container: container,
+                mode: .onboardingDeposit,
+                onSuccess: { finishToDashboard() }
+            )
+        }
+    }
+
+    /// Fires from the Create Cash Card cover's `onDismiss` — i.e. strictly after that
+    /// screen has finished dismissing — so the activation SDK is only ever presented
+    /// with THIS screen behind it, never Create Cash Card.
+    private func launchPendingActivationIfNeeded() {
+        guard let pending = pendingActivation else { return }
+        pendingActivation = nil
+        Task {
+            await plaidVM.activateVirtualCard(
+                pin: pending.pin,
+                accountId: pending.accountId,
+                onRequiresSupport: { finishToDashboard() }
+            )
+            if plaidVM.state == .success {
+                try? await KeychainManager.shared.save(
+                    pending.pin, for: KeychainManager.Keys.cardPinForCurrentUser, protection: .backgroundSafe
                 )
-                .fullScreenCover(isPresented: $showFund) {
-                    FundAccountView(
-                        container: container,
-                        mode: .onboardingDeposit,
-                        onSuccess: { finishToDashboard() }
-                    )
-                }
             }
         }
     }
@@ -177,6 +224,7 @@ struct KYCSuccessView: View {
             showBankLink = false
             plaidVM.showVirtualCardAllSet = false
             activateCardAccount = nil
+            pendingActivation = nil
             onFinish()
         }
     }
