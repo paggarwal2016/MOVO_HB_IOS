@@ -34,10 +34,12 @@ struct CreateCashCardView: View {
     let onClose: () -> Void
     
     var onCreated: ((VCardListResponse) -> Void)? = nil
-    
+
     var onActivated: (() -> Void)? = nil
 
     var onActivationRequiresSupport: (() -> Void)? = nil
+
+    var onPinConfirmed: ((String) -> Void)? = nil
 
     enum Mode { case create, activate }
 
@@ -49,6 +51,7 @@ struct CreateCashCardView: View {
     @State private var showPin = false
     @State private var showConfirmPin = false
     @State private var isLoading = false
+    @State private var handedOffSpinnerOwnership = false
     @FocusState private var focusedField: Field?
 
     fileprivate enum Field { case nickname, pin, confirmPin }
@@ -121,7 +124,9 @@ struct CreateCashCardView: View {
             }
         }
         .onDisappear {
-            SpinnerView.hideFullScreen()
+            if !handedOffSpinnerOwnership {
+                SpinnerView.hideFullScreen()
+            }
         }
         .globalAlert()
     }
@@ -274,35 +279,12 @@ private extension CreateCashCardView {
                 }
             }
         case .activate:
-            Task {
-                await plaidVM?.activateVirtualCard(
-                    pin: pin,
-                    accountId: primaryAccountId,
-                    onRequiresSupport: onActivationRequiresSupport
-                )
-                let succeeded = plaidVM?.state == .success
-                if succeeded {
-                    try? await KeychainManager.shared.save(
-                        pin, for: KeychainManager.Keys.cardPinForCurrentUser, protection: .backgroundSafe
-                    )
-                }
-                await MainActor.run {
-                    isLoading = false
-                    SpinnerView.hideFullScreen()
-                    if succeeded { onActivated?() }
-                }
-            }
+            isLoading = false
+            handedOffSpinnerOwnership = true
+            onPinConfirmed?(pin)
         }
     }
 
-    /// `UIApplication.dismissKeyboard()` (`sendAction(resignFirstResponder...)`)
-    /// resigns whatever the CURRENT responder chain points at, but this screen's
-    /// PIN entry uses a near-invisible `TextField` (`PinBoxRow`, opacity 0.011) and
-    /// submit() immediately transitions into a new presented screen (the wallet
-    /// SDK / next cover) — in that combination the responder-chain approach can
-    /// leave the keyboard visually stuck up. Forcing the key window itself to end
-    /// editing reaches the field regardless, so the keyboard is reliably gone
-    /// before the next screen appears.
     func dismissKeyboardForcefully() {
         UIApplication.shared.connectedScenes
             .compactMap { ($0 as? UIWindowScene)?.keyWindow }
@@ -314,8 +296,6 @@ private extension CreateCashCardView {
 // MARK: - PinBoxRow
 
 /// 4-digit PIN row: transparent TextField captures keystrokes;
-/// PinCell renders the visual state. Eye toggle is display-only —
-/// underlying field is always a TextField so .numberPad is guaranteed.
 private struct PinBoxRow: View {
 
     @Binding var pin: String
