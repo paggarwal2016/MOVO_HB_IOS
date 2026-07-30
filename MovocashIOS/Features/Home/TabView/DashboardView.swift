@@ -273,7 +273,7 @@ struct DashboardView: View {
             inviteSent = false
             AlertManager.shared.showCustom(
                 title: "Invite Sent",
-                message: inviteMessage ?? "Invite sent successfully",
+                message: AttributedString(inviteMessage ?? "Invite sent successfully"),
                 primary: "LET'S MOVO!",
                 onPrimary: {
                     NotificationCenter.default.post(name: .returnToDashboard, object: nil)
