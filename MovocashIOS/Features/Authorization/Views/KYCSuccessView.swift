@@ -86,14 +86,15 @@ struct KYCSuccessView: View {
                 }
                 .padding(.bottom, Spacing.lg)
 
-                VStack(spacing: Spacing.xl) { 
-                    Text("Your main MOVO card is ready! Let\u{2019}s Movo.")
-                        .textStyle(Typography.heroTitle)
+                 
+                VStack(spacing: Spacing.xl) {
+                    Text("You\u{2019}re in. Let\u{2019}s MOVO.")
+                        .textStyle(Typography.sectionTitle)
                         .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
-                    
-                    Text("Add your Movo card to Apple Wallet to tap and pay anywhere.")
+
+                    Text("Add your Main MOVO card to Apple Wallet to tap and pay anywhere.")
                         .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                         .multilineTextAlignment(.center)
@@ -144,7 +145,7 @@ struct KYCSuccessView: View {
         }
         .fullScreenCover(isPresented: $plaidVM.showVirtualCardAllSet) {
             VirtualCardAllSetView(
-                title: "Your digital cash card is live!",
+                title: "Your Main MOVO card is ready to use!",
                 message: allSetMessage,
                 onDone: {
                     showBankLink = true
@@ -233,9 +234,9 @@ struct KYCSuccessView: View {
     private var allSetMessage: String {
         switch plaidVM.walletProvisioningOutcome {
         case .activeButNotInWallet:
-            return "Your Main MOVO card is live and ready to use. We couldn't add it to Apple Wallet just now — you can try again anytime from your Card screen."
+            return "We couldn\u{2019}t add it to Apple Wallet right now \u{2014} you can try again anytime from your Card screen."
         case .addedToWallet, .none:
-            return "Your main MOVO card is live and in your Apple Wallet. Add money to start spending."
+            return "Your Main MOVO card has been added to Apple Wallet. Add money to start spending."
         }
     }
     

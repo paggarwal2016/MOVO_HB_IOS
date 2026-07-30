@@ -21,8 +21,6 @@ struct VirtualCardAllSetView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: Spacing.xl)
-
             glyph
 
             Text(title)
@@ -54,7 +52,7 @@ struct VirtualCardAllSetView: View {
     }
 
     private var glyph: some View {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack(alignment: .topTrailing) {
             Image("CardFrontHerring")
                 .resizable()
                 .scaledToFit()
@@ -68,7 +66,7 @@ struct VirtualCardAllSetView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.movo.onAccent)
             }
-            .offset(x: 8, y: 8)
+            .offset(x: 8, y: -8)
         }
         .padding(.bottom, Spacing.xl + 8)
     }

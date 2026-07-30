@@ -539,7 +539,7 @@ struct CardDetailSheet: View {
                 }
                 HStack(spacing: 4) {
                     Text("Exp \(card.expiryMMYY) · CVC \(revealedCvc ?? "•••")")
-                        .textStyle(Typography.captionSmall)
+                        .textStyle(Typography.body)
                         .foregroundColor(Color.movo.textTertiary)
                     Button(action: toggleCvc) {
                         if isRevealingCvc {
