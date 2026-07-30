@@ -7,15 +7,10 @@
 
 import SwiftUI
 
-/// Wraps the resolved primary account id so it can drive `.fullScreenCover(item:)` —
-/// binding the id directly into what's presented, rather than through a sibling
-/// `@State` var set just before flipping a separate `isPresented` flag.
 private struct ActivateCardAccount: Identifiable {
     let id: Int
 }
 
-/// PIN confirmed in `CreateCashCardView`, captured just before it's dismissed, so the
-/// activation SDK can be launched from `onDismiss` — once that screen is actually gone.
 private struct PendingActivation {
     let pin: String
     let accountId: Int
@@ -147,61 +142,47 @@ struct KYCSuccessView: View {
                 }
             )
         }
-        // Level 2 — Virtual Card All Set. A sibling of the Create Cash Card cover
-        // above (not nested inside it) so it presents cleanly over THIS screen
-        // regardless of SDK success, failure, or cancellation — Create Cash Card is
-        // already gone by the time this can appear. Bound directly to the ViewModel's
-        // flag — set by the SDK's wallet provisioning notifications as soon as any of
-        // them fires, not after `activateVirtualCard(...)` resolves.
         .fullScreenCover(isPresented: $plaidVM.showVirtualCardAllSet) {
             VirtualCardAllSetView(
                 title: "Your digital cash card is live!",
                 message: allSetMessage,
                 onDone: {
-                    plaidVM.showVirtualCardAllSet = false
                     showBankLink = true
                 }
             )
-        }
-        // Level 3 — Bank Linked Info. Also a sibling, NOT nested inside Level 2's
-        // cover: `onDone` above flips `showVirtualCardAllSet` to false in the very
-        // same action that flips `showBankLink` to true, so if this sheet were
-        // attached to Level 2's content it would be torn down together with its
-        // parent the instant it was meant to appear — dismissing itself immediately.
-        .sheet(isPresented: $showBankLink, onDismiss: {
-            if continueToPlaid {
-                continueToPlaid = false
-                startPlaidFlow = true
+            .sheet(isPresented: $showBankLink, onDismiss: {
+                if continueToPlaid {
+                    continueToPlaid = false
+                    startPlaidFlow = true
+                }
+            }) {
+                BankLinkedInfoScreen(
+                    onContinue: { continueToPlaid = true },
+                    onClose: { showBankLink = false }
+                )
+                .presentationDetents([.height(430)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(Radius.sheet)
+                .presentationBackground(Color.movo.cardSurface)
             }
-        }) {
-            BankLinkedInfoScreen(
-                onContinue: { continueToPlaid = true },
-                onClose: { finishToDashboard() }
-            )
-            .presentationDetents([.height(430)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
-        }
-        // Level 4 — Plaid link flow, same sibling reasoning as Level 3.
-        .plaidLinkFlow(
-            isActive: $startPlaidFlow,
-            plaidVM: plaidVM,
-            container: container,
-            allowFunding: false,
-            onDone: { showFund = true },
-            onCancel: { finishToDashboard() }
-        )
-        // Level 5 — Fund Account, same sibling reasoning as Level 3.
-        .fullScreenCover(isPresented: $showFund) {
-            FundAccountView(
+            .plaidLinkFlow(
+                isActive: $startPlaidFlow,
+                plaidVM: plaidVM,
                 container: container,
-                mode: .onboardingDeposit,
-                onSuccess: { finishToDashboard() }
+                allowFunding: false,
+                onDone: { showFund = true },
+                onCancel: { finishToDashboard() }
             )
+            .fullScreenCover(isPresented: $showFund) {
+                FundAccountView(
+                    container: container,
+                    mode: .onboardingDeposit,
+                    onSuccess: { finishToDashboard() }
+                )
+            }
         }
     }
-
+    
     /// Fires from the Create Cash Card cover's `onDismiss` — i.e. strictly after that
     /// screen has finished dismissing — so the activation SDK is only ever presented
     /// with THIS screen behind it, never Create Cash Card.
@@ -228,12 +209,6 @@ struct KYCSuccessView: View {
         var tx = SwiftUI.Transaction()
         tx.disablesAnimations = true
         withTransaction(tx) {
-            // Collapse every nested cover in THIS view before the root swaps away.
-            // RootView replacing this whole subtree (appState.flow = .home) does not
-            // reliably tear down fullScreenCovers still bound to this view's own
-            // state — leaving an orphaned screen (e.g. CreateCashCardView) visible
-            // underneath. Zeroing them here, in the same non-animated transaction as
-            // the flow swap, ensures nothing is left presented.
             showFund = false
             startPlaidFlow = false
             showBankLink = false
