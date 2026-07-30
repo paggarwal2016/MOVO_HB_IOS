@@ -50,9 +50,10 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     /// (rather than treating the whole call as failed) to pick the right copy for
     /// the post-activation success screen.
     @Published private(set) var walletProvisioningOutcome: AppleWalletProvisioningOutcome = .none
-    /// Set directly by `observeAppleWalletProvisioning()` as soon as ANY of the three
-    /// notifications fires — the caller binds its `VirtualCardAllSetView` cover
-    /// straight to this (not a local flag set after `await activateVirtualCard`/
+    /// Set directly by `activateVirtualCard`'s or `addVirtualCardToAppleWallet`'s own
+    /// dedicated notification observer as soon as ANY of the three notifications
+    /// fires — the caller binds its `VirtualCardAllSetView` cover straight to this
+    /// (not a local flag set after `await activateVirtualCard`/
     /// `addVirtualCardToAppleWallet` returns), so the confirmation screen appears the
     /// moment the SDK resolves the wallet step, and the caller's own `onDone` then
     /// carries the flow forward as usual.
@@ -63,10 +64,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         case addedToWallet
         case activeButNotInWallet
     }
-
-    private var walletProvisioningCompletedObserver: NSObjectProtocol?
-    private var walletProvisioningFailedObserver: NSObjectProtocol?
-    private var walletProvisioningCanceledObserver: NSObjectProtocol?
 
     init(
         service: PlaidService = .shared,
@@ -83,19 +80,12 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             network: resolvedNetwork,
             keychain: resolvedKeychain
         )
-        observeAppleWalletProvisioning()
-    }
-
-    deinit {
-        if let walletProvisioningCompletedObserver {
-            NotificationCenter.default.removeObserver(walletProvisioningCompletedObserver)
-        }
-        if let walletProvisioningFailedObserver {
-            NotificationCenter.default.removeObserver(walletProvisioningFailedObserver)
-        }
-        if let walletProvisioningCanceledObserver {
-            NotificationCenter.default.removeObserver(walletProvisioningCanceledObserver)
-        }
+        // No permanent observer registration here on purpose: `PlaidAchViewModel` is
+        // instantiated fresh by 9+ different screens, most of them unrelated to wallet
+        // provisioning. `activateVirtualCard` and `addVirtualCardToAppleWallet` each
+        // register their own independent observers only for the duration of their own
+        // call (see each function's own `defer`) — so notifications never trigger
+        // logic belonging to a flow that isn't actually running on this instance.
     }
 
     // MARK: - Auth
@@ -433,16 +423,18 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         )
     }
 
-    /// Outcome is reported via `walletProvisioningOutcome`/`showVirtualCardAllSet`
-    /// (set from the SDK's provisioning notifications — see
-    /// `observeAppleWalletProvisioning`), not an alert. Callers bind their
-    /// `VirtualCardAllSetView` cover directly to `showVirtualCardAllSet`.
+    // MARK: - Card Details
+    // MARK: - addVirtualCardToAppleWallet
     func addVirtualCardToAppleWallet(accountId: Int? = nil, localizedDescription: String? = nil) async {
         guard let presenter = await waitForPresentableViewController() else {
             SecureLogger.error("[Wallet] no presentable view controller for add-to-wallet", category: .payment)
             AlertManager.shared.showError("Unable to present wallet flow.")
             return
         }
+
+        let observers = observeAddVirtualCardToAppleWalletProvisioning()
+        defer { for token in observers { NotificationCenter.default.removeObserver(token) } }
+
         await perform {
             do {
                 self.provisionedPass = try await self.service.addVirtualCardToAppleWallet(
@@ -465,10 +457,56 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         }
     }
 
-    /// - Parameter onRequiresSupport: invoked when the SDK reports the card can't be
-    ///   activated in-app (HTTP 400) and the user must call support instead — fires
-    ///   when they tap "OK" on that alert. The caller decides what that means for
-    ///   navigation (e.g. KYCSuccessView exits the whole flow to the Dashboard).
+    // MARK: - Card Details
+    // MARK: - observeAddVirtualCardToAppleWalletProvisioning
+    private func observeAddVirtualCardToAppleWalletProvisioning() -> [NSObjectProtocol] {
+        let completed = NotificationCenter.default.addObserver(
+            forName: .appleWalletProvisioningCompleted, object: nil, queue: nil
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+               // self.walletProvisioningOutcome = .addedToWallet
+                SecureLogger.info("[Wallet] Apple Wallet provisioning completed", category: .payment)
+                self.analytics.log(AnalyticsEvent.walletAdd)
+            }
+        }
+        let failed = NotificationCenter.default.addObserver(
+            forName: .appleWalletProvisioningFailed, object: nil, queue: nil
+        ) { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                //self.walletProvisioningOutcome = .activeButNotInWallet
+                let error = note.object as? NSError
+                let message = error?.localizedDescription ?? "Unable to add your card to Apple Wallet."
+                SecureLogger.error("[Wallet] Apple Wallet provisioning failed: \(message)", category: .payment)
+                self.analytics.log(
+                    AnalyticsEvent.walletAddFailed,
+                    params: [
+                        AnalyticsParam.errorCode: error?.analyticsCode ?? "unknown",
+                        AnalyticsParam.errorMessage: message
+                    ]
+                )
+            }
+        }
+        let canceled = NotificationCenter.default.addObserver(
+            forName: .appleWalletProvisioningCanceled, object: nil, queue: nil
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                //self.walletProvisioningOutcome = .activeButNotInWallet
+                SecureLogger.info("[Wallet] Apple Wallet provisioning canceled by user", category: .payment)
+                self.analytics.log(
+                    AnalyticsEvent.walletAddFailed,
+                    params: [AnalyticsParam.errorMessage: "cancelled"]
+                )
+            }
+        }
+        return [completed, failed, canceled]
+    }
+
+ 
+    // MARK: - Registration
+    // MARK: - activateVirtualCard
     func activateVirtualCard(
         pin: String,
         accountId: Int? = nil,
@@ -482,6 +520,9 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             SpinnerView.hideFullScreen()
             return
         }
+
+        let observers = observeActivateVirtualCardWalletProvisioning()
+        defer { for token in observers { NotificationCenter.default.removeObserver(token) } }
 
         let spinnerWatcher = Task { [weak self] in
             while !Task.isCancelled {
@@ -529,18 +570,11 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             }
         }
     }
-
-    /// Common handling for the SDK's Apple Wallet provisioning broadcasts — posted by
-    /// `MobileBankingSDK` from inside `activateVirtualCard`/`addVirtualCardToAppleWallet`,
-    /// on the main thread, ahead of those calls' own completion. Centralized here (rather
-    /// than in each calling screen) so every entry point gets the same routing for free:
-    /// regardless of which of the three fires, `walletProvisioningOutcome` is set to the
-    /// right outcome and `showVirtualCardAllSet` flips to `true` immediately — the caller's
-    /// `VirtualCardAllSetView` cover is bound directly to that flag, so it presents the
-    /// moment the notification arrives (not after the outer `await` resolves), and the
-    /// caller's own `onDone` carries the remaining flow forward from there.
-    private func observeAppleWalletProvisioning() {
-        walletProvisioningCompletedObserver = NotificationCenter.default.addObserver(
+    
+    // MARK: - Registration
+    // MARK: - observeActivateVirtualCardWalletProvisioning
+    private func observeActivateVirtualCardWalletProvisioning() -> [NSObjectProtocol] {
+        let completed = NotificationCenter.default.addObserver(
             forName: .appleWalletProvisioningCompleted, object: nil, queue: nil
         ) { [weak self] _ in
             MainActor.assumeIsolated {
@@ -552,7 +586,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 Task { _ = try? await self.network.requestData(VCardAPI.activatedVCard) }
             }
         }
-        walletProvisioningFailedObserver = NotificationCenter.default.addObserver(
+        let failed = NotificationCenter.default.addObserver(
             forName: .appleWalletProvisioningFailed, object: nil, queue: nil
         ) { [weak self] note in
             MainActor.assumeIsolated {
@@ -572,7 +606,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 Task { _ = try? await self.network.requestData(VCardAPI.activatedVCard) }
             }
         }
-        walletProvisioningCanceledObserver = NotificationCenter.default.addObserver(
+        let canceled = NotificationCenter.default.addObserver(
             forName: .appleWalletProvisioningCanceled, object: nil, queue: nil
         ) { [weak self] _ in
             MainActor.assumeIsolated {
@@ -587,6 +621,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 Task { _ = try? await self.network.requestData(VCardAPI.activatedVCard) }
             }
         }
+        return [completed, failed, canceled]
     }
 
     // MARK: -   Intent
