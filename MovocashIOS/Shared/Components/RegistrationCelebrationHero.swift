@@ -127,20 +127,15 @@ struct RegistrationCelebrationHero: View {
 
     private func backdrop(size: CGFloat) -> some View {
         ZStack {
-            // Spotlight halo: a large faint disc + a tighter glow behind the balloon.
+            // Spotlight halo — softened (blur and size reduced from original).
             Circle().fill(Color.movo.accentTint)
                 .frame(width: size * 2.1, height: size * 2.1)
-                .blur(radius: size * 0.30)
+                .blur(radius: size * 0.20)
+                .opacity(0.6)
             Circle().fill(Color.movo.accentTint)
                 .frame(width: size * 1.25, height: size * 1.25)
-                .blur(radius: size * 0.18)
-
-            // Accent marks (origin = balloon center): 3 arcs + 2 dots, like the mock.
-            accentArc(size, trim: 0.16, rotation: -35, color: Color.movo.accent,     dx:  0.66, dy: -0.55)
-            accentArc(size, trim: 0.16, rotation: 150, color: Color.movo.silverTint, dx: -0.82, dy: -0.04)
-            accentArc(size, trim: 0.16, rotation:  70, color: Color.movo.accent,     dx:  0.70, dy:  0.52)
-            dot(size, radius: 0.05, color: Color.white,       dx:  0.92, dy:  0.16)
-            dot(size, radius: 0.05, color: Color.movo.accent, dx: -0.70, dy:  0.46)
+                .blur(radius: size * 0.12)
+                .opacity(0.7)
         }
     }
 
@@ -169,7 +164,7 @@ struct RegistrationCelebrationHero: View {
 
             // Right-edge shadow, clipped to the body outline.
             BalloonShape()
-                .fill(Color.movo.balloonShade.opacity(0.4))
+                .fill(Color.movo.balloonShade.opacity(0.2))
                 .offset(x: size * 0.03, y: size * 0.03)
                 .mask(BalloonShape())
 
@@ -181,9 +176,9 @@ struct RegistrationCelebrationHero: View {
                 .offset(x: -size * 0.16, y: -size * 0.22)
                 .mask(BalloonShape())
 
-            // Reuse the existing mark, rendered all-white.
+            // Reuse the existing mark, rendered all-white. +20% scale vs original.
             MovoMVSymbol(bodyStyle: Color.white, accent: Color.white)
-                .frame(width: size * 0.55)
+                .frame(width: size * 0.73)
                 .offset(y: -size * 0.04)   // optical-center on the bulge
         }
         .frame(width: size, height: bodyH)
