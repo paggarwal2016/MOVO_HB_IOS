@@ -157,7 +157,7 @@ struct CardItemView: View {
     // MARK: - Virtual pill
 
     private var virtualPill: some View {
-        MovoTypeBadge("VIRTUAL")
+        MovoTypeBadge("DIGITAL CASH")
     }
 
     // MARK: - Link row
@@ -166,16 +166,16 @@ struct CardItemView: View {
     private var linkRow: some View {
         HStack(spacing: Spacing.xs) {
             Text("LET'S MOVO")
-                .textStyle(Typography.eyebrow)
+                .font(.system(size: 16, weight: .semibold))
+                .tracking(0.8)
                 .foregroundColor(Color.movo.accent)
             Spacer()
-            MovoChevron(.cta)
+            MovoChevron(.large)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
         .padding(.bottom, 5)
         .frame(maxWidth: .infinity)
-        .drawingGroup()
         .contentShape(Rectangle())
         .onTapGesture { onDetail?() }
     }

@@ -19,7 +19,9 @@ struct CreateCardView: View {
             // Match PrimaryAccountContent / BalanceCardView surface — the cardVoid gradient.
             LinearGradient.cardVoid
 
-            CardMockIllustration()
+            Image("CardFrontHerring")
+                .resizable()
+                .scaledToFit()
                 .frame(width: 140, height: 162)
                 .rotationEffect(.degrees(8), anchor: .center)
                 .offset(x: 20, y: 16)

@@ -59,8 +59,25 @@ struct BiometricGateView: View {
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea()
         .task {
-            if autoTriggerBiometric {
-                await attempt(isManualRetry: false)
+            guard autoTriggerBiometric else { return }
+            await withTaskGroup(of: Void.self) { group in
+                // Arm 1: the real biometric attempt.
+                group.addTask { await attempt(isManualRetry: false) }
+                // Arm 2: safety-net timer — surfaces retry UI if the nonce fetch
+                // stalls and the biometric prompt never appears.
+                // try? absorbs the CancellationError when arm 1 finishes first and
+                // cancelAll() fires. The Task.isCancelled guard then exits without
+                // touching showError, so a good login never flips the retry UI.
+                // MainActor.run keeps the @State write on the main actor.
+                group.addTask {
+                    try? await Task.sleep(for: .seconds(12))
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        if !showError { showError = true }
+                    }
+                }
+                await group.next()   // first arm to complete wins
+                group.cancelAll()    // stand down the other arm
             }
         }
     }
@@ -147,7 +164,12 @@ struct BiometricGateView: View {
                     .foregroundStyle(Color.movo.textSecondary)
                     .underline()
             }
-            .disabled(isLoading)
+            // Not gated on isLoading — relies on the caller (RootView) wiring
+            // onUsePhoneNumber to call authVM.cancelBiometricLogin() and then clear
+            // appState.flow. That sequence cancels the nonce fetch and tears this view
+            // down, making any still-parked authenticate() harmless. If that wiring
+            // ever changes, re-gate this button on isLoading to prevent a concurrent
+            // authenticate() from racing the new path.
 
             Spacer()
         }

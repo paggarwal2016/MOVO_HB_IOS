@@ -269,7 +269,7 @@ struct FundAccountView: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            Text(isProfileMode ? "Withdraw Funds" : "Fund Account")
+            Text(isProfileMode ? "Withdraw Funds" : "Link Account")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()

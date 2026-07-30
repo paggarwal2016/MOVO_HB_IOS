@@ -92,7 +92,15 @@ struct RootView: View {
                                 switch destination {
                                 case .signupDetails:
                                     legalAcceptedItems = []
-                                    appState.flow = .signupDetails
+                                    // TEST ONLY — skip email entry (.signupDetails) and email OTP
+                                    // (.emailVerification) after phone OTP. Routes straight to the
+                                    // same destination those steps would have produced on success.
+                                    // To restore the real flow, replace the two lines below with:
+                                    //     appState.flow = .signupDetails   // test only
+                                    //
+                                    let passkeyDone = await authVM.isPasskeyRegistered()
+                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
+                                    //
                                 default:
                                     // Returning user — KYC already complete.
                                     // Enrolled → require a biometric scan (RSA) before the
@@ -567,6 +575,10 @@ struct RootView: View {
 
             // Clear any transient alert so it can't sit above the biometric gate.
             AlertManager.shared.dismiss()
+            // Cancel any in-flight cold-launch biometric task before entering warm relock.
+            // Without this, runBiometricLogin joins the stale splash-race task and the
+            // warm-relock screen stays frozen until the original nonce fetch times out.
+            authVM.cancelBiometricLogin()
             appState.flow = .warmRelock
         }
         .task {
@@ -700,7 +712,7 @@ struct RootView: View {
         guard let token = try? await container.keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else {
             SecureLogger.error("Passkey check: unable to decode userId from token — blocking navigation", category: .auth)
             AlertManager.shared.showError(failureMessage)
