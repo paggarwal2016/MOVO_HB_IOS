@@ -11,6 +11,7 @@ import MobileBankingSDK
 import UIKit
 import AuthenticationServices
 import PassKit
+import SwiftUI
 
 @MainActor
 final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
@@ -534,6 +535,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         var message = AttributedString("Your card didn\u{2019}t get added to Apple Wallet. One more tap usually does it. If not, call support at ")
         var phone = AttributedString("(866) 348-3435")
         phone.underlineStyle = .single
+        phone.foregroundColor = Color.movo.accent
         phone.link = URL(string: "tel:8663483435")
         message += phone
         message += AttributedString(".")
