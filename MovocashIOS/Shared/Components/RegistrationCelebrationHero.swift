@@ -70,7 +70,7 @@ struct RegistrationCelebrationHero: View {
 
     /// Upper bound for balloon width; the actual size is computed to fit the
     /// available height (see GeometryReader below), so it never clips on SE.
-    var maxBalloonWidth: CGFloat = 100
+    var maxBalloonWidth: CGFloat = 140
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hasAppeared = false

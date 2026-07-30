@@ -56,7 +56,7 @@ struct KYCSuccessView: View {
                 Spacer(minLength: Spacing.xxl)
                 
                 RegistrationCelebrationHero()
-                    .frame(maxHeight: 190)
+                    .frame(maxHeight: 260)
                     .overlay(
                         Color.clear
                             .frame(width: 116, height: 116)
@@ -72,7 +72,7 @@ struct KYCSuccessView: View {
                     .padding(.bottom, Spacing.lg)
                 
                 VStack(spacing: Spacing.xl) {
-                    Text("You\u{2019}re in. Let\u{2019}s MOVO.")
+                    Text("You\u{2019}re in. Let\u{2019}s MOVO!")
                         .textStyle(Typography.sectionTitle)
                         .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
@@ -114,7 +114,7 @@ struct KYCSuccessView: View {
                 vm: vCardVM,
                 plaidVM: plaidVM,
                 primaryAccountId: account.id,
-                title: "Set your card PIN",
+                title: "Set your Main MOVO card PIN",
                 mode: .activate,
                 nicknameFieldLabel: "NICK NAME",
                 fixedNickname: "MOVO Vault Card",

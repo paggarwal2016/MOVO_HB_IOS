@@ -592,7 +592,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 if nsError.code == 400 {
                     AlertManager.shared.showCustom(
                         title: "Call to Finish Setup",
-                        message: "We couldn't set your main MOVO card PIN this time. Need help? Call (866) 348-3435.",
+                        message: "We couldn't set your Main MOVO card PIN this time. Need help? Call (866) 348-3435.",
                         primary: "OK",
                         icon: .error,
                         onPrimary: onRequiresSupport
