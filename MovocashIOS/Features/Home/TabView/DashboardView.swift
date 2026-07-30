@@ -464,7 +464,7 @@ struct DashboardView: View {
             title: "Set digital cash card PIN",
             mode: .create,
             createUserAction: "ACTIVE-FIRST-VCARD",
-            showsNicknameField: false,
+            showsNicknameField: true,
             onClose: onClose,
             onCreated: { _ in showAllSetOverCreate = true }
         )
@@ -644,21 +644,21 @@ struct DashboardView: View {
             CardSkeletonView()
                 .frame(maxWidth: .infinity)
         } else if dashboardVM.cards.isEmpty {
-            FirstCardRewardCard(onActivate: {
-                if case .found = KeychainManager.shared.getSync(KeychainManager.Keys.cardPinForCurrentUser) {
-                    showVirtualCardActivation = true
-                } else {
-                    showDirectCreatePin = true
+            CreateCardView(
+                title: data.title,
+                message: data.description,
+                caption: data.description2,
+                buttonLabel: data.actions.first?.label ?? "Create card",
+                onTap: {
+                    if case .found = KeychainManager.shared.getSync(KeychainManager.Keys.cardPinForCurrentUser) {
+                        showVirtualCardActivation = true
+                    } else {
+                        showDirectCreatePin = true
+                    }
+                   // showCreateCashCard = true
                 }
-            })
+            )
             .frame(maxWidth: .infinity)
-            // TODO
-//            CreateCardView( // TODO remove the future
-//                title: data.title,
-//                message: data.description,
-//                onTap: { showCreateCashCard = true }
-//            )
-//            .frame(maxWidth: .infinity)
         } else {
             CardSelectorView(
                 cards: dashboardVM.cards,

@@ -11,6 +11,8 @@ struct CreateCardView: View {
 
     var title: String   = "Get your\ncash card"
     var message: String = "Spend instantly\nApple Pay ready"
+    var caption: String? = nil
+    var buttonLabel: String = "Create card"
     var onTap: () -> Void
 
     var body: some View {
@@ -35,14 +37,21 @@ struct CreateCardView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(message)
-                        .textStyle(Typography.subtitle)
+                        .textStyle(Typography.cardTitle)
                         .foregroundStyle(Color.movo.textSecondary)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    if let caption, !caption.isEmpty {
+                        Text(caption)
+                            .textStyle(Typography.caption)
+                            .foregroundStyle(Color.movo.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     Button(action: onTap) {
                         HStack(spacing: 6) {
-                            Text("Create card")
+                            Text(buttonLabel)
                                 .textStyle(Typography.button)
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 10, weight: .semibold))
