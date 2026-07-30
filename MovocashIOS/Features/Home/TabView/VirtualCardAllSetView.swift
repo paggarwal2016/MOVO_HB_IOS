@@ -27,6 +27,7 @@ struct VirtualCardAllSetView: View {
                 .textStyle(Typography.sectionTitle)
                 .foregroundStyle(Color.movo.textPrimary)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.xxl)
 
             Text(message)
                 .textStyle(Typography.subtitle)
@@ -34,7 +35,7 @@ struct VirtualCardAllSetView: View {
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, Spacing.xl)
+                .padding(.horizontal, Spacing.xxl)
                 .padding(.top, Spacing.xs)
 
             Spacer(minLength: Spacing.xl)
@@ -47,12 +48,12 @@ struct VirtualCardAllSetView: View {
             .padding(.horizontal, Spacing.xl)
             .padding(.bottom, Spacing.xxxl)
         }
-        .padding(.top, Spacing.md)
+        .padding(.top, 50)
         .background(Color.movo.surface.ignoresSafeArea())
     }
 
     private var glyph: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .bottomTrailing) {
             Image("CardFrontHerring")
                 .resizable()
                 .scaledToFit()
@@ -66,7 +67,7 @@ struct VirtualCardAllSetView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.movo.onAccent)
             }
-            .offset(x: 8, y: -8)
+            .offset(x: 8, y: 8)
         }
         .padding(.bottom, Spacing.xl + 8)
     }
