@@ -32,7 +32,7 @@ struct CustomAlertConfig {
 
 struct CustomAlertView: View {
     let title: String
-    let message: String
+    let message: AttributedString
     let primary: String
     var secondary: String? = nil
     /// Optional SF Symbol shown trailing the primary button label (e.g. "arrow.right").

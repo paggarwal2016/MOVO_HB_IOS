@@ -244,7 +244,7 @@ final class AuthViewModel: ObservableObject {
             if let description = lastSendDescription, !description.isEmpty {
                 AlertManager.shared.showCustom(
                     title: lastSendMessage ?? "Pre-approved!",
-                    message: description,
+                    message: AttributedString(description),
                     primary: "Continue",
                     primaryIcon: "arrow.right",
                     icon: .success,
@@ -270,7 +270,7 @@ final class AuthViewModel: ObservableObject {
             } else if let message = waitlistMessage(from: error) {
                 AlertManager.shared.showCustom(
                     title: "Join the waitlist",
-                    message: message,
+                    message: AttributedString(message),
                     primary: "LET'S MOVO!",
                     secondary: "SKIP",
                     icon: .movo,

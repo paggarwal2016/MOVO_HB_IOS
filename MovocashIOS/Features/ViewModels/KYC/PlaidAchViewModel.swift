@@ -470,9 +470,15 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-               // self.walletProvisioningOutcome = .addedToWallet
+                self.walletProvisioningOutcome = .addedToWallet
                 SecureLogger.info("[Wallet] Apple Wallet provisioning completed", category: .payment)
                 self.analytics.log(AnalyticsEvent.walletAdd)
+                AlertManager.shared.showCustom(
+                    title: "Added to Apple Wallet",
+                    message: "Your card is in Apple Wallet. You\u{2019}re all set to tap and pay.",
+                    primary: "OK",
+                    icon: .success
+                )
             }
         }
         let failed = NotificationCenter.default.addObserver(
@@ -480,7 +486,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         ) { [weak self] note in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                //self.walletProvisioningOutcome = .activeButNotInWallet
+                self.walletProvisioningOutcome = .activeButNotInWallet
                 let error = note.object as? NSError
                 let message = error?.localizedDescription ?? "Unable to add your card to Apple Wallet."
                 SecureLogger.error("[Wallet] Apple Wallet provisioning failed: \(message)", category: .payment)
@@ -491,6 +497,12 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                         AnalyticsParam.errorMessage: message
                     ]
                 )
+                AlertManager.shared.showCustom(
+                    title: "Card Not Added",
+                    message: Self.cardNotAddedMessage,
+                    primary: "OK",
+                    icon: .error
+                )
             }
         }
         let canceled = NotificationCenter.default.addObserver(
@@ -498,18 +510,36 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                //self.walletProvisioningOutcome = .activeButNotInWallet
+                self.walletProvisioningOutcome = .activeButNotInWallet
                 SecureLogger.info("[Wallet] Apple Wallet provisioning canceled by user", category: .payment)
                 self.analytics.log(
                     AnalyticsEvent.walletAddFailed,
                     params: [AnalyticsParam.errorMessage: "cancelled"]
+                )
+                AlertManager.shared.showCustom(
+                    title: "Card Not Added",
+                    message: Self.cardNotAddedMessage,
+                    primary: "OK",
+                    icon: .error
                 )
             }
         }
         return [completed, failed, canceled]
     }
 
- 
+    /// "Card Not Added" alert copy, shared by the failed/canceled cases above — the
+    /// phone number is underlined and a real `tel:` link (same number/dial string as
+    /// `SupportSection`), so tapping it dials support directly.
+    private static var cardNotAddedMessage: AttributedString {
+        var message = AttributedString("Your card didn\u{2019}t get added to Apple Wallet. One more tap usually does it. If not, call support at ")
+        var phone = AttributedString("(866) 348-3435")
+        phone.underlineStyle = .single
+        phone.link = URL(string: "tel:8663483435")
+        message += phone
+        message += AttributedString(".")
+        return message
+    }
+
     // MARK: - Registration
     // MARK: - activateVirtualCard
     func activateVirtualCard(
