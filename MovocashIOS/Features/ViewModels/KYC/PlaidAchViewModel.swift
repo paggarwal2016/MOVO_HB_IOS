@@ -409,6 +409,11 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             localizedDescription: localizedDescription
         )
         canAddToWallet = result
+        SecureLogger.info("[Wallet] eligibility check — canAddToWallet: \(result)", category: .payment)
+        analytics.log(
+            AnalyticsEvent.walletEligibilityChecked,
+            params: [AnalyticsParam.result: result ? "eligible" : "not_eligible"]
+        )
         return result
     }
 

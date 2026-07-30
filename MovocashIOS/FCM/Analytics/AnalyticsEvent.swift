@@ -135,6 +135,7 @@ enum AnalyticsEvent {
     static let cvvRevealFailed            = "cvv_reveal_failed"
     static let walletAdd                  = "wallet_add"
     static let walletAddFailed            = "wallet_add_failed"
+    static let walletEligibilityChecked   = "wallet_eligibility_checked"
 
     // MARK: - Plaid Link
     static let plaidLinkStarted           = "plaid_link_started"
@@ -206,6 +207,7 @@ enum AnalyticsParam {
     static let userAction       = "user_action"
     static let updateType       = "update_type"
     static let latestVersion    = "latest_version"
+    static let result           = "result"
 }
 
 // MARK: - Value Bucketing

@@ -91,10 +91,6 @@ struct DashboardView: View {
     @State private var showDirectCreatePin = false
     /// "You're all set!" after "Use existing PIN" — on top of the choice.
     @State private var showAllSetOverChoice = false
-    /// "You're all set!" after "Create new PIN" — on top of the Create Cash Card
-    /// (shared by both the choice-driven and direct create-pin entry points, since
-    /// only one of those is ever presented at a time).
-    @State private var showAllSetOverCreate = false
     /// The card just created in CreateCashCardView. Held while the create sheet
     @State private var createdCashCard: VCardListResponse? = nil
     /// Drives the post-create success cover.
@@ -466,11 +462,12 @@ struct DashboardView: View {
             createUserAction: "ACTIVE-FIRST-VCARD",
             showsNicknameField: true,
             onClose: onClose,
-            onCreated: { _ in showAllSetOverCreate = true }
+            onCreated: { card in
+                selectedCard = card
+                showCardDetail = true
+                dismissVirtualCardStack()
+            }
         )
-        .fullScreenCover(isPresented: $showAllSetOverCreate) {
-            VirtualCardAllSetView(onDone: { completeFirstCardReward() })
-        }
     }
 
     /// Successful completion of the First Card Reward flow ("Let's MOVO" on the
@@ -490,7 +487,6 @@ struct DashboardView: View {
         tx.disablesAnimations = true
         withTransaction(tx) {
             showAllSetOverChoice = false
-            showAllSetOverCreate = false
             showVirtualCardCreatePin = false
             showDirectCreatePin = false
             showVirtualCardActivation = false
