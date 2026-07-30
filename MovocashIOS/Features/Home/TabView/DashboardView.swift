@@ -522,7 +522,7 @@ struct DashboardView: View {
     
     private var scrollContent: some View {
         ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 20) {
+            LazyVStack(spacing: Spacing.md) {
                 headerView
                 savingsSection
             }

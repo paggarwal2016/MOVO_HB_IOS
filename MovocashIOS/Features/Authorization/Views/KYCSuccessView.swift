@@ -86,14 +86,14 @@ struct KYCSuccessView: View {
                 }
                 .padding(.bottom, Spacing.lg)
 
-                VStack(spacing: Spacing.xl) {
-                    Text("Your MOVO account\u{2019}s ready! Let\u{2019}s Movo.")
+                VStack(spacing: Spacing.xl) { 
+                    Text("Your main MOVO card is ready! Let\u{2019}s Movo.")
                         .textStyle(Typography.heroTitle)
                         .foregroundColor(Color.movo.textPrimary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                     
-                    Text("Identity verified. Add money to send to family & friends \u{2014} or spend anywhere.")
+                    Text("Add your Movo card to Apple Wallet to tap and pay anywhere.")
                         .textStyle(Typography.subtitle)
                         .foregroundColor(Color.movo.textTertiary)
                         .multilineTextAlignment(.center)

@@ -20,7 +20,7 @@
                             <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="logo-image-view" image="herringLogo">
                                 <rect key="frame" x="134" y="326" width="125" height="125"/>
                             </imageView>
-                            <!-- MOVOCASH label, 24pt below logo bottom -->
+                            <!-- MOVOCASH label, 24pt below logo bottom. Note: launch screen storyboard does not support attributedText/NSKern — plain text only. Letter spacing is achieved via the splash SwiftUI screen instead. -->
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="MOVOCASH" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="movocash-label">
                                 <rect key="frame" x="96.5" y="475" width="200" height="28"/>
                                 <fontDescription type="system" pointSize="22"/>
@@ -35,9 +35,9 @@
                         </subviews>
                         <color key="backgroundColor" name="LaunchBackground" catalog="Asset Catalog" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <!-- Logo: centered horizontally, centered vertically offset by -48 -->
+                            <!-- Logo: centered horizontally, centered vertically offset by -35 (matches SwiftUI VStack centering: group height 197pt, logo center = centerY - (197/2 - 62.5) = centerY - 35) -->
                             <constraint firstItem="logo-image-view" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="logo-cx"/>
-                            <constraint firstItem="logo-image-view" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-48" id="logo-cy"/>
+                            <constraint firstItem="logo-image-view" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-35" id="logo-cy"/>
                             <constraint firstItem="logo-image-view" firstAttribute="width" constant="125" id="logo-w"/>
                             <constraint firstItem="logo-image-view" firstAttribute="height" constant="125" id="logo-h"/>
                             <!-- MOVOCASH: 24pt below logo, centered, fixed width -->

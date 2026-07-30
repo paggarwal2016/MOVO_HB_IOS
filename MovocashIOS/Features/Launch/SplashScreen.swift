@@ -44,13 +44,14 @@ struct MovoSplashLogo: View {
             VStack(spacing: Spacing.xs) {
                 Text("MOVOCASH")
                     .font(.system(size: 22, weight: .regular))
-                    .tracking(8.8)
-                    .foregroundColor(Color.movo.textPrimary)
-                    .padding(.leading, 8.8)
+                    // textSecondary matches the LaunchLogoTint colorset value used in
+                    // LaunchScreen.storyboard: (0.827, 0.843, 0.875, 1.0) ≈ 0xD4D7E0
+                    .foregroundColor(Color.movo.textSecondary)
 
                 Text("Powered by HyperBin\u{00AE}")
                     .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(Color.movo.textSecondary)
+                    // Storyboard sets the same base color at alpha 0.65
+                    .foregroundColor(Color.movo.textSecondary.opacity(0.65))
                     .multilineTextAlignment(.center)
             }
         }
