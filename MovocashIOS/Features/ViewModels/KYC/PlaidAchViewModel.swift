@@ -438,8 +438,6 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     /// `observeAppleWalletProvisioning`), not an alert. Callers bind their
     /// `VirtualCardAllSetView` cover directly to `showVirtualCardAllSet`.
     func addVirtualCardToAppleWallet(accountId: Int? = nil, localizedDescription: String? = nil) async {
-//        walletProvisioningOutcome = .none
-//        showVirtualCardAllSet = false
         guard let presenter = await waitForPresentableViewController() else {
             SecureLogger.error("[Wallet] no presentable view controller for add-to-wallet", category: .payment)
             AlertManager.shared.showError("Unable to present wallet flow.")
@@ -521,10 +519,13 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                         icon: .error,
                         onPrimary: onRequiresSupport
                     )
+                    throw error
                 } else if !self.isUserCancellation(error) {
                     AlertManager.shared.showError(error.localizedDescription)
+                    throw error
+                } else {
+                    throw error
                 }
-                throw error
             }
         }
     }
@@ -546,7 +547,9 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 guard let self else { return }
                 self.walletProvisioningOutcome = .addedToWallet
                 SecureLogger.info("[Wallet] Apple Wallet provisioning completed", category: .payment)
+                self.analytics.log(AnalyticsEvent.walletAdd)
                 self.showVirtualCardAllSet = true
+                Task { _ = try? await self.network.requestData(VCardAPI.activatedVCard) }
             }
         }
         walletProvisioningFailedObserver = NotificationCenter.default.addObserver(
@@ -555,10 +558,18 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.walletProvisioningOutcome = .activeButNotInWallet
-                let message = (note.object as? NSError)?.localizedDescription
-                    ?? "Unable to add your card to Apple Wallet."
+                let error = note.object as? NSError
+                let message = error?.localizedDescription ?? "Unable to add your card to Apple Wallet."
                 SecureLogger.error("[Wallet] Apple Wallet provisioning failed: \(message)", category: .payment)
+                self.analytics.log(
+                    AnalyticsEvent.walletAddFailed,
+                    params: [
+                        AnalyticsParam.errorCode: error?.analyticsCode ?? "unknown",
+                        AnalyticsParam.errorMessage: message
+                    ]
+                )
                 self.showVirtualCardAllSet = true
+                Task { _ = try? await self.network.requestData(VCardAPI.activatedVCard) }
             }
         }
         walletProvisioningCanceledObserver = NotificationCenter.default.addObserver(
@@ -568,7 +579,12 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 guard let self else { return }
                 self.walletProvisioningOutcome = .activeButNotInWallet
                 SecureLogger.info("[Wallet] Apple Wallet provisioning canceled by user", category: .payment)
+                self.analytics.log(
+                    AnalyticsEvent.walletAddFailed,
+                    params: [AnalyticsParam.errorMessage: "cancelled"]
+                )
                 self.showVirtualCardAllSet = true
+                Task { _ = try? await self.network.requestData(VCardAPI.activatedVCard) }
             }
         }
     }
