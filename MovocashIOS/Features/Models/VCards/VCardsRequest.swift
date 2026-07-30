@@ -10,6 +10,7 @@ import Foundation
 // MARK: - VCards
 
 struct VCardsRequest: Codable, Equatable, Sendable {
+    let nickname: String
     let pin: String
     let accountId: Int
     let userAction: String

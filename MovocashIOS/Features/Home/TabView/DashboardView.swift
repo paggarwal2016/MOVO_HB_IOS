@@ -24,9 +24,9 @@ struct DashboardView: View {
     @StateObject private var payeeFlow: PayeeTransferModel
     @ObservedObject var dashboardVM: DashboardViewModel
     @ObservedObject private var primaryCardStore: PrimaryCardStore
-
+    
     @Binding var selectedTab: Tab
-
+    
     private let container: AppContainer
     /// Title passed from the tab's MENU label (API-driven). Not currently rendered
     /// — the Home header shows the logo — but available for display if needed.
@@ -48,11 +48,8 @@ struct DashboardView: View {
     // MARK: - Navigation State
     
     @State private var showPrimaryAccountDetails = false
-    @State private var showAccountDetail = false
     @State private var showTransactions = false
     @State private var showCreateCashCard = false
-    @State private var showViewCard = false
-    @State private var showFunds = false
     @State private var showMoveMoney = false
     @State private var showFundAccount = false
     @State private var showAllFrequents = false
@@ -78,8 +75,26 @@ struct DashboardView: View {
     @State private var plaidInfoAllowFunding = true
     @State private var continueToPlaid = false
     @State private var startPlaidFlow = false
-    @State private var showFirstCardReward = false
-    @State private var didCheckFirstCardReward = false
+    // Stacked First Card Reward → activation flow. Each screen is presented ON TOP
+    // of the previous one (nested covers); the whole stack collapses to the
+    // Dashboard in one non-animated action when finished.
+    /// PIN choice, on top of the reward.
+    @State private var showVirtualCardActivation = false
+    /// Create Cash Card (manual PIN entry), on top of the choice.
+    @State private var showVirtualCardCreatePin = false
+    /// Create Cash Card presented directly from the Dashboard root, bypassing the
+    /// choice screen entirely — used when there's no existing PIN to offer
+    /// ("Use existing PIN" wouldn't be a valid option). Kept separate from
+    /// `showVirtualCardCreatePin` because that one's `.fullScreenCover` is nested
+    /// inside `showVirtualCardActivation`'s cover content, which never evaluates
+    /// (and so never presents) while `showVirtualCardActivation` is false.
+    @State private var showDirectCreatePin = false
+    /// "You're all set!" after "Use existing PIN" — on top of the choice.
+    @State private var showAllSetOverChoice = false
+    /// "You're all set!" after "Create new PIN" — on top of the Create Cash Card
+    /// (shared by both the choice-driven and direct create-pin entry points, since
+    /// only one of those is ever presented at a time).
+    @State private var showAllSetOverCreate = false
     /// The card just created in CreateCashCardView. Held while the create sheet
     @State private var createdCashCard: VCardListResponse? = nil
     /// Drives the post-create success cover.
@@ -122,7 +137,7 @@ struct DashboardView: View {
             }
         }
         .dimmingOverlay(isActive: isSheetActive)
-        .sheet(isPresented: $showCreateCashCard, onDismiss: {
+        .fullScreenCover(isPresented: $showCreateCashCard, onDismiss: {
             if createdCashCard != nil { showCashCardSuccess = true }
         }) {
             CreateCashCardView(
@@ -135,10 +150,6 @@ struct DashboardView: View {
                     Task { await dashboardVM.refresh() }
                 }
             )
-            .presentationDetents([.height(500)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
         }
         .fullScreenCover(isPresented: $showCashCardSuccess, onDismiss: {
             createdCashCard = nil
@@ -158,35 +169,6 @@ struct DashboardView: View {
                 .presentationBackground(.clear)
             }
         }
-        .sheet(isPresented: $showAccountDetail) {
-            if let account = displayAccount {
-                SavingAccountDetailView(accountId: account.id, showAccountCard: true, container: container)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-            }
-        }
-        .sheet(isPresented: $showViewCard) {
-            if let account = displayAccount {
-                ViewCardScreen(isPresented: $showViewCard, accountId: account.id, container: container)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-            }
-        }
-        .fullScreenCover(isPresented: $showFunds) {
-            if let account = displayAccount {
-                InternalTransferView(
-                    toClientId: account.clientId,
-                    fromAccount: account,
-                    nonPrimaryAccounts: savingVM.accountList?.data.accounts.filter { !$0.isPrimary } ?? [],
-                    preselectedFromCard: primaryCardStore.card,
-                    primaryLinkedCard: primaryCardStore.card,
-                    initialCards: dashboardVM.apiCards,
-                    container: container,
-                    onDismiss: { needsDashboardRefresh = true }
-                )
-            }
-        }
-                
         .fullScreenCover(isPresented: $showCreateContact, onDismiss: { payeeFlow.popupDidDismiss() }) {
             AddContactSheet(container: contactVM, payeeFlow: payeeFlow, isSubmitting: $isCreatingContact, countryCode: "+1", onSave: { data in
                 // The sheet stays open while we create the contact and run check-intent.
@@ -217,7 +199,7 @@ struct DashboardView: View {
                 showCreateContact = false
             })
         }
-
+        
         .fullScreenCover(isPresented: $showQuickPayView) {
             QuickPayView(
                 container: container,
@@ -415,8 +397,6 @@ struct DashboardView: View {
             Task { await dashboardVM.refresh() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
-            // Collapse any dashboard-originated push (e.g. FundAccountView) back to
-            // the dashboard in one transition, then refresh.
             showFundAccount = false
             showInternalTransfer = false
             showPlaidInfo = false
@@ -427,53 +407,96 @@ struct DashboardView: View {
         }
         .onAppear {
             showCreateCashCard = false
-            maybeShowFirstCardReward()
         }
-        .onChange(of: dashboardVM.hasLoadedCards) { _ in
-            maybeShowFirstCardReward()
-        }
-        .fullScreenCover(isPresented: $showFirstCardReward) {
-            // Both actions simply return to the Dashboard — neither opens Card Details.
-            FirstCardRewardView(
-                onViewDetails: { setFirstCardReward(false) },
-                onClose: { setFirstCardReward(false) }
+        .fullScreenCover(isPresented: $showVirtualCardActivation) {
+            VirtualCardPinChoiceView(
+                onUseExisting: {
+                    guard case .found(let existingPin) =
+                            KeychainManager.shared.getSync(KeychainManager.Keys.cardPinForCurrentUser),
+                          !existingPin.isEmpty else {
+                        showVirtualCardCreatePin = true
+                        return
+                    }
+                    SpinnerView.showFullScreen()
+                    let request = CreateVCardRequest(
+                        nickname: "MOVO",
+                        pin: existingPin,
+                        primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0,
+                        userAction: "ACTIVE-FIRST-VCARD"
+                    )
+                    Task {
+                        let card = try? await vm.createVCard(request: request)
+                        await MainActor.run {
+                            SpinnerView.hideFullScreen()
+                            // Error (card == nil) surfaced via BaseViewModel toast.
+                            guard card != nil else { return }
+                            showAllSetOverChoice = true
+                        }
+                    }
+                },
+                onCreateNew: { showVirtualCardCreatePin = true },
+                onClose: { dismissVirtualCardStack() }
             )
+            .fullScreenCover(isPresented: $showAllSetOverChoice) {
+                VirtualCardAllSetView(onDone: { completeFirstCardReward() })
+            }
+            .fullScreenCover(isPresented: $showVirtualCardCreatePin) {
+                firstCardRewardCreatePinView(onClose: { showVirtualCardCreatePin = false })
+            }
+        }
+        // Direct create-PIN entry (no existing PIN to offer, so the choice screen
+        // is skipped entirely) — a sibling top-level cover, not nested inside
+        // `showVirtualCardActivation`'s, so it can present independently of it.
+        .fullScreenCover(isPresented: $showDirectCreatePin) {
+            firstCardRewardCreatePinView(onClose: { dismissVirtualCardStack() })
         }
     }
 
-    /// Shows the one-time first-card reward for newly registered users.
-    ///
-    /// The `pendingFirstCardReward` flag is set on the post-registration landing
-    /// (`HomeTabBarView`); this consumes it using the primary card already
-    /// decoded from the Dashboard API (`primaryCardStore.card`) — no extra
-    /// API call. If the card isn't ready yet at first appear, the flag stays set
-    /// and the `.onChange` on `primaryLinkedCard` retries once it loads. The
-    /// session guard prevents re-checking on tab re-entry.
-    private func maybeShowFirstCardReward() {
-        guard !didCheckFirstCardReward else { return }
-        guard UserDefaults.standard.bool(forKey: "pendingFirstCardReward") else { return }
-        // Wait until the MYCARDS payload has resolved so we can reliably tell whether
-        // a secondary card exists before deciding (the `.onChange` retries on load).
-        guard dashboardVM.hasLoadedCards else { return }
-
-        // One-shot check — consume the flag whether or not we show the review.
-        didCheckFirstCardReward = true
-        UserDefaults.standard.set(false, forKey: "pendingFirstCardReward")
-
-        // First-time flow applies only when a secondary card (a non-primary card in
-        // the My Cards list) was issued alongside the primary. The reward simply
-        // returns to the Dashboard when dismissed. No secondary card → skip silently.
-        guard dashboardVM.cards.first != nil else { return }
-        setFirstCardReward(true)
+    /// Shared "Set digital cash card PIN" + "All Set" pair used by both the
+    /// choice-driven (`showVirtualCardCreatePin`) and direct (`showDirectCreatePin`)
+    /// entry points into the First Card Reward flow — only `onClose` differs
+    /// between them.
+    @ViewBuilder
+    private func firstCardRewardCreatePinView(onClose: @escaping () -> Void) -> some View {
+        CreateCashCardView(
+            vm: vm,
+            primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0,
+            title: "Set digital cash card PIN",
+            mode: .create,
+            createUserAction: "ACTIVE-FIRST-VCARD",
+            showsNicknameField: false,
+            onClose: onClose,
+            onCreated: { _ in showAllSetOverCreate = true }
+        )
+        .fullScreenCover(isPresented: $showAllSetOverCreate) {
+            VirtualCardAllSetView(onDone: { completeFirstCardReward() })
+        }
     }
 
-    /// Show/hide the reward cover without its own bottom slide — `FirstCardRewardView`
-    /// runs the center zoom itself, on both present and dismiss.
-    private func setFirstCardReward(_ visible: Bool) {
-        // Qualify SwiftUI.Transaction — the app also defines a `Transaction` model.
+    /// Successful completion of the First Card Reward flow ("Let's MOVO" on the
+    /// All Set screen). Deletes the per-user card-PIN Keychain marker FIRST
+    private func completeFirstCardReward() {
+        Task {
+            //try? await KeychainManager.shared.delete(KeychainManager.Keys.cardPinForCurrentUser)
+            await MainActor.run { dismissVirtualCardStack() }
+        }
+    }
+
+    /// Collapses the entire First Card Reward → activation stack back to the
+    /// Dashboard in a single non-animated action (dismissing the root reward cover
+    /// tears down every nested cover at once — no intermediate dismiss animations).
+    private func dismissVirtualCardStack() {
         var tx = SwiftUI.Transaction()
         tx.disablesAnimations = true
-        withTransaction(tx) { showFirstCardReward = visible }
+        withTransaction(tx) {
+            showAllSetOverChoice = false
+            showAllSetOverCreate = false
+            showVirtualCardCreatePin = false
+            showDirectCreatePin = false
+            showVirtualCardActivation = false
+        }
+        needsDashboardRefresh = true
+        Task { await dashboardVM.refresh() }
     }
 
     // MARK: - Subviews
@@ -486,7 +509,7 @@ struct DashboardView: View {
             selectedTab = .profile
         }
     }
-
+    
     /// INVITE-A-FRIEND card — green CTA that opens the custom invite bottom sheet
     /// (ShareInviteSheet), plus a "See all invitees" row with an avatar stack when
     /// the dashboard payload includes invitees.
@@ -621,12 +644,21 @@ struct DashboardView: View {
             CardSkeletonView()
                 .frame(maxWidth: .infinity)
         } else if dashboardVM.cards.isEmpty {
-            CreateCardView(
-                title: data.title,
-                message: data.description,
-                onTap: { showCreateCashCard = true }
-            )
+            FirstCardRewardCard(onActivate: {
+                if case .found = KeychainManager.shared.getSync(KeychainManager.Keys.cardPinForCurrentUser) {
+                    showVirtualCardActivation = true
+                } else {
+                    showDirectCreatePin = true
+                }
+            })
             .frame(maxWidth: .infinity)
+            // TODO
+//            CreateCardView( // TODO remove the future
+//                title: data.title,
+//                message: data.description,
+//                onTap: { showCreateCashCard = true }
+//            )
+//            .frame(maxWidth: .infinity)
         } else {
             CardSelectorView(
                 cards: dashboardVM.cards,
@@ -649,13 +681,13 @@ struct DashboardView: View {
     /// gated behind a prompt to fund the account first.
     /// Minimum available balance required to create a new virtual card.
     private static let minCardCreationBalance: Decimal = 5
-
+    
     private func handleCreateCardTap() {
         let account = dashboardVM.primaryAccount
         let availableBalance = account?.availableBalance ?? 0
         let accountBalance   = account?.accountBalance ?? 0
         let hasLinkedAccount = !(dashboardVM.linkedAccounts?.linkedAccounts ?? []).isEmpty
-
+        
         // Sufficient balance → proceed straight to card creation.
         guard availableBalance < Self.minCardCreationBalance else {
             showCreateCashCard = true
@@ -717,7 +749,7 @@ struct PrimaryAccountContent: View {
                     onQuickAction(moneyAction.action)
                 }
             }
-
+            
             if let txAction = accountData.actions.first(where: { $0.action == "ACTIVITY" }) {
                 QuickActionButton(title: txAction.label, icon: "clock", appearance: .secondary) {
                     onQuickAction(txAction.action)

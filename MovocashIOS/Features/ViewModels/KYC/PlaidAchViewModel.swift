@@ -44,6 +44,29 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     // Apple Wallet
     @Published var provisionedPass: AppleWalletProvisionedPass?
     @Published var canAddToWallet: Bool = true
+    /// Outcome of the most recent `activateVirtualCard` call's Apple Wallet step —
+    /// set from the SDK's provisioning notifications. Bank-side card activation can
+    /// succeed even when the wallet step fails or is cancelled, so callers use this
+    /// (rather than treating the whole call as failed) to pick the right copy for
+    /// the post-activation success screen.
+    @Published private(set) var walletProvisioningOutcome: AppleWalletProvisioningOutcome = .none
+    /// Set directly by `observeAppleWalletProvisioning()` as soon as ANY of the three
+    /// notifications fires — the caller binds its `VirtualCardAllSetView` cover
+    /// straight to this (not a local flag set after `await activateVirtualCard`/
+    /// `addVirtualCardToAppleWallet` returns), so the confirmation screen appears the
+    /// moment the SDK resolves the wallet step, and the caller's own `onDone` then
+    /// carries the flow forward as usual.
+    @Published var showVirtualCardAllSet = false
+
+    enum AppleWalletProvisioningOutcome: Equatable {
+        case none
+        case addedToWallet
+        case activeButNotInWallet
+    }
+
+    private var walletProvisioningCompletedObserver: NSObjectProtocol?
+    private var walletProvisioningFailedObserver: NSObjectProtocol?
+    private var walletProvisioningCanceledObserver: NSObjectProtocol?
 
     init(
         service: PlaidService = .shared,
@@ -60,6 +83,19 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
             network: resolvedNetwork,
             keychain: resolvedKeychain
         )
+        observeAppleWalletProvisioning()
+    }
+
+    deinit {
+        if let walletProvisioningCompletedObserver {
+            NotificationCenter.default.removeObserver(walletProvisioningCompletedObserver)
+        }
+        if let walletProvisioningFailedObserver {
+            NotificationCenter.default.removeObserver(walletProvisioningFailedObserver)
+        }
+        if let walletProvisioningCanceledObserver {
+            NotificationCenter.default.removeObserver(walletProvisioningCanceledObserver)
+        }
     }
 
     // MARK: - Auth
@@ -323,7 +359,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                   !token.isEmpty,
                   let json = JWTDecoder.decodePayload(token),
                   let payload = json["payload"] as? [String: Any],
-                  let userIdInt = payload["userId"] as? Int
+                  let userIdInt = payload["fineractClientId"] as? Int
             else {
                 // Internal precondition — suppressed from the alert (SDK errors only).
                 throw NSError(domain: "VirtualCard", code: -3)
@@ -397,7 +433,13 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         )
     }
 
+    /// Outcome is reported via `walletProvisioningOutcome`/`showVirtualCardAllSet`
+    /// (set from the SDK's provisioning notifications — see
+    /// `observeAppleWalletProvisioning`), not an alert. Callers bind their
+    /// `VirtualCardAllSetView` cover directly to `showVirtualCardAllSet`.
     func addVirtualCardToAppleWallet(accountId: Int? = nil, localizedDescription: String? = nil) async {
+//        walletProvisioningOutcome = .none
+//        showVirtualCardAllSet = false
         guard let presenter = await waitForPresentableViewController() else {
             SecureLogger.error("[Wallet] no presentable view controller for add-to-wallet", category: .payment)
             AlertManager.shared.showError("Unable to present wallet flow.")
@@ -425,18 +467,109 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
         }
     }
 
-    func activateVirtualCard(pin: String, accountId: Int? = nil, localizedDescription: String? = nil) async {
+    /// - Parameter onRequiresSupport: invoked when the SDK reports the card can't be
+    ///   activated in-app (HTTP 400) and the user must call support instead — fires
+    ///   when they tap "OK" on that alert. The caller decides what that means for
+    ///   navigation (e.g. KYCSuccessView exits the whole flow to the Dashboard).
+    func activateVirtualCard(
+        pin: String,
+        accountId: Int? = nil,
+        localizedDescription: String? = nil,
+        onRequiresSupport: (() -> Void)? = nil
+    ) async {
+        walletProvisioningOutcome = .none
+        showVirtualCardAllSet = false
         guard let presenter = await waitForPresentableViewController() else {
             AlertManager.shared.showError("Unable to present wallet flow.")
+            SpinnerView.hideFullScreen()
             return
         }
+
+        let spinnerWatcher = Task { [weak self] in
+            while !Task.isCancelled {
+                if presenter.presentedViewController != nil || (self?.walletProvisioningOutcome ?? .none) != .none {
+                    SpinnerView.hideFullScreen()
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+        }
+        defer {
+            spinnerWatcher.cancel()
+            SpinnerView.hideFullScreen()
+        }
+
         await perform {
-            self.provisionedPass = try await self.service.activateVirtualCardAndAddToAppleWallet(
-                pin: pin,
-                presentingViewController: presenter,
-                accountId: accountId,
-                localizedDescription: localizedDescription
-            )
+            do {
+                self.provisionedPass = try await self.service.activateVirtualCardAndAddToAppleWallet(
+                    pin: pin,
+                    presentingViewController: presenter,
+                    accountId: accountId,
+                    localizedDescription: localizedDescription
+                )
+            } catch {
+                if self.walletProvisioningOutcome != .none {
+                    return
+                }
+                SecureLogger.error("[Wallet] activate-and-add-to-wallet did not complete: \(error.localizedDescription)", category: .payment)
+                let nsError = error as NSError
+                if nsError.code == 400 {
+                    AlertManager.shared.showCustom(
+                        title: "Call to Finish Setup",
+                        message: "We couldn't set your main MOVO card PIN this time. Need help? Call (866) 348-3435.",
+                        primary: "OK",
+                        icon: .error,
+                        onPrimary: onRequiresSupport
+                    )
+                } else if !self.isUserCancellation(error) {
+                    AlertManager.shared.showError(error.localizedDescription)
+                }
+                throw error
+            }
+        }
+    }
+
+    /// Common handling for the SDK's Apple Wallet provisioning broadcasts — posted by
+    /// `MobileBankingSDK` from inside `activateVirtualCard`/`addVirtualCardToAppleWallet`,
+    /// on the main thread, ahead of those calls' own completion. Centralized here (rather
+    /// than in each calling screen) so every entry point gets the same routing for free:
+    /// regardless of which of the three fires, `walletProvisioningOutcome` is set to the
+    /// right outcome and `showVirtualCardAllSet` flips to `true` immediately — the caller's
+    /// `VirtualCardAllSetView` cover is bound directly to that flag, so it presents the
+    /// moment the notification arrives (not after the outer `await` resolves), and the
+    /// caller's own `onDone` carries the remaining flow forward from there.
+    private func observeAppleWalletProvisioning() {
+        walletProvisioningCompletedObserver = NotificationCenter.default.addObserver(
+            forName: .appleWalletProvisioningCompleted, object: nil, queue: nil
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.walletProvisioningOutcome = .addedToWallet
+                SecureLogger.info("[Wallet] Apple Wallet provisioning completed", category: .payment)
+                self.showVirtualCardAllSet = true
+            }
+        }
+        walletProvisioningFailedObserver = NotificationCenter.default.addObserver(
+            forName: .appleWalletProvisioningFailed, object: nil, queue: nil
+        ) { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.walletProvisioningOutcome = .activeButNotInWallet
+                let message = (note.object as? NSError)?.localizedDescription
+                    ?? "Unable to add your card to Apple Wallet."
+                SecureLogger.error("[Wallet] Apple Wallet provisioning failed: \(message)", category: .payment)
+                self.showVirtualCardAllSet = true
+            }
+        }
+        walletProvisioningCanceledObserver = NotificationCenter.default.addObserver(
+            forName: .appleWalletProvisioningCanceled, object: nil, queue: nil
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.walletProvisioningOutcome = .activeButNotInWallet
+                SecureLogger.info("[Wallet] Apple Wallet provisioning canceled by user", category: .payment)
+                self.showVirtualCardAllSet = true
+            }
         }
     }
 
@@ -496,7 +629,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 guard let passkeyToken = try? await self.keychain.get("access_token", biometricPrompt: nil),
                       let json = JWTDecoder.decodePayload(passkeyToken),
                       let payload = json["payload"] as? [String: Any],
-                      let userIdInt = payload["userId"] as? Int
+                      let userIdInt = payload["fineractClientId"] as? Int
                 else {
                     throw NSError(domain: "QuickTransfer", code: -3,
                                   userInfo: [NSLocalizedDescriptionKey: "Unable to verify device identity. Please try again."])

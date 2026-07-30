@@ -80,8 +80,8 @@ struct ViewCardsListScreen: View {
             }
         }
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showCreateCard, onDismiss: {
-            // Present the success cover only after the create sheet is fully gone.
+        .fullScreenCover(isPresented: $showCreateCard, onDismiss: {
+            // Present the success cover only after the create screen is fully gone.
             if createdCard != nil { showCreateSuccess = true }
         }) {
             CreateCashCardView(
@@ -99,10 +99,6 @@ struct ViewCardsListScreen: View {
                 }
             )
             .secured()
-            .presentationDetents([.height(500)])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.sheet)
-            .presentationBackground(Color.movo.cardSurface)
         }
         .fullScreenCover(isPresented: $showCreateSuccess, onDismiss: {
             createdCard = nil

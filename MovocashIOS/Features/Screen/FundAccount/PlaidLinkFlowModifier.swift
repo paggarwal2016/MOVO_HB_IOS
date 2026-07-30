@@ -31,6 +31,12 @@ struct PlaidLinkFlowModifier: ViewModifier {
     var allowFunding: Bool
     var onLinked: (ACHAccount) -> Void
     var onDone: () -> Void
+    /// Called when the flow ends WITHOUT a linked account — the user cancelled/
+    /// dismissed Plaid (no alert) or the link failed (an error alert is already
+    /// shown before this fires). Lets a linear caller (e.g. onboarding) advance
+    /// instead of being left on a dead-end screen. Defaults to a no-op so the
+    /// non-linear callers (Dashboard, Manage Accounts) are unaffected.
+    var onCancel: () -> Void = {}
 
     // Item-driven presentation: the cover is built only once `linkedAccount` is
     // non-nil and receives that exact value. This closes the race that let the
@@ -102,7 +108,12 @@ struct PlaidLinkFlowModifier: ViewModifier {
         // presenting the success screen (the spinner window sits above it).
         SpinnerView.hideFullScreen()
 
-        guard let linked else { return }
+        guard let linked else {
+            // Cancelled/dismissed or failed — notify the caller so a linear flow
+            // (onboarding) isn't stranded on a screen with no way forward.
+            onCancel()
+            return
+        }
 
         onLinked(linked)
         // Setting the item presents the cover; the content receives this exact
@@ -123,7 +134,8 @@ extension View {
         primaryAccount: SavingsAccountInfo? = nil,
         allowFunding: Bool,
         onLinked: @escaping (ACHAccount) -> Void = { _ in },
-        onDone: @escaping () -> Void = {}
+        onDone: @escaping () -> Void = {},
+        onCancel: @escaping () -> Void = {}
     ) -> some View {
         modifier(
             PlaidLinkFlowModifier(
@@ -133,7 +145,8 @@ extension View {
                 primaryAccount: primaryAccount,
                 allowFunding: allowFunding,
                 onLinked: onLinked,
-                onDone: onDone
+                onDone: onDone,
+                onCancel: onCancel
             )
         )
     }

@@ -15,6 +15,8 @@ import SwiftUI
 // MARK: - Size variants
 
 public enum MovoChevronSize {
+    /// Extra-large chevron — 24×24 pt, stroke 2.3
+    case large
     /// Large CTA chevron — 16×16 pt, stroke 2.0
     case cta
     /// Standard disclosure row chevron — 14×14 pt, stroke 1.75
@@ -24,6 +26,7 @@ public enum MovoChevronSize {
 
     var side: CGFloat {
         switch self {
+        case .large:       return 24
         case .cta:         return 16
         case .disclosure:  return 14
         case .inline:      return 12
@@ -32,6 +35,7 @@ public enum MovoChevronSize {
 
     var strokeWidth: CGFloat {
         switch self {
+        case .large:       return 2.30
         case .cta:         return 2.00
         case .disclosure:  return 1.75
         case .inline:      return 1.50

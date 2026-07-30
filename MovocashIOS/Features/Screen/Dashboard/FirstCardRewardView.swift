@@ -50,23 +50,20 @@ struct FirstCardRewardView: View {
             ZStack {
                 MovoMVSymbol()
                     .frame(width: 44, height: 44)
-
-                HStack {
-                    Spacer()
-                    CircularNavButton(systemName: "xmark", action: { animateOut { onClose() } })
-                }
+                
+                Spacer()
             }
 
             // Reward eyebrow pill
             rewardPill
 
-            Text("Your first cash card is on us.")
+            Text("Your first digital cash card is on us.")
                 .textStyle(Typography.cardHero)
                 .foregroundColor(Color.movo.textPrimary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("A free virtual MOVOCASH card, ready to use right now. Add it to Apple Pay in one tap.")
+            Text("A free digital cash card you can use right away \u{2014} add it to Apple Pay in one tap.")
                 .textStyle(Typography.subtitle)
                 .foregroundColor(Color.movo.textTertiary)
                 .multilineTextAlignment(.center)
@@ -74,7 +71,7 @@ struct FirstCardRewardView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             Button(action: { animateOut { onViewDetails() } }) {
-                Text("LET'S MOVO!")
+                Text("Activate my card")
                     .tracking(1.5)
             }
             .buttonStyle(MovoPrimaryButtonStyle())

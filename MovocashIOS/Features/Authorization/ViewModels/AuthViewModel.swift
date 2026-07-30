@@ -421,7 +421,7 @@ extension AuthViewModel {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else { return false }
         if case .found = keychain.getSync("passkey_registered_\(userIdInt)") { return true }
         return false
@@ -439,7 +439,7 @@ extension AuthViewModel {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else { return false }
         if case .found = keychain.getSync("biometric_enrolled_\(userIdInt)") { return true }
         return false
@@ -451,7 +451,7 @@ extension AuthViewModel {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else { return }
         try? await keychain.save("1", for: "biometric_enrolled_\(userIdInt)", protection: .backgroundSafe)
         SecureLogger.info("Biometric enrollment marked for user \(userIdInt)", category: .auth)
@@ -463,7 +463,7 @@ extension AuthViewModel {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else { return }
         try? await keychain.delete("biometric_enrolled_\(userIdInt)")
         SecureLogger.info("Biometric enrollment cleared for user \(userIdInt)", category: .auth)

@@ -305,7 +305,36 @@ enum KeychainError: Error {
 enum KeychainProtection {
     /// Used for refresh tokens (background access allowed)
     case backgroundSafe
-    
+
     /// Used for biometric unlock / payments
     case userPresence
+}
+
+// MARK: - Well-known Keys
+
+extension KeychainManager {
+    /// Shared keychain key identifiers, so callers don't duplicate string literals.
+    enum Keys {
+        /// Base identifier for the reusable 4-digit card PIN. Prefer the per-user
+        /// key (`cardPinForCurrentUser`) for reads/writes.
+        static let cardPin = "movo_card_pin"
+
+        static var cardPinForCurrentUser: String {
+            guard case .found(let token) = KeychainManager.shared.getSync("access_token"),
+                  let json = JWTDecoder.decodePayload(token),
+                  let payload = json["payload"] as? [String: Any]
+            else { return cardPin }
+            // Namespace by the Fineract client id from the validated token
+            // (handles either a numeric or string claim); fall back to the base key.
+            let clientId: String
+            if let intId = payload["fineractClientId"] as? Int {
+                clientId = String(intId)
+            } else if let strId = payload["fineractClientId"] as? String, !strId.isEmpty {
+                clientId = strId
+            } else {
+                return cardPin
+            }
+            return "\(cardPin)_\(clientId)"
+        }
+    }
 }
