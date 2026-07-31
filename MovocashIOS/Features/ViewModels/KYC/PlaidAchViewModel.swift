@@ -536,15 +536,28 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
     /// `SupportSection`), so tapping it dials support directly.
     private static var cardNotAddedMessage: AttributedString {
         var message = AttributedString("Your card didn\u{2019}t get added to Apple Wallet. One more tap usually does it. If not, call support at ")
-        var phone = AttributedString("(866) 348-3435")
+        var phone = AttributedString(AppConfig.customerCare)
         phone.underlineStyle = .single
         phone.foregroundColor = Color.movo.accent
-        phone.link = URL(string: "tel:8663483435")
+        phone.link = URL(string: AppConfig.customerCareNumber)
         message += phone
         message += AttributedString(".")
         return message
     }
-    
+
+    /// "Call to Finish Setup" alert copy for a 400 on PIN set — same tappable
+    /// `tel:` link style as `cardNotAddedMessage`.
+    private static var callToFinishSetupMessage: AttributedString {
+        var message = AttributedString("We couldn\u{2019}t set your Main MOVO card PIN this time. Need help? Call ")
+        var phone = AttributedString(AppConfig.customerCare)
+        phone.underlineStyle = .single
+        phone.foregroundColor = Color.movo.accent
+        phone.link = URL(string: AppConfig.customerCareNumber)
+        message += phone
+        message += AttributedString(".")
+        return message
+    }
+
     // MARK: - Registration
     // MARK: - activateVirtualCard
     func activateVirtualCard(
@@ -595,7 +608,7 @@ final class PlaidAchViewModel: ObservableObject, TokenRefreshable {
                 if nsError.code == 400 {
                     AlertManager.shared.showCustom(
                         title: "Call to Finish Setup",
-                        message: "We couldn't set your Main MOVO card PIN this time. Need help? Call (866) 348-3435.",
+                        message: Self.callToFinishSetupMessage,
                         primary: "OK",
                         icon: .error,
                         onPrimary: onRequiresSupport

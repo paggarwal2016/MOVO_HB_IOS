@@ -14,9 +14,6 @@ struct SupportSection: View {
 
     @State private var showCannotCallAlert = false
 
-    private let phoneNumber = "(866) 348-3435"
-    private let dialString  = "tel:8663483435"
-
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
 
@@ -48,7 +45,7 @@ struct SupportSection: View {
         .alert("Call Support", isPresented: $showCannotCallAlert) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("Phone calls aren't available on this device. Please call \(phoneNumber).")
+            Text("Phone calls aren't available on this device. Please call \(AppConfig.customerCare).")
         }
     }
 
@@ -111,14 +108,14 @@ struct SupportSection: View {
 
     private var ctaButton: some View {
         Button(action: dial) {
-            Text(phoneNumber)
+            Text(AppConfig.customerCare)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         // Explicit floor keeps the tap target at ≥ 50 pt for AX guidance.
         .frame(minHeight: 50)
-        .accessibilityLabel("Call support at \(phoneNumber)")
+        .accessibilityLabel("Call support at \(AppConfig.customerCare)")
         .accessibilityHint("Dials the MOVO support line")
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.sm)
@@ -128,7 +125,7 @@ struct SupportSection: View {
     // MARK: - Action
 
     private func dial() {
-        guard let url = URL(string: dialString),
+        guard let url = URL(string: AppConfig.customerCareNumber),
               UIApplication.shared.canOpenURL(url) else {
             showCannotCallAlert = true
             return
