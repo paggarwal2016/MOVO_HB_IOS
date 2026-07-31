@@ -439,14 +439,18 @@ struct DashboardView: View {
             .fullScreenCover(isPresented: $showAllSetOverChoice) {
                 VirtualCardAllSetView(onDone: { completeFirstCardReward() })
             }
-            .fullScreenCover(isPresented: $showVirtualCardCreatePin) {
+            .fullScreenCover(isPresented: $showVirtualCardCreatePin, onDismiss: {
+                if createdCashCard != nil { showCashCardSuccess = true }
+            }) {
                 firstCardRewardCreatePinView(onClose: { showVirtualCardCreatePin = false })
             }
         }
         // Direct create-PIN entry (no existing PIN to offer, so the choice screen
         // is skipped entirely) — a sibling top-level cover, not nested inside
         // `showVirtualCardActivation`'s, so it can present independently of it.
-        .fullScreenCover(isPresented: $showDirectCreatePin) {
+        .fullScreenCover(isPresented: $showDirectCreatePin, onDismiss: {
+            if createdCashCard != nil { showCashCardSuccess = true }
+        }) {
             firstCardRewardCreatePinView(onClose: { dismissVirtualCardStack() })
         }
     }
@@ -467,7 +471,7 @@ struct DashboardView: View {
             onClose: onClose,
             onCreated: { card in
                 createdCashCard = card
-                showCreateCashCard = false
+                onClose()
                 Task { await dashboardVM.refresh() }
             }
         )
