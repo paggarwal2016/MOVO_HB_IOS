@@ -2,20 +2,12 @@
 //  SupportSection.swift
 //  MovocashIOS
 //
-//  Me-tab support card. Icon tile treatment matches the "Manage external
-//  account" row exactly: Color.movo.elevated fill, Radius.sm corners, 44×44,
-//  18pt .semibold glyph in Color.movo.accent. The only saturated-green element
-//  is the CTA button (MovoPrimaryButtonStyle / Heritage Green fill).
-//
 
 import SwiftUI
 
 struct SupportSection: View {
 
     @State private var showCannotCallAlert = false
-
-    private let phoneNumber = "(866) 348-3435"
-    private let dialString  = "tel:+18663483435"
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -53,14 +45,6 @@ struct SupportSection: View {
     }
 
     // MARK: - Header Row
-    //
-    // Matches manageExternalAccount exactly:
-    //   HStack spacing  → Spacing.md
-    //   Tile fill       → Color.movo.elevated  (neutral, NOT tinted)
-    //   Tile corners    → Radius.sm
-    //   Tile size       → 44 × 44
-    //   Glyph           → 18pt .semibold, Color.movo.accent
-    //   Row padding     → .vertical(rowPaddingVertical) + .horizontal(Spacing.lg)
 
     private var headerRow: some View {
         HStack(spacing: Spacing.md) {
@@ -104,10 +88,6 @@ struct SupportSection: View {
     }
 
     // MARK: - CTA Button
-    //
-    // MovoPrimaryButtonStyle is the ONLY Heritage Green (#629F86) fill element
-    // on this card. lineLimit(2) + multilineTextAlignment ensure the number
-    // doesn't truncate at AX3–AX5 large-text sizes.
 
     private var ctaButton: some View {
         Button(action: dial) {

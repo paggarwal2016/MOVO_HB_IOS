@@ -2,30 +2,13 @@
 //  LimitNoticeBanner.swift
 //  MovocashIOS
 //
-//  Presentational-only notice banner shown above the Transfer button in
-//  FundAccountView. It is purely informational — it does not gate, disable,
-//  or affect the transfer flow in any way.
-//
-//  To update the limit amount, phone display string, or dial digits, change
-//  LimitNoticeConfig below. Do not inline literals in the view body.
-//
-
 import SwiftUI
-
-// MARK: - Configuration
-
-private enum LimitNoticeConfig {
-    /// Displayed limit amount (e.g. "$200"). Update here, not in the view.
-    static let dailyLimit          = "$200"
-    /// Human-readable phone string shown in the banner text.
-    static let supportPhoneDisplay = "(866) 348-3435"
-    /// Digits used in the tel: URL — no spaces, no dashes.
-    static let supportPhoneDial    = "+18663483435"
-}
 
 // MARK: - View
 
 struct LimitNoticeBanner: View {
+    
+    private let dailyLimit = "$200"
 
     @Environment(\.openURL) private var openURL
 
@@ -48,7 +31,7 @@ struct LimitNoticeBanner: View {
         // navigating inside the text.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "Daily transfer limit \(LimitNoticeConfig.dailyLimit). " +
+            "Daily transfer limit \(dailyLimit). " +
             "Temporary, will be lifted soon. " +
             "Contact support with questions."
         )
@@ -59,14 +42,14 @@ struct LimitNoticeBanner: View {
 
     private var noticeText: some View {
         var attr = AttributedString(
-            "Daily transfer limit: \(LimitNoticeConfig.dailyLimit). " +
+            "Daily transfer limit: \(dailyLimit). " +
             "Temporary \u{2014} will be lifted soon. " +
-            "Contact support at \(LimitNoticeConfig.supportPhoneDisplay) with questions."
+            "Contact support at \(AppConfig.customerCare) with questions."
         )
         // Underline + link only the phone number span; the rest is plain text.
-        if let range = attr.range(of: LimitNoticeConfig.supportPhoneDisplay) {
+        if let range = attr.range(of: AppConfig.customerCare) {
             attr[range].underlineStyle = .single
-            attr[range].link = URL(string: "tel:\(LimitNoticeConfig.supportPhoneDial)")
+            attr[range].link = URL(string: AppConfig.customerCareNumber)
         }
         return Text(attr)
             .font(.caption)                       // semantic style — scales with Dynamic Type
@@ -77,7 +60,7 @@ struct LimitNoticeBanner: View {
     // MARK: - Helpers
 
     private func dialSupport() {
-        guard let url = URL(string: "tel:\(LimitNoticeConfig.supportPhoneDial)") else { return }
+        guard let url = URL(string: AppConfig.customerCareNumber) else { return }
         openURL(url)
     }
 }

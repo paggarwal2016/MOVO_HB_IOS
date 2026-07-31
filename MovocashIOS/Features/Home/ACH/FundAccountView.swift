@@ -103,20 +103,23 @@ struct FundAccountView: View {
                 SpinnerView()
             } else {
                 VStack(spacing: 0) {
-                    navBar
-                    Spacer()
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            navBar
+                            Spacer(minLength: Spacing.xl)
 
-                    amountDisplay
-                        .padding(.bottom, Spacing.lg)
-                    Spacer()
+                            amountDisplay
+                                .padding(.bottom, Spacing.lg)
 
-                    transferPanel
-                        .padding(.bottom, Spacing.lg)
-                    Spacer()
+                            transferPanel
+                                .padding(.bottom, Spacing.lg)
 
-                    LimitNoticeBanner()
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.bottom, Spacing.sm)
+                            LimitNoticeBanner()
+                                .padding(.horizontal, Spacing.lg)
+                        }
+                        .frame(minHeight: 420)
+                    }
+                    .scrollDismissesKeyboard(.immediately)
 
                     transferButton
                         .padding(.horizontal, Spacing.lg)
