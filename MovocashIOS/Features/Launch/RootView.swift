@@ -92,15 +92,7 @@ struct RootView: View {
                                 switch destination {
                                 case .signupDetails:
                                     legalAcceptedItems = []
-                                    // TEST ONLY — skip email entry (.signupDetails) and email OTP
-                                    // (.emailVerification) after phone OTP. Routes straight to the
-                                    // same destination those steps would have produced on success.
-                                    // To restore the real flow, replace the two lines below with:
-                                    //     appState.flow = .signupDetails   // test only
-                                    //
-                                    let passkeyDone = await authVM.isPasskeyRegistered()
-                                    appState.flow = passkeyDone ? .getStartedInfo : .enableBiometrics
-                                    //
+                                    appState.flow = .signupDetails
                                 default:
                                     // Returning user — KYC already complete.
                                     // Enrolled → require a biometric scan (RSA) before the
