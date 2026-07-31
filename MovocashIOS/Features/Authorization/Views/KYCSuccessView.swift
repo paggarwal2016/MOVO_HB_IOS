@@ -118,11 +118,6 @@ struct KYCSuccessView: View {
         .background(Color.movo.background)
         .navigationBarHidden(true)
         .task { await savingVM.loadAccounts() }
-        
-        // Level 1 — Create Cash Card (Set your card PIN).
-        // `onDismiss` only fires once this cover has actually finished dismissing —
-        // that's what launches the SDK, so it's never presented on top of (or falls
-        // back to) this screen. See `launchPendingActivationIfNeeded()`.
         .fullScreenCover(item: $activateCardAccount, onDismiss: {
             launchPendingActivationIfNeeded()
         }) { account in
@@ -184,8 +179,6 @@ struct KYCSuccessView: View {
         }
     }
     
-    /// Fires from the Create Cash Card cover's `onDismiss` — i.e. strictly after that
-    /// screen has finished dismissing — so the activation SDK is only ever presented
     /// with THIS screen behind it, never Create Cash Card.
     private func launchPendingActivationIfNeeded() {
         guard let pending = pendingActivation else { return }

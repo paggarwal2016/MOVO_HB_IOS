@@ -176,6 +176,7 @@ struct CardItemView: View {
         .padding(.vertical, Spacing.md)
         .padding(.bottom, 5)
         .frame(maxWidth: .infinity)
+        .drawingGroup()
         .contentShape(Rectangle())
         .onTapGesture { onDetail?() }
     }

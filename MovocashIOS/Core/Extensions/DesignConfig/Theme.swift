@@ -57,7 +57,8 @@ public struct MovoColorScheme: Sendable {
     public let successTint:     ColorToken
     public let danger:          ColorToken
     public let dangerTint:      ColorToken
-    public let warning:         ColorToken
+    public let warning:             ColorToken
+    public let warningBackground:   ColorToken  // Soft amber fill — notice banners
 
     // On-accent label color — high-contrast text drawn on accent fills
     public let onAccent:        ColorToken
@@ -116,7 +117,8 @@ public struct MovoColorScheme: Sendable {
         successTint:   DesignTokens.Palette.success.opacity(0.12),
         danger:        DesignTokens.Palette.danger,
         dangerTint:    DesignTokens.Palette.danger.opacity(0.10),
-        warning:       DesignTokens.Palette.warning,
+        warning:           DesignTokens.Palette.warning,
+        warningBackground: DesignTokens.Palette.warningBackground,
 
         // Always near-black — works on the green accent in BOTH modes.
         // (Was previously `background`, which would have flipped to white
