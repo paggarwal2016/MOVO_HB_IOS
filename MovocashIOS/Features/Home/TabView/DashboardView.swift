@@ -159,6 +159,9 @@ struct DashboardView: View {
                         var tx = SwiftUI.Transaction()
                         tx.disablesAnimations = true
                         withTransaction(tx) { showCashCardSuccess = false }
+                    }, onClose: {
+                        showCashCardSuccess = false
+                        Task { await dashboardVM.refresh() }
                     })
                     .frame(width: 320)
                 }
@@ -463,9 +466,9 @@ struct DashboardView: View {
             showsNicknameField: true,
             onClose: onClose,
             onCreated: { card in
-                selectedCard = card
-                showCardDetail = true
-                dismissVirtualCardStack()
+                createdCashCard = card
+                showCreateCashCard = false
+                Task { await dashboardVM.refresh() }
             }
         )
     }
