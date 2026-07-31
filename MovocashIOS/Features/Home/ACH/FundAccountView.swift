@@ -114,6 +114,10 @@ struct FundAccountView: View {
                         .padding(.bottom, Spacing.lg)
                     Spacer()
 
+                    LimitNoticeBanner()
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.sm)
+
                     transferButton
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.xl)
@@ -269,7 +273,7 @@ struct FundAccountView: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            Text(isProfileMode ? "Withdraw Funds" : "Link Account")
+            Text(isProfileMode ? "Withdraw Funds" : "Add Money")
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
             Spacer()

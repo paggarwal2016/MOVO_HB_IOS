@@ -15,7 +15,7 @@ struct SupportSection: View {
     @State private var showCannotCallAlert = false
 
     private let phoneNumber = "(866) 348-3435"
-    private let dialString  = "tel:8663483435"
+    private let dialString  = "tel:+18663483435"
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
