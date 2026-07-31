@@ -69,6 +69,7 @@ struct BankLinkedSuccessScreen: View {
                         header
                         amountSection
                         fromToCard
+                        LimitNoticeBanner()
                     }
                     .padding(.horizontal, Spacing.xl)
                     .padding(.top, Spacing.xxxl)
