@@ -7,29 +7,27 @@
 
 import SwiftUI
 
-/// Shown after a virtual card is successfully created. Presents the new card and
-/// its key details. The single "Done" CTA dismisses the screen.
 struct CashCardCreateSuccess: View {
-
-    /// The newly created card whose details are shown.
+    
     let card: VCardListResponse
-
-    /// Invoked when the user taps "Done".
+    
     var onDone: () -> Void = {}
-
+    
+    var onClose: (() -> Void)? = nil
+    
     // MARK: - Body
-
+    
     var body: some View {
         VStack(spacing: 0) {
-
+            
             Spacer().frame(height: Spacing.xxxl)
-
+            
             CheckmarkHalo()
                 .frame(width: 88, height: 88)
-
+            
             Spacer().frame(height: Spacing.xxl)
-
-            Text("Your MOVOCASH card created!")
+            
+            Text("Digital cash card \(card.lastFour ?? "----") is live!")
                 .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.accent)
                 .padding(.horizontal, Spacing.lg)
@@ -41,22 +39,22 @@ struct CashCardCreateSuccess: View {
                             Capsule().strokeBorder(Color.movo.accentBorder, lineWidth: Stroke.hairline)
                         )
                 )
-
+            
             Spacer().frame(height: Spacing.xxl)
-
-            Text("Your virtual cash card is ready.\nAdd it to Apple Wallet anytime.")
+            
+            Text("Spend with it anywhere, or add it to Apple Wallet for tap-to-pay.")
                 .foregroundColor(Color.movo.textTertiary)
                 .textStyle(Typography.body)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Spacing.xl)
-
+            
             Spacer().frame(height: Spacing.xxxl)
-
+            
             // MARK: - CTA
-
+            
             Button(action: onDone) {
-                Text("LET'S MOVO!")
+                Text("View my card")
                     .tracking(1.5)
             }
             .buttonStyle(MovoPrimaryButtonStyle())
@@ -78,5 +76,11 @@ struct CashCardCreateSuccess: View {
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: Radius.sheet))
+        .overlay(alignment: .topTrailing) {
+            if let onClose {
+                CircularNavButton(systemName: "xmark", action: onClose)
+                    .padding(Spacing.md)
+            }
+        }
     }
 }
