@@ -21,7 +21,8 @@ struct LimitNoticeBanner: View {
 
             noticeText
         }
-        .padding(Spacing.md)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Radius.card)
                 .fill(Color.movo.warningBackground)
