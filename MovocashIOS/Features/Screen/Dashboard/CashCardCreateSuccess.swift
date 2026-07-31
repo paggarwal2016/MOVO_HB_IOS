@@ -27,7 +27,7 @@ struct CashCardCreateSuccess: View {
             
             Spacer().frame(height: Spacing.xxl)
             
-            Text("Your digital cash card •••• \(card.lastFour ?? "----") is live!")
+            Text("Digital cash card \(card.lastFour ?? "----") is live!")
                 .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.accent)
                 .padding(.horizontal, Spacing.lg)
