@@ -16,38 +16,21 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <!-- Herring logo, centered slightly above midpoint to leave room for text -->
-                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="logo-image-view" image="herringLogo">
-                                <rect key="frame" x="134" y="326" width="125" height="125"/>
+                            <!-- herringSplash: 231×241, centered.
+                                 SYNC: width (231) and height (241) must stay identical to
+                                 the splashWidth/splashHeight constants in SplashScreen.swift. -->
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="splash-image-view" image="herringSplash">
+                                <rect key="frame" x="81" y="305.5" width="231" height="241"/>
                             </imageView>
-                            <!-- MOVOCASH label, 24pt below logo bottom. Note: launch screen storyboard does not support attributedText/NSKern — plain text only. Letter spacing is achieved via the splash SwiftUI screen instead. -->
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="MOVOCASH" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="movocash-label">
-                                <rect key="frame" x="96.5" y="475" width="200" height="28"/>
-                                <fontDescription type="system" pointSize="22"/>
-                                <color key="textColor" red="0.82745098039215681" green="0.84313725490196079" blue="0.87450980392156863" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                            </label>
-                            <!-- Powered by HyperBin label, 4pt below MOVOCASH -->
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Powered by HyperBin®" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="hyperbin-label">
-                                <rect key="frame" x="96.5" y="507" width="200" height="16"/>
-                                <fontDescription type="system" pointSize="12"/>
-                                <color key="textColor" red="0.82745098039215681" green="0.84313725490196079" blue="0.87450980392156863" alpha="0.65" colorSpace="custom" customColorSpace="sRGB"/>
-                            </label>
                         </subviews>
-                        <color key="backgroundColor" name="LaunchBackground" catalog="Asset Catalog" colorSpace="custom" customColorSpace="sRGB"/>
+                        <!-- Pure black #000000 — fixed, not adaptive, so light mode cannot shift it. -->
+                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <!-- Logo: centered horizontally, centered vertically offset by -35 (matches SwiftUI VStack centering: group height 197pt, logo center = centerY - (197/2 - 62.5) = centerY - 35) -->
-                            <constraint firstItem="logo-image-view" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="logo-cx"/>
-                            <constraint firstItem="logo-image-view" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-35" id="logo-cy"/>
-                            <constraint firstItem="logo-image-view" firstAttribute="width" constant="125" id="logo-w"/>
-                            <constraint firstItem="logo-image-view" firstAttribute="height" constant="125" id="logo-h"/>
-                            <!-- MOVOCASH: 24pt below logo, centered, fixed width -->
-                            <constraint firstItem="movocash-label" firstAttribute="top" secondItem="logo-image-view" secondAttribute="bottom" constant="24" id="movocash-top"/>
-                            <constraint firstItem="movocash-label" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="movocash-cx"/>
-                            <constraint firstItem="movocash-label" firstAttribute="width" constant="200" id="movocash-w"/>
-                            <!-- HyperBin: 4pt below MOVOCASH, centered, fixed width -->
-                            <constraint firstItem="hyperbin-label" firstAttribute="top" secondItem="movocash-label" secondAttribute="bottom" constant="4" id="hyperbin-top"/>
-                            <constraint firstItem="hyperbin-label" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="hyperbin-cx"/>
-                            <constraint firstItem="hyperbin-label" firstAttribute="width" constant="200" id="hyperbin-w"/>
+                            <!-- SYNC: 231pt width must match SplashScreen.swift splashWidth. -->
+                            <constraint firstItem="splash-image-view" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="splash-cx"/>
+                            <constraint firstItem="splash-image-view" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="splash-cy"/>
+                            <constraint firstItem="splash-image-view" firstAttribute="width" constant="231" id="splash-w"/>
+                            <constraint firstItem="splash-image-view" firstAttribute="height" constant="241" id="splash-h"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -57,6 +40,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="herringLogo" width="360" height="360"/>
+        <image name="herringSplash" width="231" height="241"/>
     </resources>
 </document>

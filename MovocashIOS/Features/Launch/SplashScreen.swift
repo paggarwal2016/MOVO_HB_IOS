@@ -5,7 +5,7 @@
 //  Pure visual splash. Routing decisions live in StartupRouter — this view
 //  only renders while appState.flow == .splash during postBootstrap warmup.
 //
-//  The splash logo is extracted as MovoSplashLogo so BiometricGateView
+//  The splash image is extracted as MovoSplashLogo so BiometricGateView
 //  can reuse it in its splash mode (auto-trigger warm-transition state).
 //  This guarantees pixel-perfect visual continuity between cold launch
 //  and warm-transition re-auth screens.
@@ -13,47 +13,33 @@
 
 import SwiftUI
 
-// NOTE: LaunchBackground.colorset and LaunchLogoTint.colorset in Assets.xcassets
-// are manually coupled to DesignTokens.Palette.background and
-// DesignTokens.Palette.textPrimary/textSecondary. The storyboard cannot read
-// Swift tokens — if those token values ever change, update the colorsets to match.
 struct SplashScreen: View {
     var body: some View {
         ZStack {
-            Color.movo.background.ignoresSafeArea()
+            // Pure black #000000 — fixed, not adaptive, so light mode cannot shift it.
+            // Matches LaunchScreen.storyboard background exactly.
+            Color.black.ignoresSafeArea()
             MovoSplashLogo()
         }
-        .environment(\.colorScheme, .dark)
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea()
     }
 }
 
-/// The Movo logo mark, sized and styled to match LaunchScreen.storyboard
-/// exactly. Used in both SplashScreen (cold launch) and BiometricGateView's
+/// The Movo splash image, sized to match LaunchScreen.storyboard exactly.
+/// Used in both SplashScreen (cold launch) and BiometricGateView's
 /// splash mode (warm-transition re-auth). Static — no animation — so the
 /// transition from LaunchScreen to SwiftUI splash is visually seamless.
 struct MovoSplashLogo: View {
+
+    // SYNC: keep splashWidth (231) in sync with the LaunchScreen.storyboard
+    // herringSplash width constraint (231pt). Both sides must stay identical.
+    private static let splashWidth: CGFloat = 231
+
     var body: some View {
-        VStack(spacing: Spacing.xxl) {
-            Image("herringLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 125, height: 125)
-
-            VStack(spacing: Spacing.xs) {
-                Text("MOVOCASH")
-                    .font(.system(size: 22, weight: .regular))
-                    // textSecondary matches the LaunchLogoTint colorset value used in
-                    // LaunchScreen.storyboard: (0.827, 0.843, 0.875, 1.0) ≈ 0xD4D7E0
-                    .foregroundColor(Color.movo.textSecondary)
-
-                Text("Powered by HyperBin\u{00AE}")
-                    .font(.system(size: 12, weight: .regular))
-                    // Storyboard sets the same base color at alpha 0.65
-                    .foregroundColor(Color.movo.textSecondary.opacity(0.65))
-                    .multilineTextAlignment(.center)
-            }
-        }
+        Image("herringSplash")
+            .resizable()
+            .scaledToFit()
+            .frame(width: Self.splashWidth)
     }
 }
