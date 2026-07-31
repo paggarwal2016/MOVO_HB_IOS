@@ -2,20 +2,12 @@
 //  SupportSection.swift
 //  MovocashIOS
 //
-//  Me-tab support card. Icon tile treatment matches the "Manage external
-//  account" row exactly: Color.movo.elevated fill, Radius.sm corners, 44×44,
-//  18pt .semibold glyph in Color.movo.accent. The only saturated-green element
-//  is the CTA button (MovoPrimaryButtonStyle / Heritage Green fill).
-//
 
 import SwiftUI
 
 struct SupportSection: View {
 
     @State private var showCannotCallAlert = false
-
-    private let phoneNumber = "(866) 348-3435"
-    private let dialString  = "tel:+18663483435"
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -48,19 +40,11 @@ struct SupportSection: View {
         .alert("Call Support", isPresented: $showCannotCallAlert) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("Phone calls aren't available on this device. Please call \(phoneNumber).")
+            Text("Phone calls aren't available on this device. Please call \(AppConfig.customerCare).")
         }
     }
 
     // MARK: - Header Row
-    //
-    // Matches manageExternalAccount exactly:
-    //   HStack spacing  → Spacing.md
-    //   Tile fill       → Color.movo.elevated  (neutral, NOT tinted)
-    //   Tile corners    → Radius.sm
-    //   Tile size       → 44 × 44
-    //   Glyph           → 18pt .semibold, Color.movo.accent
-    //   Row padding     → .vertical(rowPaddingVertical) + .horizontal(Spacing.lg)
 
     private var headerRow: some View {
         HStack(spacing: Spacing.md) {
@@ -104,21 +88,17 @@ struct SupportSection: View {
     }
 
     // MARK: - CTA Button
-    //
-    // MovoPrimaryButtonStyle is the ONLY Heritage Green (#629F86) fill element
-    // on this card. lineLimit(2) + multilineTextAlignment ensure the number
-    // doesn't truncate at AX3–AX5 large-text sizes.
 
     private var ctaButton: some View {
         Button(action: dial) {
-            Text(phoneNumber)
+            Text(AppConfig.customerCare)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
         }
         .buttonStyle(MovoPrimaryButtonStyle())
         // Explicit floor keeps the tap target at ≥ 50 pt for AX guidance.
         .frame(minHeight: 50)
-        .accessibilityLabel("Call support at \(phoneNumber)")
+        .accessibilityLabel("Call support at \(AppConfig.customerCare)")
         .accessibilityHint("Dials the MOVO support line")
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.sm)
@@ -128,7 +108,7 @@ struct SupportSection: View {
     // MARK: - Action
 
     private func dial() {
-        guard let url = URL(string: dialString),
+        guard let url = URL(string: AppConfig.customerCareNumber),
               UIApplication.shared.canOpenURL(url) else {
             showCannotCallAlert = true
             return
