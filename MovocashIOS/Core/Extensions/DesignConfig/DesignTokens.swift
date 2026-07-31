@@ -105,6 +105,10 @@ public enum DesignTokens {
         public static let warning = ColorToken(
             light: 0xB08840, dark: 0xC8A45F, name: "warning")          // darker gold in light
 
+        // Soft amber fill for informational notice banners. Pairs with `warning` (foreground).
+        public static let warningBackground = ColorToken(
+            light: 0xFEF3C7, dark: 0x1F1500, name: "warningBackground")
+
         // On-accent label color — light: platinum white on green (brand spec); dark: near-black on green.
         public static let onAccent = ColorToken(
             light: 0xF2F3F6, dark: 0x060608, name: "onAccent")

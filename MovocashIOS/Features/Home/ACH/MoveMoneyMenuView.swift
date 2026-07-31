@@ -27,7 +27,7 @@ struct MoveMoneyMenuView: View {
         VStack(spacing: 0) {
             optionRow(
                 icon: "building.columns",
-                title: "Link Account",
+                title: "Add Money",
                 subtitle: "Deposit from a linked bank account",
                 action: onFundAccount
             )
