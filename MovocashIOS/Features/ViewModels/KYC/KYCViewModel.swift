@@ -37,21 +37,7 @@ final class KYCViewModel: ObservableObject {
             try await kycManager.configureSDK(officeId: AppConfig.officeId)
             let user = try await kycManager.start()
 
-            // Persist the verified user and WAIT for the Save User API success
-            // acknowledgment before any further processing — only then do we mark
-            // KYC complete and hand off via onSuccess. A full-screen spinner covers
-            // the wait since the underlying `.kyc` flow renders nothing once the
-            // scanner dismisses.
-            SpinnerView.showFullScreen()
-            let saved = await saveUser(user)
-            SpinnerView.hideFullScreen()
-            guard saved else {
-                // saveUser() already emitted a precise `kyc_step_failed` event with
-                // the underlying code/message, so no analytics call is needed here.
-                alertManager.showError("We couldn't save your verification details. Please try again.")
-                onFailure()
-                return
-            }
+            Task { await saveUser(user) }
 
             analytics.trackKYCCompleted(step: .idVerified)
             onSuccess()
@@ -115,6 +101,7 @@ final class KYCViewModel: ObservableObject {
                 return false
             }
             SecureLogger.info("User data saved successfully after KYC", category: .network)
+            analytics.log(AnalyticsEvent.kycUserSaved)
             return true
         } catch {
             SecureLogger.error("saveUser failed: \(error.localizedDescription)", category: .network)

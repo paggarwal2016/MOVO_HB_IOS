@@ -40,10 +40,6 @@ final class KYCManager: KYCManagerProtocol, TokenRefreshable {
     let network: NetworkServiceProtocol
     let keychain: KeychainManagerProtocol
     private let analytics: AnalyticsTracking
-
-    /// Dedicated window that hosts the entire KYC flow.
-    /// Isolates the SDK from the SwiftUI UIHostingController so the SDK's
-    /// internal alerts never conflict with the main app window hierarchy.
     private var kycWindow: UIWindow?
 
     // MARK: Init
@@ -60,13 +56,16 @@ extension KYCManager {
 
     func configureSDK(officeId: String) async throws {
         // Fetch a fresh access token from /auth/token-access and pass the API
-        // response straight into the SDK so it never runs on a stale token.
         let token: String
         do {
             token = try await freshAccessToken()
+            analytics.log(AnalyticsEvent.tokenRefreshed, params: [AnalyticsParam.reason: "kyc_configure"])
         } catch {
             SecureLogger.error("Token refresh failed — aborting KYC configure", category: .kyc)
-            analytics.log(AnalyticsEvent.kycStepFailed, params: [AnalyticsParam.errorCode: "token_refresh_failed"])
+            analytics.log(AnalyticsEvent.kycStepFailed, params: [
+                AnalyticsParam.errorCode: "token_refresh_failed",
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw KYCError.notConfigured
         }
         try await configureSDK(officeId: officeId, authToken: token)
@@ -74,13 +73,12 @@ extension KYCManager {
 
     func configureSDK(officeId: String, authToken: String) async throws {
         SecureLogger.info("Configuring KYC SDK", category: .kyc)
-
-        #if DEBUG
+        
+#if DEBUG
         let verboseLogs = true
 #else
         let verboseLogs = false
 #endif
-
         MobileBankingSDK.configure(
             authToken: authToken,
             baseUrl: AppConfig.sdkURL,
@@ -90,16 +88,19 @@ extension KYCManager {
         )
 
         SecureLogger.info("KYC SDK configured successfully", category: .kyc)
+        analytics.log(AnalyticsEvent.sdkConfigured)
     }
 
     func updateToken(_ token: String) {
         MobileBankingSDK.updateAuthToken(token)
         SecureLogger.info("KYC auth token refreshed", category: .kyc)
+        analytics.log(AnalyticsEvent.tokenRefreshed, params: [AnalyticsParam.reason: "kyc_update_token"])
     }
 
     func clearSession() {
         MobileBankingSDK.clearSession()
         SecureLogger.info("KYC session cleared", category: .kyc)
+        analytics.log(AnalyticsEvent.sdkSessionCleared)
     }
 }
 
@@ -233,7 +234,7 @@ private final class KYCViewControllerWrapper: UIViewController {
         super.viewDidAppear(animated)
         guard !hasLaunchedKyc else { return }
         hasLaunchedKyc = true
-        MobileBankingSDK.startKyc(presentingViewController: self, useSdkSuccessUI: false) //true Get started UI is appear
+        MobileBankingSDK.startKyc(presentingViewController: self, useSdkSuccessUI: false)
         AnalyticsManager.shared.log(AnalyticsEvent.kycSdkOpened)
     }
 
@@ -261,7 +262,10 @@ private final class KYCViewControllerWrapper: UIViewController {
         let message = (notification.object as? Error)?.localizedDescription
             ?? "Identity verification failed."
         SecureLogger.error("KYC verificationFailed: \(message)", category: .kyc)
-        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "failed"])
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [
+            AnalyticsParam.reason: "failed",
+            AnalyticsParam.errorMessage: message
+        ])
         dismissSDKThen { [weak self] in self?.onFailure?(KYCError.sdkError(message)) }
     }
 
@@ -269,7 +273,10 @@ private final class KYCViewControllerWrapper: UIViewController {
         let message = (notification.object as? NSError)?.localizedDescription
             ?? "Scanner error occurred."
         SecureLogger.error("KYC scannerError: \(message)", category: .kyc)
-        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [AnalyticsParam.reason: "scanner_error"])
+        AnalyticsManager.shared.log(AnalyticsEvent.kycSdkClosed, params: [
+            AnalyticsParam.reason: "scanner_error",
+            AnalyticsParam.errorMessage: message
+        ])
         dismissSDKThen { [weak self] in self?.onFailure?(KYCError.sdkError(message)) }
     }
 

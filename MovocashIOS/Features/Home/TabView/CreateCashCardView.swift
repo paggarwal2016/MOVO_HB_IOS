@@ -11,16 +11,37 @@ struct CreateCashCardView: View {
 
     // MARK: - Dependencies & Callbacks
 
-    /// View model that performs the create-card network call.
     let vm: VCardViewModel
-    /// Primary savings account id the new card is created against.
+
+    var plaidVM: PlaidAchViewModel? = nil
+    
     let primaryAccountId: Int
-    /// Dismisses this sheet (used by the close button).
+
+    var title: String = "Set digital cash card PIN"
+    
+    var mode: Mode = .create
+    
+    var createUserAction: String = "VCARD-CREATION"
+    
+    var showsNicknameField: Bool = true
+    
+    var nicknameFieldLabel: String = "CARD NAME"
+    
+    var fixedNickname: String? = nil
+    
+    var isNicknameEditable: Bool = true
+    
     let onClose: () -> Void
-    /// Invoked after the card is created successfully. The presenter is expected
-    /// to dismiss this sheet and then present the success screen, passing along
-    /// the created card.
-    let onCreated: (VCardListResponse) -> Void
+    
+    var onCreated: ((VCardListResponse) -> Void)? = nil
+
+    var onActivated: (() -> Void)? = nil
+
+    var onActivationRequiresSupport: (() -> Void)? = nil
+
+    var onPinConfirmed: ((String) -> Void)? = nil
+
+    enum Mode { case create, activate }
 
     // MARK: - State
 
@@ -30,6 +51,7 @@ struct CreateCashCardView: View {
     @State private var showPin = false
     @State private var showConfirmPin = false
     @State private var isLoading = false
+    @State private var handedOffSpinnerOwnership = false
     @FocusState private var focusedField: Field?
 
     fileprivate enum Field { case nickname, pin, confirmPin }
@@ -58,11 +80,13 @@ struct CreateCashCardView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomSheetHeader(
-                title: "Create your cash card",
-                subtitle: "Let's MOVO your way",
+                title: title,
+                // KYCSuccessView's .activate entry hides the subtitle and close button.
+                subtitle: "",
                 systemImage: "creditcard.fill",
                 iconTint: Color.movo.accent,
                 iconBackground: Color.movo.accentTint,
+                showsCloseButton: mode != .activate,
                 horizontalPadding: Spacing.xl,
                 closeAction: onClose
             )
@@ -70,7 +94,10 @@ struct CreateCashCardView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         VStack(spacing: Spacing.xl) {
-                            nicknameField
+                            // KYCSuccessView's .activate entry shows PIN entry only.
+                            if mode != .activate {
+                                nicknameField
+                            }
                             pinSection
                             confirmPinSection
                         }
@@ -89,18 +116,19 @@ struct CreateCashCardView: View {
                 .scrollDismissesKeyboard(.interactively)
             }
         }
-        .padding(.top, Spacing.xxl)
         .background(Color.movo.surface.ignoresSafeArea())
         .onAppear {
-            // Focus just after the sheet-present animation settles (matches the
-            // app's PIN-entry convention in OTPScreen).
+            if let fixedNickname { nickname = fixedNickname }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                focusedField = .nickname
+                focusedField = (showsNicknameField && isNicknameEditable) ? .nickname : .pin
             }
         }
         .onDisappear {
-            SpinnerView.hideFullScreen()
+            if !handedOffSpinnerOwnership {
+                SpinnerView.hideFullScreen()
+            }
         }
+        .globalAlert()
     }
 }
 
@@ -110,7 +138,7 @@ private extension CreateCashCardView {
 
     var nicknameField: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            fieldLabel("CARD NAME")
+            fieldLabel(nicknameFieldLabel)
             TextField(
                 "",
                 text: $nickname,
@@ -122,7 +150,7 @@ private extension CreateCashCardView {
             .submitLabel(.next)
             .onSubmit { focusedField = .pin }
             .focused($focusedField, equals: .nickname)
-            .disabled(isLoading)
+            .disabled(isLoading || !isNicknameEditable)
             .padding(.horizontal, Spacing.md)
             .frame(height: 48)
             .background(Color.movo.elevated, in: RoundedRectangle(cornerRadius: Radius.card))
@@ -232,30 +260,42 @@ private extension CreateCashCardView {
         guard isValid else { return }
         focusedField = nil
         isLoading = true
+        dismissKeyboardForcefully()
         SpinnerView.showFullScreen()
-        let request = CreateVCardRequest(
-            nickname: nickname.trimmingCharacters(in: .whitespaces),
-            pin: pin,
-            primaryAccountId: primaryAccountId,
-            userAction: "VCARD-CREATION"
-        )
-        Task {
-            let card = try? await vm.createVCard(request: request)
-            // Error (card == nil) is surfaced via BaseViewModel toast.
-            await MainActor.run {
-                isLoading = false
-                SpinnerView.hideFullScreen()
-                if let card { onCreated(card) }
+        switch mode {
+        case .create:
+            let request = CreateVCardRequest(
+                nickname: nickname.trimmingCharacters(in: .whitespaces),
+                pin: pin,
+                primaryAccountId: primaryAccountId,
+                userAction: createUserAction
+            )
+            Task {
+                let card = try? await vm.createVCard(request: request)
+                await MainActor.run {
+                    isLoading = false
+                    SpinnerView.hideFullScreen()
+                    if let card { onCreated?(card) }
+                }
             }
+        case .activate:
+            isLoading = false
+            handedOffSpinnerOwnership = true
+            onPinConfirmed?(pin)
         }
+    }
+
+    func dismissKeyboardForcefully() {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?
+            .endEditing(true)
     }
 }
 
 // MARK: - PinBoxRow
 
 /// 4-digit PIN row: transparent TextField captures keystrokes;
-/// PinCell renders the visual state. Eye toggle is display-only —
-/// underlying field is always a TextField so .numberPad is guaranteed.
 private struct PinBoxRow: View {
 
     @Binding var pin: String
@@ -270,7 +310,7 @@ private struct PinBoxRow: View {
 
     var body: some View {
         ZStack {
-            HStack(spacing: Spacing.sm + 2) {
+            HStack(spacing: Spacing.md + 2) {
                 ForEach(0..<4, id: \.self) { i in
                     PinCell(
                         char: char(at: i),

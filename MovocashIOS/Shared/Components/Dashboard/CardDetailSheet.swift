@@ -84,6 +84,24 @@ struct CardDetailSheet: View {
     /// completes; otherwise the card handed down from the Dashboard.
     private var displayCard: VCardListResponse { liveCard ?? card }
 
+    /// Wallet button title, driven by the latest eligibility check. When the card
+    /// can't be added (already provisioned on this device, or unsupported) the
+    /// button is disabled and reads "In Apple Wallet".
+    private var walletButtonTitle: String {
+        achVM.canAddToWallet ? "Add to Apple Wallet" : "In Apple Wallet"
+    }
+
+    /// Disabled state uses dedicated neutral tokens rather than dimming the accent
+    /// fill with opacity (which looks washed-out); the button stays crisp and
+    /// clearly reads as inactive.
+    private var walletButtonFill: Color {
+        achVM.canAddToWallet ? Color.movo.accent : Color.movo.elevated
+    }
+
+    private var walletButtonForeground: Color {
+        achVM.canAddToWallet ? Color.movo.background : Color.movo.textDisabled
+    }
+
     private var transferMode: TransferFlowMode {
         if card.id == primaryLinkedCard?.id {
             return .fixedFrom
@@ -185,6 +203,9 @@ struct CardDetailSheet: View {
             await loadRecentTransactions()
             isLoading = false
         }
+        .task {
+            await refreshWalletEligibility()
+        }
         .sheet(isPresented: $showEditNickname) {
             EditNicknameView(currentNickname: cardNickname) { newValue in
                 saveNickname(newValue)
@@ -198,6 +219,29 @@ struct CardDetailSheet: View {
             // Refresh the Dashboard on the way back only if something changed here.
             if hasChanges { onChanged?() }
         }
+        // Bound directly to the ViewModel's flag — set by the SDK's wallet
+        // provisioning notifications as soon as any of them fires, not after this
+        // screen's own `await achVM.addVirtualCardToAppleWallet(...)` resolves.
+        .fullScreenCover(isPresented: $achVM.showVirtualCardAllSet) {
+            VirtualCardAllSetView(
+                title: walletAllSetTitle,
+                message: walletAllSetMessage,
+                onDone: { achVM.showVirtualCardAllSet = false }
+            )
+        }
+    }
+
+    private var walletAllSetTitle: String {
+        achVM.walletProvisioningOutcome == .addedToWallet ? "Added to Apple Wallet" : "Card is Active"
+    }
+
+    private var walletAllSetMessage: String {
+        switch achVM.walletProvisioningOutcome {
+        case .addedToWallet:
+            return "Your card has been added to Apple Wallet."
+        case .activeButNotInWallet, .none:
+            return "We couldn't add your card to Apple Wallet just now — you can try again anytime from here."
+        }
     }
 
     private var cardNickname: String {
@@ -205,6 +249,13 @@ struct CardDetailSheet: View {
     }
 
     private var hasNickname: Bool { !cardNickname.isEmpty }
+
+    /// True when the card being shown is the user's primary linked card — its
+    /// name is fixed ("Main MOVO Card") and not editable, unlike other cards.
+    private var isPrimaryCard: Bool {
+        guard let primaryLinkedCard else { return false }
+        return displayCard.id == primaryLinkedCard.id
+    }
 
     private func saveNickname(_ newValue: String) {
         guard let accountId = displayCard.savingsAccountId else { return }
@@ -214,6 +265,23 @@ struct CardDetailSheet: View {
             hasChanges = true
             await refreshCardDetails()
         }
+    }
+
+    /// Refreshes the SDK configuration, then re-evaluates Apple Wallet eligibility
+    /// so the "Add to Apple Wallet" button's enabled state reflects the latest
+    /// status every time this screen is shown. Runs via `.task` on appear.
+    private func refreshWalletEligibility() async {
+        do {
+            try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
+        } catch {
+            SecureLogger.error("[Wallet] SDK config for eligibility failed: \(error.localizedDescription)", category: .payment)
+            achVM.canAddToWallet = false
+            return
+        }
+        achVM.checkCanAddToWallet(
+            primaryAccountNumberSuffix: card.lastFour ?? "",
+            localizedDescription: "Apple Pay"
+        )
     }
 
     /// Loads the latest 10 transactions for this card's savings account.
@@ -265,7 +333,7 @@ struct CardDetailSheet: View {
                     do {
                         try await KYCManager.shared.configureSDK(officeId: AppConfig.officeId)
                     } catch {
-                        AlertManager.shared.showError("Unable to initialize. Please try again.")
+                        AlertManager.shared.showError(error.localizedDescription)
                         return
                     }
                     await achVM.addVirtualCardToAppleWallet(
@@ -284,20 +352,21 @@ struct CardDetailSheet: View {
                         }
                     }
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.movo.background)
-                    Text("Add to Apple Wallet")
+                    .foregroundStyle(walletButtonForeground)
+                    Text(walletButtonTitle)
                         .textStyle(Typography.bodyCompact)
                         .fontWeight(.semibold)
                 }
-                .foregroundColor(Color.movo.background)
+                .foregroundColor(walletButtonForeground)
                 .frame(width: transferWidth)
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .fill(Color.movo.accent)
+                        .fill(walletButtonFill)
                 )
             }
             .buttonStyle(.plain)
+            .disabled(!achVM.canAddToWallet)
 
             Button(action: { showTransfer = true }) {
                 HStack(spacing: Spacing.sm) {
@@ -365,15 +434,17 @@ struct CardDetailSheet: View {
     private var navBar: some View {
         HStack(spacing: Spacing.sm) {
             CircularNavButton(systemName: "chevron.left") { (securedDismiss ?? dismiss)() }
-            Text(hasNickname ? cardNickname : "My Card")
+            Text(isPrimaryCard ? "Main MOVO Card" : (hasNickname ? cardNickname : "My Card"))
                 .textStyle(Typography.cardTitle)
                 .foregroundColor(Color.movo.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.tail)
-            Button(action: { showEditNickname = true }) {
-                MovoEditIcon(size: 18)
+            if !isPrimaryCard {
+                Button(action: { showEditNickname = true }) {
+                    MovoEditIcon(size: 18)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             Spacer()
         }
         .padding(.horizontal, Spacing.lg)
@@ -468,7 +539,7 @@ struct CardDetailSheet: View {
                 }
                 HStack(spacing: 4) {
                     Text("Exp \(card.expiryMMYY) · CVC \(revealedCvc ?? "•••")")
-                        .textStyle(Typography.captionSmall)
+                        .textStyle(Typography.body)
                         .foregroundColor(Color.movo.textTertiary)
                     Button(action: toggleCvc) {
                         if isRevealingCvc {
@@ -570,13 +641,26 @@ struct CardDetailSheet: View {
             return "\(prefix)\(formatted)"
         }
         
-        private var formattedDate: String {
-            let calendar = Calendar.current
-            if calendar.isDateInToday(item.date)     { return "Today" }
-            if calendar.isDateInYesterday(item.date) { return "Yesterday" }
+        private static let timeFormatter: DateFormatter = {
+            let f = DateFormatter()
+            f.dateFormat = "h:mm a"
+            //f.timeZone = .current
+            return f
+        }()
+
+        private static let monthDayFormatter: DateFormatter = {
             let f = DateFormatter()
             f.dateFormat = "MMM d"
-            return f.string(from: item.date)
+           // f.timeZone = .current
+            return f
+        }()
+
+        private var formattedDate: String {
+            let calendar = Calendar.current
+            let time = Self.timeFormatter.string(from: item.date)
+            if calendar.isDateInToday(item.date)     { return "Today, \(time)" }
+            if calendar.isDateInYesterday(item.date) { return "Yesterday, \(time)" }
+            return "\(Self.monthDayFormatter.string(from: item.date)), \(time)"
         }
 
         private var amountColor: Color {

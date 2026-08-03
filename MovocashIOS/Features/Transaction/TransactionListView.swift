@@ -459,6 +459,7 @@ struct TransactionListView: View {
         private static let timeFormatter: DateFormatter = {
             let f = DateFormatter()
             f.dateFormat = "h:mm a"
+           // f.timeZone = .current
             return f
         }()
 

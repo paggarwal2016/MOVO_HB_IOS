@@ -473,19 +473,21 @@ nonisolated struct DashboardLinkedAccounts: Decodable, Sendable {
 nonisolated struct DashboardMyCards: Decodable, Sendable {
     let title: String
     let description: String
+    let description2: String?
     let actions: [DashboardAction]
     /// Sealed-box ciphertext (base64) carrying the user's `[VCardListResponse]`.
     /// Decrypted by DashboardViewModel via SealedCryptoService.
     let encryptedData: String?
 
     private enum CodingKeys: String, CodingKey {
-        case title, description, actions, encryptedData
+        case title, description, description2, actions, encryptedData
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         title = c.decodeLossyString(forKey: .title)
         description = c.decodeLossyString(forKey: .description)
+        description2 = try? c.decodeIfPresent(String.self, forKey: .description2)
         actions = try c.decodeLossyDashboardActionArray(forKey: .actions)
         encryptedData = try? c.decodeIfPresent(String.self, forKey: .encryptedData)
     }

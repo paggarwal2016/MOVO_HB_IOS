@@ -12,7 +12,8 @@ import Foundation
 enum AnalyticsEvent {
 
     // MARK: - General
-    static let screenView            = "screen_view"
+    static let screenView                = "screen_view"
+    static let successConfirmationDone   = "success_confirmation_done"
 
     // MARK: - Auth
     static let loginAttempt          = "login_attempt"
@@ -48,6 +49,13 @@ enum AnalyticsEvent {
     static let kycAbandoned          = "kyc_abandoned"
     static let kycSdkOpened          = "kyc_sdk_opened"
     static let kycSdkClosed          = "kyc_sdk_closed"
+    static let kycUserSaved          = "kyc_user_saved"
+    static let sdkConfigured         = "sdk_configured"
+    static let sdkSessionCleared     = "sdk_session_cleared"
+
+    // MARK: - Dashboard
+    static let dashboardViewed       = "dashboard_viewed"
+    static let dashboardLoadFailed   = "dashboard_load_failed"
 
     // MARK: - Accounts / Balances
     static let accountViewed         = "account_viewed"
@@ -79,8 +87,15 @@ enum AnalyticsEvent {
     static let withdrawalSuccess          = "withdrawal_success"
     static let withdrawalFailed           = "withdrawal_failed"
     static let transactionListViewed      = "transaction_list_viewed"
+    static let transactionListFailed      = "transaction_list_failed"
     static let internalTransferInitiated  = "internal_transfer_initiated"
     static let internalTransferFailed     = "internal_transfer_failed"
+    /// Peer send-money workflow (sendMoneyToContact): configure → device identity
+    /// → passkey (re)registration → create intent → approve → complete.
+    static let moneySent                  = "money_sent"
+    static let moneySendFailed            = "money_send_failed"
+    static let intentCompleteConfirmed    = "intent_complete_confirmed"
+    static let intentCompleteFailed       = "intent_complete_failed"
 
     // MARK: - Contacts
     static let contactListViewed                = "contact_list_viewed"
@@ -95,6 +110,8 @@ enum AnalyticsEvent {
     static let contactFrequentFailed            = "contact_frequent_failed"
     static let contactReferralInvite            = "contact_referral_invite"
     static let contactReferralInviteFailed      = "contact_referral_invite_failed"
+    static let contactReferralListViewed        = "contact_referral_list_viewed"
+    static let contactReferralListFailed        = "contact_referral_list_failed"
     static let contactCreated                   = "contact_created"
     static let contactCreateFailed              = "contact_create_failed"
 
@@ -113,8 +130,12 @@ enum AnalyticsEvent {
     static let vcardCreateFailed          = "vcard_create_failed"
     static let cardActivated              = "card_activated"
     static let cardActivationFailed       = "card_activation_failed"
+    /// Virtual card CVV reveal. The CVV value itself is never logged.
+    static let cvvRevealed                = "cvv_revealed"
+    static let cvvRevealFailed            = "cvv_reveal_failed"
     static let walletAdd                  = "wallet_add"
     static let walletAddFailed            = "wallet_add_failed"
+    static let walletEligibilityChecked   = "wallet_eligibility_checked"
 
     // MARK: - Plaid Link
     static let plaidLinkStarted           = "plaid_link_started"
@@ -127,6 +148,10 @@ enum AnalyticsEvent {
     static let achTransferFailed          = "ach_transfer_failed"
     static let achAccountsViewed          = "ach_accounts_viewed"
     static let achAccountsFetchFailed     = "ach_accounts_fetch_failed"
+    static let achAccountDeleted          = "ach_account_deleted"
+    static let achAccountDeleteFailed     = "ach_account_delete_failed"
+    static let achAccountSetDefault       = "ach_account_set_default"
+    static let achAccountSetDefaultFailed = "ach_account_set_default_failed"
 
     // MARK: - Documents
     static let documentViewed             = "document_viewed"
@@ -182,6 +207,7 @@ enum AnalyticsParam {
     static let userAction       = "user_action"
     static let updateType       = "update_type"
     static let latestVersion    = "latest_version"
+    static let result           = "result"
 }
 
 // MARK: - Value Bucketing

@@ -244,7 +244,7 @@ final class AuthViewModel: ObservableObject {
             if let description = lastSendDescription, !description.isEmpty {
                 AlertManager.shared.showCustom(
                     title: lastSendMessage ?? "Pre-approved!",
-                    message: description,
+                    message: AttributedString(description),
                     primary: "Continue",
                     primaryIcon: "arrow.right",
                     icon: .success,
@@ -270,7 +270,7 @@ final class AuthViewModel: ObservableObject {
             } else if let message = waitlistMessage(from: error) {
                 AlertManager.shared.showCustom(
                     title: "Join the waitlist",
-                    message: message,
+                    message: AttributedString(message),
                     primary: "LET'S MOVO!",
                     secondary: "SKIP",
                     icon: .movo,
@@ -315,8 +315,15 @@ final class AuthViewModel: ObservableObject {
                 AuthAPI.emailVerify(request: EmailVerifyRequest(email: email, userAction: "VERIFY-EMAIL"))
             )
             state = .otpSent
+        } catch is CancellationError {
+            state = .idle
+            throw CancellationError()
         } catch {
             state = .idle
+            analytics.log(AnalyticsEvent.appError, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -371,8 +378,15 @@ final class AuthViewModel: ObservableObject {
             let _: SuccessResponse = try await network.request(AuthAPI.acceptAgreements)
             analytics.log(AnalyticsEvent.signupTermsAccepted)
             state = .idle
+        } catch is CancellationError {
+            state = .idle
+            throw CancellationError()
         } catch {
             state = .idle
+            analytics.log(AnalyticsEvent.appError, params: [
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
             throw error
         }
     }
@@ -407,7 +421,7 @@ extension AuthViewModel {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else { return false }
         if case .found = keychain.getSync("passkey_registered_\(userIdInt)") { return true }
         return false
@@ -425,7 +439,7 @@ extension AuthViewModel {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else { return false }
         if case .found = keychain.getSync("biometric_enrolled_\(userIdInt)") { return true }
         return false
@@ -437,7 +451,7 @@ extension AuthViewModel {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else { return }
         try? await keychain.save("1", for: "biometric_enrolled_\(userIdInt)", protection: .backgroundSafe)
         SecureLogger.info("Biometric enrollment marked for user \(userIdInt)", category: .auth)
@@ -449,7 +463,7 @@ extension AuthViewModel {
         guard let token = try? await keychain.get("access_token", biometricPrompt: nil),
               let json = JWTDecoder.decodePayload(token),
               let payload = json["payload"] as? [String: Any],
-              let userIdInt = payload["userId"] as? Int
+              let userIdInt = payload["fineractClientId"] as? Int
         else { return }
         try? await keychain.delete("biometric_enrolled_\(userIdInt)")
         SecureLogger.info("Biometric enrollment cleared for user \(userIdInt)", category: .auth)

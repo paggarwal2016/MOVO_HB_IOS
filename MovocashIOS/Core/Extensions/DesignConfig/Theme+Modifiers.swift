@@ -36,8 +36,9 @@ extension Color {
         public static var successTint:   Color { MovoTheme.color.successTint.color }
         public static var danger:        Color { MovoTheme.color.danger.color }
         public static var dangerTint:    Color { MovoTheme.color.dangerTint.color }
-        public static var warning:       Color { MovoTheme.color.warning.color }
-        public static var onAccent:      Color { MovoTheme.color.onAccent.color }
+        public static var warning:           Color { MovoTheme.color.warning.color }
+        public static var warningBackground: Color { MovoTheme.color.warningBackground.color }
+        public static var onAccent:          Color { MovoTheme.color.onAccent.color }
         public static var cardSurface:   Color { MovoTheme.color.cardSurface.color }
         public static var cardBorder:    Color { MovoTheme.color.cardBorder.color }
 

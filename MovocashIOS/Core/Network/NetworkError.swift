@@ -187,6 +187,84 @@ extension NetworkError {
     }
 }
 
+// MARK: - Server Error Message Extraction
+
+/// Derives a user-displayable message from an error response body so the server's
+/// own wording is surfaced instead of a canned client string. Prefers the
+/// structured JSON contract (`APIErrorResponse.message`); when the body is not that
+/// JSON (e.g. a gateway HTML rate-limit page such as `<title>429</title>429 Too
+/// Many Requests`), falls back to the body's readable text. Returns nil when no
+/// meaningful text can be recovered, so the caller can use its per-status default.
+enum ServerErrorMessage {
+
+    /// Toasts should stay short — cap recovered text so a verbose error page can't
+    /// flood the UI.
+    nonisolated private static let maxLength = 300
+
+    nonisolated static func extract(from data: Data) -> String? {
+        if let json = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+            let message = json.message.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !message.isEmpty { return message }
+        }
+
+        guard let raw = String(data: data, encoding: .utf8) else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A JSON body that didn't match our error contract isn't user-displayable
+        // text — don't dump raw JSON into a toast; let the caller fall back.
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("{"), !trimmed.hasPrefix("[") else { return nil }
+        return readableText(from: trimmed)
+    }
+
+    /// Strips markup and collapses whitespace to recover the human-readable text
+    /// from an HTML/plain-text error body.
+    nonisolated static func readableText(from raw: String) -> String? {
+        // Preserve <title> text as a fallback before its element is removed.
+        let titleText = firstCapture(in: raw, pattern: "<title[^>]*>([\\s\\S]*?)</title>")
+
+        var text = raw
+        // Drop non-content elements outright (tag + inner text) so their contents
+        // (e.g. a duplicated status code in <title>) don't leak into the message.
+        for element in ["script", "style", "title"] {
+            text = text.replacingOccurrences(
+                of: "<\(element)[^>]*>[\\s\\S]*?</\(element)>",
+                with: " ",
+                options: [.regularExpression, .caseInsensitive]
+            )
+        }
+        // Strip any remaining tags.
+        text = text.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+
+        let body = normalize(text)
+        let candidate = body.isEmpty ? normalize(titleText ?? "") : body
+        guard !candidate.isEmpty else { return nil }
+        return String(candidate.prefix(maxLength))
+    }
+
+    /// Decodes the handful of entities that appear in plain error pages, then
+    /// collapses whitespace runs to single spaces and trims.
+    nonisolated private static func normalize(_ input: String) -> String {
+        var text = input
+        let entities = ["&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&#39;": "'", "&nbsp;": " "]
+        for (entity, character) in entities {
+            text = text.replacingOccurrences(of: entity, with: character)
+        }
+        text = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    nonisolated private static func firstCapture(in text: String, pattern: String) -> String? {
+        guard let regex = try? NSRegularExpression(
+            pattern: pattern,
+            options: [.caseInsensitive, .dotMatchesLineSeparators]
+        ) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: range),
+              match.numberOfRanges > 1,
+              let captureRange = Range(match.range(at: 1), in: text) else { return nil }
+        return String(text[captureRange])
+    }
+}
+
 // MARK: - Session Expiry Detection
 
 /// Central detection and broadcast for server-driven session termination.

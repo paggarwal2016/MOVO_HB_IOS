@@ -69,6 +69,12 @@ public enum DesignTokens {
             name: "heritageGreenLine"
         )
 
+        // Heritage Green lightened for eyebrow / small labels on near-black surfaces.
+        // ~4.5:1 contrast (AA) at 11pt against cardVoid near-black (#060608 dark).
+        // light: darkened for contrast on platinum (#F2F3F6) bg.
+        public static let accentEyebrow = ColorToken(
+            light: 0x3E7560, dark: 0x7FB79E, name: "accentEyebrow")
+
         // Balloon illustration pigments — LOCKED, non-adaptive.
         // Used exclusively in RegistrationCelebrationHero for the balloon sheen and
         // shadow/knot. Do NOT use as text or interactive-element colors — these are
@@ -98,6 +104,10 @@ public enum DesignTokens {
 
         public static let warning = ColorToken(
             light: 0xB08840, dark: 0xC8A45F, name: "warning")          // darker gold in light
+
+        // Soft amber fill for informational notice banners. Pairs with `warning` (foreground).
+        public static let warningBackground = ColorToken(
+            light: 0xFEF3C7, dark: 0x1F1500, name: "warningBackground")
 
         // On-accent label color — light: platinum white on green (brand spec); dark: near-black on green.
         public static let onAccent = ColorToken(

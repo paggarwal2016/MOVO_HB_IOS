@@ -382,9 +382,9 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         if http.statusCode == 429 {
-            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                apiErrorMessage = apiError.message
-                throw NetworkError.serverMessage(apiError.message)
+            if let message = ServerErrorMessage.extract(from: data) {
+                apiErrorMessage = message
+                throw NetworkError.serverMessage(message)
             }
             throw NetworkError.rateLimited
         }
@@ -400,18 +400,18 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         if (500...599).contains(http.statusCode) {
-            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                apiErrorMessage = apiError.message
-                throw NetworkError.serverMessage(apiError.message)
+            if let message = ServerErrorMessage.extract(from: data) {
+                apiErrorMessage = message
+                throw NetworkError.serverMessage(message)
             }
             throw NetworkError.serverError
         }
         
         if !(200...299).contains(http.statusCode) {
-            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                SecureLogger.error("API Error: \(apiError.message)", category: .network)
-                apiErrorMessage = apiError.message
-                throw NetworkError.serverMessage(apiError.message)
+            if let message = ServerErrorMessage.extract(from: data) {
+                SecureLogger.error("API Error: \(message)", category: .network)
+                apiErrorMessage = message
+                throw NetworkError.serverMessage(message)
             }
             throw NetworkError.apiError(http.statusCode)
         }
@@ -518,9 +518,9 @@ actor NetworkService: NetworkServiceProtocol {
         }
 
         if http.statusCode == 429 {
-            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                apiErrorMessage = apiError.message
-                throw NetworkError.serverMessage(apiError.message)
+            if let message = ServerErrorMessage.extract(from: data) {
+                apiErrorMessage = message
+                throw NetworkError.serverMessage(message)
             }
             throw NetworkError.rateLimited
         }
@@ -534,16 +534,16 @@ actor NetworkService: NetworkServiceProtocol {
             throw NetworkError.updateRequired(message: message)
         }
         if (500...599).contains(http.statusCode) {
-            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                apiErrorMessage = apiError.message
-                throw NetworkError.serverMessage(apiError.message)
+            if let message = ServerErrorMessage.extract(from: data) {
+                apiErrorMessage = message
+                throw NetworkError.serverMessage(message)
             }
             throw NetworkError.serverError
         }
         if !(200...299).contains(http.statusCode) {
-            if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                apiErrorMessage = apiError.message
-                throw NetworkError.serverMessage(apiError.message)
+            if let message = ServerErrorMessage.extract(from: data) {
+                apiErrorMessage = message
+                throw NetworkError.serverMessage(message)
             }
             throw NetworkError.apiError(http.statusCode)
         }

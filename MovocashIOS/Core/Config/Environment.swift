@@ -55,15 +55,11 @@ enum AppEnvironmentType {
 }
 
 
-
-
-
-
-
 // MARK: - AppEnvironment
+
 struct AppEnvironment {
     private init() {}
-    static let current: AppEnvironmentType = .dev // 🔁 Switch the Environment
+    static let current: AppEnvironmentType = .production // 🔁 Switch the Environment
     static let baseURL: URL   = makeURL(current.baseURLString)
     static let sdkURL: String = current.sdkURLString
 
@@ -89,13 +85,21 @@ final class AppConfig {
     static let sdkURL: String    = AppEnvironment.sdkURL
     static let officeId: String  = AppEnvironment.current.officeId
     static let cryptoKey: String = AppEnvironment.current.cryptoKey
+   
+    //MARK: - App security
     
     /// App screen protection screenshot / record
     static let isScreenProtectionEnabled: Bool = false
 
     /// SSL pinning enable
-    static let isSSLPinningEnabled: Bool = false
+    static let isSSLPinningEnabled: Bool = true
 
     /// SSL pinning certificate name
     static let pinnedCertificateName: String   = AppEnvironment.current.pinnedCertificateNames
+    
+    //MARK: - Customer Support
+    
+    static let customerCare = "(866) 348-3435"
+
+    static let customerCareNumber = "tel:+1\(customerCare.filter(\.isNumber))"
 }

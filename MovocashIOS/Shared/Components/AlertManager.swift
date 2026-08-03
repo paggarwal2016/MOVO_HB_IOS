@@ -11,7 +11,7 @@ import Combine
 enum AppAlertType {
     case error(message: String)
     case confirmation(title: String, message: String)
-    case custom(title: String, message: String, primary: String, secondary: String?, primaryIcon: String?, icon: CustomAlertIcon)
+    case custom(title: String, message: AttributedString, primary: String, secondary: String?, primaryIcon: String?, icon: CustomAlertIcon)
     case textInput(title: String, message: String, placeholder: String)
 }
 
@@ -59,7 +59,7 @@ final class AlertManager: ObservableObject, AlertManagerProtocol {
         currentAlert = IdentifiedAlert(type: .confirmation(title: title, message: message))
     }
 
-    func showCustom(title: String, message: String, primary: String, secondary: String? = nil, primaryIcon: String? = nil, icon: CustomAlertIcon = .success, onPrimary: (() -> Void)? = nil, onSecondary: (() -> Void)? = nil) {
+    func showCustom(title: String, message: AttributedString, primary: String, secondary: String? = nil, primaryIcon: String? = nil, icon: CustomAlertIcon = .success, onPrimary: (() -> Void)? = nil, onSecondary: (() -> Void)? = nil) {
         primaryAction = onPrimary
         secondaryAction = onSecondary
         currentAlert = IdentifiedAlert(type: .custom(title: title, message: message, primary: primary, secondary: secondary, primaryIcon: primaryIcon, icon: icon))

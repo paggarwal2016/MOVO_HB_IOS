@@ -505,9 +505,12 @@ final class ContactViewModel: BaseViewModel {
                 try await self.network.request(ContactAPI.referrelInviteList)
             }
             referralInvitees = response.data
+            analytics.log(AnalyticsEvent.contactReferralListViewed, params: [
+                AnalyticsParam.count: response.data.count
+            ])
         } catch is CancellationError {
         } catch {
-            analytics.log(AnalyticsEvent.contactListFailed, params: [
+            analytics.log(AnalyticsEvent.contactReferralListFailed, params: [
                 AnalyticsParam.errorCode: error.analyticsCode, AnalyticsParam.errorMessage: error.localizedDescription
             ])
             SecureLogger.error("Referral list load failed: \(error.localizedDescription)", category: .network)
