@@ -122,7 +122,7 @@ struct TransactionRow: View {
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "MMM d, h:mm a"
-        f.timeZone = .current
+      //  f.timeZone = .current
         return f
     }()
 

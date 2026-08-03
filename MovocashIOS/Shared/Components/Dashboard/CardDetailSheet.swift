@@ -644,14 +644,14 @@ struct CardDetailSheet: View {
         private static let timeFormatter: DateFormatter = {
             let f = DateFormatter()
             f.dateFormat = "h:mm a"
-            f.timeZone = .current
+            //f.timeZone = .current
             return f
         }()
 
         private static let monthDayFormatter: DateFormatter = {
             let f = DateFormatter()
             f.dateFormat = "MMM d"
-            f.timeZone = .current
+           // f.timeZone = .current
             return f
         }()
 

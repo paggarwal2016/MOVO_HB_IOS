@@ -90,7 +90,7 @@ struct Transaction: Decodable, Identifiable, Sendable {
         let f = DateFormatter()
         f.dateFormat = format
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
+       // f.timeZone = TimeZone(identifier: "UTC")
         return f
     }
 

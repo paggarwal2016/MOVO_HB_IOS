@@ -173,11 +173,11 @@ struct KYCSuccessView: View {
                 accountId: pending.accountId,
                 onRequiresSupport: { finishToDashboard() }
             )
-            if plaidVM.state == .success {
-                try? await KeychainManager.shared.save(
-                    pending.pin, for: KeychainManager.Keys.cardPinForCurrentUser, protection: .backgroundSafe
-                )
-            }
+//            if plaidVM.state == .success {
+//                try? await KeychainManager.shared.save(
+//                    pending.pin, for: KeychainManager.Keys.cardPinForCurrentUser, protection: .backgroundSafe
+//                )
+//            }
         }
     }
     
