@@ -8,12 +8,12 @@ import SwiftUI
 // MARK: - VirtualCardActivationFlowModifier
 
 private struct ActivateCardAccount: Identifiable {
-    let id: Int
+    let id: Int?
 }
 
 private struct PendingActivation {
     let pin: String
-    let accountId: Int
+    let accountId: Int?
 }
 
 struct VirtualCardActivationFlowModifier: ViewModifier {
@@ -21,7 +21,7 @@ struct VirtualCardActivationFlowModifier: ViewModifier {
     let vCardVM: VCardViewModel
     @ObservedObject var plaidVM: PlaidAchViewModel
     @Binding var isActive: Bool
-    var accountId: Int?
+    var accountId: Int? = nil
     var title: String = "Set your Main MOVO card PIN"
     var onAllSet: () -> Void = {}
     var onRequiresSupport: () -> Void = {}
@@ -34,15 +34,7 @@ struct VirtualCardActivationFlowModifier: ViewModifier {
         content
             .onChange(of: isActive) { active in
                 guard active else { return }
-                // Consume the trigger immediately so it fires exactly once.
                 isActive = false
-                // `id == 0` is never a real account id — treat it the same as
-                // "not found yet" rather than sending a bogus accountId through.
-                guard let accountId, accountId != 0 else {
-                    AlertManager.shared.showError("Unable to find your account. Please try again.")
-                    return
-                }
-                // Primary account →  Activation
                 activateCardAccount = ActivateCardAccount(id: accountId)
             }
         // Activation →  PIN entry
@@ -111,7 +103,7 @@ extension View {
         vCardVM: VCardViewModel,
         plaidVM: PlaidAchViewModel,
         isActive: Binding<Bool>,
-        accountId: Int?,
+        accountId: Int? = nil,
         title: String = "Set your Main MOVO card PIN",
         onAllSet: @escaping () -> Void = {},
         onRequiresSupport: @escaping () -> Void = {},

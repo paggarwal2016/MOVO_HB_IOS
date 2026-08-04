@@ -15,7 +15,6 @@ struct KYCSuccessView: View {
 
     @StateObject private var plaidVM: PlaidAchViewModel
     @StateObject private var vCardVM: VCardViewModel
-    @StateObject private var savingVM: SavingsAccountViewModel
     /// Apple Wallet result →  Bank link  →  Plaid link  →  Fund  →  Finish
     /// Continues once the shared activation flow's "All Set" screen calls `onAllSet`.
     @State private var showBankLink = false
@@ -31,7 +30,6 @@ struct KYCSuccessView: View {
     /// Triggers the shared activation flow attached to this view's body.
     @State private var startCardActivation = false
     /// Primary account id resolved from `savingVM`, fed into the shared activation flow.
-    @State private var activationAccountId: Int? = nil
     @State private var didFinish = false
     
     @State private var badgeFrame: CGRect = .zero
@@ -44,7 +42,6 @@ struct KYCSuccessView: View {
         self.onSkip = onSkip
         _plaidVM = StateObject(wrappedValue: container.makePlaidACHViewModel())
         _vCardVM = StateObject(wrappedValue: container.makeVCardViewModel())
-        _savingVM = StateObject(wrappedValue: container.makeSavingsAccountViewModel())
     }
     
     var body: some View {
@@ -102,12 +99,10 @@ struct KYCSuccessView: View {
         .onPreferenceChange(BadgeFramePreferenceKey.self) { badgeFrame = $0 }
         .background(Color.movo.background)
         .navigationBarHidden(true)
-        .task { await savingVM.loadAccounts() }
         .virtualCardActivationFlow(
             vCardVM: vCardVM,
             plaidVM: plaidVM,
             isActive: $startCardActivation,
-            accountId: activationAccountId,
             // Apple Wallet result →  Bank link
             onAllSet: { showBankLink = true },
             onRequiresSupport: { finishToDashboard() },
@@ -169,21 +164,9 @@ struct KYCSuccessView: View {
         }
     }
 
-    private func startActivateCard() {
-        // `id == 0` is never a real account id — treat it the same as "not found yet"
-        // rather than sending a bogus accountId through to the SDK/activation call.
-        guard let primaryId = savingVM.accountList?.data.accounts
-            .first(where: { $0.isPrimary })?.id, primaryId != 0 else {
-            AlertManager.shared.showError("Unable to find your account. Please try again.")
-            return
-        }
-        activationAccountId = primaryId
-        startCardActivation = true
-    }
-
     private var ctaFooter: some View {
         VStack(spacing: Spacing.xl) {
-            Button(action: { startActivateCard() }) {
+            Button(action: { startCardActivation = true }) {
                 Text("Add to Apple Wallet")
             }
             .buttonStyle(MovoPrimaryButtonStyle())
