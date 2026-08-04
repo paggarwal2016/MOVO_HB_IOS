@@ -99,7 +99,7 @@ final class AppConfig {
     
     //MARK: - Customer Support
     
-    static let customerCare = "(866) 348-3435"
+    static var customerCare = "(866) 348 - 3435"
 
-    static let customerCareNumber = "tel:+1\(customerCare.filter(\.isNumber))"
+    static var customerCareNumber: String { "tel:+1\(customerCare.filter(\.isNumber))" }
 }

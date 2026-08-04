@@ -46,6 +46,7 @@ nonisolated struct AuthTokenSMSResponse: Decodable {
 nonisolated struct ConfigureResponse: Decodable {
     let movoSessionConfig: String
     let sessionId: String
+    let supportContactNumber: String?
 }
 
 // MARK: - App Version Check (GET /app/check)
