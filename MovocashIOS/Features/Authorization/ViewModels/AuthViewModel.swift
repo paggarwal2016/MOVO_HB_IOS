@@ -400,6 +400,9 @@ final class AuthViewModel: ObservableObject {
         let info: ConfigureResponse = try await network.request(AuthAPI.deviceConfig)
         try await KeychainManager.shared.save(info.movoSessionConfig, for: DeviceSessionManager.publicKeyKey, protection: .backgroundSafe)
         try await KeychainManager.shared.save(info.sessionId, for: DeviceSessionManager.sessionIdKey, protection: .backgroundSafe)
+        if let supportContactNumber = info.supportContactNumber, !supportContactNumber.isEmpty {
+            AppConfig.customerCare = supportContactNumber
+        }
     }
 
     func reset() {

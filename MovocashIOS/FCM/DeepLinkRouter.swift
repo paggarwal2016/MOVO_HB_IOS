@@ -37,7 +37,20 @@ class DeepLinkRouter: ObservableObject {
         case "kyc":         destination = .kycVerification
         default:            destination = .notifications
         }
-        // AnalyticsManager.shared.logFeatureUsed(
         SecureLogger.debug("deep_link_push_\(type)")
+    }
+    
+    func route(url: URL) {
+        guard url.scheme?.lowercased() == "movocash" else { return }
+        let host = url.host?.lowercased() ?? ""
+        let id = url.pathComponents.first(where: { $0 != "/" })
+        switch host {
+        case "transaction":
+            guard let id, !id.isEmpty else { return }
+            destination = .transactionDetail(id: id)
+        default:
+            return
+        }
+        SecureLogger.debug("deep_link_url_\(host)")
     }
 }

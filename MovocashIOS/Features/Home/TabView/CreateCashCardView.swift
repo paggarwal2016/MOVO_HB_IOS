@@ -15,7 +15,7 @@ struct CreateCashCardView: View {
 
     var plaidVM: PlaidAchViewModel? = nil
     
-    let primaryAccountId: Int
+    let primaryAccountId: Int?
 
     var title: String = "Set digital cash card PIN"
     

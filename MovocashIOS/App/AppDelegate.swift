@@ -139,4 +139,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler(.newData)
         }
     }
+    
+    func application(_ app: UIApplication,
+                     open url: URL,
+                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        guard url.scheme?.lowercased() == "movocash" else { return false }
+        Task { @MainActor in DeepLinkRouter.shared.route(url: url) }
+        return true
+    }
 }
