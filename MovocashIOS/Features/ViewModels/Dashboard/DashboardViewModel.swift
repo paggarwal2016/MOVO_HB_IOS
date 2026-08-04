@@ -179,11 +179,13 @@ final class DashboardViewModel: BaseViewModel {
     }
 
     var primaryAccount: SavingsAccountInfo? {
-        guard let account = rawPrimaryAccount else { return nil }
+        guard let account = primaryAccountData else { return nil }
         return SavingsAccountInfo(dashboardAccount: account)
     }
 
-    private var rawPrimaryAccount: DashboardAccount? {
+    /// Raw PRIMARYACCOUNT section — carries API-driven fields (e.g. `bankAccountLabel`,
+    /// `actions`) that `SavingsAccountInfo` doesn't mirror.
+    var primaryAccountData: DashboardAccount? {
         dashboard?.data.compactMap { section -> DashboardAccount? in
             guard case .primaryAccount(let a) = section else { return nil }
             return a
@@ -218,17 +220,7 @@ final class DashboardViewModel: BaseViewModel {
         }.first
     }
 
-    func optimisticallyUpdateNickname(_ nickname: String) {
-        guard var current = dashboard else { return }
-        current.data = current.data.map { section in
-            guard case .primaryAccount(var account) = section else { return section }
-            account.nickname = nickname.isEmpty ? nil : nickname
-            return .primaryAccount(account)
-        }
-        dashboard = current
-    }
-
-    var supportMessage: String? {
+var supportMessage: String? {
         guard let d = dashboard, d.data.isEmpty else { return nil }
         return d.message
     }

@@ -11,25 +11,30 @@ import SwiftUI
 struct BalanceCardView: View {
 
     let account: SavingsAccountInfo
-    var showViewCard: Bool
+    var isVCardActive: Bool
+    var vCardLastFour: String?
     var onCardTap: () -> Void
     var onViewCardTap: () -> Void
+    var onActivateTap: () -> Void
 
     var body: some View {
         // ── Content drives tile height. No fixed frame. ────────────────────
         VStack(alignment: .leading, spacing: 0) {
 
-            // Top row: eyebrow + type badge
+            // Top row: alternate account number label + masked v-card number.
+            // Both share the same font/tracking/color — same visual format.
             HStack(alignment: .center) {
-                Text("MOVO AVAILABLE BALANCE")
-                    .font(.system(size: 10, weight: .semibold))
-                    .tracking(1.2)
+                Text("Main MOVO Card")
+                    .textStyle(Typography.cardHero)
                     .foregroundColor(Color.movo.textTertiary)
                 Spacer()
-                MovoTypeBadge(account.isPrimary ? "PRIMARY" : "ACCOUNT")
+                if let vCardLastFour {
+                    maskedLastFourText(vCardLastFour)
+                        .foregroundColor(Color.movo.textTertiary)
+                }
             }
 
-            Spacer().frame(height: Spacing.sm)
+            Spacer().frame(height: Spacing.xxs)
 
             // Balance
             if let bal = account.availableBalance {
@@ -40,7 +45,7 @@ struct BalanceCardView: View {
                     .foregroundColor(Color.movo.textTertiary)
             }
 
-            Spacer().frame(height: Spacing.sm)
+            Spacer().frame(height: Spacing.xxs)
 
             // Status
             if account.status == .active {
@@ -50,31 +55,20 @@ struct BalanceCardView: View {
             }
 
             // Fixed gap — keeps bottom row off the status without an expanding Spacer
-            Spacer().frame(height: Spacing.xl)
+            Spacer().frame(height: Spacing.md)
 
             // ── Bottom metadata row ────────────────────────────────────────
             HStack(alignment: .center) {
-                HStack(spacing: 4) {
-                    Text("••\(account.accountNumber.suffix(4))")
-                        .font(.system(size: 20, weight: .medium))
-                        .tracking(0.5)
-                        .foregroundColor(Color.movo.textTertiary)
-                    Button(action: onCardTap) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color.movo.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
-
                 Spacer()
 
-                if showViewCard {
+                if isVCardActive {
                     MovoActionButton("View Card".uppercased()) { onViewCardTap() }
+                } else {
+                    MovoActionButton("Activate Card".uppercased()) { onActivateTap() }
                 }
             }
         }
-        .padding(Spacing.lg)
+        .padding(Spacing.sm)
         // ── Decoration is a background — never affects geometry ────────────
         .background(
             ZStack {

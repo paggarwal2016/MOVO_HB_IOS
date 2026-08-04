@@ -104,7 +104,9 @@ struct DashboardView: View {
     @State private var inviteSent = false
     /// Server success message from the invite API, surfaced in the post-dismiss alert.
     @State private var inviteMessage: String?
-    
+    /// Primary account →  Activation  →  PIN entry →  SDK activation  →  Apple Wallet result
+    @State private var startCardActivation = false
+
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
     }
@@ -355,15 +357,12 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showPrimaryAccountDetails) {
             if let account = displayAccount {
-                AccountDetailsView(account: account, onNicknameUpdated: { name in
-                    Task {
-                        await savingVM.updateNickname(name: name, accountId: account.id, primaryAccountId: dashboardVM.primaryLinkedCard?.savingsAccountId ?? 0)
-                        dashboardVM.optimisticallyUpdateNickname(name)
-                        await dashboardVM.refresh()
-                    }
-                })
-                .presentationDetents([.height(385)])
-                .presentationDragIndicator(.visible)
+                AccountDetailsView(
+                    account: account,
+                    bankAccountLabel: dashboardVM.primaryAccountData?.bankAccountLabel,
+                    accountNumberLabel: dashboardVM.primaryAccountData?.accountNumberLabel
+                )
+                .presentationDetents([.height(280)])
                 .presentationCornerRadius(Radius.sheet)
                 .presentationBackground(Color.movo.cardSurface)
             }
@@ -453,6 +452,16 @@ struct DashboardView: View {
         }) {
             firstCardRewardCreatePinView(onClose: { dismissVirtualCardStack() })
         }
+        .virtualCardActivationFlow(
+            vCardVM: vm,
+            plaidVM: achVM,
+            isActive: $startCardActivation,
+            accountId: dashboardVM.primaryAccount?.id,
+            onAllSet: {
+                achVM.showVirtualCardAllSet = false
+                needsDashboardRefresh = true
+            }
+        )
     }
 
     /// Shared "Set digital cash card PIN" + "All Set" pair used by both the
@@ -513,6 +522,22 @@ struct DashboardView: View {
         }
     }
     
+    /// PRIMARYACCOUNT summary card — shown once, right under the header. Tapping
+    /// "Bank Account Details" reuses the existing AccountDetailsView sheet.
+    @ViewBuilder
+    private var mainAccountBalanceCard: some View {
+        if let data = dashboardVM.primaryAccountData {
+            MainAccountBalanceCard(
+                label: data.bankAccountLabel ?? "MAIN ACCOUNT BALANCE",
+                accountNumber: data.accountNumber,
+                balance: Decimal(string: data.accountBalance) ?? 0,
+                buttonLabel: data.actions.first(where: { $0.action == "BANK-ACCOUNT-DETAILS" })?.label ?? "Bank Account Details",
+                onDetailsTap: { showPrimaryAccountDetails = true }
+            )
+            .padding(.horizontal, 15)
+        }
+    }
+
     /// INVITE-A-FRIEND card — green CTA that opens the custom invite bottom sheet
     /// (ShareInviteSheet), plus a "See all invitees" row with an avatar stack when
     /// the dashboard payload includes invitees.
@@ -531,6 +556,7 @@ struct DashboardView: View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 20) {
                 headerView
+                mainAccountBalanceCard
                 savingsSection
             }
             .padding(.top, 56)
@@ -568,11 +594,16 @@ struct DashboardView: View {
                     PrimaryAccountContent(
                         account: account,
                         accountData: accountData,
-                        hasVCards: primaryCardStore.card != nil,
-                        onCardTap: { showPrimaryAccountDetails = true },
+                        isVCardActive: accountData.isPVCardActivated == "Active",
+                        vCardLastFour: primaryCardStore.card?.lastFour,
+                        onCardTap: { //showPrimaryAccountDetails = true
+                        },
                         onViewCardTap: {
                             selectedCard = primaryCardStore.card
                             showCardDetail = true
+                        },
+                        onActivateTap: {
+                            startCardActivation = true
                         },
                         onQuickAction: handleQuickAction
                     )
@@ -727,17 +758,21 @@ struct DashboardView: View {
 struct PrimaryAccountContent: View {
     let account: SavingsAccountInfo
     let accountData: DashboardAccount
-    let hasVCards: Bool
+    let isVCardActive: Bool
+    let vCardLastFour: String?
     let onCardTap: () -> Void
     let onViewCardTap: () -> Void
+    let onActivateTap: () -> Void
     let onQuickAction: (String) -> Void
-    
+
     var body: some View {
         BalanceCardView(
             account: account,
-            showViewCard: hasVCards, // showViewCard: accountData.isPVCardActivated == "Active" && hasVCards,
+            isVCardActive: isVCardActive,
+            vCardLastFour: vCardLastFour,
             onCardTap: onCardTap,
-            onViewCardTap: onViewCardTap
+            onViewCardTap: onViewCardTap,
+            onActivateTap: onActivateTap
         )
         
         HStack(spacing: 10) {

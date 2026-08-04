@@ -81,6 +81,7 @@
 		839952E530206FC200B64A66 /* MobileBankingSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 839952E430206FC200B64A66 /* MobileBankingSDK */; };
 		839952E830206FF000B64A66 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 839952E730206FF000B64A66 /* LinkKit */; };
 		83D22074301A379A00DCD6B7 /* FirstCardRewardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D22073301A379A00DCD6B7 /* FirstCardRewardCard.swift */; };
+		83D2D6703021DF5100BD990C /* MaskedLastFourText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D2D66F3021DF5100BD990C /* MaskedLastFourText.swift */; };
 		99C2EAA42FC9AAB600384E28 /* terms-layout.css in Resources */ = {isa = PBXBuildFile; fileRef = 99C2EAA22FC9AAB600384E28 /* terms-layout.css */; };
 		99C2EAA62FC9ABDE00384E28 /* StatusBarScrim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */; };
 		99C2F1D32FDC610A00384E28 /* PhoneNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */; };
@@ -197,6 +198,7 @@
 		14FF70592F7D2DA700EC0B57 /* MovocashIOSDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MovocashIOSDebug.entitlements; sourceTree = "<group>"; };
 		14FF718E2F7E9F3200EC0B57 /* JWTDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTDecoder.swift; sourceTree = "<group>"; };
 		83D22073301A379A00DCD6B7 /* FirstCardRewardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstCardRewardCard.swift; sourceTree = "<group>"; };
+		83D2D66F3021DF5100BD990C /* MaskedLastFourText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskedLastFourText.swift; sourceTree = "<group>"; };
 		99C2EAA22FC9AAB600384E28 /* terms-layout.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "terms-layout.css"; sourceTree = "<group>"; };
 		99C2EAA52FC9ABDE00384E28 /* StatusBarScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarScrim.swift; sourceTree = "<group>"; };
 		99C2F1D22FDC610A00384E28 /* PhoneNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNormalizer.swift; sourceTree = "<group>"; };
@@ -503,6 +505,7 @@
 		146819712F4DE6CF00BED014 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				83D2D66F3021DF5100BD990C /* MaskedLastFourText.swift */,
 				1495840D2FED768D005E64A9 /* CustomAlertView.swift */,
 				14D2CDBD2FE93FCA007A9EEB /* MovoEditIcon.swift */,
 				99C2F4482FE06CA100384E28 /* RegistrationCelebrationHero.swift */,
@@ -836,6 +839,7 @@
 				14D52CBD2F9B908600CB648B /* EmptyStateView.swift in Sources */,
 				1468199F2F4EE8B100BED014 /* OTPViewModel.swift in Sources */,
 				146E02212FA4A9020000C193 /* LinkedAccountsSectionView.swift in Sources */,
+				83D2D6703021DF5100BD990C /* MaskedLastFourText.swift in Sources */,
 				1445791D2F6D4BB500EADEA2 /* PinInputAlertPresenter.swift in Sources */,
 				146819852F4DE6CF00BED014 /* Endpoint.swift in Sources */,
 				1489F2682F67D3AE0046FAD4 /* ToastManager.swift in Sources */,

@@ -7,30 +7,31 @@
 
 import SwiftUI
 
-private struct ActivateCardAccount: Identifiable {
-    let id: Int
-}
-
-private struct PendingActivation {
-    let pin: String
-    let accountId: Int
-}
-
 struct KYCSuccessView: View {
-    
+
     let container: AppContainer
     let onFinish: () -> Void
     let onSkip: () -> Void
-    
+
     @StateObject private var plaidVM: PlaidAchViewModel
     @StateObject private var vCardVM: VCardViewModel
     @StateObject private var savingVM: SavingsAccountViewModel
+    /// Apple Wallet result →  Bank link  →  Plaid link  →  Fund  →  Finish
+    /// Continues once the shared activation flow's "All Set" screen calls `onAllSet`.
     @State private var showBankLink = false
+    /// Bank link →  Plaid link
+    /// Set when the user taps "Continue" on `BankLinkedInfoScreen`; consumed in
+    /// that sheet's `onDismiss` so Plaid presents only after it's fully gone.
     @State private var continueToPlaid = false
+    /// Bank link →  Plaid link
     @State private var startPlaidFlow = false
+    /// Plaid link →  Fund
     @State private var showFund = false
-    @State private var activateCardAccount: ActivateCardAccount? = nil
-    @State private var pendingActivation: PendingActivation? = nil
+    /// Primary account →  Activation  →  PIN entry →  SDK activation  →  Apple Wallet result
+    /// Triggers the shared activation flow attached to this view's body.
+    @State private var startCardActivation = false
+    /// Primary account id resolved from `savingVM`, fed into the shared activation flow.
+    @State private var activationAccountId: Int? = nil
     @State private var didFinish = false
     
     @State private var badgeFrame: CGRect = .zero
@@ -102,85 +103,57 @@ struct KYCSuccessView: View {
         .background(Color.movo.background)
         .navigationBarHidden(true)
         .task { await savingVM.loadAccounts() }
-        .fullScreenCover(item: $activateCardAccount, onDismiss: {
-            launchPendingActivationIfNeeded()
-        }) { account in
-            CreateCashCardView(
-                vm: vCardVM,
-                plaidVM: plaidVM,
-                primaryAccountId: account.id,
-                title: "Set your Main MOVO card PIN",
-                mode: .activate,
-                nicknameFieldLabel: "NICK NAME",
-                fixedNickname: "MOVO Vault Card",
-                isNicknameEditable: false,
-                onClose: { activateCardAccount = nil },
-                onActivationRequiresSupport: { finishToDashboard() },
-                onPinConfirmed: { pin in
-                    pendingActivation = PendingActivation(pin: pin, accountId: account.id)
-                    activateCardAccount = nil
-                }
-            )
-        }
-        .fullScreenCover(isPresented: $plaidVM.showVirtualCardAllSet) {
-            VirtualCardAllSetView(
-                title: "Your Main MOVO card is ready to use!",
-                message: allSetMessage,
-                onDone: {
-                    showBankLink = true
-                }
-            )
-            .sheet(isPresented: $showBankLink, onDismiss: {
-                if continueToPlaid {
-                    continueToPlaid = false
-                    startPlaidFlow = true
-                }
-            }) {
-                BankLinkedInfoScreen(
-                    onContinue: { continueToPlaid = true },
-                    onClose: { showBankLink = false }
-                )
-                .presentationDetents([.height(430)])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(Radius.sheet)
-                .presentationBackground(Color.movo.cardSurface)
-            }
-            .plaidLinkFlow(
-                isActive: $startPlaidFlow,
-                plaidVM: plaidVM,
-                container: container,
-                allowFunding: false,
-                onDone: { showFund = true },
-                onCancel: { finishToDashboard() }
-            )
-            .fullScreenCover(isPresented: $showFund) {
-                FundAccountView(
-                    container: container,
-                    mode: .onboardingDeposit,
-                    onSuccess: { finishToDashboard() }
+        .virtualCardActivationFlow(
+            vCardVM: vCardVM,
+            plaidVM: plaidVM,
+            isActive: $startCardActivation,
+            accountId: activationAccountId,
+            // Apple Wallet result →  Bank link
+            onAllSet: { showBankLink = true },
+            onRequiresSupport: { finishToDashboard() },
+            allSetContent: { allSetScreen in
+                AnyView(
+                    allSetScreen
+                        // Bank link
+                        .sheet(isPresented: $showBankLink, onDismiss: {
+                            if continueToPlaid {
+                                continueToPlaid = false
+                                startPlaidFlow = true
+                            }
+                        }) {
+                            BankLinkedInfoScreen(
+                                onContinue: { continueToPlaid = true },
+                                onClose: { showBankLink = false }
+                            )
+                            .presentationDetents([.height(430)])
+                            .presentationDragIndicator(.visible)
+                            .presentationCornerRadius(Radius.sheet)
+                            .presentationBackground(Color.movo.cardSurface)
+                        }
+                        // Bank link →  Plaid link →  Fund
+                        .plaidLinkFlow(
+                            isActive: $startPlaidFlow,
+                            plaidVM: plaidVM,
+                            container: container,
+                            allowFunding: false,
+                            onDone: { showFund = true },
+                            onCancel: { finishToDashboard() }
+                        )
+                        // Fund →  Finish
+                        .fullScreenCover(isPresented: $showFund) {
+                            FundAccountView(
+                                container: container,
+                                mode: .onboardingDeposit,
+                                onSuccess: { finishToDashboard() }
+                            )
+                        }
                 )
             }
-        }
+        )
     }
-    
-    /// with THIS screen behind it, never Create Cash Card.
-    private func launchPendingActivationIfNeeded() {
-        guard let pending = pendingActivation else { return }
-        pendingActivation = nil
-        Task {
-            await plaidVM.activateVirtualCard(
-                pin: pending.pin,
-                accountId: pending.accountId,
-                onRequiresSupport: { finishToDashboard() }
-            )
-//            if plaidVM.state == .success {
-//                try? await KeychainManager.shared.save(
-//                    pending.pin, for: KeychainManager.Keys.cardPinForCurrentUser, protection: .backgroundSafe
-//                )
-//            }
-        }
-    }
-    
+
+    // Finish — collapses the entire Activation → Bank link → Plaid link → Fund
+    // stack back to the Dashboard in one non-animated step.
     private func finishToDashboard() {
         guard !didFinish else { return }
         didFinish = true
@@ -191,12 +164,11 @@ struct KYCSuccessView: View {
             startPlaidFlow = false
             showBankLink = false
             plaidVM.showVirtualCardAllSet = false
-            activateCardAccount = nil
-            pendingActivation = nil
+            startCardActivation = false
             onFinish()
         }
     }
-    
+
     private func startActivateCard() {
         // `id == 0` is never a real account id — treat it the same as "not found yet"
         // rather than sending a bogus accountId through to the SDK/activation call.
@@ -205,18 +177,10 @@ struct KYCSuccessView: View {
             AlertManager.shared.showError("Unable to find your account. Please try again.")
             return
         }
-        activateCardAccount = ActivateCardAccount(id: primaryId)
+        activationAccountId = primaryId
+        startCardActivation = true
     }
-    
-    private var allSetMessage: String {
-        switch plaidVM.walletProvisioningOutcome {
-        case .activeButNotInWallet:
-            return "We couldn\u{2019}t add it to Apple Wallet right now \u{2014} you can try again anytime from your Card screen."
-        case .addedToWallet, .none:
-            return "Your Main MOVO card has been added to Apple Wallet. Add money to start spending."
-        }
-    }
-    
+
     private var ctaFooter: some View {
         VStack(spacing: Spacing.xl) {
             Button(action: { startActivateCard() }) {

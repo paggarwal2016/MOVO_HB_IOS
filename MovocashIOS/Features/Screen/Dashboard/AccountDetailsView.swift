@@ -11,72 +11,42 @@ import SwiftUI
 
 struct AccountDetailsView: View {
     let account: SavingsAccountInfo
-    var onNicknameUpdated: ((String) -> Void)?
+    var bankAccountLabel: String?
+    var accountNumberLabel: String?
 
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @SwiftUI.Environment(\.securedDismiss) private var securedDismiss
     @State private var copiedField: String?
-    @State private var showEditNickname = false
-    @State private var displayNickname: String
 
-    init(account: SavingsAccountInfo, onNicknameUpdated: ((String) -> Void)? = nil) {
+    init(
+        account: SavingsAccountInfo,
+        bankAccountLabel: String? = nil,
+        accountNumberLabel: String? = nil
+    ) {
         self.account = account
-        self.onNicknameUpdated = onNicknameUpdated
-        _displayNickname = State(initialValue: account.nickname ?? "")
+        self.bankAccountLabel = bankAccountLabel
+        self.accountNumberLabel = accountNumberLabel
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            balanceHero
-            sectionDivider
+            Spacer()
             accountRows
         }
         .padding(.top, Spacing.xxxl)
         .background(Color.movo.cardSurface.ignoresSafeArea())
-        .sheet(isPresented: $showEditNickname) {
-            EditNicknameView(currentNickname: displayNickname) { newValue in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    displayNickname = newValue
-                }
-                onNicknameUpdated?(newValue)
-            }
-            .presentationDetents([.height(310)])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.movo.cardSurface)
-            .presentationCornerRadius(Radius.sheet)
-        }
     }
 
     // MARK: - Header
 
     private var header: some View {
         HStack {
-            HStack(spacing: Spacing.sm) {
-                MovoMVSymbol()
-                    .frame(width: 18, height: 18)
-                    .padding(5)
-                    .background(Color.movo.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm))
-
-                Eyebrow("\(account.isPrimary ? "PRIMARY" : "ACCOUNT") · ••\(account.accountNumber.suffix(4))")
-            }
             Spacer()
-            Button(action: { showEditNickname = true }) {
-                MovoEditIcon(size: 13, tint: Color.movo.textSecondary)
-                    .frame(width: 32, height: 32)
-                    .background(
-                        Circle()
-                            .fill(Color.movo.elevated)
-                            .overlay(Circle().strokeBorder(Color.movo.border, lineWidth: Stroke.hairline))
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Edit nickname")
             CircularNavButton(systemName: "xmark") { (securedDismiss ?? dismiss)() }
                 .accessibilityLabel("Close")
         }
         .padding(.horizontal, Spacing.xl)
-        .padding(.top, Spacing.md)
         .padding(.bottom, Spacing.xs)
     }
 
@@ -84,7 +54,7 @@ struct AccountDetailsView: View {
 
     private var balanceHero: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(displayNickname)
+            Text(account.nickname ?? "")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(Color.movo.textPrimary)
                 .padding(.top, Spacing.xs)
@@ -111,14 +81,14 @@ struct AccountDetailsView: View {
     private var accountRows: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Eyebrow("MOVO ACCOUNT BALANCE")
+                Eyebrow(bankAccountLabel ?? "MOVO ACCOUNT BALANCE")
                 BalanceText(amount: account.accountBalance, dollarSize: 27, centsSize: 21, centsOpacity: 1.0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xl)
             .padding(.vertical, Spacing.lg)
             rowDivider
-            copyableRow(label: "ACCOUNT NUMBER", value: account.accountNumber, field: "accountNumber")
+            copyableRow(label: accountNumberLabel ?? "ACCOUNT NUMBER", value: account.accountNumber, field: "accountNumber")
             if let routing = account.routingNumber {
                 rowDivider
                 copyableRow(label: "ROUTING NUMBER", value: routing, field: "routingNumber")
