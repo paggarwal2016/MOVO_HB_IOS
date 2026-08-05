@@ -16,6 +16,7 @@ enum VCardAPI: Endpoint {
     case createVCard(request: CreateVCardRequest)
     case viewVCard(cardId: Int)
     case activatedVCard
+    case physicalVCard(request: PhysicalCardRequest)
     
     // MARK: - API Version
     var version: APIVersion { .v1 }
@@ -30,6 +31,7 @@ enum VCardAPI: Endpoint {
         case .createVCard: return "/vcards/create-vcard"
         case .viewVCard(let cardId): return "/vcards/\(cardId)"
         case .activatedVCard: return "/vcards/primary/activated"
+        case .physicalVCard: return "/vcards/physical-card"
         }
     }
     
@@ -40,7 +42,7 @@ enum VCardAPI: Endpoint {
             return .PUT
         case .getVCardsPrimary, .viewVCard:
             return .PUT
-        case .postVCards, .vCardsProvision, .createVCard:
+        case .postVCards, .vCardsProvision, .createVCard, .physicalVCard:
             return .POST
         case .activatedVCard:
             return .PATCH
@@ -55,7 +57,7 @@ enum VCardAPI: Endpoint {
             return [.session, .secureDeviceInfo, .officeId]
         case .getVCardsList, .getVCardsPrimary, .viewVCard:
             return [.session, .secureDeviceInfo, .officeId, .encrypted]
-        case .postVCards, .createVCard:
+        case .postVCards, .createVCard, .physicalVCard:
             return [.session, .secureDeviceInfo, .officeId, .encrypted, .Idempotency]
         }
     }
@@ -86,6 +88,8 @@ enum VCardAPI: Endpoint {
             return try JSONEncoder().encode(request)
         case .activatedVCard:
             return try JSONEncoder().encode(UserActionRequest(userAction: "ACTIVE-PRIMARY-VCARD"))
+        case .physicalVCard(let request):
+            return try JSONEncoder().encode(request)
         }
-    }
+    } 
 }

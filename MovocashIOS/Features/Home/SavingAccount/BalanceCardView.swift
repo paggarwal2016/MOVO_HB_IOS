@@ -16,6 +16,7 @@ struct BalanceCardView: View {
     var onCardTap: () -> Void
     var onViewCardTap: () -> Void
     var onActivateTap: () -> Void
+    var onIssuePhysicalCardTap: () -> Void
 
     var body: some View {
         // ── Content drives tile height. No fixed frame. ────────────────────
@@ -59,8 +60,8 @@ struct BalanceCardView: View {
 
             // ── Bottom metadata row ────────────────────────────────────────
             HStack(alignment: .center) {
+                MovoActionButton("ISSUE PHYSICAL CARD".uppercased()) { onIssuePhysicalCardTap() }
                 Spacer()
-
                 if isVCardActive {
                     MovoActionButton("View Card".uppercased()) { onViewCardTap() }
                 } else {

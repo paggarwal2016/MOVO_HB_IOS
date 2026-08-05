@@ -32,3 +32,10 @@ struct CreateVCardRequest: Codable, Equatable, Sendable {
     let primaryAccountId: Int?
     let userAction: String
 }
+
+struct PhysicalCardRequest: Codable, Equatable, Sendable {
+    let accountId: Int
+    let pin: String
+    let plasticId: Int
+    let userAction: String
+}

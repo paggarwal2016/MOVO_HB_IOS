@@ -130,6 +130,8 @@ enum AnalyticsEvent {
     static let vcardCreateFailed          = "vcard_create_failed"
     static let cardActivated              = "card_activated"
     static let cardActivationFailed       = "card_activation_failed"
+    static let physicalCardRequested      = "physical_card_requested"
+    static let physicalCardRequestFailed  = "physical_card_request_failed"
     /// Virtual card CVV reveal. The CVV value itself is never logged.
     static let cvvRevealed                = "cvv_revealed"
     static let cvvRevealFailed            = "cvv_reveal_failed"

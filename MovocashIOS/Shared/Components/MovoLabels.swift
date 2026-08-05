@@ -102,6 +102,8 @@ public struct MovoActionButton: View {
                 Text(title)
                     .font(.system(size: 12.5, weight: .semibold))
                     .foregroundColor(DesignTokens.Palette.actionText.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                 MovoChevron(.disclosure, color: DesignTokens.Palette.actionText.color)
             }
             .padding(.vertical, 8)
