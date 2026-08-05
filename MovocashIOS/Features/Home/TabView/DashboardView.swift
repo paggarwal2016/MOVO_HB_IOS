@@ -14,6 +14,7 @@ struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var lockManager: AppLockManager
     @EnvironmentObject var sessionManager: SessionManager
+    @EnvironmentObject var userVM: UserViewModel
     
     // MARK: - ViewModels
     
@@ -106,9 +107,17 @@ struct DashboardView: View {
     @State private var inviteMessage: String?
     /// Primary account →  Activation  →  PIN entry →  SDK activation  →  Apple Wallet result
     @State private var startCardActivation = false
+    /// Drives the "Issue Physical Card" flow from the Balance card's action button.
+    @State private var showIssuePhysicalCard = false
 
     private var displayAccount: SavingsAccountInfo? {
         dashboardVM.primaryAccount
+    }
+
+    /// Mirrors ProfileScreen's fallback: prefer the dashboard's inline user
+    /// details (already loaded), fall back to the dedicated profile fetch.
+    private var effectiveProfile: UserProfileResponse? {
+        dashboardVM.userDetails.map { UserProfileResponse(from: $0) } ?? userVM.profile
     }
     
     // MARK: - Body
@@ -462,6 +471,19 @@ struct DashboardView: View {
                 needsDashboardRefresh = true
             }
         )
+        .fullScreenCover(isPresented: $showIssuePhysicalCard) {
+            PhysicalCardRequestView(
+                vm: vm,
+                accountId: dashboardVM.primaryAccount?.id ?? 0,
+                plasticId: 0,
+                profile: effectiveProfile,
+                onClose: { showIssuePhysicalCard = false },
+                onIssued: {
+                    showIssuePhysicalCard = false
+                    needsDashboardRefresh = true
+                }
+            )
+        }
     }
 
     /// Shared "Set digital cash card PIN" + "All Set" pair used by both the
@@ -605,6 +627,9 @@ struct DashboardView: View {
                         onActivateTap: {
                             startCardActivation = true
                         },
+                        onIssuePhysicalCardTap: {
+                            showIssuePhysicalCard = true
+                        },
                         onQuickAction: handleQuickAction
                     )
                 }
@@ -738,6 +763,7 @@ struct DashboardView: View {
         switch action {
         case "ACTIVITY":              showTransactions = true
         case "MOVE-MONEY":            showMoveMoney = true
+        case "ADD-MONEY":              showFundAccount = true
         case "FUND-ACCOUNT":
             if (dashboardVM.linkedAccounts?.linkedAccounts ?? []).isEmpty {
                 // No linked bank → show the Plaid info sheet to link one first.
@@ -763,6 +789,7 @@ struct PrimaryAccountContent: View {
     let onCardTap: () -> Void
     let onViewCardTap: () -> Void
     let onActivateTap: () -> Void
+    let onIssuePhysicalCardTap: () -> Void
     let onQuickAction: (String) -> Void
 
     var body: some View {
@@ -772,16 +799,17 @@ struct PrimaryAccountContent: View {
             vCardLastFour: vCardLastFour,
             onCardTap: onCardTap,
             onViewCardTap: onViewCardTap,
-            onActivateTap: onActivateTap
+            onActivateTap: onActivateTap,
+            onIssuePhysicalCardTap: onIssuePhysicalCardTap
         )
         
         HStack(spacing: 10) {
             if let moneyAction = accountData.actions.first(where: {
-                $0.action == "MOVE-MONEY" || $0.action == "FUND-ACCOUNT"
+                $0.action == "MOVE-MONEY" || $0.action == "FUND-ACCOUNT" || $0.action == "ADD-MONEY"
             }) {
                 QuickActionButton(
                     title: moneyAction.label,
-                    icon: moneyAction.action == "FUND-ACCOUNT" ? "arrow.down.to.line" : "arrow.left.arrow.right",
+                    icon: moneyAction.action == "MOVE-MONEY" ? "arrow.left.arrow.right" : "arrow.down.to.line",
                     appearance: .accent
                 ) {
                     onQuickAction(moneyAction.action)

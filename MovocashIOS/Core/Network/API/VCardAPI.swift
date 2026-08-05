@@ -31,7 +31,7 @@ enum VCardAPI: Endpoint {
         case .createVCard: return "/vcards/create-vcard"
         case .viewVCard(let cardId): return "/vcards/\(cardId)"
         case .activatedVCard: return "/vcards/primary/activated"
-        case .physicalVCard: return "vcards/physical-card"
+        case .physicalVCard: return "/vcards/physical-card"
         }
     }
     

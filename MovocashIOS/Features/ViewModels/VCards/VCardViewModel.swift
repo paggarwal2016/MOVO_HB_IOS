@@ -226,4 +226,48 @@ final class VCardViewModel: BaseViewModel {
             throw error
         }
     }
+
+    func requestPhysicalCard(request: PhysicalCardRequest) async throws -> PhysicalCardResponse {
+        do {
+            let card: PhysicalCardResponse = try await perform {
+                try await self.network.request(VCardAPI.physicalVCard(request: request))
+            }
+            analytics.log(AnalyticsEvent.physicalCardRequested, params: [
+                AnalyticsParam.accountId: request.accountId
+            ])
+            return card
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            analytics.log(AnalyticsEvent.physicalCardRequestFailed, params: [
+                AnalyticsParam.accountId: request.accountId,
+                AnalyticsParam.errorCode: error.analyticsCode,
+                AnalyticsParam.errorMessage: error.localizedDescription
+            ])
+            throw error
+        }
+    }
 }
+
+
+//func requestPhysicalCard(request: PhysicalCardRequest) async throws -> PhysicalCardResponse {
+//       do {
+//           let envelope: CreateVCardEncryptedResponse = try await perform {
+//           // Unlike postVCards/createVCard, this endpoint returns its response
+//           // in plain JSON — no encrypted envelope to decrypt.
+//           let card: PhysicalCardResponse = try await perform {
+//               try await self.network.request(VCardAPI.physicalVCard(request: request))
+//           }
+//           guard let encryptedBase64 = envelope.data?.encryptedData else {
+//               throw NetworkError.decodingError
+//           }
+//           let plainData = try SealedCryptoService.decrypt(encryptedBase64: encryptedBase64)
+//#if DEBUG
+//           if let json = String(data: plainData, encoding: .utf8) {
+//               print("[VCard decrypt]", json)
+//           }
+//#endif
+//           let card = try JSONDecoder().decode(PhysicalCardResponse.self, from: plainData)
+//           analytics.log(AnalyticsEvent.physicalCardRequested, params: [
+//               AnalyticsParam.accountId: request.accountId
+//           ])

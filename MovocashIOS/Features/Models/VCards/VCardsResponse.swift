@@ -152,4 +152,26 @@ nonisolated struct VCardListAllResponse: Decodable, Sendable {
     let data: [VCardListResponse]?
 }
 
+nonisolated struct PhysicalCardResponse: Decodable, Sendable {
+    let success: Bool
+    let message: String?
+    let data: PhysicalCardDetail?
+}
 
+nonisolated struct PhysicalCardDetail: Decodable, Sendable {
+    let success: Bool
+    let starMemberNumber: String?
+    let lastFour: String?
+    let expiration: String?
+}
+
+extension PhysicalCardDetail {
+    /// Expiry as `MM/YY` from the API's `YYYY-MM` value, e.g. "2028-05" → "05/28".
+    var expiryMMYY: String {
+        let parts = (expiration ?? "").split(separator: "-")
+        if parts.count == 2, parts[0].count == 4 {
+            return "\(parts[1])/\(parts[0].suffix(2))"
+        }
+        return expiration ?? "--/--"
+    }
+}
