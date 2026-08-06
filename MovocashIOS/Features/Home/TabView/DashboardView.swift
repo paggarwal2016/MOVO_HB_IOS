@@ -740,6 +740,10 @@ struct PrimaryAccountContent: View {
             onViewCardTap: onViewCardTap
         )
         
+        // .fixedSize(vertical: true) tells the HStack to use its ideal height
+        // (the taller button's natural size) rather than filling the scroll view's
+        // proposed height. Combined with maxHeight: .infinity inside QuickActionButton,
+        // both pills grow to match the taller one — no hardcoded height needed.
         HStack(spacing: 10) {
             if let moneyAction = accountData.actions.first(where: {
                 $0.action == "MOVE-MONEY" || $0.action == "FUND-ACCOUNT"
@@ -752,12 +756,13 @@ struct PrimaryAccountContent: View {
                     onQuickAction(moneyAction.action)
                 }
             }
-            
+
             if let txAction = accountData.actions.first(where: { $0.action == "ACTIVITY" }) {
                 QuickActionButton(title: txAction.label, icon: "clock", appearance: .secondary) {
                     onQuickAction(txAction.action)
                 }
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

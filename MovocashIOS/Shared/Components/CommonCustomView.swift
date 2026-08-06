@@ -593,13 +593,19 @@ struct QuickActionButton: View {
         Button(action: onTap) {
             HStack(spacing: 7) {
                 Image(systemName: icon)
+                    .font(.system(.callout, weight: .semibold))
                 Text(uppercased ? title.uppercased() : title)
+                    .movoFont(.cta)
                     .tracking(0.4)
+                    .multilineTextAlignment(.center)
             }
-            .font(.system(size: 13, weight: .semibold))
             .foregroundColor(appearance.text)
-            .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.lg)
+            // maxHeight: .infinity fills the slot offered by the parent HStack when the
+            // HStack uses .fixedSize(horizontal: false, vertical: true). The background is
+            // after this frame so it fills the full offered height — both pills match the
+            // taller button at AX2 without a hardcoded height.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(appearance.fillStyle ?? AnyShapeStyle(appearance.fill))

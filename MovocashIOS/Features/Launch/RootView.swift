@@ -444,6 +444,10 @@ struct RootView: View {
                 })
             }
         }
+        // Dynamic Type range: floor at .large (never shrinks below default, legibility
+        // floor for a banking app) and ceiling at .accessibility1.
+        // Set once at the root; no per-view overrides needed.
+        .dynamicTypeSize(.large ... DynamicTypeSize.accessibility1)
         // Reset the idle clock on any touch anywhere in the app.
         // `simultaneousGesture` observes without consuming — existing gestures are unaffected.
         .simultaneousGesture(

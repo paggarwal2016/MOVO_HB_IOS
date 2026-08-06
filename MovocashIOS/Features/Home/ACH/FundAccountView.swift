@@ -392,7 +392,7 @@ struct FundAccountView: View {
                     )
                     .overlay(
                         Image(systemName: "arrow.down")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(.footnote, weight: .semibold))
                             .foregroundColor(Color.movo.textSecondary)
                     )
             }
@@ -412,7 +412,7 @@ struct FundAccountView: View {
                         HStack {
                             ProgressView().tint(Color.movo.textSecondary)
                             Text("Loading accounts…")
-                                .font(.system(size: 13))
+                                .font(.system(.footnote))
                                 .foregroundColor(Color.movo.textTertiary)
                             Spacer()
                         }
@@ -623,7 +623,7 @@ struct BankAccountPickerSheet: View {
                                 Spacer()
 
                                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(size: 22))
+                                    .font(.system(.title2))
                                     .foregroundColor(isSelected ? Color.movo.accent : Color.movo.textDisabled)
                                     .animation(.spring(duration: 0.2), value: isSelected)
                             }

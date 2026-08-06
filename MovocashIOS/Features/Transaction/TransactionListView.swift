@@ -395,7 +395,7 @@ struct TransactionListView: View {
                                     dash: isPending ? [3, 2] : []
                                   ))
                 Image(systemName: iconSystemName)
-                    .font(.system(size: 15, weight: .regular))
+                    .font(.system(.subheadline, weight: .regular))
                     .foregroundColor(iconForeground)
             }
         }
@@ -494,7 +494,7 @@ struct TransactionListView: View {
         return VStack(spacing: Spacing.lg) {
             Spacer()
             Image(systemName: "list.bullet.rectangle.portrait")
-                .font(.system(size: 40, weight: .ultraLight))
+                .font(.system(.largeTitle, weight: .ultraLight))
                 .foregroundColor(Color.movo.textTertiary)
             
             VStack(spacing: Spacing.sm) {
@@ -608,7 +608,7 @@ extension TransactionListView {
         HStack(spacing: Spacing.sm) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 13, weight: .regular))
+                    .font(.system(.footnote, weight: .regular))
                     .foregroundColor(Color.movo.textTertiary)
                 
                 TextField("",
@@ -785,7 +785,7 @@ extension TransactionListView {
                     .lineLimit(1)
                 Button(action: onRemove) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(.caption2, weight: .bold))
                         .foregroundColor(Color.movo.textSecondary)
                         // Padding + contentShape widen the tap target beyond the
                         // 9pt glyph without enlarging the visible chip.
@@ -813,7 +813,7 @@ extension TransactionListView {
             showSortMenu = true
         } label: {
             Image(systemName: "arrow.up.arrow.down")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(.footnote, weight: .semibold))
                 .foregroundColor(Color.movo.textSecondary)
                 .frame(width: 38, height: 38)
                 .background(
@@ -845,7 +845,7 @@ extension TransactionListView {
                 } label: {
                     HStack(spacing: Spacing.md) {
                         Image(systemName: option == activeSort ? "checkmark" : option.systemImage)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(.footnote, weight: .semibold))
                             .foregroundColor(option == activeSort ? Color.movo.accent : Color.movo.textSecondary)
                             .frame(width: 20)
                         Text(option.label)
@@ -917,7 +917,7 @@ extension TransactionListView {
                 HStack(spacing: 5) {
                     if let icon = filter.systemIcon {
                         Image(systemName: icon)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(.caption2, weight: .medium))
                     }
                     Text(filter.label)
                         .textStyle(Typography.captionSmall)
@@ -985,7 +985,7 @@ extension TransactionListView {
         var body: some View {
             Button(action: action) {
                 Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(.footnote, weight: .semibold))
                     .foregroundColor(Color.movo.textSecondary)
                     .frame(width: 38, height: 38)
                     .background(
@@ -999,7 +999,7 @@ extension TransactionListView {
                     .overlay(alignment: .topTrailing) {
                         if activeCount > 0 {
                             Text("\(activeCount)")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(.caption2, weight: .bold))
                                 .foregroundColor(Color.movo.onAccent)
                                 .frame(width: 14, height: 14)
                                 .background(

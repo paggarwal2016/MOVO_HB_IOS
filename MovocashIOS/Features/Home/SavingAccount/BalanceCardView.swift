@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 struct BalanceCardView: View {
 
@@ -15,14 +16,20 @@ struct BalanceCardView: View {
     var onCardTap: () -> Void
     var onViewCardTap: () -> Void
 
+    // Re-renders when Dynamic Type changes so UIFontMetrics.scaledValue
+    // returns the current scaled size in body.
+    @Environment(\.sizeCategory) private var sizeCategory
+
     var body: some View {
+        let _ = sizeCategory
+        let scaledFallback = UIFontMetrics(forTextStyle: .largeTitle).scaledValue(for: 58)
         // ── Content drives tile height. No fixed frame. ────────────────────
         VStack(alignment: .leading, spacing: 0) {
 
             // Top row: eyebrow + type badge
             HStack(alignment: .center) {
                 Text("MOVO AVAILABLE BALANCE")
-                    .font(.system(size: 10, weight: .semibold))
+                    .movoFont(.labelCaps)
                     .tracking(1.2)
                     .foregroundColor(Color.movo.textTertiary)
                 Spacer()
@@ -36,7 +43,7 @@ struct BalanceCardView: View {
                 BalanceText(amount: bal, dollarSize: 58, centsSize: 40, centsOpacity: 1.0)
             } else {
                 Text("$ —")
-                    .font(.system(size: 58, weight: .bold).monospacedDigit())
+                    .font(.system(size: scaledFallback, weight: .bold).monospacedDigit())
                     .foregroundColor(Color.movo.textTertiary)
             }
 
@@ -56,12 +63,12 @@ struct BalanceCardView: View {
             HStack(alignment: .center) {
                 HStack(spacing: 4) {
                     Text("••\(account.accountNumber.suffix(4))")
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.system(.title3, weight: .medium))
                         .tracking(0.5)
                         .foregroundColor(Color.movo.textTertiary)
                     Button(action: onCardTap) {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.system(.callout, weight: .medium))
                             .foregroundColor(Color.movo.accent)
                     }
                     .buttonStyle(.plain)

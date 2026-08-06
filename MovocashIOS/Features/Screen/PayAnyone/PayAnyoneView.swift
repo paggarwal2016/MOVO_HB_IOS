@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UIKit
 
 struct PayAnyoneView: View {
     
@@ -17,7 +18,10 @@ struct PayAnyoneView: View {
     @EnvironmentObject private var container: AppContainer
     @EnvironmentObject private var lockManager: AppLockManager
     @SwiftUI.Environment(\.openURL) private var openURL
-    
+    // Re-renders when Dynamic Type changes so UIFontMetrics.scaledValue returns
+    // the current size when contactAvatar is evaluated.
+    @Environment(\.sizeCategory) private var sizeCategory
+
     let cards: [VCardListResponse]
     let primaryLinkedCard: VCardListResponse?
     /// Title shown in the nav bar — passed from the tab's MENU label.
@@ -318,7 +322,7 @@ struct PayAnyoneView: View {
                 .textStyle(Typography.eyebrow)
                 .foregroundColor(Color.movo.textTertiary)
             Image(systemName: "chevron.down")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(.caption2, weight: .semibold))
                 .foregroundColor(Color.movo.textTertiary)
                 .rotationEffect(.degrees(isExpanded ? 0 : -90))
             Spacer()
@@ -330,8 +334,13 @@ struct PayAnyoneView: View {
     }
     
     private func contactAvatar(initials: String, size: CGFloat) -> some View {
-        Text(initials.isEmpty ? "?" : initials)
-            .font(.system(size: size * 0.38, weight: .semibold))
+        // sizeCategory read ensures SwiftUI re-evaluates this function when
+        // Dynamic Type changes; UIFontMetrics preserves the proportional size
+        // (38% of avatar diameter) and scales it correctly at every AX step.
+        let _ = sizeCategory
+        let scaledInitials = UIFontMetrics(forTextStyle: .callout).scaledValue(for: size * 0.38)
+        return Text(initials.isEmpty ? "?" : initials)
+            .font(.system(size: scaledInitials, weight: .semibold))
             .foregroundColor(Color.movo.textPrimary)
             .frame(width: size, height: size)
             .background(Color.movo.elevated, in: Circle())
@@ -356,7 +365,7 @@ struct PayAnyoneView: View {
                 Task { await contactVM.toggleFavourite(contact) }
             } label: {
                 Image(systemName: contactVM.isFavorite(contact) ? "star.fill" : "star")
-                    .font(.system(size: 15, weight: .regular))
+                    .font(.system(.subheadline, weight: .regular))
                     .foregroundColor(contactVM.isFavorite(contact) ? Color.movo.accent : Color.movo.textDisabled)
                     .frame(width: 40, height: 40)
                     .contentShape(Rectangle())

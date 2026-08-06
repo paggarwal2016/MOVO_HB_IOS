@@ -30,7 +30,7 @@ struct CustomHeaderView: View {
                 MovoMVSymbol()
                     .frame(width: 22, height: 22)
                 Text("MOVOCASH")
-                    .textStyle(Typography.sectionTitle)
+                    .font(.system(.title2, weight: .semibold))
                     .foregroundStyle(Color.movo.textPrimary)
             }
 

@@ -57,7 +57,7 @@ struct FirstCardRewardCard: View {
             Image(systemName: "star.fill")
                 .font(.system(size: 11, weight: .semibold))
             Text("REWARD UNLOCKED")
-                .textStyle(Typography.eyebrow)
+                .appStyle(.labelCaps)
         }
         .foregroundColor(Color.movo.accent)
         .padding(.horizontal, Spacing.lg)

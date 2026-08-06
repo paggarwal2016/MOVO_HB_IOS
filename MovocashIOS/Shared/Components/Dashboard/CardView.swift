@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 // MARK: - Card Item
 
@@ -17,6 +18,10 @@ struct CardItemView: View {
     /// Wired to the pre-existing card-detail handler in CardSelectorView / DashboardView.
     /// Nil-safe — nothing breaks if no handler is provided.
     var onDetail: (() -> Void)? = nil
+
+    // Re-renders when Dynamic Type changes so UIFontMetrics.scaledValue
+    // returns the current scaled size when styledBalance is evaluated.
+    @Environment(\.sizeCategory) private var sizeCategory
 
     private var cardName: String {
         (card.savingsAccountNickname ?? card.name ?? card.displayName).uppercased()
@@ -36,11 +41,14 @@ struct CardItemView: View {
             // ── Layer 5: content ──────────────────────────────────────────
             VStack(spacing: 0) {
                 faceContent
-                    .frame(maxHeight: .infinity)
                 linkRow
             }
         }
-        .frame(height: 165)
+        // Card tile is a fixed-proportion graphic (~165pt), not a reflow surface.
+        // A tile-local xxLarge cap keeps content proportional within the fixed frame.
+        // The full balance at AX2 is available on the uncapped CardDetailSheet.
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .frame(minHeight: 165)
         .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
@@ -53,20 +61,23 @@ struct CardItemView: View {
     private var faceContent: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // Top row: small M mark + card name + Virtual pill
-            HStack(spacing: Spacing.xs) {
-            MovoMVSymbol()
+            // Top row: fixed-size M mark + card name + "DIGITAL CASH" label.
+            // .center alignment keeps the 19pt icon and scaled name at a shared midpoint.
+            // Name truncates with tail ellipsis — long names are labels, not financial data.
+            HStack(alignment: .center, spacing: Spacing.xs) {
+                MovoMVSymbol()
                     .frame(width: 19, height: 19)
                 Text(cardName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .movoFont(.rowTitle)
                     .tracking(0.9)
                     .foregroundColor(Color.movo.textPrimary)
                     .lineLimit(1)
-                Spacer()
+                    .truncationMode(.tail)
+                Spacer(minLength: Spacing.xs)
                 virtualPill
             }
 
-            Spacer()
+            Spacer(minLength: Spacing.md)
 
             // Balance — tight, cents de-emphasised
             styledBalance
@@ -75,12 +86,12 @@ struct CardItemView: View {
 
             // Footer: masked number — silver neutral
             Text(card.maskedNumber)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(.subheadline, weight: .medium))
                 .tracking(0.7)
                 .foregroundColor(DesignTokens.Palette.silverTint.color)
         }
         .padding(Spacing.lg)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .drawingGroup()
     }
 
@@ -127,10 +138,41 @@ struct CardItemView: View {
 
     // MARK: - Styled balance
 
+    /// Maps the SwiftUI sizeCategory environment value (which respects the tile-local
+    /// .dynamicTypeSize cap) to a UITraitCollection so UIFontMetrics.scaledValue(for:compatibleWith:)
+    /// returns sizes bounded by the cap. Without this, UIFontMetrics reads UIKit's system-wide
+    /// preferredContentSizeCategory and bypasses any SwiftUI .dynamicTypeSize modifier.
+    private var cappedTraitCollection: UITraitCollection {
+        let uiCategory: UIContentSizeCategory
+        switch sizeCategory {
+        case .extraSmall:                            uiCategory = .extraSmall
+        case .small:                                 uiCategory = .small
+        case .medium:                                uiCategory = .medium
+        case .large:                                 uiCategory = .large
+        case .extraLarge:                            uiCategory = .extraLarge
+        case .extraExtraLarge:                       uiCategory = .extraExtraLarge
+        case .extraExtraExtraLarge:                  uiCategory = .extraExtraExtraLarge
+        case .accessibilityMedium:                   uiCategory = .accessibilityMedium
+        case .accessibilityLarge:                    uiCategory = .accessibilityLarge
+        case .accessibilityExtraLarge:               uiCategory = .accessibilityExtraLarge
+        case .accessibilityExtraExtraLarge:          uiCategory = .accessibilityExtraExtraLarge
+        case .accessibilityExtraExtraExtraLarge:     uiCategory = .accessibilityExtraExtraExtraLarge
+        @unknown default:                            uiCategory = .large
+        }
+        return UITraitCollection(preferredContentSizeCategory: uiCategory)
+    }
+
     /// Tight balance display: full-weight dollars + de-emphasised cents.
     /// Falls back to a single Text if the value has no decimal point.
     @ViewBuilder
     private var styledBalance: some View {
+        // sizeCategory read ensures SwiftUI re-evaluates when Dynamic Type changes.
+        // scaledValue(for:compatibleWith:) uses cappedTraitCollection so the tile's
+        // local .dynamicTypeSize(.xxLarge) cap is respected — the system UIKit value
+        // is ignored here.
+        let _ = sizeCategory
+        let scaledDollars = UIFontMetrics(forTextStyle: .largeTitle).scaledValue(for: 38, compatibleWith: cappedTraitCollection)
+        let scaledCents   = UIFontMetrics(forTextStyle: .title1).scaledValue(for: 30, compatibleWith: cappedTraitCollection)
         let raw = card.displayBalance
             .trimmingCharacters(in: .whitespaces)
             .replacingOccurrences(of: " ", with: "")
@@ -139,18 +181,21 @@ struct CardItemView: View {
             let cents   = String(raw[raw.index(after: dotIdx)...])
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(dollars)
-                    .font(.system(size: 38, weight: .bold).monospacedDigit())
+                    .font(.system(size: scaledDollars, weight: .bold).monospacedDigit())
                     .tracking(-0.5)
                     .foregroundColor(Color.movo.textPrimary)
+                    .lineLimit(1)
                 Text(cents)
-                    .font(.system(size: 30, weight: .semibold).monospacedDigit())
+                    .font(.system(size: scaledCents, weight: .semibold).monospacedDigit())
                     .foregroundColor(Color.movo.textPrimary)
+                    .lineLimit(1)
             }
         } else {
             Text(raw)
-                .font(.system(size: 38, weight: .bold).monospacedDigit())
+                .font(.system(size: scaledDollars, weight: .bold).monospacedDigit())
                 .tracking(-0.5)
                 .foregroundColor(Color.movo.textPrimary)
+                .lineLimit(1)
         }
     }
 
@@ -166,7 +211,7 @@ struct CardItemView: View {
     private var linkRow: some View {
         HStack(spacing: Spacing.xs) {
             Text("LET'S MOVO")
-                .font(.system(size: 16, weight: .semibold))
+                .movoFont(.cta)
                 .tracking(0.8)
                 .foregroundColor(Color.movo.accent)
             Spacer()
@@ -252,7 +297,7 @@ struct CardSelectorView: View {
 
                 }
                 .offset(x: targetOffset + dragOffset)
-                .frame(height: 165, alignment: .leading)
+                .frame(minHeight: 165, alignment: .leading)
                 .clipped()
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 10)
@@ -319,8 +364,7 @@ struct CardSelectorView: View {
                 }
             }
         }
-        .frame(height: cards.count > 1 ? 225 : 205)
-        .clipped()
+        .frame(minHeight: cards.count > 1 ? 225 : 205)
         .contentShape(Rectangle())
     }
 

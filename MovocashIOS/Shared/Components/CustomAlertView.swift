@@ -61,14 +61,14 @@ struct CustomAlertView: View {
 
             // Title
             Text(title)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(.title3, weight: .bold))
                 .foregroundStyle(Color.movo.textPrimary)
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 8)
 
             // Message
             Text(message)
-                .font(.system(size: 15, weight: .regular))
+                .font(.system(.subheadline, weight: .regular))
                 .foregroundStyle(Color.movo.textSecondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
@@ -81,7 +81,7 @@ struct CustomAlertView: View {
                     Text(primary)
                     if let primaryIcon {
                         Image(systemName: primaryIcon)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(.subheadline, weight: .semibold))
                     }
                 }
             }
@@ -118,7 +118,7 @@ struct CustomAlertView: View {
         case .success:
             badge(tint: Color.movo.accent, background: Color.movo.accentTint) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(.title, weight: .bold))
                     .foregroundStyle(Color.movo.accent)
             }
         case .movo:
@@ -129,7 +129,7 @@ struct CustomAlertView: View {
         case .error:
             badge(tint: Color.movo.danger, background: Color.movo.dangerTint) {
                 Image(systemName: "exclamationmark")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(.title, weight: .bold))
                     .foregroundStyle(Color.movo.danger)
             }
         case .none:

@@ -9,45 +9,66 @@ import Foundation
 import SwiftUI
 
 enum AppFont {
-    
-    // MARK: - Eyebrow
-    static let eyebrow = Font.custom("Montserrat-Medium", size: 10)
-    
-    // MARK: - Balance
-    static let balance = Font.custom("Montserrat-SemiBold", size: 28)
-    
-    // MARK: - Hero
-    static let hero = Font.custom("Montserrat-SemiBold", size: 18)
-    
-    // MARK: - Body
-    static let body = Font.custom("Montserrat-Regular", size: 12)
-    
-    // MARK: - Quick Action
-    static let quickAction = Font.custom("Montserrat-SemiBold", size: 10)
-    
-    // MARK: - CTA
-    static let cta = Font.custom("Montserrat-SemiBold", size: 11)
-    
-    // MARK: - Card Name
-    static let cardName = Font.custom("Montserrat-Medium", size: 11)
-    
-    // MARK: - Section Header
-    static let sectionHeader = Font.custom("Montserrat-Medium", size: 9)
-    
-    // MARK: - Greeting
-    static let greetingSubtitle = Font.custom("Montserrat-Medium", size: 9)
-    static let greetingName = Font.custom("Montserrat-Medium", size: 13)
-    
-    // MARK: - Bottom Nav
-    static let tabLabel = Font.custom("Montserrat-Medium", size: 9)
-    
-    // MARK: - Activity
-    static let activityName = Font.custom("Montserrat-Medium", size: 12)
-    
-    static let activityAmount = Font.system(size: 14, weight: .medium) // ⚠️ keep system for numbers
-    
-    // MARK: - Card Number
-    static let cardNumber = Font.system(size: 9, weight: .regular, design: .monospaced)
+
+    // MARK: - Global scale knob
+    //
+    // Change this single value to proportionally rescale every Montserrat token
+    // app-wide. Tracking literals in appStyle also reference the size constants
+    // below, so letter-spacing scales automatically with point size.
+    //
+    // EXCEPTION: BalanceText (home hero balance, UIFontMetrics 38pt / 30pt) is NOT
+    // wired to this knob — it calls UIFontMetrics directly for tile-frame-aware
+    // scaling. A global "make everything bigger" change must update BalanceText
+    // (dollarSize / centsSize) separately.
+    private static let scale: CGFloat = 1.0
+
+    // MARK: - Canonical base sizes
+    //
+    // Edit here only. AppFont tokens (below) and Font+Modifier.swift both reference
+    // these — single source of truth. rowTitle / rowValue share bodySize; ctaSize
+    // is independent so button labels can be tuned without touching reading text.
+    static let bodySize:      CGFloat = ceil(17 * scale)   // anchor — Apple standard body
+    static let ctaSize:       CGFloat = ceil(16 * scale)   // button labels; decoupled from body
+    static let captionSize:   CGFloat = ceil(14 * scale)
+    static let labelCapsSize: CGFloat = ceil(11 * scale)
+    static let heroSize:      CGFloat = ceil(20 * scale)
+    static let balanceSize:   CGFloat = ceil(34 * scale)
+
+    // MARK: - Role tokens
+
+    /// 16pt SemiBold — CTA buttons ("ADD MONEY", "LET'S MOVO", "TRANSFER")
+    static let cta       = Font.custom("Montserrat-SemiBold", size: ctaSize,       relativeTo: .callout)
+
+    /// 17pt Medium — row and card-face labels (card name, merchant name, greeting name)
+    static let rowTitle  = Font.custom("Montserrat-Medium",   size: bodySize,      relativeTo: .callout)
+
+    /// 17pt SemiBold — row value text; ≥ rowTitle by weight — amounts never render smaller than their label
+    static let rowValue  = Font.custom("Montserrat-SemiBold", size: bodySize,      relativeTo: .callout)
+
+    /// 17pt Regular — primary body copy
+    static let body      = Font.custom("Montserrat-Regular",  size: bodySize,      relativeTo: .body)
+
+    /// 14pt Regular — secondary captions and helper text
+    static let caption   = Font.custom("Montserrat-Regular",  size: captionSize,   relativeTo: .footnote)
+
+    /// 11pt SemiBold — ALL-CAPS eyebrow labels (section headers, greeting subtitle, tab labels)
+    static let labelCaps = Font.custom("Montserrat-SemiBold", size: labelCapsSize, relativeTo: .caption2)
+
+    // MARK: - Display / hero (exception — base sizes are load-bearing)
+
+    /// 20pt SemiBold — card section titles, sheet heroes
+    static let hero      = Font.custom("Montserrat-SemiBold", size: heroSize,      relativeTo: .title2)
+
+    /// 34pt SemiBold — balance display (AppFont layer only; large hero balances use BalanceText)
+    static let balance   = Font.custom("Montserrat-SemiBold", size: balanceSize,   relativeTo: .largeTitle)
+
+    // MARK: - System fonts (SF Pro — tabular figures and card digits)
+
+    /// SF Pro .callout — currency amounts in activity rows; SF tabular figures are preferred over Montserrat
+    static let activityAmount = Font.system(.callout, weight: .medium)
+
+    /// SF Pro .footnote monospaced — card number display
+    static let cardNumber     = Font.system(.footnote, design: .monospaced)
 }
 
 struct Tracking {
@@ -64,117 +85,77 @@ extension Font {
         case bold     = "Montserrat-Bold"
     }
 
-    static func montserrat(_ weight: MontserratWeight = .regular, size: CGFloat) -> Font {
-        Font.custom(weight.rawValue, size: size)
+    static func montserrat(_ weight: MontserratWeight = .regular, size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
+        Font.custom(weight.rawValue, size: size, relativeTo: style)
     }
 }
 
 
 extension Text {
-    
+
     @ViewBuilder
     func appStyle(_ style: AppTextStyle) -> some View {
         switch style {
-            
-        case .eyebrow:
+
+        // ALL-CAPS eyebrow / section header / tab label
+        case .labelCaps:
             self
-                .font(AppFont.eyebrow)
-                .tracking(Tracking.value(0.08, size: 10))
+                .tracking(Tracking.value(0.08, size: AppFont.labelCapsSize))
                 .textCase(.uppercase)
-            
+                .movoFont(.labelCaps)
+
         case .balance:
             self
-                .font(AppFont.balance)
-                .tracking(Tracking.value(-0.02, size: 28))
                 .monospacedDigit()
-            
+                .tracking(Tracking.value(-0.02, size: AppFont.balanceSize))
+                .movoFont(.balance)
+
         case .hero:
             self
-                .font(AppFont.hero)
-                .tracking(Tracking.value(-0.01, size: 18))
-            
+                .tracking(Tracking.value(-0.01, size: AppFont.heroSize))
+                .movoFont(.hero)
+
         case .body:
-            self
-                .font(AppFont.body)
-            
-        case .quickAction:
-            self
-                .font(AppFont.quickAction)
-                .tracking(Tracking.value(0.04, size: 10))
-                .textCase(.uppercase)
-            
+            self.movoFont(.body)
+
+        case .caption:
+            self.movoFont(.caption)
+
+        // CTA buttons — slight positive tracking for button labels
         case .cta:
             self
-                .font(AppFont.cta)
-                .tracking(Tracking.value(0.02, size: 11))
-            
-        case .cardName:
-            self
-                .font(AppFont.cardName)
-            
-        case .sectionHeader:
-            self
-                .font(AppFont.sectionHeader)
-                .tracking(Tracking.value(0.08, size: 9))
-                .textCase(.uppercase)
-            
-        case .greetingSubtitle:
-            self
-                .font(AppFont.greetingSubtitle)
-                .tracking(Tracking.value(0.08, size: 9))
-                .textCase(.uppercase)
-            
-        case .greetingName:
-            self
-                .font(AppFont.greetingName)
-            
-        case .tabLabel:
-            self
-                .font(AppFont.tabLabel)
-            
-        case .activityName:
-            self
-                .font(AppFont.activityName)
-            
+                .tracking(Tracking.value(0.02, size: AppFont.ctaSize))
+                .movoFont(.cta)
+
+        case .rowTitle:
+            self.movoFont(.rowTitle)
+
+        case .rowValue:
+            self.movoFont(.rowValue)
+
         case .activityAmount:
             self
-                .font(AppFont.activityAmount)
                 .monospacedDigit()
-            
+                .movoFont(.activityAmount)
+
         case .cardNumber:
             self
-                .font(AppFont.cardNumber)
-                .tracking(Tracking.value(0.16, size: 9))
+                .tracking(Tracking.value(0.16, size: 9))   // system font — not Montserrat-scaled
+                .movoFont(.cardNumber)
         }
     }
 }
 
 
 enum AppTextStyle {
-    case eyebrow
-    case balance
-    case hero
-    case body
-    case quickAction
     case cta
-    case cardName
-    case sectionHeader
-    case greetingSubtitle
-    case greetingName
-    case tabLabel
-    case activityName
+    case rowTitle
+    case rowValue
+    case body
+    case caption
+    case labelCaps
+    case hero
+    case balance
     case activityAmount
     case cardNumber
 }
-
-
-//Text("AVAILABLE BALANCE")
-//    .appStyle(.eyebrow)
-//
-//Text("₹ 50.00")
-//    .appStyle(.balance)
-//
-//Text("Amazon")
-//    .appStyle(.activityName)
-
-//Font.montserrat("Montserrat-SemiBold", size: 18)

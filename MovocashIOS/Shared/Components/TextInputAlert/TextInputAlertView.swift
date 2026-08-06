@@ -52,7 +52,7 @@ struct TextInputAlertView: View {
                 VStack(spacing: 6) {
                     if let icon = config.headerIcon {
                         Image(systemName: icon)
-                            .font(.system(size: 28, weight: .semibold))
+                            .font(.system(.title, weight: .semibold))
                             .foregroundStyle(config.titleColor)
                             .padding(.bottom, 2)
                     }

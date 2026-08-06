@@ -289,7 +289,7 @@ struct UsePhoneContactButton: View {
         Button(action: action) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "person.crop.circle.badge.plus")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(.footnote, weight: .semibold))
                 Text("Use phone contacts")
                     .textStyle(Typography.button)
                 Spacer()

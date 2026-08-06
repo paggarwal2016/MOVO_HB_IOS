@@ -351,7 +351,7 @@ struct CardDetailSheet: View {
                             Image(systemName: "creditcard")
                         }
                     }
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(.title3, weight: .semibold))
                     .foregroundStyle(walletButtonForeground)
                     Text(walletButtonTitle)
                         .textStyle(Typography.bodyCompact)
@@ -371,7 +371,7 @@ struct CardDetailSheet: View {
             Button(action: { showTransfer = true }) {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "arrow.left.arrow.right")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(.callout, weight: .medium))
                     Text("Transfer")
                         .textStyle(Typography.bodyCompact)
                         .fontWeight(.semibold)
@@ -526,12 +526,12 @@ struct CardDetailSheet: View {
                 Eyebrow("Card number")
                 HStack(spacing: Spacing.sm) {
                     Text(showFullCardNumber ? formattedCardNumber : maskedCardNumber)
-                        .font(.system(size: 15, weight: .medium, design: .monospaced))
+                        .font(.system(.subheadline, design: .monospaced, weight: .medium))
                         .foregroundColor(Color.movo.textPrimary)
                         .tracking(1.5)
                     Button(action: { showFullCardNumber.toggle() }) {
                         Image(systemName: showFullCardNumber ? "eye.slash" : "eye")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(.footnote, weight: .medium))
                             .foregroundColor(Color.movo.accent)
                     }
                     .buttonStyle(.plain)
@@ -547,7 +547,7 @@ struct CardDetailSheet: View {
                                 .scaleEffect(0.6)
                         } else {
                             Image(systemName: revealedCvc == nil ? "eye" : "eye.slash")
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.system(.caption, weight: .medium))
                                 .foregroundColor(Color.movo.accent)
                         }
                     }
@@ -562,7 +562,7 @@ struct CardDetailSheet: View {
 
             Button(action: copyCardNumber) {
                 Image(systemName: "doc.on.doc")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(.callout, weight: .medium))
                     .foregroundColor(Color.movo.accent)
                     .frame(width: 36, height: 36)
                     .background(
@@ -692,7 +692,7 @@ struct CardDetailSheet: View {
                             lineWidth: Stroke.hairline
                         )
                     Image(systemName: iconSystemName)
-                        .font(.system(size: 14, weight: .regular))
+                        .font(.system(.footnote, weight: .regular))
                         .foregroundColor(Color.movo.textSecondary)
                 }
                 .frame(width: 36, height: 36)
@@ -709,7 +709,7 @@ struct CardDetailSheet: View {
                 Spacer()
                 
                 Text(formattedAmount)
-                    .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                    .font(.system(.footnote, weight: .semibold).monospacedDigit())
                     .foregroundColor(amountColor)
             }
             .padding(.horizontal, Spacing.md)

@@ -125,6 +125,8 @@ public struct PayAnyoneIllustration: View {
             )
         }
         .aspectRatio(80.0 / 60.0, contentMode: .fit)
+        // Decorative illustration — not meaningful to VoiceOver.
+        .accessibilityHidden(true)
     }
 
     /// Draws one outlined figure: head circle + bell-curve body.
@@ -250,7 +252,7 @@ struct PayAnyoneAddContactView: View {
                     .frame(width: 52, height: 52)
                 }
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .movoFont(.caption)
                     .foregroundColor(Color.movo.textSecondary)
                     .lineLimit(1)
             }
@@ -299,8 +301,10 @@ struct InviteAFriendCard: View {
         Button(action: onTap) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "person.badge.plus")
+                    .font(.system(.callout, weight: .semibold))
                     .foregroundColor(Color.movo.accent)
                 Text(title.uppercased())
+                    .movoFont(.cta)
                     .foregroundColor(Color.movo.textPrimary)
 
                 Spacer(minLength: Spacing.sm)
@@ -312,7 +316,6 @@ struct InviteAFriendCard: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Color.movo.textSecondary)
             }
-            .font(.system(size: 13, weight: .semibold))
             .foregroundColor(Color.movo.background)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, Spacing.lg)

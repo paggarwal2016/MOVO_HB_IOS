@@ -347,7 +347,7 @@ struct InternalTransferView: View {
                         .frame(width: 44, height: 44)
                         .overlay(
                             Image(systemName: "arrow.up.arrow.down")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(.footnote, weight: .medium))
                                 .foregroundColor(Color.movo.accent)
                         )
                 }
@@ -368,7 +368,7 @@ struct InternalTransferView: View {
                     .frame(width: 32, height: 32)
                     .overlay(
                         Image(systemName: "arrow.down")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(.footnote, weight: .semibold))
                             .foregroundColor(Color.movo.textSecondary)
                     )
             }
@@ -434,17 +434,17 @@ struct InternalTransferView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: Spacing.xs) {
                     Text(displayName)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(.subheadline, weight: .semibold))
                         .foregroundColor(Color.movo.textPrimary)
                     if isPrimary {
                         StatusPill("PRIMARY", variant: .accent, style: Typography.pill)
                     }
                 }
                 Text(card?.maskedNumber ?? "•••• •••• •••• ••••")
-                    .font(.system(size: 13, weight: .regular))
+                    .font(.system(.footnote, weight: .regular))
                     .foregroundColor(Color.movo.textTertiary)
                 Text(card?.displayBalance ?? balance)
-                    .font(.system(size: 13, weight: .regular))
+                    .font(.system(.footnote, weight: .regular))
                     .foregroundColor(Color.movo.textTertiary)
             }
 
@@ -482,7 +482,7 @@ struct InternalTransferView: View {
                     MovoMVSymbol().frame(width: 28, height: 28)
                 } else {
                     Image(systemName: "creditcard")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(.subheadline, weight: .medium))
                         .foregroundColor(Color.movo.textDisabled)
                 }
             }
@@ -494,10 +494,10 @@ struct InternalTransferView: View {
                     .foregroundColor(card != nil ? Color.movo.textPrimary : Color.movo.textDisabled)
                 if let card {
                     Text(card.maskedNumber)
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(.footnote, weight: .regular))
                         .foregroundColor(Color.movo.textTertiary)
                     Text(card.displayBalance)
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(.footnote, weight: .regular))
                         .foregroundColor(Color.movo.textTertiary)
                 }
             }
@@ -535,7 +535,7 @@ struct InternalTransferView: View {
     private var noteCard: some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: "bubble.left")
-                .font(.system(size: 15, weight: .regular))
+                .font(.system(.subheadline, weight: .regular))
                 .foregroundColor(Color.movo.textDisabled)
 
             TextField("", text: $descriptionText,
@@ -567,7 +567,7 @@ struct InternalTransferView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.up.forward")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(.footnote, weight: .semibold))
                 Text(amount > 0 ? "Transfer $\(String(format: "%.2f", amount))" : "Transfer")
                     .textStyle(Typography.buttonLarge)
             }
@@ -642,7 +642,7 @@ private struct CardChipRow: View {
         HStack(spacing: Spacing.sm) {
             if showIcon {
                 Image(systemName: "creditcard")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(.title3, weight: .medium))
                     .foregroundColor(Color.movo.accent)
                     .frame(width: 44, height: 44)
                     .background(Color.movo.elevated)
@@ -722,20 +722,20 @@ private struct CardPickerSheet: View {
 
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(card.savingsAccountNickname ?? card.name ?? "Virtual Card")
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .font(.system(.subheadline, weight: .semibold))
                                         .foregroundColor(Color.movo.textPrimary)
                                     Text(card.maskedNumber)
                                         .textStyle(Typography.subtitle)
                                         .foregroundColor(Color.movo.textTertiary)
                                     Text(card.displayBalance)
-                                        .font(.system(size: 13))
+                                        .font(.system(.footnote))
                                         .foregroundColor(Color.movo.textTertiary)
                                 }
 
                                 Spacer()
 
                                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(size: 22))
+                                    .font(.system(.title2))
                                     .foregroundColor(isSelected ? Color.movo.accent : Color.movo.textDisabled)
                                     .animation(.spring(duration: 0.2), value: isSelected)
                             }

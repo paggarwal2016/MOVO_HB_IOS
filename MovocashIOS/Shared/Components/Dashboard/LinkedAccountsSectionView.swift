@@ -225,14 +225,17 @@ private struct LinkBankIllustration: View {
                 let s = geo.size.width / 230.0
                 VStack(spacing: max(1, 3 * s)) {
                     MovoMVSymbol()
-                        .frame(width: 44 * s, height: 44 * s)
+                        .frame(width: 44, height: 44)
                     Text("Let\u{2019}s Movo.")
-                        .font(.system(size: max(7, 13 * s), weight: .medium).italic())
+                        .movoFont(.caption)
+                        .italic()
                         .foregroundColor(Color.movo.textTertiary)
                 }
                 .position(x: 192 * s, y: 73 * s)
             }
         }
+        // Decorative illustration — not meaningful to VoiceOver.
+        .accessibilityHidden(true)
     }
 }
 
@@ -253,21 +256,21 @@ struct LinkedAccountRowView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(account.institutionName) \(account.accountName)")
-                    .textStyle(Typography.body)
+                    .movoFont(.rowTitle)
                     .foregroundStyle(Color.movo.textPrimary)
                     .lineLimit(2)
 
                 Text(maskedNumber)
-                    .textStyle(Typography.caption)
+                    .movoFont(.caption)
                     .foregroundStyle(Color.movo.textTertiary)
             }
 
             Spacer()
 
             Text(account.formattedBalance)
-                .textStyle(Typography.cardTitle)
-                .foregroundStyle(Color.movo.textPrimary)
+                .movoFont(.rowValue)
                 .monospacedDigit()
+                .foregroundStyle(Color.movo.textPrimary)
         }
         .padding(.vertical, Spacing.md)
     }

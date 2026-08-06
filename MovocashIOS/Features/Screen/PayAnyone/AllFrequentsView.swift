@@ -157,7 +157,7 @@ struct AllFrequentsView: View {
     private func errorView(_ message: String) -> some View {
         VStack(spacing: Spacing.md) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 28, weight: .regular))
+                .font(.system(.title, weight: .regular))
                 .foregroundColor(Color.movo.textTertiary)
             Text(message)
                 .textStyle(Typography.body)
