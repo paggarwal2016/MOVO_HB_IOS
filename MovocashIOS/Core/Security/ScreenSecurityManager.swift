@@ -18,20 +18,31 @@ final class ScreenSecurityManager: ObservableObject {
         didSet { updateShield() }
     }
 
-    @Published private(set) var isInBackground: Bool = false {
-        didSet { updateShield() }
-    }
-
     @Published var sensitiveScreenVisible: Bool = false {
         didSet { updateShield() }
     }
 
+    /// Transient flag raised for a short window after a screenshot is taken. The
+    /// screenshot notification fires only *after* the image is captured (the pixels
+    /// are already blanked by `.secured()`), so this briefly shows the Shield as
+    /// feedback, then clears itself. Kept separate from recording so overlapping
+    /// events compose safely.
+    private var screenshotShieldActive: Bool = false {
+        didSet { updateShield() }
+    }
+
+    /// Auto-hide timer for `screenshotShieldActive`.
+    private var screenshotShieldTask: Task<Void, Never>?
+
+    /// How long the Shield stays up after a screenshot before auto-hiding.
+    private let screenshotShieldDuration: TimeInterval = 2
+
     /// Reference count of active suspensions. While greater than zero the shield
     /// is fully suppressed — even on real backgrounding or recording. In-process
     /// system overlays (Face ID, passkey, Apple Wallet, Control Center) no longer
-    /// need this: the shield is driven by didEnterBackground (see observeAppState),
-    /// which they never trigger. This remains for trusted full-screen flows that
-    /// run in their own window and want the shield fully off — currently only the
+    /// need this: the shield is driven only by active screen capture (recording /
+    /// screenshot), which they never trigger. This remains for trusted full-screen
+    /// flows that run in their own window and want the shield fully off — currently only the
     /// KYC SDK (`KYCManager`). Counting keeps overlapping suspensions safe: the
     /// shield resumes only when the last one ends.
     private var suspensionCount = 0 {
@@ -57,7 +68,6 @@ final class ScreenSecurityManager: ObservableObject {
 
     private init() {
         observeRecording()
-        observeAppState()
         observeScreenshot()
     }
 
@@ -82,41 +92,6 @@ private extension ScreenSecurityManager {
         observerTokens.append(token)
     }
 
-    func observeAppState() {
-        // Use didEnterBackground / willEnterForeground rather than
-        // willResignActive / didBecomeActive. willResignActive fires for any
-        // system overlay (Face ID, passkey, Apple Wallet, Control Center,
-        // notification pull-down, incoming calls) and would flash the shield on
-        // top of them. didEnterBackground fires only on genuine backgrounding
-        // (home / app switcher) and still occurs before the task-switcher
-        // snapshot, so the snapshot stays protected (Apple Tech Q&A QA1838).
-        let backgroundToken = NotificationCenter.default.addObserver(
-            forName: UIApplication.didEnterBackgroundNotification,
-            object: nil,
-            queue: nil
-        ) { _ in
-            // Must run synchronously: the task-switcher snapshot is taken right
-            // after this notification returns. Deferring via Task would show the
-            // shield too late and leave the snapshot unprotected. The notification
-            // is delivered on the main thread, so assumeIsolated is safe here.
-            MainActor.assumeIsolated {
-                ScreenSecurityManager.shared.isInBackground = true
-            }
-        }
-
-        let foregroundToken = NotificationCenter.default.addObserver(
-            forName: UIApplication.willEnterForegroundNotification,
-            object: nil,
-            queue: nil
-        ) { _ in
-            Task { @MainActor in
-                ScreenSecurityManager.shared.isInBackground = false
-            }
-        }
-
-        observerTokens.append(contentsOf: [backgroundToken, foregroundToken])
-    }
-
     func observeScreenshot() {
         let token = NotificationCenter.default.addObserver(
             forName: UIApplication.userDidTakeScreenshotNotification,
@@ -124,6 +99,7 @@ private extension ScreenSecurityManager {
             queue: nil
         ) { _ in
             Task { @MainActor in
+                ScreenSecurityManager.shared.handleScreenshot()
                 await ScreenSecurityManager.shared.onScreenshotDetected?()
             }
         }
@@ -149,12 +125,29 @@ private extension ScreenSecurityManager {
             return
         }
 
-        let shouldProtect = (isCaptured && sensitiveScreenVisible) || isInBackground
+        // Backgrounding no longer raises the Shield — AppLockManager covers the app
+        // with the SplashScreen on background. The Shield is reserved for active
+        // screen capture: a live recording, or the brief window after a screenshot.
+        let shouldProtect = (isCaptured && sensitiveScreenVisible) || screenshotShieldActive
 
         if shouldProtect {
             SecureWindowShield.shared.show(.protection)
         } else {
             SecureWindowShield.shared.hide(.protection)
+        }
+    }
+
+    /// Raises the Shield briefly after a screenshot, then auto-hides it. A fresh
+    /// screenshot restarts the timer so back-to-back captures keep the Shield up.
+    func handleScreenshot() {
+        screenshotShieldTask?.cancel()
+        screenshotShieldActive = true
+        screenshotShieldTask = Task { [weak self] in
+            guard let self else { return }
+            let seconds = UInt64(self.screenshotShieldDuration * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: seconds)
+            guard !Task.isCancelled else { return }
+            self.screenshotShieldActive = false
         }
     }
 }

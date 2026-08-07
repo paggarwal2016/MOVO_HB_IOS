@@ -65,6 +65,17 @@ final class SecureContainerView: UIView {
     }
 
     private func configure() {
+        // Opaque app-background backdrop. When screen protection is enabled the whole
+        // hierarchy is re-hosted through this container's secure canvas, which adds a
+        // nested layout pass. The OS removes the launch storyboard as soon as the window
+        // is visible, but the re-hosted SwiftUI splash hasn't drawn yet — without an
+        // opaque backdrop that gap falls through to the window's default black, showing
+        // a black flash before the M-logo splash. Filling it with the theme background
+        // (dynamic light/dark, matching LaunchBackground) makes the transition seamless.
+        // The sensitive content still lives inside the secure canvas and is still blanked
+        // on capture; only this backdrop is opaque.
+        backgroundColor = DesignTokens.Palette.background.uiColor
+
         secureTextField.isSecureTextEntry = true
         secureTextField.isUserInteractionEnabled = false
 

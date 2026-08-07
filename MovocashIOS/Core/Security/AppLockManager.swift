@@ -167,14 +167,13 @@ final class AppLockManager: ObservableObject {
     /// survives the .inactive scene-phase bounce that happens when Settings opens,
     /// so the flag is still live when the real .active fires on return.
     private var permissionFlowActive: Bool = false
-    /// Token for the willEnterForeground observer that raises the auth cover.
-    private var foregroundCoverObserver: NSObjectProtocol?
-    /// Injected at app startup. Returns true when the biometric lock gate is the
-    /// currently presented screen — in that case the auth cover would only obscure
-    /// an already-opaque lock UI, so it is skipped.
-    /// nil is treated as false (gate not visible) so any wiring omission degrades
-    /// to raising the cover — the safe, visible direction.
-    var isLockUIVisible: (@MainActor () -> Bool)? = nil
+    /// True when a real device lock happened during the current background period
+    /// (protected data became unavailable). Distinguishes a device lock (→ biometric
+    /// re-auth on return) from a plain app switch (→ seamless resume, no re-auth).
+    /// Reset at the start of each background cycle; read and cleared on foreground.
+    private var deviceLockedWhileBackgrounded: Bool = false
+    /// App-lifecycle notification tokens (background cover + device-lock detection).
+    private var lifecycleObservers: [NSObjectProtocol] = []
 
     // MARK: - Init (Production)
 
@@ -199,7 +198,7 @@ final class AppLockManager: ObservableObject {
         if passcodeManager.isPasscodeSet || RSAKeyManager.shared.keysExist() {
             state = .locked
         }
-        observeForegroundForAuthCover()
+        observeAppLifecycle()
     }
 
     // MARK: - Init (Testing)
@@ -260,100 +259,136 @@ final class AppLockManager: ObservableObject {
     }
 
     deinit {
-        if let foregroundCoverObserver {
-            NotificationCenter.default.removeObserver(foregroundCoverObserver)
-        }
+        lifecycleObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
-    /// Raises the opaque auth cover the moment the app starts returning to the
-    /// foreground (before the first frame renders) — but only when this resume
-    /// will require biometric re-auth. The cover stays above all content/alerts
-    /// until the biometric gate completes its attempt (see BiometricGateView).
-    private func observeForegroundForAuthCover() {
-        foregroundCoverObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.willEnterForegroundNotification,
+    /// Observes app lifecycle for two purposes:
+    ///
+    ///  1. Privacy cover — raises the splash cover synchronously the instant the app
+    ///     backgrounds, so the app-switcher snapshot never shows real UI (Apple
+    ///     QA1838). Mirrors ScreenSecurityManager's use of didEnterBackground.
+    ///  2. Device-lock detection — `protectedDataWillBecomeUnavailable` fires when the
+    ///     device locks (with a passcode). Recording it lets the next foreground tell a
+    ///     real device lock (→ biometric re-auth) apart from a plain app switch
+    ///     (→ seamless resume). This is the Google-Pay-style distinction.
+    private func observeAppLifecycle() {
+        let center = NotificationCenter.default
+
+        // Delivered on the main thread; assumeIsolated lets us raise the cover
+        // synchronously, before the task-switcher snapshot is taken.
+        let background = center.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
             queue: nil
         ) { [weak self] _ in
-            // Delivered on the main thread; assumeIsolated lets us show the cover
-            // synchronously, before the foreground frame is drawn.
             MainActor.assumeIsolated {
-                guard let self, self.shouldRelockOnForeground() else { return }
-                // Skip the cover when the lock gate is already the visible screen —
-                // it is itself opaque, so the cover would only block user interaction
-                // with the retry UI. nil closure → false → cover raised (safe default).
-                let gateVisible = self.isLockUIVisible?() ?? false
-                guard !gateVisible else { return }
+                guard let self else { return }
+                // Start a fresh background cycle.
+                self.backgroundedAt = self.clock.now()
+                self.wasUnlockedWhenBackgrounded = (self.state == .unlocked)
+                self.deviceLockedWhileBackgrounded = false
+                // Skip the cover for intentional in-app system prompts (opening
+                // Settings for a permission) and trusted full-screen flows (KYC SDK),
+                // which manage their own presentation and expect a seamless return.
+                guard !self.skipNextLock,
+                      !self.permissionFlowActive,
+                      !ScreenSecurityManager.shared.isProtectionSuspended else { return }
                 SecureWindowShield.shared.show(.auth)
             }
         }
-    }
 
-    /// Mirrors the re-lock decision in `handleScenePhase(.active)`, evaluated at
-    /// `willEnterForeground` (before `backgroundedAt` is cleared) so the cover is
-    /// raised only when the gate will actually appear.
-    private func shouldRelockOnForeground() -> Bool {
-        guard hasAuthMethod else { return false }
-        guard !skipNextLock && !permissionFlowActive else { return false }
-        guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return false }
-        guard let since = backgroundedAt else { return false }
-        let elapsed = clock.now().timeIntervalSince(since)
-        if !wasUnlockedWhenBackgrounded { return true }
-        return elapsed >= config.backgroundTimeout
+        // Device lock — protected data becomes unavailable when the screen locks on a
+        // passcode-protected device. Marks this background cycle as a real lock so the
+        // next foreground triggers biometric re-auth.
+        let deviceLock = center.addObserver(
+            forName: UIApplication.protectedDataWillBecomeUnavailableNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.deviceLockedWhileBackgrounded = true }
+        }
+
+        lifecycleObservers = [background, deviceLock]
     }
 
     func handleScenePhase(_ phase: ScenePhase) {
         switch phase {
         case .background:
-            backgroundedAt = clock.now()
-            wasUnlockedWhenBackgrounded = (state == .unlocked)
+            // Cover + bookkeeping are handled synchronously in the didEnterBackground
+            // observer (observeAppLifecycle) so the app-switcher snapshot is protected
+            // before it is captured. Nothing to do here.
+            break
         case .active:
             let suppress = skipNextLock || permissionFlowActive
             skipNextLock = false
             permissionFlowActive = false
+
+            let wasLocked = deviceLockedWhileBackgrounded
+            let since = backgroundedAt
+            backgroundedAt = nil
+            deviceLockedWhileBackgrounded = false
+
             if suppress {
-                backgroundedAt = nil
                 SecureWindowShield.shared.hide(.auth)
                 return
             }
-            guard let since = backgroundedAt else { return }
-            backgroundedAt = nil
-            let elapsed = clock.now().timeIntervalSince(since)
 
-            // Only enforce for users past the dashboard. Mid-onboarding is
-            // governed by RootView's 10-minute timeout.
-            guard UserDefaults.standard.bool(forKey: "kycCompleted") else { return }
+            // A pure .inactive → .active bounce never fires didEnterBackground, so
+            // `since` is nil. This happens for in-process system overlays — the Face ID
+            // prompt, Control Center, permission alerts — none of which are a real
+            // backgrounding and none of which should re-lock. Resume seamlessly.
+            // Without this, the biometric gate's OWN Face ID prompt would relock the
+            // app and bounce the user from the retry screen to the warm-relock splash.
+            // Real backgrounding (app switch, device lock) always sets `backgroundedAt`.
+            guard since != nil else {
+                SecureWindowShield.shared.hide(.auth)
+                return
+            }
+
+            // Only enforce for users past the dashboard. Mid-onboarding is governed
+            // by RootView's 10-minute timeout. Take the cover down either way.
+            guard UserDefaults.standard.bool(forKey: "kycCompleted") else {
+                SecureWindowShield.shared.hide(.auth)
+                return
+            }
 
             if hasAuthMethod {
-                if elapsed >= config.backgroundTimeout || !wasUnlockedWhenBackgrounded {
-                    // Long background or user was already on the lock screen:
-                    // require re-auth. RootView's lockManager.state observer
-                    // routes to .warmRelock (auto-trigger Face ID).
-                    state = .locked
+                // Google-Pay model: biometric re-auth ONLY when the device was actually
+                // locked (or we were already sitting on the lock screen). A plain app
+                // switch resumes seamlessly no matter how long it lasted.
+                let needsReauth = wasLocked || !wasUnlockedWhenBackgrounded
+                if needsReauth {
+                    if state == .locked {
+                        // Already on the biometric gate (e.g. a prior failed retry).
+                        // The gate owns the screen — reveal it so the user can retry.
+                        SecureWindowShield.shared.hide(.auth)
+                    } else {
+                        // RootView's lockManager.state observer routes .locked →
+                        // .warmRelock (auto-triggers Face ID). The gate takes the cover
+                        // down when its attempt finishes; the cover stays up until then.
+                        state = .locked
+                    }
                 } else {
-                    // Short background while unlocked — seamless resume, no re-auth.
-                    // Assumption: state is .unlocked here because wasUnlockedWhenBackgrounded
-                    // is true and nothing transitions state to .locked between .background
-                    // and .active (lock() has no call sites; handleScenePhase(.background)
-                    // does not lock). The old pattern emitted .locked then immediately
-                    // .unlocked, which spuriously fired RootView's lockManager.state
-                    // observer and routed to .warmRelock on every brief app switch.
+                    // Plain app switch — seamless resume, no re-auth.
                     SecureWindowShield.shared.hide(.auth)
                 }
             } else {
-                // No biometric — 15 min permissive re-auth (matches server idle).
-                // OTP is high-friction so only fire after server session is
-                // actually likely dead.
-                guard elapsed >= AppState.apiIdleTimeout else { return }
-                SecureLogger.info(
-                    "Background \(Int(elapsed))s, no biometric → ChoiceScreen",
-                    category: .auth
-                )
-                NotificationCenter.default.post(
-                    name: .sessionExpired,
-                    object: nil,
-                    userInfo: ["message": "Your session has expired. Please sign in again."]
-                )
+                // No biometric enrolled. There is no in-app challenge to present, so
+                // resume seamlessly — but preserve the server-idle safety net: if the
+                // server session is certainly dead, force phone re-auth.
+                SecureWindowShield.shared.hide(.auth)
+                let elapsed = since.map { clock.now().timeIntervalSince($0) } ?? 0
+                if elapsed >= AppState.apiIdleTimeout {
+                    SecureLogger.info(
+                        "Background \(Int(elapsed))s, no biometric → ChoiceScreen",
+                        category: .auth
+                    )
+                    NotificationCenter.default.post(
+                        name: .sessionExpired,
+                        object: nil,
+                        userInfo: ["message": "Your session has expired. Please sign in again."]
+                    )
+                }
             }
         default:
             break

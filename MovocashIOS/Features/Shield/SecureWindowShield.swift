@@ -17,9 +17,13 @@
 //  all reasons clear. The system biometric prompt renders above this window, so
 //  the gate always appears on top when authentication is required.
 //
-//  Content: when screen protection is enabled the cover is ShieldView (so the
-//  protection message shows first); otherwise it's the app SplashScreen (a
-//  seamless backdrop for the biometric gate's splash mode).
+//  Content is chosen per active reason, not globally:
+//    • .protection active → ShieldView (the "Screen Protected" message shown
+//      during a screenshot or screen recording).
+//    • otherwise (only .auth) → the app SplashScreen, a seamless backdrop for
+//      backgrounding and the biometric gate's splash mode.
+//  The hosted content is refreshed whenever the active reasons change, so a
+//  window already up for one reason switches content if the other is added.
 //
 
 import UIKit
@@ -39,6 +43,7 @@ final class SecureWindowShield {
 
     private var reasons: Set<Reason> = []
     private var secureWindow: UIWindow?
+    private var host: UIHostingController<AnyView>?
 
     /// Raise the cover for `reason` (idempotent).
     func show(_ reason: Reason) {
@@ -57,6 +62,10 @@ final class SecureWindowShield {
             dismiss()
         } else {
             present()
+            // Reasons may have changed while the window was already up (e.g. a
+            // screenshot fires .protection over an existing .auth cover), so keep
+            // the hosted content in sync with the current reason set.
+            host?.rootView = coverContent
         }
     }
 
@@ -75,22 +84,25 @@ final class SecureWindowShield {
         window.rootViewController = host
         window.isHidden = false
 
+        self.host = host
         secureWindow = window
     }
 
     private func dismiss() {
         secureWindow?.isHidden = true
         secureWindow = nil
+        host = nil
     }
 
-    /// ShieldView (protection message) when screen protection is on; otherwise the
-    /// app SplashScreen, which is pixel-identical to BiometricGateView's splash.
-    @ViewBuilder
-    private var coverContent: some View {
-        if AppConfig.isScreenProtectionEnabled {
-            ShieldView()
+    /// ShieldView (the "Screen Protected" message) only while screen protection is
+    /// active — i.e. during a screenshot or screen recording. Otherwise the app
+    /// SplashScreen, which hides content on backgrounding and is pixel-identical to
+    /// BiometricGateView's splash backdrop.
+    private var coverContent: AnyView {
+        if reasons.contains(.protection) {
+            return AnyView(ShieldView())
         } else {
-            SplashScreen()
+            return AnyView(SplashScreen())
         }
     }
 }

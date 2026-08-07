@@ -562,7 +562,11 @@ struct RootView: View {
                   !appState.isNewRegistration,
                   !UserDefaults.standard.bool(forKey: "kycInProgress"),
                   UserDefaults.standard.bool(forKey: "kycCompleted"),
-                  appState.flow != .warmRelock
+                  appState.flow != .warmRelock,
+                  // Already on the cold-launch biometric gate — it owns the retry UI.
+                  // Never swap it for the warm-relock splash gate (that would dismiss
+                  // the "Try Again" screen and restart from a splash).
+                  appState.flow != .appLock
             else { return }
 
             // Clear any transient alert so it can't sit above the biometric gate.
