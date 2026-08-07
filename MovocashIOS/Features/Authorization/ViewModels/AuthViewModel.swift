@@ -168,6 +168,9 @@ final class AuthViewModel: ObservableObject {
                 appState: appState
             )
 
+            // Best-effort App Attest registration; fail-open, never blocks or breaks login.
+            Task.detached { await AppAttestRegistrationService.shared.registerIfNeeded() }
+
             analytics.trackLogin(method: .otp)
             let destination: AuthFlow = context == .login ? .home : .signupDetails
             reset()
